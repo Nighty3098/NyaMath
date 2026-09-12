@@ -1,0 +1,112 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
+/* ===== Семантические токены темы (light по умолчанию, dark через [data-theme]) ===== */
+:root, [data-theme="light"] {
+  --chrome: #12151d;
+  --chrome-ink: #e9edf3;
+  --chrome-soft: #a7b0bd;
+  --chrome-line: #262c38;
+  --canvas: #24272e;
+  --sheet: #ffffff;
+  --ink: #16161a;
+  --ink-soft: #3f4753;
+  --faint: #8a94a3;
+  --line: #cbd5e1;
+  --hover-line: #aeb8c6;
+  --accent: #4f46e5;
+  --accent-ink: #4338ca;
+  --accent-line: #4f7cff;
+  --accent-soft: rgba(79, 124, 255, 0.1);
+  --danger: #dc2626;
+  --danger-bg: rgba(220, 38, 38, 0.06);
+  --ok: #059669;
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --grid-lt: rgba(15, 23, 42, 0.055);
+  --grid-dk: rgba(15, 23, 42, 0.11);
+}
+
+[data-theme="gruvbox"], [data-theme="dark"] {
+  --chrome: #1d2021;
+  --chrome-ink: #ebdbb2;
+  --chrome-soft: #a89984;
+  --chrome-line: #3c3836;
+  --canvas: #1d2021;
+  --sheet: #282828;
+  --ink: #ebdbb2;
+  --ink-soft: #d5c4a1;
+  --faint: #928374;
+  --line: #3c3836;
+  --hover-line: #504945;
+  --accent: #83a598;
+  --accent-ink: #83a598;
+  --accent-line: #83a598;
+  --accent-soft: rgba(131, 165, 152, 0.13);
+  --danger: #fb4934;
+  --danger-bg: rgba(251, 73, 52, 0.09);
+  --ok: #b8bb26;
+  --input-bg: #1d2021;
+  --input-border: #504945;
+  --grid-lt: rgba(235, 219, 178, 0.04);
+  --grid-dk: rgba(235, 219, 178, 0.09);
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  background: var(--canvas);
+  color: var(--chrome-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Видимые focus-кольца везде (a11y: focus-states) */
+:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Сетка поверх листа — цвет из токенов темы */
+.weng-grid-fine {
+  background-image:
+    linear-gradient(to right, var(--grid-lt) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-lt) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid-dk) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-dk) 1px, transparent 1px);
+  background-size: 14px 14px, 14px 14px, 140px 140px, 140px 140px;
+}
+
+/* Регион Mathcad: прозрачный, размер по содержимому */
+.weng-region {
+  background: transparent;
+  width: max-content;
+  max-width: 640px;
+}
+
+.math-input {
+  font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Формулы наследуют чернила листа */
+.weng-sheet .katex { color: var(--ink); }
+.weng-sheet .katex-display { margin: 0; }
+
+/* Уважение к reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* thin scrollbars */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--hover-line); border-radius: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
