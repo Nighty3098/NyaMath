@@ -1,0 +1,22 @@
+{
+  "name": "wengineering-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server: full agent control over Wengineering documents (blocks, solutions, plots, positions)",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\"",
+    "typecheck": "tsc --noEmit",
+    "test": "node test/smoke.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "mathjs": "^15.2.0",
+    "uuid": "^14.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.0"
+  }
+}
