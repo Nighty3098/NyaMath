@@ -33,8 +33,8 @@ export function useRegionDrag(id: string, scale: number, disabled: boolean) {
     const dy = (e.clientY - d.py) / scale;
     const st = useCanvasStore.getState();
     for (const [gid, o] of Object.entries(d.orig)) {
-      const b = st.blocks[gid];
-      if (b) st.dragTo(gid, Math.max(0, o.x + dx), Math.max(0, o.y + dy));
+      // пол бесконечный во все стороны — отрицательные координаты разрешены
+      if (st.blocks[gid]) st.dragTo(gid, o.x + dx, o.y + dy);
     }
   };
 

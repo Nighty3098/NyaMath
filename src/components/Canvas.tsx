@@ -4,8 +4,6 @@ import MathBlockView from './MathBlockView';
 import PlotBlockView from './PlotBlockView';
 import ProgramBlockView from './ProgramBlockView';
 
-const WORLD_W = 4000;
-const WORLD_H = 2600;
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 3;
 // Скорость догоняющей анимации зума (меньше — плавнее)
@@ -203,10 +201,8 @@ export default function Canvas() {
   const onDoubleClick = (e: React.MouseEvent) => {
     if (isInteractive(e.target)) return;
     const w = screenToWorld(e.clientX, e.clientY);
-    addBlock(
-      Math.min(Math.max(0, w.x - 40), WORLD_W - 480),
-      Math.min(Math.max(0, w.y - 20), WORLD_H - 100),
-    );
+    // пол бесконечный — клампов нет, блок встаёт ровно под курсор
+    addBlock(Math.round(w.x - 40), Math.round(w.y - 20));
   };
 
   const zoomCenter = useCallback(
@@ -256,16 +252,39 @@ export default function Canvas() {
   }, [recalc, removeSelected, selectedIds.length, select]);
 
   const list = Object.values(blocks);
+  const theme = useCanvasStore((s) => s.theme);
+
+  // Бесконечная сетка в экранных координатах: шаг и сдвиг следуют за камерой
+  const mod = (a: number, n: number) => ((a % n) + n) % n;
+  const gridStyle: React.CSSProperties = showGrid
+    ? (() => {
+        const minor = theme === 'light' ? 'rgba(15,23,42,0.07)' : 'rgba(235,219,178,0.05)';
+        const major = theme === 'light' ? 'rgba(15,23,42,0.13)' : 'rgba(235,219,178,0.11)';
+        const s1 = 14 * view.k;
+        const s2 = 140 * view.k;
+        return {
+          backgroundImage: [
+            `linear-gradient(to right, ${minor} 1px, transparent 1px)`,
+            `linear-gradient(to bottom, ${minor} 1px, transparent 1px)`,
+            `linear-gradient(to right, ${major} 1px, transparent 1px)`,
+            `linear-gradient(to bottom, ${major} 1px, transparent 1px)`,
+          ].join(','),
+          backgroundSize: `${s1}px ${s1}px, ${s1}px ${s1}px, ${s2}px ${s2}px, ${s2}px ${s2}px`,
+          backgroundPosition: `${mod(view.x, s1)}px ${mod(view.y, s1)}px, ${mod(view.x, s1)}px ${mod(view.y, s1)}px, ${mod(view.x, s2)}px ${mod(view.y, s2)}px, ${mod(view.x, s2)}px ${mod(view.y, s2)}px`,
+        };
+      })()
+    : {};
 
   return (
     <div
       ref={containerRef}
-      className="flex-1 relative overflow-hidden bg-[var(--canvas)] select-none"
+      className="flex-1 relative overflow-hidden bg-[var(--sheet)] select-none"
       role="application"
-      aria-label="Рабочий лист: двойной клик создаёт блок, перетаскивание с зажатой кнопкой выделяет"
+      aria-label="Бесконечный рабочий лист: двойной клик создаёт блок, перетаскивание с зажатой кнопкой выделяет"
       style={{
         cursor: panning ? 'grabbing' : spaceDown ? 'grab' : 'default',
         touchAction: 'none',
+        ...gridStyle,
       }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -288,12 +307,10 @@ export default function Canvas() {
           }}
         />
       )}
-      {/* лист вычислений */}
+      {/* бесконечный слой блоков (нулевой размер, hit-area только у самих блоков) */}
       <div
-        className={`absolute left-0 top-0 bg-[var(--sheet)] weng-sheet shadow-[0_0_60px_rgba(0,0,0,0.5)] ${showGrid ? 'weng-grid-fine' : ''}`}
+        className="absolute left-0 top-0 weng-sheet"
         style={{
-          width: WORLD_W,
-          height: WORLD_H,
           transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`,
           transformOrigin: '0 0',
         }}
