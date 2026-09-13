@@ -14,6 +14,7 @@ export function useRegionDrag(id: string, scale: number, disabled: boolean) {
     e.preventDefault();
     e.stopPropagation();
     const st = useCanvasStore.getState();
+    st.beginGesture();
     const group = st.selectedIds.includes(id) && st.selectedIds.length > 1 ? st.selectedIds : [id];
     const orig: Record<string, { x: number; y: number }> = {};
     for (const gid of group) {
@@ -68,6 +69,7 @@ export function useRegionResize(
     e.preventDefault();
     e.stopPropagation();
     const st = useCanvasStore.getState();
+    st.beginGesture();
     const b = st.blocks[id];
     if (!b) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);

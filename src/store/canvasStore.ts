@@ -39,6 +39,13 @@ export interface CanvasState {
   /** Загрузить документ из файла (валидация + миграция) */
   loadDocument: (data: unknown) => { ok: boolean; message: string };
   updatePlot: (id: string, patch: Partial<MathBlockData>) => void;
+  /** История undo/redo (снапшоты blocks, без persist) */
+  past: Record<string, MathBlockData>[];
+  future: Record<string, MathBlockData>[];
+  undo: () => void;
+  redo: () => void;
+  /** Снапшот перед жестом (драг/ресайз): вызывается на pointerdown */
+  beginGesture: () => void;
 }
 
 function blank(id: string, x: number, y: number): MathBlockData {
@@ -101,7 +108,46 @@ function restore(): Record<string, MathBlockData> {
 
 let debounceT: ReturnType<typeof setTimeout> | null = null;
 
+/** История: лимит глубины и троттлинг снапшотов при печати (leading edge). */
+const HISTORY_LIMIT = 100;
+const SNAPSHOT_WINDOW_MS = 2000;
+let lastPushAt = 0;
+
 type SetFn = (p: Partial<CanvasState> | ((s: CanvasState) => Partial<CanvasState>)) => void;
+type GetFn = () => CanvasState;
+
+/**
+ * Положить текущие blocks в past (ветка future сбрасывается).
+ * force — дискретные действия (add/remove/load...); без force — троттлинг для печати.
+ */
+function pushHistory(get: GetFn, set: SetFn, force = false): void {
+  const now = Date.now();
+  if (!force) {
+    if (now - lastPushAt < SNAPSHOT_WINDOW_MS) return;
+  }
+  lastPushAt = now;
+  const past = [...get().past, get().blocks];
+  if (past.length > HISTORY_LIMIT) past.splice(0, past.length - HISTORY_LIMIT);
+  set({ past, future: [] });
+}
+
+/** Одинаковые ли снапшоты (только редактируемые поля; результаты/превью игнорируем). */
+function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathBlockData>): boolean {
+  const ka = Object.keys(a);
+  const kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  for (const id of ka) {
+    const x = a[id];
+    const y = b[id];
+    if (!x || !y) return false;
+    if (
+      x.kind !== y.kind || x.x !== y.x || x.y !== y.y || x.rawInput !== y.rawInput ||
+      x.plotFn !== y.plotFn || x.plotXmin !== y.plotXmin || x.plotXmax !== y.plotXmax ||
+      x.exportName !== y.exportName || x.w !== y.w || x.h !== y.h
+    ) return false;
+  }
+  return true;
+}
 
 function scheduleRecalc(get: () => CanvasState, set: SetFn, ms: number) {
   if (debounceT) clearTimeout(debounceT);
@@ -125,8 +171,54 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       return { theme: next };
     }),
   recalcCounter: 0,
+  past: [],
+  future: [],
+
+  undo: () => {
+    const st = get();
+    if (!st.past.length) return;
+    const cur = st.blocks;
+    // пропускаем снапшоты, идентичные текущему (клик без движения и т.п.)
+    const past = [...st.past];
+    let target = past.pop();
+    while (target && sameSnapshots(target, cur)) target = past.pop();
+    if (!target) {
+      set({ past: [] });
+      return;
+    }
+    const next = withRecalc(target);
+    persist(next);
+    set((s) => ({
+      blocks: next,
+      past,
+      future: [cur, ...s.future].slice(0, HISTORY_LIMIT),
+      recalcCounter: s.recalcCounter + 1,
+      selectedIds: s.selectedIds.filter((id) => next[id]),
+    }));
+  },
+
+  redo: () => {
+    const st = get();
+    if (!st.future.length) return;
+    const cur = st.blocks;
+    const [target, ...future] = st.future;
+    const next = withRecalc(target);
+    persist(next);
+    set((s) => ({
+      blocks: next,
+      past: [...s.past, cur].slice(-HISTORY_LIMIT),
+      future,
+      recalcCounter: s.recalcCounter + 1,
+      selectedIds: s.selectedIds.filter((id) => next[id]),
+    }));
+  },
+
+  beginGesture: () => {
+    pushHistory(get, set as SetFn, true);
+  },
 
   addBlock: (x, y, raw = '') => {
+    pushHistory(get, set as SetFn, true);
     const id = uuid();
     const next = withRecalc({ ...get().blocks, [id]: { ...blank(id, x, y), rawInput: raw } });
     persist(next);
@@ -134,6 +226,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   addPlotBlock: (x, y, fn = 'sin(x)') => {
+    pushHistory(get, set as SetFn, true);
     const id = uuid();
     const b: MathBlockData = {
       ...blank(id, x, y), rawInput: 'plot', kind: 'plot', plotFn: fn, plotXmin: -10, plotXmax: 10,
@@ -144,6 +237,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   addProgramBlock: (x, y, raw = 's := 0\nfor i in 1..n\n  s := s + i\nend\ns', exportName = '') => {
+    pushHistory(get, set as SetFn, true);
     const id = uuid();
     const b: MathBlockData = {
       ...blank(id, x, y), rawInput: raw, kind: 'program', exportName,
@@ -156,6 +250,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   updateInput: (id, raw) => {
     const cur = get().blocks[id];
     if (!cur) return;
+    pushHistory(get, set as SetFn);
     set({ blocks: { ...get().blocks, [id]: { ...cur, rawInput: raw } } });
     scheduleRecalc(get, set as SetFn, 150);
   },
@@ -163,6 +258,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   setExportName: (id, name) => {
     const cur = get().blocks[id];
     if (!cur) return;
+    pushHistory(get, set as SetFn);
     const next = withRecalc({ ...get().blocks, [id]: { ...cur, exportName: name } });
     persist(next);
     set((s) => ({ blocks: next, recalcCounter: s.recalcCounter + 1 }));
@@ -171,6 +267,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   moveBlock: (id, x, y) => {
     const cur = get().blocks[id];
     if (!cur) return;
+    pushHistory(get, set as SetFn, true);
     set({ blocks: { ...get().blocks, [id]: { ...cur, x, y } } });
     // порядок сверху-вниз зависит от Y → пересчёт после перемещения
     scheduleRecalc(get, set as SetFn, 250);
@@ -195,6 +292,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   removeBlock: (id) => {
+    pushHistory(get, set as SetFn, true);
     const next = { ...get().blocks };
     delete next[id];
     const rec = withRecalc(next);
@@ -205,6 +303,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   removeSelected: () => {
     const sel = get().selectedIds;
     if (!sel.length) return;
+    pushHistory(get, set as SetFn, true);
     const next = { ...get().blocks };
     for (const id of sel) delete next[id];
     const rec = withRecalc(next);
@@ -228,11 +327,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   clear: () => {
+    pushHistory(get, set as SetFn, true);
     persist({});
     set({ blocks: {}, selectedIds: [] });
   },
 
   loadTestScenario: () => {
+    pushHistory(get, set as SetFn, true);
     const rec: Record<string, MathBlockData> = {};
     let y = 60;
     for (const line of TEST_SCENARIO_LINES) {
@@ -254,6 +355,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   loadAdvancedDemo: () => {
+    pushHistory(get, set as SetFn, true);
     const rec: Record<string, MathBlockData> = {};
     let y = 60;
     for (const item of ADVANCED_DEMO) {
@@ -287,6 +389,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       else bad++;
     }
     if (!Object.keys(rec).length) return { ok: false, message: 'В файле нет корректных блоков' };
+    pushHistory(get, set as SetFn, true);
     const next = withRecalc(rec);
     persist(next);
     set((s) => ({ blocks: next, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
@@ -296,6 +399,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   updatePlot: (id, patch) => {
     const cur = get().blocks[id];
     if (!cur) return;
+    pushHistory(get, set as SetFn);
     const next = { ...get().blocks, [id]: { ...cur, ...patch } };
     persist(next);
     set({ blocks: next });

@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
+import { saveDocument } from '../lib/saveDocument';
 import FunctionPalette from './FunctionPalette';
-import { IDemo, IFx, IFormula, IGrid, IOpen, IPlot, IProgram, IRecalc, ISave, IX, IZap, ISun, IMoon } from './Icon';
+import { IDemo, IFx, IFormula, IGrid, IOpen, IPlot, IProgram, IRecalc, IRedo, ISave, IUndo, IX, IZap, ISun, IMoon } from './Icon';
 
 export default function Toolbar() {
   const blocks = useCanvasStore((s) => s.blocks);
@@ -18,6 +19,10 @@ export default function Toolbar() {
   const toggleTheme = useCanvasStore((s) => s.toggleTheme);
   const loadDocument = useCanvasStore((s) => s.loadDocument);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
+  const undo = useCanvasStore((s) => s.undo);
+  const redo = useCanvasStore((s) => s.redo);
+  const canUndo = useCanvasStore((s) => s.past.length > 0);
+  const canRedo = useCanvasStore((s) => s.future.length > 0);
   const [palette, setPalette] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -25,44 +30,8 @@ export default function Toolbar() {
   const errs = list.filter((b) => b.error).length;
   const n = list.length;
 
-  const saveFile = async () => {
-    const payload = JSON.stringify(list, null, 2);
-    // Системный диалог «Сохранить как…» (путь + имя файла), где поддерживается
-    if (window.showSaveFilePicker) {
-      try {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: 'wengineering-doc.json',
-          types: [{ description: 'Wengineering document', accept: { 'application/json': ['.json'] } }],
-        });
-        const stream = await handle.createWritable();
-        await stream.write(payload);
-        await stream.close();
-        return;
-      } catch (e) {
-        // Отмена диалога пользователем — молча выходим
-        if (e instanceof DOMException && e.name === 'AbortError') return;
-        // Остальные ошибки — падаем в обычное скачивание ниже
-      }
-    } else {
-      // Firefox/Safari: сайты не могут открыть системный диалог (API не поддерживается).
-      // Диалог появится, если в браузере включено «всегда спрашивать, куда сохранять».
-      try {
-        if (!localStorage.getItem('weng-save-hint-shown')) {
-          localStorage.setItem('weng-save-hint-shown', '1');
-          alert(
-            'Ваш браузер не даёт сайтам выбирать папку (например, Firefox).\n' +
-              'Чтобы выбирать путь и имя при сохранении, включите в настройках браузера:\n' +
-              '«Всегда спрашивать, куда сохранять файлы» (Настройки → Основные → Файлы и приложения).',
-          );
-        }
-      } catch { /* localStorage недоступен — просто скачиваем */ }
-    }
-    const blob = new Blob([payload], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'wengineering-doc.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
+  const saveFile = () => {
+    void saveDocument(blocks);
   };
 
   const openFile = (f: File) => {
@@ -119,6 +88,21 @@ export default function Toolbar() {
           active={showGrid}
         />
         <div className="w-px h-6 bg-[var(--chrome-line)] mx-1" aria-hidden="true" />
+        <Btn
+          icon={<IUndo />}
+          title="Отменить (Ctrl+Z)"
+          onClick={undo}
+          aria-label="Отменить"
+          disabled={!canUndo}
+        />
+        <Btn
+          icon={<IRedo />}
+          title="Вернуть (Ctrl+Shift+Z)"
+          onClick={redo}
+          aria-label="Вернуть"
+          disabled={!canRedo}
+        />
+        <div className="w-px h-6 bg-[var(--chrome-line)] mx-1" aria-hidden="true" />
         <Btn icon={<IZap />} label="20" title="Вариант 20, электродинамика" onClick={loadTestScenario} accent />
         <Btn
           icon={<IDemo />}
@@ -127,7 +111,7 @@ export default function Toolbar() {
           onClick={loadAdvancedDemo}
           accent
         />
-        <Btn icon={<ISave />} title="Сохранить проект в файл (.json)" onClick={saveFile} aria-label="Сохранить проект" />
+        <Btn icon={<ISave />} title="Сохранить проект в файл (.json) (Ctrl+S)" onClick={saveFile} aria-label="Сохранить проект" />
         <Btn icon={<IOpen />} title="Открыть проект из файла (.json)" onClick={() => fileRef.current?.click()} aria-label="Открыть проект" />
         <input
           ref={fileRef}
@@ -201,7 +185,7 @@ function Btn({
       aria-label={aria['aria-label'] ?? title}
       onClick={onClick}
       {...aria}
-      className={`min-h-[36px] min-w-[36px] inline-flex items-center justify-center gap-1.5 text-[13px] px-2 rounded-lg border transition-colors cursor-pointer active:scale-[0.96] ${
+      className={`min-h-[36px] min-w-[36px] inline-flex items-center justify-center gap-1.5 text-[13px] px-2 rounded-lg border transition-colors cursor-pointer active:scale-[0.96] disabled:opacity-40 disabled:pointer-events-none ${
         accent
           ? 'bg-[var(--accent-soft)] border-[var(--accent-line)]/60 text-[var(--chrome-ink)] hover:brightness-125'
           : danger

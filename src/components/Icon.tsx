@@ -56,6 +56,18 @@ export const IRecalc = () => (
     <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 1.8v2.7h-2.7" />
   </Svg>
 );
+export const IUndo = () => (
+  <Svg>
+    <path d="M6.5 3.5 3 7l3.5 3.5" />
+    <path d="M3.5 7H10a3.5 3.5 0 0 1 0 7H7" />
+  </Svg>
+);
+export const IRedo = () => (
+  <Svg>
+    <path d="M9.5 3.5 13 7l-3.5 3.5" />
+    <path d="M12.5 7H6a3.5 3.5 0 0 0 0 7h3" />
+  </Svg>
+);
 export const IGrid = () => (
   <Svg>
     <path d="M2.5 2.5h11v11h-11zM2.5 6h11M2.5 10h11M6 2.5v11M10 2.5v11" />
