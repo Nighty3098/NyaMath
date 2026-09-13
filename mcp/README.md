@@ -1,28 +1,28 @@
 # Wengineering MCP server
 
-Полное управление документом Wengineering из агента: блоки, решения, scope,
-данные графиков, позиции и размеры, файлы. Тот же движок и формат, что в
-веб-приложении (`mathjs`, `:=`, `j`, матрицы, программы, пересчёт сверху-вниз).
+Full agent control over a Wengineering document: blocks, solutions, scope,
+plot data, positions and sizes, files. Same engine and format as the web app
+(`mathjs`, `:=`, `j`, matrices, programs, top-to-bottom recalculation).
 
-## Установка и сборка
+## Install & build
 
 ```bash
 cd mcp
 npm install
-npm run build    # → dist/index.js (один файл, node)
-npm test         # smoke-тест через настоящий MCP-клиент (20 проверок)
+npm run build    # → dist/index.js (single file, node)
+npm test         # smoke test via a real MCP client (20 checks)
 ```
 
-## Запуск
+## Run
 
 ```bash
-node dist/index.js                  # stdio, документ по умолчанию ./wengineering-doc.json
+node dist/index.js                  # stdio, default document ./wengineering-doc.json
 WENG_DOC=/path/to/doc.json node dist/index.js
 ```
 
-## Подключение к opencode
+## Connect to opencode
 
-В `opencode.json` / `opencode.jsonc`:
+In `opencode.json` / `opencode.jsonc`:
 
 ```json
 {
@@ -40,10 +40,10 @@ WENG_DOC=/path/to/doc.json node dist/index.js
 }
 ```
 
-После этого в промптах доступно `use wengineering`, инструменты видны агенту
-рядом со встроенными. Файл, который правит агент, открывается в приложении
-кнопкой `⇧` (тот же JSON-формат; приложение подхватит позиции, размеры,
-формулы и программы).
+After that, `use wengineering` is available in prompts and the tools are
+visible to the agent next to the built-in ones. The file the agent edits can
+be opened in the app (same JSON format; the app picks up positions, sizes,
+formulas and programs).
 
 ## Claude Desktop
 
@@ -59,37 +59,37 @@ WENG_DOC=/path/to/doc.json node dist/index.js
 }
 ```
 
-## Инструменты (17)
+## Tools (17)
 
-| Инструмент | Что делает |
+| Tool | What it does |
 |---|---|
-| `weng_status` | Блоки, ошибки, число переменных, путь файла |
-| `weng_list_blocks` | Список блоков (фильтр `kind`, `limit`/`offset`) |
-| `weng_get_block` | Полный блок: результат, LaTeX, зависимости, мета автографика |
-| `weng_add_block` | Новый блок (`math`/`text`/`plot`/`program` + поля) |
-| `weng_update_block` | Правка текста/функции/диапазона/exportName |
-| `weng_move_block` / `weng_move_blocks` | Позиции (влияют на порядок вычислений!) |
-| `weng_resize_block` | Ручной размер `w`/`h` |
-| `weng_remove_block` / `weng_clear` | Удаление (clear только с `confirm: true`) |
-| `weng_evaluate` | Выражение в живом scope (только чтение) |
-| `weng_get_scope` | Все переменные → значения (проверка решений) |
-| `weng_get_plot_data` | Точки серий графика или автографика (`max_points`, даунсэмплинг) |
-| `weng_open` / `weng_save` | Файл проекта (валидация, миграция) |
-| `weng_load_example` | `variant20` (электродинамика) или `advanced` (матрицы/программы) |
-| `weng_recalc` | Принудительный пересчёт |
+| `weng_status` | Document state: block count, errors, scope variable count, file path |
+| `weng_list_blocks` | Block list (`kind` filter, `limit`/`offset`) |
+| `weng_get_block` | Full block: result, LaTeX, dependencies, auto-plot preview meta |
+| `weng_add_block` | New block (`math`/`text`/`plot`/`program` + fields) |
+| `weng_update_block` | Edit content / plotFn / range / exportName |
+| `weng_move_block` / `weng_move_blocks` | Positions (affect evaluation order!) |
+| `weng_resize_block` | Manual size `w`/`h` |
+| `weng_remove_block` / `weng_clear` | Removal (clear requires `confirm: true`) |
+| `weng_evaluate` | Evaluate an expression in the live scope (read-only) |
+| `weng_get_scope` | All variables → values (solution check) |
+| `weng_get_plot_data` | Point series of a plot or auto-plot (`max_points`, downsampling) |
+| `weng_open` / `weng_save` | Project file (validation, migration) |
+| `weng_load_example` | `variant20` (electrodynamics) or `advanced` (matrices/programs) |
+| `weng_recalc` | Force recalculation |
 
-Ресурс `weng://document` — JSON-сводка документа.
+Resource `weng://document` — JSON summary of the document.
 
-## Типовые сценарии агента
+## Typical agent scenarios
 
-- «Посчитай вариант 20 и проверь `eps_check`»: `weng_load_example{variant20}` → `weng_get_scope`.
-- «Построй график»: `weng_add_block{kind: plot, plotFn: "sin(x); cos(x/2)"}` → `weng_get_plot_data{id}` → анализ точек.
-- «Что за ошибка?»: `weng_status` → `weng_get_block{id}` → `weng_update_block` / `weng_move_block` (перестановка чинит use-before-def).
-- «Продолжи расчёт с сохранением»: `weng_open{path}` → правки → `weng_save{}` → открыть файл в приложении.
+- "Solve variant 20 and check `eps_check`": `weng_load_example{variant20}` → `weng_get_scope`.
+- "Plot it": `weng_add_block{kind: plot, plotFn: "sin(x); cos(x/2)"}` → `weng_get_plot_data{id}` → analyze points.
+- "What's this error?": `weng_status` → `weng_get_block{id}` → `weng_update_block` / `weng_move_block` (reordering fixes use-before-def).
+- "Continue the calculation and keep it": `weng_open{path}` → edits → `weng_save{}` → open the file in the app.
 
-## Замечания
+## Notes
 
-- Порядок вычислений — строго сверху-вниз по `y`, как в приложении: ставьте определения выше использований.
-- Комплексные: `j`, функции `Re()`/`Im()`; матрицы `[1, 2; 3, 4]`; диапазоны `1..10`.
-- `weng_evaluate` не мутирует документ; для новых величин — `weng_add_block`.
-- Большие массивы точек режьте через `max_points` (stride-даунсэмплинг).
+- Evaluation order is strictly top-to-bottom by `y`, same as in the app: put definitions above their uses.
+- Complex numbers: `j`, `Re()`/`Im()` functions; matrices `[1, 2; 3, 4]`; ranges `1..10`.
+- `weng_evaluate` does not mutate the document; use `weng_add_block` for new quantities.
+- Trim large point arrays via `max_points` (stride downsampling).
