@@ -24,6 +24,7 @@ import {
   type Scope,
 } from '../../src/engine/mathEngine.js';
 import { samplePlotBlock } from '../../src/engine/plotSample.js';
+import { samplePlot3d } from '../../src/engine/plot3dSample.js';
 import { TEST_SCENARIO_LINES } from '../../src/data/testScenario.js';
 import { ADVANCED_DEMO } from '../../src/data/demoAdvanced.js';
 
@@ -54,7 +55,8 @@ function validateBlock(raw: unknown): MathBlockData | null {
   if (typeof b['x'] !== 'number' || typeof b['y'] !== 'number' || typeof b['rawInput'] !== 'string') return null;
   const id = typeof b['id'] === 'string' && b['id'] ? b['id'] : uuid();
   const kind: MathBlockData['kind'] =
-    b['kind'] === 'plot' || b['kind'] === 'program' || b['kind'] === 'text' ? b['kind'] : 'math';
+    b['kind'] === 'plot' || b['kind'] === 'plot3d' || b['kind'] === 'program' || b['kind'] === 'text' ? b['kind'] : 'math';
+  const numOrUndef = (v: unknown): number | undefined => (typeof v === 'number' && isFinite(v) ? v : undefined);
   return {
     ...blank(id, b['x'], b['y'], kind),
     ...b,
@@ -63,6 +65,9 @@ function validateBlock(raw: unknown): MathBlockData | null {
     isOutput: b['isOutput'] ?? false,
     plotPreview: null,
     exportName: typeof b['exportName'] === 'string' ? b['exportName'] : undefined,
+    plotMode: b['plotMode'] === 'surface' || b['plotMode'] === 'points' || b['plotMode'] === 'matrix' ? b['plotMode'] : undefined,
+    plotResolution: numOrUndef(b['plotResolution']),
+    plotWireframe: typeof b['plotWireframe'] === 'boolean' ? b['plotWireframe'] : undefined,
     w: typeof b['w'] === 'number' && (b['w'] as number) > 0 ? (b['w'] as number) : null,
     h: typeof b['h'] === 'number' && (b['h'] as number) > 0 ? (b['h'] as number) : null,
   };
@@ -96,7 +101,7 @@ function summarize(b: MathBlockData): BlockSummary {
     dependencies: b.dependencies,
     error: b.error,
     result: b.resultStr,
-    hasPlot: b.kind === 'plot' || !!b.plotPreview,
+    hasPlot: b.kind === 'plot' || b.kind === 'plot3d' || !!b.plotPreview,
   };
 }
 
@@ -136,7 +141,7 @@ server.tool(
   'weng_list_blocks',
   'Список блоков документа (id, тип, позиция, ввод, переменная, ошибка, результат)',
   {
-    kind: z.enum(['math', 'text', 'plot', 'program']).optional().describe('Фильтр по типу'),
+    kind: z.enum(['math', 'text', 'plot', 'plot3d', 'program']).optional().describe('Фильтр по типу'),
     limit: z.number().int().min(1).max(1000).default(200),
     offset: z.number().int().min(0).default(0),
   },
@@ -174,13 +179,18 @@ server.tool(
 );
 
 const AddBlockShape = {
-  kind: z.enum(['math', 'text', 'plot', 'program']).default('math'),
+  kind: z.enum(['math', 'text', 'plot', 'plot3d', 'program']).default('math'),
   x: z.number().default(80),
   y: z.number().default(80),
   rawInput: z.string().default('').describe('Текст блока; для math: "f := 10*10^9", "Z_c_abs =", "f(x) := sin(x)"'),
-  plotFn: z.string().optional().describe('Для plot: "sin(x); cos(x/2)"'),
+  plotFn: z.string().optional().describe('Для plot: "sin(x); cos(x/2)", для plot3d: "sin(sqrt(x^2+y^2))", матрица N×3, "X; Y; Z"'),
   plotXmin: z.number().optional(),
   plotXmax: z.number().optional(),
+  plotYmin: z.number().optional().describe('Для plot3d: минимум y'),
+  plotYmax: z.number().optional().describe('Для plot3d: максимум y'),
+  plotMode: z.enum(['auto', 'surface', 'points', 'matrix']).optional().describe('Для plot3d: режим'),
+  plotResolution: z.number().int().min(8).max(100).optional().describe('Для plot3d: разрешение сетки'),
+  plotWireframe: z.boolean().optional().describe('Для plot3d: каркас поверх поверхности'),
   exportName: z.string().optional().describe('Для program: переменная результата'),
 };
 
@@ -190,12 +200,18 @@ server.tool(
   AddBlockShape,
   async (args): Promise<CallToolResult> => {
     const id = uuid();
+    const is3d = args.kind === 'plot3d';
     const b: MathBlockData = {
       ...blank(id, args.x, args.y, args.kind),
-      rawInput: args.kind === 'plot' ? 'plot' : args.rawInput,
-      plotFn: args.plotFn ?? (args.kind === 'plot' ? args.rawInput || 'sin(x)' : undefined),
-      plotXmin: args.plotXmin ?? undefined,
-      plotXmax: args.plotXmax ?? undefined,
+      rawInput: args.kind === 'plot' ? 'plot' : is3d ? 'plot3d' : args.rawInput,
+      plotFn: args.plotFn ?? (args.kind === 'plot' ? args.rawInput || 'sin(x)' : is3d ? args.rawInput || 'sin(sqrt(x^2+y^2))' : undefined),
+      plotXmin: args.plotXmin ?? (is3d ? -5 : undefined),
+      plotXmax: args.plotXmax ?? (is3d ? 5 : undefined),
+      plotYmin: args.plotYmin ?? (is3d ? -5 : undefined),
+      plotYmax: args.plotYmax ?? (is3d ? 5 : undefined),
+      plotMode: args.plotMode ?? (is3d ? 'auto' : undefined),
+      plotResolution: args.plotResolution ?? (is3d ? 48 : undefined),
+      plotWireframe: args.plotWireframe ?? (is3d ? false : undefined),
       exportName: args.exportName ?? undefined,
     };
     blocks.push(b);
@@ -213,15 +229,25 @@ server.tool(
     plotFn: z.string().optional(),
     plotXmin: z.number().optional(),
     plotXmax: z.number().optional(),
+    plotYmin: z.number().optional(),
+    plotYmax: z.number().optional(),
+    plotMode: z.enum(['auto', 'surface', 'points', 'matrix']).optional(),
+    plotResolution: z.number().int().min(8).max(100).optional(),
+    plotWireframe: z.boolean().optional(),
     exportName: z.string().optional(),
   },
-  async ({ id, rawInput, plotFn, plotXmin, plotXmax, exportName }): Promise<CallToolResult> => {
+  async ({ id, rawInput, plotFn, plotXmin, plotXmax, plotYmin, plotYmax, plotMode, plotResolution, plotWireframe, exportName }): Promise<CallToolResult> => {
     const b = find(id);
     if (!b) return fail(`Блок ${id} не найден`);
     if (rawInput !== undefined) b.rawInput = rawInput;
     if (plotFn !== undefined) b.plotFn = plotFn;
     if (plotXmin !== undefined) b.plotXmin = plotXmin;
     if (plotXmax !== undefined) b.plotXmax = plotXmax;
+    if (plotYmin !== undefined) b.plotYmin = plotYmin;
+    if (plotYmax !== undefined) b.plotYmax = plotYmax;
+    if (plotMode !== undefined) b.plotMode = plotMode;
+    if (plotResolution !== undefined) b.plotResolution = plotResolution;
+    if (plotWireframe !== undefined) b.plotWireframe = plotWireframe;
     if (exportName !== undefined) b.exportName = exportName;
     refresh();
     return ok(summarize(find(id) as MathBlockData));
@@ -352,6 +378,51 @@ server.tool(
       ymax: p.ymax,
       xs: stride(p.xs, max_points),
       ys: stride(p.ys, max_points),
+    });
+  },
+);
+
+server.tool(
+  'weng_get_plot3d_data',
+  'Данные 3D-блока: поверхность {gx, gy, zs} или точки [{x,y,z}] + границы. Для plot3d-блока',
+  { id: z.string().describe('ID plot3d-блока'), max_points: z.number().int().min(8).max(4000).default(2500) },
+  async ({ id, max_points }): Promise<CallToolResult> => {
+    const b = find(id);
+    if (!b) return fail(`Блок ${id} не найден`);
+    if (b.kind !== 'plot3d') return fail('Блок не plot3d (для 2D используйте weng_get_plot_data)');
+    const s = samplePlot3d(b.plotFn ?? 'sin(sqrt(x^2+y^2))', lastScope, {
+      xmin: b.plotXmin ?? -5,
+      xmax: b.plotXmax ?? 5,
+      ymin: b.plotYmin ?? -5,
+      ymax: b.plotYmax ?? 5,
+      res: b.plotResolution ?? 48,
+      mode: b.plotMode ?? 'auto',
+    });
+    if (!s) return fail('Нет 3D-данных: проверьте выражение и диапазоны');
+    if (s.mode === 'points') {
+      return ok({
+        kind: 'plot3d', mode: 'points', expr: s.expr,
+        xmin: s.xmin, xmax: s.xmax, ymin: s.ymin, ymax: s.ymax, zmin: s.zmin, zmax: s.zmax,
+        count: s.pts.length, pts: stride(s.pts, max_points),
+      });
+    }
+    // surface: прореживаем сетку до max_points
+    const total = s.cols * s.rows;
+    const step = total > max_points ? Math.ceil(Math.sqrt(total / max_points)) : 1;
+    const gx: number[] = [];
+    const gy: number[] = [];
+    for (let c = 0; c < s.cols; c += step) gx.push(s.gx[c] as number);
+    for (let r = 0; r < s.rows; r += step) gy.push(s.gy[r] as number);
+    const zs: (number | null)[][] = [];
+    for (let r = 0; r < s.rows; r += step) {
+      const row: (number | null)[] = [];
+      for (let c = 0; c < s.cols; c += step) row.push(s.zs[r]?.[c] ?? null);
+      zs.push(row);
+    }
+    return ok({
+      kind: 'plot3d', mode: 'surface', expr: s.expr,
+      xmin: s.xmin, xmax: s.xmax, ymin: s.ymin, ymax: s.ymax, zmin: s.zmin, zmax: s.zmax,
+      cols: gx.length, rows: gy.length, gx, gy, zs,
     });
   },
 );

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import MathBlockView from './MathBlockView';
 import PlotBlockView from './PlotBlockView';
+import Plot3dBlockView from './Plot3dBlockView';
 import ProgramBlockView from './ProgramBlockView';
 
 const MIN_SCALE = 0.25;
@@ -318,6 +319,8 @@ export default function Canvas() {
         {list.map((b) =>
           b.kind === 'plot' ? (
             <PlotBlockView key={b.id} block={b} scale={view.k} />
+          ) : b.kind === 'plot3d' ? (
+            <Plot3dBlockView key={b.id} block={b} scale={view.k} />
           ) : b.kind === 'program' ? (
             <ProgramBlockView key={b.id} block={b} scale={view.k} />
           ) : (

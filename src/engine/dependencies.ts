@@ -17,10 +17,16 @@ export interface MathBlockData {
   definedVar: string | null;
   /** true, если последняя строка блока — вывод (expr / expr =): результат показываем инлайн */
   isOutput: boolean;
-  kind: 'math' | 'plot' | 'text' | 'program';
+  kind: 'math' | 'plot' | 'text' | 'program' | 'plot3d';
   plotFn?: string;
   plotXmin?: number;
   plotXmax?: number;
+  /** 3D: диапазон по y, режим, разрешение сетки, каркас поверх поверхности */
+  plotYmin?: number;
+  plotYmax?: number;
+  plotMode?: 'auto' | 'surface' | 'points' | 'matrix';
+  plotResolution?: number;
+  plotWireframe?: boolean;
   /** Имя переменной, в которую программный блок экспортирует результат */
   exportName?: string;
   /** Ручной размер: w — ширина региона/графика, h — высота графика. null = авто */
@@ -124,7 +130,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
 
   for (const b of ordered) {
     const cur = out[b.id];
-    if (b.kind === 'plot' || b.kind === 'text') {
+    if (b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'text') {
       cur.error = null;
       cur.dependencies = [];
       cur.definedVar = null;

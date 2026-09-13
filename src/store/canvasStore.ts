@@ -17,6 +17,7 @@ export interface CanvasState {
   recalcCounter: number;
   addBlock: (x: number, y: number, raw?: string) => void;
   addPlotBlock: (x: number, y: number, fn?: string) => void;
+  addPlot3dBlock: (x: number, y: number, fn?: string) => void;
   addProgramBlock: (x: number, y: number, raw?: string, exportName?: string) => void;
   updateInput: (id: string, raw: string) => void;
   setExportName: (id: string, name: string) => void;
@@ -75,7 +76,9 @@ function migrate(raw: unknown): MathBlockData | null {
   const b = raw as Partial<MathBlockData>;
   if (typeof b.x !== 'number' || typeof b.y !== 'number' || typeof b.rawInput !== 'string') return null;
   const id = typeof b.id === 'string' && b.id ? b.id : uuid();
-  const kind = b.kind === 'plot' || b.kind === 'program' || b.kind === 'text' ? b.kind : 'math';
+  const kind = b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'program' || b.kind === 'text' ? b.kind : 'math';
+  const numOrNull = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
+  const numOrUndef = (v: unknown): number | undefined => (typeof v === 'number' && isFinite(v) ? v : undefined);
   return {
     ...blank(id, b.x, b.y),
     ...b,
@@ -85,8 +88,13 @@ function migrate(raw: unknown): MathBlockData | null {
     isOutput: b.isOutput ?? false,
     plotPreview: null,
     exportName: typeof b.exportName === 'string' ? b.exportName : undefined,
-    w: typeof b.w === 'number' && b.w > 0 ? b.w : null,
-    h: typeof b.h === 'number' && b.h > 0 ? b.h : null,
+    plotYmin: numOrUndef(b.plotYmin),
+    plotYmax: numOrUndef(b.plotYmax),
+    plotMode: b.plotMode === 'surface' || b.plotMode === 'points' || b.plotMode === 'matrix' ? b.plotMode : undefined,
+    plotResolution: numOrUndef(b.plotResolution),
+    plotWireframe: typeof b.plotWireframe === 'boolean' ? b.plotWireframe : undefined,
+    w: numOrNull(b.w),
+    h: numOrNull(b.h),
   };
 }
 
@@ -143,6 +151,8 @@ function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathB
     if (
       x.kind !== y.kind || x.x !== y.x || x.y !== y.y || x.rawInput !== y.rawInput ||
       x.plotFn !== y.plotFn || x.plotXmin !== y.plotXmin || x.plotXmax !== y.plotXmax ||
+      x.plotYmin !== y.plotYmin || x.plotYmax !== y.plotYmax || x.plotMode !== y.plotMode ||
+      x.plotResolution !== y.plotResolution || x.plotWireframe !== y.plotWireframe ||
       x.exportName !== y.exportName || x.w !== y.w || x.h !== y.h
     ) return false;
   }
@@ -230,6 +240,19 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const id = uuid();
     const b: MathBlockData = {
       ...blank(id, x, y), rawInput: 'plot', kind: 'plot', plotFn: fn, plotXmin: -10, plotXmax: 10,
+    };
+    const next = withRecalc({ ...get().blocks, [id]: b });
+    persist(next);
+    set({ blocks: next, selectedIds: [id] });
+  },
+
+  addPlot3dBlock: (x, y, fn = 'sin(sqrt(x^2+y^2))') => {
+    pushHistory(get, set as SetFn, true);
+    const id = uuid();
+    const b: MathBlockData = {
+      ...blank(id, x, y), rawInput: 'plot3d', kind: 'plot3d', plotFn: fn,
+      plotXmin: -5, plotXmax: 5, plotYmin: -5, plotYmax: 5,
+      plotMode: 'auto', plotResolution: 48, plotWireframe: false,
     };
     const next = withRecalc({ ...get().blocks, [id]: b });
     persist(next);

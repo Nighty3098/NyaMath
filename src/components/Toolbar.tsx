@@ -2,12 +2,13 @@ import { useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { saveDocument } from '../lib/saveDocument';
 import FunctionPalette from './FunctionPalette';
-import { IDemo, IFx, IFormula, IGrid, IOpen, IPlot, IProgram, IRecalc, IRedo, ISave, IUndo, IX, IZap, ISun, IMoon } from './Icon';
+import { IDemo, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IProgram, IRecalc, IRedo, ISave, IUndo, IX, IZap, ISun, IMoon } from './Icon';
 
 export default function Toolbar() {
   const blocks = useCanvasStore((s) => s.blocks);
   const addBlock = useCanvasStore((s) => s.addBlock);
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
+  const addPlot3dBlock = useCanvasStore((s) => s.addPlot3dBlock);
   const addProgramBlock = useCanvasStore((s) => s.addProgramBlock);
   const loadTestScenario = useCanvasStore((s) => s.loadTestScenario);
   const loadAdvancedDemo = useCanvasStore((s) => s.loadAdvancedDemo);
@@ -65,6 +66,7 @@ export default function Toolbar() {
           onClick={() => addBlock(200 + Math.random() * 200, 150 + Math.random() * 120)}
         />
         <Btn icon={<IPlot />} label="plot" title="Новый график" onClick={() => addPlotBlock(600, 200)} />
+        <Btn icon={<IPlot3d />} label="3d" title="Новый 3D-график: f(x,y), точки, матрица" onClick={() => addPlot3dBlock(600, 260)} />
         <Btn
           icon={<IProgram />}
           label="≣"
