@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="192"
+   height="192"
+   fill="none"
+   version="1.1"
+   viewBox="0 0 192 192"
+   id="svg3"
+   sodipodi:docname="Wengineering.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs3" />
+  <sodipodi:namedview
+     id="namedview3"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="3.0833333"
+     inkscape:cx="84.810811"
+     inkscape:cy="76.864865"
+     inkscape:window-width="1265"
+     inkscape:window-height="1265"
+     inkscape:window-x="20"
+     inkscape:window-y="20"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="g3" />
+  <g
+     clip-rule="evenodd"
+     fill-rule="evenodd"
+     id="g3">
+    <path
+       d="m20 162c0 5.523 4.4772 10 10 10h109.44l32.56-32.178v-109.82c0-5.5228-4.477-10-10-10h-132c-5.5228 0-10 4.4772-10 10v132z"
+       fill="#F9DE81"
+       id="path1" />
+    <path
+       d="m 96.369801,49.936493 a 2.0002,2.0002 0 0 0 -1.9687,2.0312 v 6.1094 a 14,14 0 0 0 -12.398,13.891001 14,14 0 0 0 5.0391,10.758 l -24.445,50.632996 a 6.0006,6.0006 0 1 0 10.805,5.2187 l 18.789,-38.929996 c 1.1514,-0.99148 2.421,-1.6797 3.8125,-1.6797 1.3829,0 2.6431,0.683 3.789099,1.6641 l 18.805,38.944996 a 6.0006,6.0006 0 1 0 10.805,-5.2187 l -24.445,-50.640996 a 14,14 0 0 0 5.0469,-10.75 14,14 0 0 0 -11.601999,-13.773001 v -6.2266 a 2.0002,2.0002 0 0 0 -2.0313,-2.0312 z m -0.36718,16.031 a 6,6 0 0 1 5.999999,6.000001 6,6 0 0 1 -5.999999,6 6,6 0 0 1 -6,-6 6,6 0 0 1 6,-6.000001 z"
+       style="fill:#8e6f60;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke fill markers;fill-opacity:1"
+       id="path5" />
+    <path
+       d="m140 172 32-32h-22c-5.523 0-10 4.477-10 10v22z"
+       fill="#C39A54"
+       id="path3" />
+  </g>
+</svg>
