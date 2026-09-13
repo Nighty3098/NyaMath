@@ -3,9 +3,25 @@ import { v4 as uuid } from 'uuid';
 import { recalculateAll, type MathBlockData } from '../engine/dependencies';
 import { TEST_SCENARIO_LINES } from '../data/testScenario';
 import { ADVANCED_DEMO } from '../data/demoAdvanced';
-import { loadTheme, saveTheme, type ThemeName } from '../theme';
+import { loadTheme, saveTheme, THEMES, type ThemeName } from '../theme';
+import { loadLang, setLangState, t, type Lang } from '../i18n';
 
 const STORAGE_KEY = 'wengineering-doc-v1';
+const GRID_KEY = 'wengineering-show-grid';
+
+function loadGrid(): boolean {
+  try {
+    return localStorage.getItem(GRID_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function saveGrid(v: boolean) {
+  try {
+    localStorage.setItem(GRID_KEY, v ? '1' : '0');
+  } catch { /* ignore */ }
+}
 
 export interface CanvasState {
   blocks: Record<string, MathBlockData>;
@@ -13,7 +29,10 @@ export interface CanvasState {
   selectedIds: string[];
   showGrid: boolean;
   theme: ThemeName;
+  setTheme: (t: ThemeName) => void;
   toggleTheme: () => void;
+  lang: Lang;
+  setLang: (l: Lang) => void;
   recalcCounter: number;
   addBlock: (x: number, y: number, raw?: string) => void;
   addPlotBlock: (x: number, y: number, fn?: string) => void;
@@ -171,14 +190,29 @@ function scheduleRecalc(get: () => CanvasState, set: SetFn, ms: number) {
 export const useCanvasStore = create<CanvasState>((set, get) => ({
   blocks: restore(),
   selectedIds: [],
-  // чистый лист как в Mathcad — сетка по желанию
-  showGrid: false,
+  // чистый лист как в Mathcad — сетка по желанию (выбор хранится в localStorage)
+  showGrid: loadGrid(),
   theme: loadTheme(),
+  setTheme: (t) =>
+    set(() => {
+      saveTheme(t);
+      return { theme: t };
+    }),
   toggleTheme: () =>
     set((s) => {
-      const next: ThemeName = s.theme === 'gruvbox' ? 'light' : 'gruvbox';
+      const i = THEMES.findIndex((t) => t.id === s.theme);
+      const next = THEMES[(i + 1) % THEMES.length].id;
       saveTheme(next);
       return { theme: next };
+    }),
+  lang: loadLang(),
+  setLang: (l) =>
+    set((s) => {
+      setLangState(l);
+      // ошибки движка хранятся готовыми строками — пересчитать на новом языке
+      const next = withRecalc(get().blocks);
+      persist(next);
+      return { lang: l, blocks: next, recalcCounter: s.recalcCounter + 1 };
     }),
   recalcCounter: 0,
   past: [],
@@ -341,7 +375,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       selectedIds: s.selectedIds.includes(id) ? s.selectedIds.filter((s2) => s2 !== id) : [...s.selectedIds, id],
     })),
 
-  toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
+  toggleGrid: () =>
+    set((s) => {
+      const showGrid = !s.showGrid;
+      saveGrid(showGrid);
+      return { showGrid };
+    }),
 
   recalc: () => {
     const next = withRecalc(get().blocks);
@@ -402,8 +441,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   loadDocument: (data) => {
-    if (!Array.isArray(data)) return { ok: false, message: 'Файл не похож на проект Wengineering (ожидается массив блоков)' };
-    if (data.length > 5000) return { ok: false, message: 'Слишком много блоков (>5000)' };
+    if (!Array.isArray(data)) return { ok: false, message: t('doc.notArray') };
+    if (data.length > 5000) return { ok: false, message: t('doc.tooMany') };
     const rec: Record<string, MathBlockData> = {};
     let bad = 0;
     for (const item of data) {
@@ -411,12 +450,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       if (b) rec[b.id] = b;
       else bad++;
     }
-    if (!Object.keys(rec).length) return { ok: false, message: 'В файле нет корректных блоков' };
+    if (!Object.keys(rec).length) return { ok: false, message: t('doc.noBlocks') };
     pushHistory(get, set as SetFn, true);
     const next = withRecalc(rec);
     persist(next);
     set((s) => ({ blocks: next, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
-    return { ok: true, message: `Загружено блоков: ${Object.keys(rec).length}${bad ? ` (пропущено битых: ${bad})` : ''}` };
+    return { ok: true, message: t('doc.loaded', { n: Object.keys(rec).length, bad: bad ? t('doc.loadedBad', { bad }) : '' }) };
   },
 
   updatePlot: (id, patch) => {

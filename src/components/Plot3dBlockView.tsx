@@ -8,6 +8,7 @@ import { samplePlot3d } from '../engine/plot3dSample';
 import type { Plot3dMode, Plot3dSample } from '../engine/plot3dSample';
 import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
+import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IResize, IX } from './Icon';
 
@@ -40,6 +41,8 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
   const blocks = useCanvasStore((s) => s.blocks);
   const theme = useCanvasStore((s) => s.theme);
   const pal = plotPalettes[theme];
+  // подписка ради перерендера при смене языка
+  useCanvasStore((s) => s.lang);
 
   const boxRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
@@ -66,7 +69,7 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
 
   const { sample, err } = useMemo<{ sample: Plot3dSample | null; err: string | null }>(() => {
     try {
-      if (!(xmin < xmax) || !(ymin < ymax)) return { sample: null, err: 'Нужно xmin < xmax и ymin < ymax' };
+      if (!(xmin < xmax) || !(ymin < ymax)) return { sample: null, err: t('p3.needRange') };
       const mathBlocks = Object.values(blocks).filter((b) => b.kind === 'math');
       const { scope } = recalculateAll(mathBlocks);
       const base = { ...createBaseScope(), ...scope };
@@ -74,7 +77,7 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
       if (!s) {
         return {
           sample: null,
-          err: 'Нет 3D-данных: f(x,y) → поверхность • матрица N×3 → точки • матрица M×N → высоты • X; Y; Z → точки',
+          err: t('p3.noDataHint'),
         };
       }
       return { sample: s, err: null };
@@ -132,14 +135,16 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
     const disposables: THREE.BufferGeometry[] = [];
     const tmpC = new THREE.Color();
 
-    // Рамка бокса + сетка пола
+    // Рамка бокса + сетка пола (цвета из палитры темы)
+    const axisHex = new THREE.Color(pal.axis).getHex();
+    const frameHex = new THREE.Color(pal.frame).getHex();
     const box = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(SX, SY, SZ)),
-      new THREE.LineBasicMaterial({ color: theme === 'light' ? 0x94a3b8 : 0x665c54, transparent: true, opacity: 0.9 }),
+      new THREE.LineBasicMaterial({ color: axisHex, transparent: true, opacity: 0.9 }),
     );
     scene.add(box);
     disposables.push(box.geometry);
-    const grid = new THREE.GridHelper(SX, 8, theme === 'light' ? 0x94a3b8 : 0x665c54, theme === 'light' ? 0xcbd5e1 : 0x3c3836);
+    const grid = new THREE.GridHelper(SX, 8, axisHex, frameHex);
     grid.rotation.x = Math.PI / 2;
     grid.position.z = -SZ / 2;
     const gm = grid.material as THREE.Material;
@@ -202,7 +207,7 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
       if (wire) {
         const wmesh = new THREE.Mesh(
           g,
-          new THREE.MeshBasicMaterial({ wireframe: true, color: theme === 'light' ? 0x334155 : 0xebdbb2, transparent: true, opacity: 0.22 }),
+          new THREE.MeshBasicMaterial({ wireframe: true, color: new THREE.Color(pal.legend).getHex(), transparent: true, opacity: 0.22 }),
         );
         wmesh.position.z = 0.001;
         scene.add(wmesh);
@@ -316,9 +321,9 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
   const selected = selectedIds.includes(block.id);
   const sub =
     sample?.mode === 'points'
-      ? `точек: ${sample.pts.length} • z ∈ [${fmt(sample.zmin)}, ${fmt(sample.zmax)}]`
+      ? t('p3.points', { n: sample.pts.length, lo: fmt(sample.zmin), hi: fmt(sample.zmax) })
       : sample
-        ? `сетка ${sample.cols}×${sample.rows} • z ∈ [${fmt(sample.zmin)}, ${fmt(sample.zmax)}]`
+        ? t('p3.grid', { c: sample.cols, r: sample.rows, lo: fmt(sample.zmin), hi: fmt(sample.zmax) })
         : '';
 
   return (
@@ -344,7 +349,7 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
         >
           <span className="text-[var(--faint)] text-[12px]" aria-hidden="true">⠿</span>
           <span className="text-[11px] uppercase tracking-wider text-[var(--accent-ink)]">plot3d</span>
-          <label htmlFor={`plot3dfn-${block.id}`} className="sr-only">Выражение 3D: f(x,y), матрица N×3 или X; Y; Z</label>
+          <label htmlFor={`plot3dfn-${block.id}`} className="sr-only">{t('p3.fnLabel')}</label>
           <input
             id={`plot3dfn-${block.id}`}
             className="math-input flex-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-2 py-0.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent-line)] select-text"
@@ -353,48 +358,48 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             spellCheck={false}
-            title="f(x,y) — поверхность • матрица N×3 — точки • матрица M×N — высоты • X; Y; Z — точки"
+            title={t('p3.fnTitle')}
           />
           <button
             type="button"
             className="p-1.5 text-[var(--faint)] hover:text-[var(--danger)] cursor-pointer"
             onClick={() => removeBlock(block.id)}
             onPointerDown={(e) => e.stopPropagation()}
-            aria-label="Удалить 3D-график"
+            aria-label={t('p3.delete')}
           >
             <IX />
           </button>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap text-[12px] text-[var(--ink-soft)] mb-1">
-          <label>xmin <input type="number" aria-label="Минимум x" className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={xmin} onChange={(e) => updatePlot(block.id, { plotXmin: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-          <label>xmax <input type="number" aria-label="Максимум x" className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={xmax} onChange={(e) => updatePlot(block.id, { plotXmax: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-          <label>ymin <input type="number" aria-label="Минимум y" className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={ymin} onChange={(e) => updatePlot(block.id, { plotYmin: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-          <label>ymax <input type="number" aria-label="Максимум y" className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={ymax} onChange={(e) => updatePlot(block.id, { plotYmax: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-          <label>режим
-            <select aria-label="Режим 3D" className="ml-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)]" value={mode} onChange={(e) => updatePlot(block.id, { plotMode: e.target.value as Plot3dMode })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+          <label>xmin <input type="number" aria-label={t('p3.xmin')} className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={xmin} onChange={(e) => updatePlot(block.id, { plotXmin: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
+          <label>xmax <input type="number" aria-label={t('p3.xmax')} className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={xmax} onChange={(e) => updatePlot(block.id, { plotXmax: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
+          <label>ymin <input type="number" aria-label={t('p3.ymin')} className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={ymin} onChange={(e) => updatePlot(block.id, { plotYmin: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
+          <label>ymax <input type="number" aria-label={t('p3.ymax')} className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={ymax} onChange={(e) => updatePlot(block.id, { plotYmax: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
+          <label>{t('p3.modeLabel')}
+            <select aria-label={t('p3.mode')} className="ml-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)]" value={mode} onChange={(e) => updatePlot(block.id, { plotMode: e.target.value as Plot3dMode })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
               <option value="auto">auto</option>
               <option value="surface">surface</option>
               <option value="points">points</option>
               <option value="matrix">matrix</option>
             </select>
           </label>
-          <label>сетка <input type="number" aria-label="Разрешение сетки" min={N_MIN} max={N_MAX} step={1} className="w-[60px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={res} onChange={(e) => updatePlot(block.id, { plotResolution: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
+          <label>{t('p3.resLabel')} <input type="number" aria-label={t('p3.res')} min={N_MIN} max={N_MAX} step={1} className="w-[60px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={res} onChange={(e) => updatePlot(block.id, { plotResolution: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
           <label className="inline-flex items-center gap-1 cursor-pointer">
-            <input type="checkbox" aria-label="Каркас поверх" className="w-4 h-4 accent-[var(--accent-line)]" checked={wire} onChange={(e) => updatePlot(block.id, { plotWireframe: e.target.checked })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} />
-            каркас
+            <input type="checkbox" aria-label={t('p3.wire')} className="w-4 h-4 accent-[var(--accent-line)]" checked={wire} onChange={(e) => updatePlot(block.id, { plotWireframe: e.target.checked })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} />
+            {t('p3.wireLabel')}
           </label>
         </div>
 
         {err || !sample ? (
-          <div className="text-[var(--danger)] text-[12px]" role="alert">⚠ {err ?? 'Нет данных'}</div>
+          <div className="text-[var(--danger)] text-[12px]" role="alert">⚠ {err ?? t('p3.noData')}</div>
         ) : (
           <div
             ref={viewRef}
             className="relative rounded-lg border border-[var(--line)] overflow-hidden"
             style={{ width: pw - 24, height: ph, background: pal.svgBg, touchAction: 'none' }}
             role="img"
-            aria-label={`3D-график ${fnText}, режим ${sample.mode}. ${sub}`}
+            aria-label={t('p3.aria', { fn: fnText, mode: sample.mode, sub })}
             onPointerDown={(e) => e.stopPropagation()}
             onDoubleClick={(e) => e.stopPropagation()}
           >
@@ -409,12 +414,12 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
           </div>
         )}
         <div className="text-[11px] text-[var(--faint)] mt-1 truncate">
-          drag — вращать • колесо — зум • ПКМ — панорама • навести — координаты • видит все переменные
+          {t('p3.footer')}
         </div>
         <span
           className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize opacity-0 group-hover:opacity-100 text-[var(--faint)] hover:text-[var(--accent-line)] select-none"
           style={{ opacity: selected ? 1 : undefined }}
-          title="Потянуть — размер 3D-блока"
+          title={t('p3.resize')}
           onPointerDown={onResizeDown}
           onPointerMove={onResizeMove}
           onPointerUp={onResizeUp}

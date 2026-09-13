@@ -4,6 +4,8 @@ import MathBlockView from './MathBlockView';
 import PlotBlockView from './PlotBlockView';
 import Plot3dBlockView from './Plot3dBlockView';
 import ProgramBlockView from './ProgramBlockView';
+import { isLightTheme } from '../theme';
+import { t } from '../i18n';
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 3;
@@ -254,13 +256,16 @@ export default function Canvas() {
 
   const list = Object.values(blocks);
   const theme = useCanvasStore((s) => s.theme);
+  // подписка ради перерендера при смене языка
+  useCanvasStore((s) => s.lang);
 
   // Бесконечная сетка в экранных координатах: шаг и сдвиг следуют за камерой
   const mod = (a: number, n: number) => ((a % n) + n) % n;
   const gridStyle: React.CSSProperties = showGrid
     ? (() => {
-        const minor = theme === 'light' ? 'rgba(15,23,42,0.07)' : 'rgba(235,219,178,0.05)';
-        const major = theme === 'light' ? 'rgba(15,23,42,0.13)' : 'rgba(235,219,178,0.11)';
+        const light = isLightTheme(theme);
+        const minor = light ? 'rgba(15,23,42,0.07)' : 'rgba(235,219,178,0.05)';
+        const major = light ? 'rgba(15,23,42,0.13)' : 'rgba(235,219,178,0.11)';
         const s1 = 14 * view.k;
         const s2 = 140 * view.k;
         return {
@@ -281,7 +286,7 @@ export default function Canvas() {
       ref={containerRef}
       className="flex-1 relative overflow-hidden bg-[var(--sheet)] select-none"
       role="application"
-      aria-label="Бесконечный рабочий лист: двойной клик создаёт блок, перетаскивание с зажатой кнопкой выделяет"
+      aria-label={t('c.aria')}
       style={{
         cursor: panning ? 'grabbing' : spaceDown ? 'grab' : 'default',
         touchAction: 'none',
@@ -293,7 +298,7 @@ export default function Canvas() {
       onPointerCancel={endPointer}
       onDoubleClick={onDoubleClick}
       onContextMenu={(e) => e.preventDefault()}
-      title="ЛКМ-drag — выделение • Space/MMB/RMB — панорама • колесо — панорама • Ctrl+колесо — зум • двойной клик — новый блок"
+      title={t('c.title')}
     >
       {/* рамка выделения */}
       {marquee && (
@@ -335,8 +340,8 @@ export default function Canvas() {
           <div className="text-center">
             <div className="text-2xl text-slate-200 font-semibold">Wengineering</div>
             <div className="text-sm text-slate-400 mt-1">
-              Двойной клик — новый блок • <span className="math-input">:=</span> присваивание •{' '}
-              <span className="math-input">=</span> вывод
+              {t('c.emptyNew')} • <span className="math-input">:=</span> {t('c.emptyAssign')} •{' '}
+              <span className="math-input">=</span> {t('c.emptyOutput')}
             </div>
           </div>
         </div>
@@ -346,9 +351,9 @@ export default function Canvas() {
       <div
         className="absolute right-3 bottom-3 flex items-center gap-1 bg-[var(--chrome)]/95 border border-[var(--chrome-line)] rounded-lg p-1"
         role="toolbar"
-        aria-label="Масштаб листа"
+        aria-label={t('c.zoomBar')}
       >
-        <ZoomBtn onClick={() => zoomCenter(1 / 1.25)} label="Уменьшить масштаб">
+        <ZoomBtn onClick={() => zoomCenter(1 / 1.25)} label={t('c.zoomOut')}>
           −
         </ZoomBtn>
         <button
@@ -359,12 +364,12 @@ export default function Canvas() {
             targetRef.current = n;
             setView(n);
           }}
-          title="Сбросить вид (100%)"
-          aria-label="Сбросить масштаб к 100 процентам"
+          title={t('c.resetView')}
+          aria-label={t('c.resetZoom')}
         >
           {Math.round(view.k * 100)}%
         </button>
-        <ZoomBtn onClick={() => zoomCenter(1.25)} label="Увеличить масштаб">
+        <ZoomBtn onClick={() => zoomCenter(1.25)} label={t('c.zoomIn')}>
           +
         </ZoomBtn>
       </div>

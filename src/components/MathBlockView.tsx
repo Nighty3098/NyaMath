@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import katex from 'katex';
 import type { MathBlockData } from '../engine/dependencies';
 import { useCanvasStore } from '../store/canvasStore';
+import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IGrip, IResize, IX } from './Icon';
 import MiniPlot from './MiniPlot';
@@ -23,6 +24,8 @@ function MathBlockView({ block, scale }: Props) {
   const select = useCanvasStore((s) => s.select);
   const toggleSelect = useCanvasStore((s) => s.toggleSelect);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
+  // подписка ради перерендера при смене языка
+  useCanvasStore((s) => s.lang);
   const [editing, setEditing] = useState(block.rawInput === '' && block.kind === 'math');
   const [draft, setDraft] = useState(block.rawInput);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -107,7 +110,7 @@ function MathBlockView({ block, scale }: Props) {
         }}
         title={
           block.dependencies.length
-            ? `${block.rawInput}\nзависит от: ${block.dependencies.join(', ')}`
+            ? `${block.rawInput}\n${t('m.depends')} ${block.dependencies.join(', ')}`
             : block.rawInput
         }
       >
@@ -115,7 +118,7 @@ function MathBlockView({ block, scale }: Props) {
         <span
           className="absolute -left-6 top-1/2 -translate-y-1/2 p-1.5 text-[var(--faint)] cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 select-none"
           style={{ opacity: selected ? 1 : undefined }}
-          title="Тянуть для перемещения (группу — если выделено несколько)"
+          title={t('ui.dragGrip')}
           onPointerDown={onGripDown}
           onPointerMove={onGripMove}
           onPointerUp={onGripUp}
@@ -129,8 +132,8 @@ function MathBlockView({ block, scale }: Props) {
           type="button"
           className="absolute -right-7 top-0 p-1.5 text-[var(--faint)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 cursor-pointer"
           style={{ opacity: selected ? 1 : undefined }}
-          title="Удалить (Del)"
-          aria-label="Удалить блок"
+          title={t('ui.delete')}
+          aria-label={t('m.deleteBlock')}
           onClick={(e) => {
             e.stopPropagation();
             removeBlock(block.id);
@@ -143,7 +146,7 @@ function MathBlockView({ block, scale }: Props) {
         <span
           className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize opacity-0 group-hover:opacity-100 text-[var(--faint)] hover:text-[var(--accent-line)] select-none"
           style={{ opacity: selected ? 1 : undefined }}
-          title="Потянуть — ширина блока"
+          title={t('ui.resizeW')}
           onPointerDown={onResizeDown}
           onPointerMove={onResizeMove}
           onPointerUp={onResizeUp}
@@ -210,12 +213,12 @@ function MathBlockView({ block, scale }: Props) {
           <div
             className="text-[14px] leading-6 text-[var(--ink)] cursor-text whitespace-pre-wrap break-words"
             onClick={onBodyClick}
-            title="Клик — редактировать • Shift+клик — в выделение"
+            title={t('ui.editHint')}
           >
-            {comment || <span className="text-[var(--faint)]">// комментарий</span>}
+            {comment || <span className="text-[var(--faint)]">{t('m.commentPh')}</span>}
           </div>
         ) : (
-          <div className="cursor-text" onClick={onBodyClick} title="Клик — редактировать • Shift+клик — в выделение">
+          <div className="cursor-text" onClick={onBodyClick} title={t('ui.editHint')}>
             {html ? (
               <div className="text-[17px] leading-8" dangerouslySetInnerHTML={{ __html: html }} />
             ) : (
@@ -230,18 +233,18 @@ function MathBlockView({ block, scale }: Props) {
               <div className="mt-1" onClick={(e) => e.stopPropagation()}>
                 <MiniPlot sample={block.plotPreview} />
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[11px] text-[var(--faint)]">автографик f(x), x ∈ [-10, 10]</span>
+                  <span className="text-[11px] text-[var(--faint)]">{t('m.autoplot')}</span>
                   <button
                     type="button"
                     className="ml-auto text-[11px] px-2 min-h-[28px] rounded-lg border border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--accent-line)] hover:text-[var(--ink)] cursor-pointer"
-                    title="Создать полноценный plot-блок с этой функцией"
+                    title={t('m.expandTitle')}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (block.plotPreview) addPlotBlock(block.x, block.y + 260, block.plotPreview.expr);
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
-                    Развернуть в plot ⤢
+                    {t('m.expandPlot')}
                   </button>
                 </div>
               </div>

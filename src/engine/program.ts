@@ -21,6 +21,7 @@ import {
   preprocessRanges,
   type Scope,
 } from './mathEngine';
+import { t } from '../i18n';
 
 const MAX_WHILE = 100000;
 const MAX_FOR = 100000;
@@ -108,7 +109,7 @@ type Signal = null | 'break' | 'continue' | { ret: unknown };
 export function runProgram(src: string, globals: Scope): ProgramResult {
   const lines = toLines(src);
   if (lines.length > MAX_LINES) {
-    return { value: null, error: `Слишком длинная программа (>${MAX_LINES} строк)`, errorLine: null };
+    return { value: null, error: t('e.progTooLong', { n: MAX_LINES }), errorLine: null };
   }
   const local: Scope = {};
   const scopeOf = (): Scope => ({ ...globals, ...local });
@@ -129,18 +130,18 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
       const c = v as { re: number; im: number };
       return c.re !== 0 || c.im !== 0;
     }
-    throw { line: lineNo, msg: 'Условие должно быть логическим (сравнения: ==, !=, <, >, <=, >=, and/or/not)' };
+    throw { line: lineNo, msg: t('e.condLogic') };
   };
 
   const toArray = (v: unknown, lineNo: number): unknown[] => {
     if (typeof v === 'number') {
       const n = Math.floor(v);
-      if (!isFinite(n) || n < 0 || n > MAX_FOR) throw { line: lineNo, msg: `for: число должно быть 0..${MAX_FOR}` };
+      if (!isFinite(n) || n < 0 || n > MAX_FOR) throw { line: lineNo, msg: t('e.forNumber', { max: MAX_FOR }) };
       return Array.from({ length: n }, (_, k) => k + 1);
     }
     if (math.isMatrix(v)) return (v as { toArray: () => unknown[] }).toArray().flat(Infinity);
     if (Array.isArray(v)) return v.flat(Infinity);
-    throw { line: lineNo, msg: 'for ожидает вектор, диапазон a..b или число n (→ 1..n)' };
+    throw { line: lineNo, msg: t('e.forExpect') };
   };
 
   // exec(start, end) — выполнить lines[start..end), вернуть сигнал
@@ -189,7 +190,7 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
       if (f) {
         const endIdx = findEnd(i, end, no);
         const arr = toArray(evalExpr(rangeToSeq(f[2]), no), no);
-        if (arr.length > MAX_FOR) throw { line: no, msg: `for: слишком много итераций (>${MAX_FOR})` };
+        if (arr.length > MAX_FOR) throw { line: no, msg: t('e.forIters', { max: MAX_FOR }) };
         for (const item of arr) {
           local[f[1]] = item;
           const res = exec(i + 1, endIdx);
@@ -208,7 +209,7 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
         const endIdx = findEnd(i, end, no);
         let iter = 0;
         while (truthy(evalExpr(w[1], no), no)) {
-          if (++iter > MAX_WHILE) throw { line: no, msg: `while: превышен лимит ${MAX_WHILE} итераций (бесконечный цикл?)` };
+          if (++iter > MAX_WHILE) throw { line: no, msg: t('e.whileLimit', { max: MAX_WHILE }) };
           const res = exec(i + 1, endIdx);
           if (res.sig === 'break') break;
           if (res.sig === 'continue') continue;
@@ -220,7 +221,7 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
       }
 
       if (/^(end|else)$/i.test(text)) {
-        throw { line: no, msg: `"${text}" без открывающей конструкции (if/for/while)` };
+        throw { line: no, msg: t('e.strayEnd', { text }) };
       }
 
       // --- выражение ---
@@ -241,7 +242,7 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
         depth--;
       }
     }
-    throw { line: lineNo, msg: 'Нет закрывающего "end" для конструкции' };
+    throw { line: lineNo, msg: t('e.noEnd') };
   };
   const findEnd = blockEnd;
   const findIfBounds = (from: number, end: number, lineNo: number): { elseIdx: number; endIdx: number } => {
@@ -257,7 +258,7 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
         elseIdx = k;
       }
     }
-    throw { line: lineNo, msg: 'Нет закрывающего "end" для if' };
+    throw { line: lineNo, msg: t('e.noEndIf') };
   };
 
   try {
@@ -268,7 +269,7 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
   } catch (e) {
     const ce = e as { line?: number; msg?: string };
     if (ce && typeof ce.line === 'number') {
-      return { value: null, error: `Строка ${ce.line}: ${ce.msg ?? 'ошибка'}`, errorLine: ce.line };
+      return { value: null, error: t('e.lineErr', { line: ce.line, msg: ce.msg ?? t('e.lineErrDefault') }), errorLine: ce.line };
     }
     return { value: null, error: humanizeMathError(e), errorLine: null };
   }

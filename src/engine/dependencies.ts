@@ -1,6 +1,7 @@
 import { createBaseScope, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, toLatex, valueToLatex, type Scope } from './mathEngine';
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
+import { t } from '../i18n';
 
 export interface MathBlockData {
   id: string;
@@ -139,7 +140,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
       continue;
     }
     if (cyclic.has(b.id)) {
-      cur.error = 'Cyclic dependency: цикл в определениях переменных';
+      cur.error = t('e.cyclicDep');
       cur.resultStr = '';
       cur.resultLatex = '';
       cur.resultValue = null;

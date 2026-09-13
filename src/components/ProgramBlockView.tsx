@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import katex from 'katex';
 import type { MathBlockData } from '../engine/dependencies';
 import { useCanvasStore } from '../store/canvasStore';
+import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IGrip, IResize, IX } from './Icon';
 
@@ -22,6 +23,8 @@ function ProgramBlockView({ block, scale }: Props) {
   const select = useCanvasStore((s) => s.select);
   const toggleSelect = useCanvasStore((s) => s.toggleSelect);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
+  // подписка ради перерендера при смене языка
+  useCanvasStore((s) => s.lang);
   const [editing, setEditing] = useState(block.rawInput === '');
   const [draft, setDraft] = useState(block.rawInput);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -78,13 +81,13 @@ function ProgramBlockView({ block, scale }: Props) {
           if (e.shiftKey) toggleSelect(block.id);
           else select(block.id);
         }}
-        title="Программный блок: if/for/while (клик — редактировать • Shift+клик — в выделение)"
+        title={t('g.title')}
       >
         {/* ручка */}
         <span
           className="absolute -left-7 top-2 p-1.5 text-[var(--faint)] cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 select-none"
           style={{ opacity: selected ? 1 : undefined }}
-          title="Тянуть для перемещения (группу — если выделено несколько)"
+          title={t('ui.dragGrip')}
           onPointerDown={onGripDown}
           onPointerMove={onGripMove}
           onPointerUp={onGripUp}
@@ -97,7 +100,7 @@ function ProgramBlockView({ block, scale }: Props) {
         <span
           className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize opacity-0 group-hover:opacity-100 text-[var(--faint)] hover:text-[var(--accent-line)] select-none"
           style={{ opacity: selected ? 1 : undefined }}
-          title="Потянуть — ширина блока"
+          title={t('ui.resizeW')}
           onPointerDown={onResizeDown}
           onPointerMove={onResizeMove}
           onPointerUp={onResizeUp}
@@ -115,14 +118,14 @@ function ProgramBlockView({ block, scale }: Props) {
         >
           <span className="text-[10px] uppercase tracking-wider text-[var(--faint)]">program →</span>
           <label htmlFor={`export-${block.id}`} className="sr-only">
-            Переменная для результата программы
+            {t('g.exportLabel')}
           </label>
           <input
             id={`export-${block.id}`}
             className="math-input w-20 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1 text-[12px] text-[var(--ink)] outline-none focus:border-[var(--accent-line)] select-text"
             value={block.exportName ?? ''}
-            placeholder="имя"
-            title="Переменная документа для результата (пусто — только вычислить)"
+            placeholder={t('g.exportPh')}
+            title={t('g.exportTitle')}
             onChange={(e) => setExportName(block.id, e.target.value.replace(/[^A-Za-z0-9_]/g, ''))}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
@@ -131,8 +134,8 @@ function ProgramBlockView({ block, scale }: Props) {
           <button
             type="button"
             className="ml-auto p-1 text-[var(--faint)] hover:text-[var(--danger)] cursor-pointer"
-            title="Удалить (Del)"
-            aria-label="Удалить программный блок"
+            title={t('ui.delete')}
+            aria-label={t('g.deleteBlock')}
             onClick={(e) => {
               e.stopPropagation();
               removeBlock(block.id);
@@ -189,9 +192,9 @@ function ProgramBlockView({ block, scale }: Props) {
                 setEditing(true);
               }
             }}
-            title="Клик — редактировать • Shift+клик — в выделение"
+            title={t('ui.editHint')}
           >
-            {block.rawInput || <span className="text-[var(--faint)]">// пустая программа</span>}
+            {block.rawInput || <span className="text-[var(--faint)]">{t('g.emptyProg')}</span>}
           </pre>
         )}
 

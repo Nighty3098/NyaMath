@@ -3,6 +3,7 @@
  * Все функции/константы — чистый клиентский JS поверх mathjs, zero-latency.
  */
 import type { MathJsInstance } from 'mathjs';
+import { t, type LText, type PackId } from '../i18n';
 
 export type Scope = Record<string, unknown>;
 
@@ -23,11 +24,11 @@ export function buildPackScope(math: MathJsInstance): Scope {
     const A = Number(a);
     const B = Number(b);
     const S = step === undefined ? 1 : Number(step);
-    if (!isFinite(A) || !isFinite(B) || !isFinite(S)) throw new Error('seq: аргументы должны быть числами');
-    if (S === 0) throw new Error('seq: шаг не может быть 0');
+    if (!isFinite(A) || !isFinite(B) || !isFinite(S)) throw new Error(t('e.seqArgs'));
+    if (S === 0) throw new Error(t('e.seqStep'));
     const n = Math.floor((B - A) / S + 1e-9) + 1;
     if (n < 0) return math.matrix([]);
-    if (n > 100000) throw new Error('seq: диапазон слишком большой (>100000). Уменьшите шаг/границы');
+    if (n > 100000) throw new Error(t('e.seqRange'));
     const out: number[] = [];
     for (let k = 0; k < n; k++) out.push(Number((A + k * S).toPrecision(12)));
     return math.matrix(out);
@@ -37,7 +38,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
     const A = Number(a);
     const B = Number(b);
     const N = n === undefined ? 50 : Math.floor(Number(n));
-    if (N < 2 || N > 100000) throw new Error('linspace: n должно быть 2..100000');
+    if (N < 2 || N > 100000) throw new Error(t('e.linspaceN'));
     const out: number[] = [];
     for (let k = 0; k < N; k++) out.push(Number((A + ((B - A) * k) / (N - 1)).toPrecision(12)));
     return math.matrix(out);
@@ -65,7 +66,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
     cols,
     rms: (v: unknown) => {
       const f = flat(v).map(Number);
-      if (!f.length) throw new Error('rms: пустой вектор');
+      if (!f.length) throw new Error(t('e.rmsEmpty'));
       return Math.sqrt(f.reduce((s, x) => s + x * x, 0) / f.length);
     },
     sinc: (x: unknown) => {
@@ -127,9 +128,9 @@ export const PACK_NAMES = [
 /* ---------------- Палитра вставки ---------------- */
 
 export interface Snippet {
-  pack: string;
-  label: string;
-  hint: string;
+  pack: PackId;
+  label: LText;
+  hint: LText;
   code: string;
   kind: 'math' | 'plot' | 'program';
   exportName?: string;
@@ -137,39 +138,39 @@ export interface Snippet {
 
 export const SNIPPETS: Snippet[] = [
   // матрицы
-  { pack: 'Матрицы', label: 'Матрица 2×2', hint: '[ ; ] — строки', code: 'A := [1, 2; 3, 4]', kind: 'math' },
-  { pack: 'Матрицы', label: 'Определитель', hint: 'det(M)', code: 'det(A) =', kind: 'math' },
-  { pack: 'Матрицы', label: 'Обратная', hint: 'inv(M)', code: 'B := inv(A)', kind: 'math' },
-  { pack: 'Матрицы', label: 'Транспонирование', hint: "A' или transpose", code: 'transpose(A) =', kind: 'math' },
-  { pack: 'Матрицы', label: 'Решение СЛАУ', hint: 'x = A⁻¹·b', code: 'x := inv(A)*[5; 6]', kind: 'math' },
-  { pack: 'Матрицы', label: 'Диапазон 1..n', hint: 'вектор-столбец значений', code: 'n := seq(0, 10)', kind: 'math' },
-  { pack: 'Матрицы', label: 'linspace', hint: 'N точек [a,b]', code: 't := linspace(0, 1, 11)', kind: 'math' },
+  { pack: 'matrices', label: { ru: 'Матрица 2×2', en: '2×2 matrix' }, hint: { ru: '[ ; ] — строки', en: '[ ; ] — rows' }, code: 'A := [1, 2; 3, 4]', kind: 'math' },
+  { pack: 'matrices', label: { ru: 'Определитель', en: 'Determinant' }, hint: { ru: 'det(M)', en: 'det(M)' }, code: 'det(A) =', kind: 'math' },
+  { pack: 'matrices', label: { ru: 'Обратная', en: 'Inverse' }, hint: { ru: 'inv(M)', en: 'inv(M)' }, code: 'B := inv(A)', kind: 'math' },
+  { pack: 'matrices', label: { ru: 'Транспонирование', en: 'Transpose' }, hint: { ru: "A' или transpose", en: "A' or transpose" }, code: 'transpose(A) =', kind: 'math' },
+  { pack: 'matrices', label: { ru: 'Решение СЛАУ', en: 'Linear system' }, hint: { ru: 'x = A⁻¹·b', en: 'x = A⁻¹·b' }, code: 'x := inv(A)*[5; 6]', kind: 'math' },
+  { pack: 'matrices', label: { ru: 'Диапазон 1..n', en: 'Range 1..n' }, hint: { ru: 'вектор-столбец значений', en: 'column vector of values' }, code: 'n := seq(0, 10)', kind: 'math' },
+  { pack: 'matrices', label: { ru: 'linspace', en: 'linspace' }, hint: { ru: 'N точек [a,b]', en: 'N points [a,b]' }, code: 't := linspace(0, 1, 11)', kind: 'math' },
   // статистика
-  { pack: 'Статистика', label: 'Выборка', hint: 'вектор данных', code: 'data := [2.3, 3.1, 2.8, 4.0, 3.5, 2.9]', kind: 'math' },
-  { pack: 'Статистика', label: 'Среднее', hint: 'mean(v)', code: 'mean(data) =', kind: 'math' },
-  { pack: 'Статистика', label: 'СКО', hint: 'std(v)', code: 'std(data) =', kind: 'math' },
-  { pack: 'Статистика', label: 'RMS', hint: 'среднеквадратичное', code: 'rms(data) =', kind: 'math' },
-  { pack: 'Статистика', label: 'Медиана/квантиль', hint: 'median, quantileSeq', code: 'median(data) =', kind: 'math' },
+  { pack: 'stats', label: { ru: 'Выборка', en: 'Sample' }, hint: { ru: 'вектор данных', en: 'data vector' }, code: 'data := [2.3, 3.1, 2.8, 4.0, 3.5, 2.9]', kind: 'math' },
+  { pack: 'stats', label: { ru: 'Среднее', en: 'Mean' }, hint: { ru: 'mean(v)', en: 'mean(v)' }, code: 'mean(data) =', kind: 'math' },
+  { pack: 'stats', label: { ru: 'СКО', en: 'Std dev' }, hint: { ru: 'std(v)', en: 'std(v)' }, code: 'std(data) =', kind: 'math' },
+  { pack: 'stats', label: { ru: 'RMS', en: 'RMS' }, hint: { ru: 'среднеквадратичное', en: 'root mean square' }, code: 'rms(data) =', kind: 'math' },
+  { pack: 'stats', label: { ru: 'Медиана/квантиль', en: 'Median/quantile' }, hint: { ru: 'median, quantileSeq', en: 'median, quantileSeq' }, code: 'median(data) =', kind: 'math' },
   // физика
-  { pack: 'Физика', label: 'Фотон 650 нм', hint: 'E = h·c/λ', code: 'E_ph := h_planck*c_light/(650*10^-9)', kind: 'math' },
-  { pack: 'Физика', label: 'Энергия в эВ', hint: '/q_e', code: 'E_eV := E_ph/q_e', kind: 'math' },
-  { pack: 'Физика', label: 'Тепловая энергия', hint: 'k_B·T', code: 'E_th := k_B*300', kind: 'math' },
+  { pack: 'physics', label: { ru: 'Фотон 650 нм', en: '650 nm photon' }, hint: { ru: 'E = h·c/λ', en: 'E = h·c/λ' }, code: 'E_ph := h_planck*c_light/(650*10^-9)', kind: 'math' },
+  { pack: 'physics', label: { ru: 'Энергия в эВ', en: 'Energy in eV' }, hint: { ru: '/q_e', en: '/q_e' }, code: 'E_eV := E_ph/q_e', kind: 'math' },
+  { pack: 'physics', label: { ru: 'Тепловая энергия', en: 'Thermal energy' }, hint: { ru: 'k_B·T', en: 'k_B·T' }, code: 'E_th := k_B*300', kind: 'math' },
   // телеком
-  { pack: 'Телеком', label: 'Мощность в дБм', hint: 'Вт → дБм', code: 'dBm(20*10^-3) =', kind: 'math' },
-  { pack: 'Телеком', label: 'дБм в ватты', hint: 'обратно', code: 'WdBm(13) =', kind: 'math' },
-  { pack: 'Телеком', label: 'FSPL', hint: 'потери, d — м, f — Гц', code: 'L := fspl_dB(1000, 2.4*10^9)', kind: 'math' },
-  { pack: 'Телеком', label: 'Длина волны', hint: 'λ(f)', code: 'lambda_f(2.4*10^9) =', kind: 'math' },
-  { pack: 'Телеком', label: 'Отношение в дБ', hint: '10·lg', code: 'dB(100) =', kind: 'math' },
+  { pack: 'telecom', label: { ru: 'Мощность в дБм', en: 'Power in dBm' }, hint: { ru: 'Вт → дБм', en: 'W → dBm' }, code: 'dBm(20*10^-3) =', kind: 'math' },
+  { pack: 'telecom', label: { ru: 'дБм в ватты', en: 'dBm to watts' }, hint: { ru: 'обратно', en: 'reverse' }, code: 'WdBm(13) =', kind: 'math' },
+  { pack: 'telecom', label: { ru: 'FSPL', en: 'FSPL' }, hint: { ru: 'потери, d — м, f — Гц', en: 'loss, d — m, f — Hz' }, code: 'L := fspl_dB(1000, 2.4*10^9)', kind: 'math' },
+  { pack: 'telecom', label: { ru: 'Длина волны', en: 'Wavelength' }, hint: { ru: 'λ(f)', en: 'λ(f)' }, code: 'lambda_f(2.4*10^9) =', kind: 'math' },
+  { pack: 'telecom', label: { ru: 'Отношение в дБ', en: 'Ratio in dB' }, hint: { ru: '10·lg', en: '10·lg' }, code: 'dB(100) =', kind: 'math' },
   // программы
   {
-    pack: 'Программы', label: 'Факториал (for)', hint: 'цикл, экспорт fact',
+    pack: 'programs', label: { ru: 'Факториал (for)', en: 'Factorial (for)' }, hint: { ru: 'цикл, экспорт fact', en: 'loop, exports fact' },
     code: 'f := 1\nfor i in 2..n\n  f := f*i\nend\nf', kind: 'program', exportName: 'fact',
   },
   {
-    pack: 'Программы', label: 'Сумма ряда (while+if)', hint: 'while, if/else',
+    pack: 'programs', label: { ru: 'Сумма ряда (while+if)', en: 'Series sum (while+if)' }, hint: { ru: 'while, if/else', en: 'while, if/else' },
     code: 's := 0\nk := 0\nwhile s < 100\n  k := k + 1\n  if k/2 == round(k/2)\n    s := s + k\n  else\n    s := s + 1\n  end\nend\ns', kind: 'program',
   },
   // графики
-  { pack: 'Графики', label: 'sin + cos', hint: 'две серии через ;', code: 'sin(x); cos(x/2)', kind: 'plot' },
-  { pack: 'Графики', label: 'Затухание', hint: 'экспонента × синус', code: 'exp(-x/5)*sin(x)', kind: 'plot' },
+  { pack: 'plots', label: { ru: 'sin + cos', en: 'sin + cos' }, hint: { ru: 'две серии через ;', en: 'two series via ;' }, code: 'sin(x); cos(x/2)', kind: 'plot' },
+  { pack: 'plots', label: { ru: 'Затухание', en: 'Damping' }, hint: { ru: 'экспонента × синус', en: 'exponential × sine' }, code: 'exp(-x/5)*sin(x)', kind: 'plot' },
 ];

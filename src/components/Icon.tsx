@@ -47,6 +47,11 @@ export const IPlot3d = () => (
     <path d="M2.5 4.8 8 7.8l5.5-3M8 7.8v6.4" />
   </Svg>
 );
+export const IBlank = () => (
+  <Svg>
+    <rect x="3.5" y="2" width="9" height="12" rx="1.5" />
+  </Svg>
+);
 export const IProgram = () => (
   <Svg>
     <path d="M5.5 4 2.5 8l3 4M10.5 4l3 4-3 4" />

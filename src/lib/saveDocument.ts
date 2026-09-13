@@ -1,4 +1,5 @@
 import type { MathBlockData } from '../engine/dependencies';
+import { t } from '../i18n';
 
 /**
  * Сохранение документа в файл.
@@ -29,11 +30,7 @@ export async function saveDocument(blocks: Record<string, MathBlockData>): Promi
     try {
       if (!localStorage.getItem('weng-save-hint-shown')) {
         localStorage.setItem('weng-save-hint-shown', '1');
-        alert(
-          'Ваш браузер не даёт сайтам выбирать папку (например, Firefox).\n' +
-            'Чтобы выбирать путь и имя при сохранении, включите в настройках браузера:\n' +
-            '«Всегда спрашивать, куда сохранять файлы» (Настройки → Основные → Файлы и приложения).',
-        );
+        alert(t('save.hint'));
       }
     } catch { /* localStorage недоступен — просто скачиваем */ }
   }

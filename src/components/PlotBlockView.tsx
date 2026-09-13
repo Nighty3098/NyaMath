@@ -3,6 +3,7 @@ import { evaluateLine, createBaseScope, preprocessJ } from '../engine/mathEngine
 import { recalculateAll } from '../engine/dependencies';
 import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
+import { t } from '../i18n';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IResize, IX } from './Icon';
@@ -62,6 +63,8 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   const blocks = useCanvasStore((s) => s.blocks);
   const theme = useCanvasStore((s) => s.theme);
   const pal = plotPalettes[theme];
+  // подписка ради перерендера при смене языка
+  useCanvasStore((s) => s.lang);
 
   const fnText = block.plotFn ?? 'sin(x)';
   const xmin = block.plotXmin ?? -10;
@@ -78,8 +81,8 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
         .map((s) => s.trim())
         .filter(Boolean)
         .slice(0, 5);
-      if (!exprs.length) return fail('Пусто: введите f(x), несколько — через «;»');
-      if (!(xmin < xmax)) return fail('Нужно xmin < xmax');
+      if (!exprs.length) return fail(t('p2.empty'));
+      if (!(xmin < xmax)) return fail(t('p2.needRange'));
 
       const mathBlocks = Object.values(blocks).filter((b) => b.kind === 'math');
       const { scope } = recalculateAll(mathBlocks);
@@ -153,7 +156,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
         out.push({ expr, color: pal.series[si % pal.series.length], d: '', _xs: xs, _ys: ys } as Series & { _xs: number[]; _ys: number[] });
       });
 
-      if (!allY.length) return { ...fail('Нет данных: проверьте выражения'), series: out };
+      if (!allY.length) return { ...fail(t('p2.noData')), series: out };
       let lo = Math.min(...allY);
       let hi = Math.max(...allY);
       if (lo === hi) {
@@ -223,7 +226,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           </span>
           <span className="text-[11px] uppercase tracking-wider text-[var(--accent-ink)]">plot</span>
           <label htmlFor={`plotfn-${block.id}`} className="sr-only">
-            Функции графика, несколько — через точку с запятой
+            {t('p2.fnLabel')}
           </label>
           <input
             id={`plotfn-${block.id}`}
@@ -233,14 +236,14 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             spellCheck={false}
-            title="f(x); несколько серий через «;». Без x — вектор из документа по индексу"
+            title={t('p2.fnTitle')}
           />
           <button
             type="button"
             className="p-1.5 text-[var(--faint)] hover:text-[var(--danger)] cursor-pointer"
             onClick={() => removeBlock(block.id)}
             onPointerDown={(e) => e.stopPropagation()}
-            aria-label="Удалить график"
+            aria-label={t('p2.delete')}
           >
             <IX />
           </button>
@@ -250,7 +253,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             xmin{' '}
             <input
               type="number"
-              aria-label="Минимум x"
+              aria-label={t('p2.xmin')}
               className="w-[70px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
               value={xmin}
               onChange={(e) => updatePlot(block.id, { plotXmin: Number(e.target.value) })}
@@ -262,7 +265,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             xmax{' '}
             <input
               type="number"
-              aria-label="Максимум x"
+              aria-label={t('p2.xmax')}
               className="w-[70px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
               value={xmax}
               onChange={(e) => updatePlot(block.id, { plotXmax: Number(e.target.value) })}
@@ -285,7 +288,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             className="rounded-lg border border-[var(--line)]"
             style={{ background: pal.svgBg }}
             role="img"
-            aria-label={`График ${fnText}: y от ${fmtTick(ymin)} до ${fmtTick(ymax)}, x от ${xmin} до ${xmax}`}
+            aria-label={t('p2.aria', { fn: fnText, lo: fmtTick(ymin), hi: fmtTick(ymax), x0: xmin, x1: xmax })}
           >
             {/* сетка + тики */}
             {xticks.map((t) => (
@@ -324,13 +327,13 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           </svg>
         )}
         <div className="text-[11px] text-[var(--faint)] mt-1 truncate">
-          y(x) = {fnText} • видит все переменные документа • x: [{xmin}, {xmax}]
+          {t('p2.footer', { fn: fnText, x0: xmin, x1: xmax })}
         </div>
         {/* ручка размера */}
         <span
           className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize opacity-0 group-hover:opacity-100 text-[var(--faint)] hover:text-[var(--accent-line)] select-none"
           style={{ opacity: selected ? 1 : undefined }}
-          title="Потянуть — размер графика"
+          title={t('p2.resize')}
           onPointerDown={onResizeDown}
           onPointerMove={onResizeMove}
           onPointerUp={onResizeUp}

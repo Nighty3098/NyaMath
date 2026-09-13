@@ -10,6 +10,7 @@
  */
 import { create, all, type MathJsInstance } from 'mathjs';
 import { buildPackScope, PACK_NAMES } from './packs';
+import { t } from '../i18n';
 
 export const math: MathJsInstance = create(all, {});
 
@@ -218,7 +219,7 @@ export function evaluateLine(rawInput: string, scope: Scope): EvalResult {
       // висячее `=` (`x := 5 =`) — только флаг показа, в вычислении не участвует
       const rhsClean = parsed.expr.replace(/=+\s*$/, '').trim();
       if (rhsClean === '') {
-        return { value: null, error: 'Пустое выражение справа от ":="' };
+        return { value: null, error: t('e.emptyRight') };
       }
       if (parsed.isFunctionDef) {
         // f(x) := body  ->  f(x) = body для mathjs
@@ -228,10 +229,10 @@ export function evaluateLine(rawInput: string, scope: Scope): EvalResult {
         return { value: scope[parsed.definedVar as string] ?? null, error: null };
       }
       if (!isValidVarName(parsed.lhs)) {
-        return { value: null, error: `Некорректное имя переменной: "${parsed.lhs}"` };
+        return { value: null, error: t('e.badVar', { name: parsed.lhs }) };
       }
       if (parsed.lhs === 'i') {
-        return { value: null, error: 'Нельзя переопределять константу "i"' };
+        return { value: null, error: t('e.constI') };
       }
       const rhsPre = preprocessRanges(preprocessJ(rhsClean, false));
       const value = math.evaluate(rhsPre, scope);
@@ -255,23 +256,23 @@ export function evaluateLine(rawInput: string, scope: Scope): EvalResult {
   }
 }
 
-/** Человекочитаемые сообщения об ошибках mathjs (RU). */
+/** Человекочитаемые сообщения об ошибках mathjs (локализованы через i18n). */
 export function humanizeMathError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (/Undefined symbol/i.test(msg)) {
     const m = msg.match(/Undefined symbol\s+(\S+)/i);
-    return m ? `Неопределённая переменная: ${m[1]} (объявите её в блоке выше)` : 'Неопределённая переменная';
+    return m ? t('e.undefVar', { name: m[1] }) : t('e.undef');
   }
-  if (/Division by zero/i.test(msg)) return 'Деление на ноль';
-  if (/Cannot convert|Unexpected|Value expected|Parenthesis|Syntax/i.test(msg)) return `Синтаксическая ошибка: ${msg}`;
-  if (/cyclic|recursion|stack/i.test(msg)) return 'Циклическая зависимость / переполнение рекурсии';
+  if (/Division by zero/i.test(msg)) return t('e.divZero');
+  if (/Cannot convert|Unexpected|Value expected|Parenthesis|Syntax/i.test(msg)) return t('e.syntax', { msg });
+  if (/cyclic|recursion|stack/i.test(msg)) return t('e.cyclic');
   return msg.slice(0, 220);
 }
 
 /** Форматирование результата для отображения (числа, комплексные, матрицы). */
 export function formatResult(value: unknown): string {
   if (value === null || value === undefined) return '';
-  if (typeof value === 'function') return 'f(x) — функция определена';
+  if (typeof value === 'function') return t('e.funcDefined');
   try {
     // mathjs Complex
     if (math.isComplex(value)) {
@@ -405,7 +406,7 @@ function entryLatex(v: unknown): string {
 /** Значение → LaTeX для красивого вывода результата (KaTeX). '' = нечего показать. */
 export function valueToLatex(value: unknown): string {
   if (value === null || value === undefined) return '';
-  if (typeof value === 'function') return '\\text{функция определена}';
+  if (typeof value === 'function') return t('e.funcDefinedTex');
   if (typeof value === 'number') return numLatex(value);
   if (typeof value === 'boolean') return `\\text{${value}}`;
   if (typeof value === 'string') return `\\text{${escapeLatex(value).slice(0, 120)}}`;

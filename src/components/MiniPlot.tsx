@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import type { PlotSample } from '../engine/plotSample';
 import { plotPalettes } from '../theme';
+import { t } from '../i18n';
 import { useCanvasStore } from '../store/canvasStore';
 
 const VW = 400;
@@ -13,6 +14,8 @@ const PB = 20;
 /** Компактное превью автографика под формулой. */
 function MiniPlot({ sample }: { sample: PlotSample }) {
   const theme = useCanvasStore((s) => s.theme);
+  // подписка ради перерендера при смене языка
+  useCanvasStore((s) => s.lang);
   const pal = plotPalettes[theme];
   const color = pal.series[0];
 
@@ -39,7 +42,7 @@ function MiniPlot({ sample }: { sample: PlotSample }) {
       className="w-full max-w-[420px] h-auto rounded-lg border border-[var(--line)]"
       style={{ background: pal.svgBg }}
       role="img"
-      aria-label={`Автографик ${sample.label}: y от ${f(sample.ymin)} до ${f(sample.ymax)}`}
+      aria-label={t('mini.aria', { label: sample.label, lo: f(sample.ymin), hi: f(sample.ymax) })}
     >
       {/* нулевая ось */}
       {zeroY !== null && (

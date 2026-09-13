@@ -1,0 +1,421 @@
+/**
+ * Локализация RU/EN. Выбор хранится в localStorage (ключ LANG_KEY),
+ * по умолчанию — язык браузера (ru → 'ru', иначе 'en').
+ *
+ * Компоненты подписываются на `lang` из стора и вызывают t() в рендере.
+ * Движок (mathEngine/program/packs/dependencies) вызывает t() в момент
+ * формирования ошибки; при смене языка стор делает пересчёт, поэтому
+ * ошибки перегенерируются уже на новом языке.
+ */
+import type { ThemeName } from './theme';
+
+export type Lang = 'ru' | 'en';
+
+const LANG_KEY = 'wengineering-lang';
+
+let current: Lang = detect();
+
+function detect(): Lang {
+  try {
+    const v = localStorage.getItem(LANG_KEY);
+    if (v === 'ru' || v === 'en') return v;
+    if (typeof navigator !== 'undefined' && navigator.language?.toLowerCase().startsWith('ru')) return 'ru';
+    return 'en';
+  } catch {
+    return 'ru';
+  }
+}
+
+export function loadLang(): Lang {
+  return current;
+}
+
+export function getLang(): Lang {
+  return current;
+}
+
+/** Синхронизировать состояние модуля (вызывает стор при setLang). */
+export function setLangState(l: Lang) {
+  current = l;
+  try {
+    localStorage.setItem(LANG_KEY, l);
+  } catch { /* ignore */ }
+  if (typeof document !== 'undefined') document.documentElement.lang = l;
+}
+
+type Params = Record<string, string | number>;
+
+const ru = {
+  'menu.file': 'Файл',
+  'menu.insert': 'Вставка',
+  'menu.edit': 'Правка',
+  'menu.view': 'Вид',
+  'menu.examples': 'Примеры',
+  'menu.help': 'Справка',
+  'menu.main': 'Главное меню',
+  'menu.newMath': 'Новый мат-блок',
+  'menu.save': 'Сохранить проект…',
+  'menu.open': 'Открыть проект…',
+  'menu.clear': 'Очистить холст',
+  'menu.insMath': 'Мат-блок f(x)',
+  'menu.insPlot': 'График plot',
+  'menu.ins3d': '3D-график',
+  'menu.insProg': 'Программный блок',
+  'menu.insPal': 'Палитра функций…',
+  'menu.undo': 'Отменить',
+  'menu.redo': 'Вернуть',
+  'menu.recalc': 'Пересчитать всё',
+  'menu.grid': 'Сетка',
+  'menu.ex20': 'Вариант 20 · электродинамика',
+  'menu.exdemo': 'Демо · матрицы и программы',
+  'menu.welcome': 'Показать приветствие',
+  'menu.language': 'Язык',
+  'confirm.clear': 'Очистить холст?',
+
+  'app.badJson': 'Не удалось прочитать файл: это не корректный JSON',
+  'doc.notArray': 'Файл не похож на проект Wengineering (ожидается массив блоков)',
+  'doc.tooMany': 'Слишком много блоков (>5000)',
+  'doc.noBlocks': 'В файле нет корректных блоков',
+  'doc.loaded': 'Загружено блоков: {n}{bad}',
+  'doc.loadedBad': ' (пропущено битых: {bad})',
+  'save.hint':
+    'Ваш браузер не даёт сайтам выбирать папку (например, Firefox).\n' +
+    'Чтобы выбирать путь и имя при сохранении, включите в настройках браузера:\n' +
+    '«Всегда спрашивать, куда сохранять файлы» (Настройки → Основные → Файлы и приложения).',
+
+  'w.aria': 'Добро пожаловать в Wengineering',
+  'w.close': 'Закрыть приветствие',
+  'w.tag': 'Инженерный лист: формулы, графики и программы.',
+  'w.formula': 'Формула',
+  'w.plot': 'График',
+  'w.plotSub': 'sin(x) · векторы',
+  'w.plot3d': '3D-график',
+  'w.plot3dSub': 'f(x,y) · точки',
+  'w.program': 'Программа',
+  'w.demo1': 'Демо 1',
+  'w.demo2': 'Демо 2',
+  'w.openFile': 'Открыть файл…',
+  'w.blank': 'Чистый лист',
+  'w.creator': 'Создатель:',
+
+  'pal.aria': 'Палитра функций',
+  'pal.insert': 'ƒx Вставка',
+  'pal.searchLabel': 'Поиск функции',
+  'pal.searchPh': 'поиск: матрица, дБм, for…',
+  'pal.close': 'Закрыть палитру',
+  'pal.empty': 'Ничего не найдено',
+  'pal.footerMatrices': 'Матрицы:',
+  'pal.footerIndex': 'индекс',
+  'pal.footerFrom1': '(с 1)',
+  'pal.footerRanges': 'диапазоны',
+
+  'c.aria': 'Бесконечный рабочий лист: двойной клик создаёт блок, перетаскивание с зажатой кнопкой выделяет',
+  'c.title': 'ЛКМ-drag — выделение • Space/MMB/RMB — панорама • колесо — панорама • Ctrl+колесо — зум • двойной клик — новый блок',
+  'c.emptyNew': 'Двойной клик — новый блок',
+  'c.emptyAssign': 'присваивание',
+  'c.emptyOutput': 'вывод',
+  'c.zoomBar': 'Масштаб листа',
+  'c.zoomOut': 'Уменьшить масштаб',
+  'c.zoomIn': 'Увеличить масштаб',
+  'c.resetView': 'Сбросить вид (100%)',
+  'c.resetZoom': 'Сбросить масштаб к 100 процентам',
+
+  'ui.dragGrip': 'Тянуть для перемещения (группу — если выделено несколько)',
+  'ui.delete': 'Удалить (Del)',
+  'ui.resizeW': 'Потянуть — ширина блока',
+  'ui.editHint': 'Клик — редактировать • Shift+клик — в выделение',
+
+  'm.depends': 'зависит от:',
+  'm.deleteBlock': 'Удалить блок',
+  'm.commentPh': '// комментарий',
+  'm.autoplot': 'автографик f(x), x ∈ [-10, 10]',
+  'm.expandPlot': 'Развернуть в plot ⤢',
+  'm.expandTitle': 'Создать полноценный plot-блок с этой функцией',
+
+  'p2.fnLabel': 'Функции графика, несколько — через точку с запятой',
+  'p2.fnTitle': 'f(x); несколько серий через «;». Без x — вектор из документа по индексу',
+  'p2.delete': 'Удалить график',
+  'p2.xmin': 'Минимум x',
+  'p2.xmax': 'Максимум x',
+  'p2.empty': 'Пусто: введите f(x), несколько — через «;»',
+  'p2.needRange': 'Нужно xmin < xmax',
+  'p2.noData': 'Нет данных: проверьте выражения',
+  'p2.aria': 'График {fn}: y от {lo} до {hi}, x от {x0} до {x1}',
+  'p2.footer': 'y(x) = {fn} • видит все переменные документа • x: [{x0}, {x1}]',
+  'p2.resize': 'Потянуть — размер графика',
+
+  'p3.fnLabel': 'Выражение 3D: f(x,y), матрица N×3 или X; Y; Z',
+  'p3.fnTitle': 'f(x,y) — поверхность • матрица N×3 — точки • матрица M×N — высоты • X; Y; Z — точки',
+  'p3.delete': 'Удалить 3D-график',
+  'p3.xmin': 'Минимум x',
+  'p3.xmax': 'Максимум x',
+  'p3.ymin': 'Минимум y',
+  'p3.ymax': 'Максимум y',
+  'p3.mode': 'Режим 3D',
+  'p3.modeLabel': 'режим',
+  'p3.res': 'Разрешение сетки',
+  'p3.resLabel': 'сетка',
+  'p3.wire': 'Каркас поверх',
+  'p3.wireLabel': 'каркас',
+  'p3.noData': 'Нет данных',
+  'p3.noDataHint': 'Нет 3D-данных: f(x,y) → поверхность • матрица N×3 → точки • матрица M×N — высоты • X; Y; Z → точки',
+  'p3.needRange': 'Нужно xmin < xmax и ymin < ymax',
+  'p3.aria': '3D-график {fn}, режим {mode}. {sub}',
+  'p3.points': 'точек: {n} • z ∈ [{lo}, {hi}]',
+  'p3.grid': 'сетка {c}×{r} • z ∈ [{lo}, {hi}]',
+  'p3.footer': 'drag — вращать • колесо — зум • ПКМ — панорама • навести — координаты • видит все переменные',
+  'p3.resize': 'Потянуть — размер 3D-блока',
+
+  'g.title': 'Программный блок: if/for/while (клик — редактировать • Shift+клик — в выделение)',
+  'g.exportLabel': 'Переменная для результата программы',
+  'g.exportPh': 'имя',
+  'g.exportTitle': 'Переменная документа для результата (пусто — только вычислить)',
+  'g.deleteBlock': 'Удалить программный блок',
+  'g.emptyProg': '// пустая программа',
+
+  'mini.aria': 'Автографик {label}: y от {lo} до {hi}',
+
+  'e.emptyRight': 'Пустое выражение справа от ":="',
+  'e.badVar': 'Некорректное имя переменной: "{name}"',
+  'e.constI': 'Нельзя переопределять константу "i"',
+  'e.undefVar': 'Неопределённая переменная: {name} (объявите её в блоке выше)',
+  'e.undef': 'Неопределённая переменная',
+  'e.divZero': 'Деление на ноль',
+  'e.syntax': 'Синтаксическая ошибка: {msg}',
+  'e.cyclic': 'Циклическая зависимость / переполнение рекурсии',
+  'e.cyclicDep': 'Cyclic dependency: цикл в определениях переменных',
+  'e.funcDefined': 'f(x) — функция определена',
+  'e.funcDefinedTex': '\\text{функция определена}',
+  'e.progTooLong': 'Слишком длинная программа (>{n} строк)',
+  'e.condLogic': 'Условие должно быть логическим (сравнения: ==, !=, <, >, <=, >=, and/or/not)',
+  'e.forNumber': 'for: число должно быть 0..{max}',
+  'e.forExpect': 'for ожидает вектор, диапазон a..b или число n (→ 1..n)',
+  'e.forIters': 'for: слишком много итераций (>{max})',
+  'e.whileLimit': 'while: превышен лимит {max} итераций (бесконечный цикл?)',
+  'e.strayEnd': '"{text}" без открывающей конструкции (if/for/while)',
+  'e.noEnd': 'Нет закрывающего "end" для конструкции',
+  'e.noEndIf': 'Нет закрывающего "end" для if',
+  'e.lineErr': 'Строка {line}: {msg}',
+  'e.lineErrDefault': 'ошибка',
+  'e.seqArgs': 'seq: аргументы должны быть числами',
+  'e.seqStep': 'seq: шаг не может быть 0',
+  'e.seqRange': 'seq: диапазон слишком большой (>100000). Уменьшите шаг/границы',
+  'e.linspaceN': 'linspace: n должно быть 2..100000',
+  'e.rmsEmpty': 'rms: пустой вектор',
+};
+
+export type StrKey = keyof typeof ru;
+
+const en: Record<StrKey, string> = {
+  'menu.file': 'File',
+  'menu.insert': 'Insert',
+  'menu.edit': 'Edit',
+  'menu.view': 'View',
+  'menu.examples': 'Examples',
+  'menu.help': 'Help',
+  'menu.main': 'Main menu',
+  'menu.newMath': 'New math block',
+  'menu.save': 'Save project…',
+  'menu.open': 'Open project…',
+  'menu.clear': 'Clear canvas',
+  'menu.insMath': 'Math block f(x)',
+  'menu.insPlot': 'Plot graph',
+  'menu.ins3d': '3D graph',
+  'menu.insProg': 'Program block',
+  'menu.insPal': 'Function palette…',
+  'menu.undo': 'Undo',
+  'menu.redo': 'Redo',
+  'menu.recalc': 'Recalculate all',
+  'menu.grid': 'Grid',
+  'menu.ex20': 'Variant 20 · electrodynamics',
+  'menu.exdemo': 'Demo · matrices and programs',
+  'menu.welcome': 'Show welcome dialog',
+  'menu.language': 'Language',
+  'confirm.clear': 'Clear the canvas?',
+
+  'app.badJson': 'Could not read the file: not valid JSON',
+  'doc.notArray': 'File does not look like a Wengineering project (expected an array of blocks)',
+  'doc.tooMany': 'Too many blocks (>5000)',
+  'doc.noBlocks': 'No valid blocks in the file',
+  'doc.loaded': 'Loaded blocks: {n}{bad}',
+  'doc.loadedBad': ' (skipped broken: {bad})',
+  'save.hint':
+    'Your browser does not let sites choose a folder (e.g. Firefox).\n' +
+    'To pick a path and name on save, enable in browser settings:\n' +
+    '"Always ask where to save files" (Settings → General → Files and Applications).',
+
+  'w.aria': 'Welcome to Wengineering',
+  'w.close': 'Close welcome dialog',
+  'w.tag': 'Engineering sheet: formulas, plots and programs.',
+  'w.formula': 'Formula',
+  'w.plot': 'Plot',
+  'w.plotSub': 'sin(x) · vectors',
+  'w.plot3d': '3D plot',
+  'w.plot3dSub': 'f(x,y) · points',
+  'w.program': 'Program',
+  'w.demo1': 'Demo 1',
+  'w.demo2': 'Demo 2',
+  'w.openFile': 'Open file…',
+  'w.blank': 'Blank sheet',
+  'w.creator': 'Creator:',
+
+  'pal.aria': 'Function palette',
+  'pal.insert': 'ƒx Insert',
+  'pal.searchLabel': 'Search functions',
+  'pal.searchPh': 'search: matrix, dBm, for…',
+  'pal.close': 'Close palette',
+  'pal.empty': 'Nothing found',
+  'pal.footerMatrices': 'Matrices:',
+  'pal.footerIndex': 'index',
+  'pal.footerFrom1': '(1-based)',
+  'pal.footerRanges': 'ranges',
+
+  'c.aria': 'Infinite worksheet: double-click creates a block, dragging with a pressed button selects',
+  'c.title': 'LMB-drag — select • Space/MMB/RMB — pan • wheel — pan • Ctrl+wheel — zoom • double-click — new block',
+  'c.emptyNew': 'Double-click — new block',
+  'c.emptyAssign': 'assignment',
+  'c.emptyOutput': 'output',
+  'c.zoomBar': 'Sheet zoom',
+  'c.zoomOut': 'Zoom out',
+  'c.zoomIn': 'Zoom in',
+  'c.resetView': 'Reset view (100%)',
+  'c.resetZoom': 'Reset zoom to 100 percent',
+
+  'ui.dragGrip': 'Drag to move (group — if several are selected)',
+  'ui.delete': 'Delete (Del)',
+  'ui.resizeW': 'Drag — block width',
+  'ui.editHint': 'Click — edit • Shift+click — add to selection',
+
+  'm.depends': 'depends on:',
+  'm.deleteBlock': 'Delete block',
+  'm.commentPh': '// comment',
+  'm.autoplot': 'auto-plot f(x), x ∈ [-10, 10]',
+  'm.expandPlot': 'Expand to plot ⤢',
+  'm.expandTitle': 'Create a full plot block with this function',
+
+  'p2.fnLabel': 'Plot functions, several — separated by semicolon',
+  'p2.fnTitle': 'f(x); several series via ";". Without x — document vector by index',
+  'p2.delete': 'Delete plot',
+  'p2.xmin': 'Minimum x',
+  'p2.xmax': 'Maximum x',
+  'p2.empty': 'Empty: enter f(x), several — via ";"',
+  'p2.needRange': 'Need xmin < xmax',
+  'p2.noData': 'No data: check the expressions',
+  'p2.aria': 'Plot {fn}: y from {lo} to {hi}, x from {x0} to {x1}',
+  'p2.footer': 'y(x) = {fn} • sees all document variables • x: [{x0}, {x1}]',
+  'p2.resize': 'Drag — plot size',
+
+  'p3.fnLabel': '3D expression: f(x,y), N×3 matrix or X; Y; Z',
+  'p3.fnTitle': 'f(x,y) — surface • N×3 matrix — points • M×N matrix — heights • X; Y; Z — points',
+  'p3.delete': 'Delete 3D plot',
+  'p3.xmin': 'Minimum x',
+  'p3.xmax': 'Maximum x',
+  'p3.ymin': 'Minimum y',
+  'p3.ymax': 'Maximum y',
+  'p3.mode': '3D mode',
+  'p3.modeLabel': 'mode',
+  'p3.res': 'Grid resolution',
+  'p3.resLabel': 'grid',
+  'p3.wire': 'Wireframe overlay',
+  'p3.wireLabel': 'wireframe',
+  'p3.noData': 'No data',
+  'p3.noDataHint': 'No 3D data: f(x,y) → surface • N×3 matrix — points • M×N matrix — heights • X; Y; Z — points',
+  'p3.needRange': 'Need xmin < xmax and ymin < ymax',
+  'p3.aria': '3D plot {fn}, mode {mode}. {sub}',
+  'p3.points': 'points: {n} • z ∈ [{lo}, {hi}]',
+  'p3.grid': 'grid {c}×{r} • z ∈ [{lo}, {hi}]',
+  'p3.footer': 'drag — rotate • wheel — zoom • RMB — pan • hover — coordinates • sees all variables',
+  'p3.resize': 'Drag — 3D block size',
+
+  'g.title': 'Program block: if/for/while (click — edit • Shift+click — add to selection)',
+  'g.exportLabel': 'Variable for the program result',
+  'g.exportPh': 'name',
+  'g.exportTitle': 'Document variable for the result (empty — just evaluate)',
+  'g.deleteBlock': 'Delete program block',
+  'g.emptyProg': '// empty program',
+
+  'mini.aria': 'Auto-plot {label}: y from {lo} to {hi}',
+
+  'e.emptyRight': 'Empty expression right of ":="',
+  'e.badVar': 'Invalid variable name: "{name}"',
+  'e.constI': 'Cannot redefine the "i" constant',
+  'e.undefVar': 'Undefined variable: {name} (declare it in a block above)',
+  'e.undef': 'Undefined variable',
+  'e.divZero': 'Division by zero',
+  'e.syntax': 'Syntax error: {msg}',
+  'e.cyclic': 'Cyclic dependency / recursion overflow',
+  'e.cyclicDep': 'Cyclic dependency: cycle in variable definitions',
+  'e.funcDefined': 'f(x) — function defined',
+  'e.funcDefinedTex': '\\text{function defined}',
+  'e.progTooLong': 'Program too long (>{n} lines)',
+  'e.condLogic': 'Condition must be boolean (comparisons: ==, !=, <, >, <=, >=, and/or/not)',
+  'e.forNumber': 'for: number must be 0..{max}',
+  'e.forExpect': 'for expects a vector, range a..b or number n (→ 1..n)',
+  'e.forIters': 'for: too many iterations (>{max})',
+  'e.whileLimit': 'while: iteration limit {max} exceeded (infinite loop?)',
+  'e.strayEnd': '"{text}" without an opening construct (if/for/while)',
+  'e.noEnd': 'Missing closing "end" for the construct',
+  'e.noEndIf': 'Missing closing "end" for if',
+  'e.lineErr': 'Line {line}: {msg}',
+  'e.lineErrDefault': 'error',
+  'e.seqArgs': 'seq: arguments must be numbers',
+  'e.seqStep': 'seq: step cannot be 0',
+  'e.seqRange': 'seq: range too large (>100000). Increase the step / shrink the bounds',
+  'e.linspaceN': 'linspace: n must be 2..100000',
+  'e.rmsEmpty': 'rms: empty vector',
+};
+
+/** Строка на текущем языке с подстановкой {параметров}. */
+export function t(key: StrKey, params?: Params): string {
+  const dict = current === 'ru' ? ru : en;
+  let s: string = dict[key] ?? ru[key] ?? key;
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      s = s.replaceAll(`{${k}}`, String(v));
+    }
+  }
+  return s;
+}
+
+const themeNames: Record<ThemeName, { ru: string; en: string }> = {
+  'gruvbox-dark': { ru: 'Gruvbox тёмная', en: 'Gruvbox dark' },
+  'gruvbox-light': { ru: 'Gruvbox светлая', en: 'Gruvbox light' },
+  'nord-dark': { ru: 'Nord тёмная', en: 'Nord dark' },
+  'nord-light': { ru: 'Nord светлая', en: 'Nord light' },
+  'solarized-dark': { ru: 'Solarized тёмная', en: 'Solarized dark' },
+  'osaka-solarized': { ru: 'Osaka Solarized', en: 'Osaka Solarized' },
+  nightfly: { ru: 'Nightfly', en: 'Nightfly' },
+  'github-dark': { ru: 'GitHub тёмная', en: 'GitHub dark' },
+  'github-light': { ru: 'GitHub светлая', en: 'GitHub light' },
+};
+
+/** Название темы на текущем языке. */
+export function themeLabel(id: ThemeName): string {
+  return themeNames[id][current];
+}
+
+export type PackId = 'matrices' | 'stats' | 'physics' | 'telecom' | 'programs' | 'plots';
+
+const packNames: Record<PackId, { ru: string; en: string }> = {
+  matrices: { ru: 'Матрицы', en: 'Matrices' },
+  stats: { ru: 'Статистика', en: 'Statistics' },
+  physics: { ru: 'Физика', en: 'Physics' },
+  telecom: { ru: 'Телеком', en: 'Telecom' },
+  programs: { ru: 'Программы', en: 'Programs' },
+  plots: { ru: 'Графики', en: 'Plots' },
+};
+
+/** Название пака сниппетов на текущем языке. */
+export function packName(id: PackId): string {
+  return packNames[id]?.[current] ?? id;
+}
+
+/** Локализованная строка (для подписей/подсказок сниппетов). */
+export interface LText {
+  ru: string;
+  en: string;
+}
+
+export function lx(v: LText): string {
+  return v[current];
+}

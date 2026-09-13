@@ -1,33 +1,34 @@
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
 
-/* ===== Семантические токены темы (light по умолчанию, dark через [data-theme]) ===== */
-:root, [data-theme="light"] {
-  --chrome: #12151d;
-  --chrome-ink: #e9edf3;
-  --chrome-soft: #a7b0bd;
-  --chrome-line: #262c38;
-  --canvas: #24272e;
+/* ===== Семантические токены тем (hex — canonical палитры с GitHub, см. src/theme.ts) ===== */
+:root, [data-theme="github-light"] {
+  --chrome: #f6f8fa;
+  --chrome-ink: #1f2328;
+  --chrome-soft: #656d76;
+  --chrome-line: #d0d7de;
+  --canvas: #f6f8fa;
   --sheet: #ffffff;
-  --ink: #16161a;
-  --ink-soft: #3f4753;
-  --faint: #8a94a3;
-  --line: #cbd5e1;
-  --hover-line: #aeb8c6;
-  --accent: #4f46e5;
-  --accent-ink: #4338ca;
-  --accent-line: #4f7cff;
-  --accent-soft: rgba(79, 124, 255, 0.1);
-  --danger: #dc2626;
-  --danger-bg: rgba(220, 38, 38, 0.06);
-  --ok: #059669;
+  --ink: #1f2328;
+  --ink-soft: #424a53;
+  --faint: #8c959f;
+  --line: #d0d7de;
+  --hover-line: #afb8c1;
+  --accent: #0969da;
+  --accent-ink: #0550ae;
+  --accent-line: #0969da;
+  --accent-soft: rgba(9, 105, 218, 0.1);
+  --danger: #cf222e;
+  --danger-bg: rgba(207, 34, 46, 0.06);
+  --ok: #1a7f37;
   --input-bg: #ffffff;
-  --input-border: #cbd5e1;
-  --grid-lt: rgba(15, 23, 42, 0.055);
-  --grid-dk: rgba(15, 23, 42, 0.11);
+  --input-border: #d0d7de;
+  --grid-lt: rgba(31, 35, 40, 0.055);
+  --grid-dk: rgba(31, 35, 40, 0.11);
 }
 
-[data-theme="gruvbox"], [data-theme="dark"] {
+/* --- gruvbox dark: morhetz/gruvbox --- */
+[data-theme="gruvbox-dark"] {
   --chrome: #1d2021;
   --chrome-ink: #ebdbb2;
   --chrome-soft: #a89984;
@@ -50,6 +51,188 @@
   --input-border: #504945;
   --grid-lt: rgba(235, 219, 178, 0.04);
   --grid-dk: rgba(235, 219, 178, 0.09);
+}
+
+/* --- gruvbox light: morhetz/gruvbox (faded-акценты светлой схемы) --- */
+[data-theme="gruvbox-light"] {
+  --chrome: #ebdbb2;
+  --chrome-ink: #3c3836;
+  --chrome-soft: #665c54;
+  --chrome-line: #d5c4a1;
+  --canvas: #f2e5bc;
+  --sheet: #fbf1c7;
+  --ink: #282828;
+  --ink-soft: #504945;
+  --faint: #928374;
+  --line: #d5c4a1;
+  --hover-line: #bdae93;
+  --accent: #076678;
+  --accent-ink: #076678;
+  --accent-line: #458588;
+  --accent-soft: rgba(69, 133, 136, 0.12);
+  --danger: #9d0006;
+  --danger-bg: rgba(157, 0, 6, 0.06);
+  --ok: #79740e;
+  --input-bg: #fbf1c7;
+  --input-border: #d5c4a1;
+  --grid-lt: rgba(60, 56, 54, 0.05);
+  --grid-dk: rgba(60, 56, 54, 0.1);
+}
+
+/* --- nord dark: nordtheme.com (nord0..nord15) --- */
+[data-theme="nord-dark"] {
+  --chrome: #232831;
+  --chrome-ink: #eceff4;
+  --chrome-soft: #d8dee9;
+  --chrome-line: #434c5e;
+  --canvas: #2e3440;
+  --sheet: #3b4252;
+  --ink: #eceff4;
+  --ink-soft: #d8dee9;
+  --faint: #8a97ad;
+  --line: #434c5e;
+  --hover-line: #4c566a;
+  --accent: #88c0d0;
+  --accent-ink: #88c0d0;
+  --accent-line: #81a1c1;
+  --accent-soft: rgba(136, 192, 208, 0.14);
+  --danger: #bf616a;
+  --danger-bg: rgba(191, 97, 106, 0.1);
+  --ok: #a3be8c;
+  --input-bg: #2e3440;
+  --input-border: #4c566a;
+  --grid-lt: rgba(236, 239, 244, 0.05);
+  --grid-dk: rgba(236, 239, 244, 0.1);
+}
+
+/* --- nord light: Snow Storm --- */
+[data-theme="nord-light"] {
+  --chrome: #e5e9f0;
+  --chrome-ink: #2e3440;
+  --chrome-soft: #4c566a;
+  --chrome-line: #d8dee9;
+  --canvas: #dfe5ee;
+  --sheet: #eceff4;
+  --ink: #2e3440;
+  --ink-soft: #3b4252;
+  --faint: #7e8aa0;
+  --line: #d8dee9;
+  --hover-line: #b9c1cf;
+  --accent: #5e81ac;
+  --accent-ink: #4c6a8e;
+  --accent-line: #5e81ac;
+  --accent-soft: rgba(94, 129, 172, 0.12);
+  --danger: #bf616a;
+  --danger-bg: rgba(191, 97, 106, 0.08);
+  --ok: #6a9a4f;
+  --input-bg: #eceff4;
+  --input-border: #c3cad6;
+  --grid-lt: rgba(46, 52, 64, 0.06);
+  --grid-dk: rgba(46, 52, 64, 0.12);
+}
+
+/* --- solarized dark (классика Ethan Schoonover: base03..base3) --- */
+[data-theme="solarized-dark"] {
+  --chrome: #002b36;
+  --chrome-ink: #93a1a1;
+  --chrome-soft: #839496;
+  --chrome-line: #073642;
+  --canvas: #002b36;
+  --sheet: #073642;
+  --ink: #839496;
+  --ink-soft: #93a1a1;
+  --faint: #586e75;
+  --line: #073642;
+  --hover-line: #586e75;
+  --accent: #268bd2;
+  --accent-ink: #268bd2;
+  --accent-line: #2aa198;
+  --accent-soft: rgba(38, 139, 210, 0.13);
+  --danger: #dc322f;
+  --danger-bg: rgba(220, 50, 47, 0.09);
+  --ok: #859900;
+  --input-bg: #002b36;
+  --input-border: #586e75;
+  --grid-lt: rgba(147, 161, 161, 0.06);
+  --grid-dk: rgba(147, 161, 161, 0.12);
+}
+
+/* --- osaka solarized: craftzdog/solarized-osaka.nvim (HSL→hex) --- */
+[data-theme="osaka-solarized"] {
+  --chrome: #00141a;
+  --chrome-ink: #9fabad;
+  --chrome-soft: #839495;
+  --chrome-line: #073541;
+  --canvas: #00141a;
+  --sheet: #002d38;
+  --ink: #9fabad;
+  --ink-soft: #839495;
+  --faint: #586e74;
+  --line: #073541;
+  --hover-line: #586e74;
+  --accent: #278bd3;
+  --accent-ink: #278bd3;
+  --accent-line: #2aa298;
+  --accent-soft: rgba(39, 139, 211, 0.14);
+  --danger: #dc312e;
+  --danger-bg: rgba(220, 49, 46, 0.1);
+  --ok: #859900;
+  --input-bg: #00141a;
+  --input-border: #586e74;
+  --grid-lt: rgba(173, 184, 184, 0.05);
+  --grid-dk: rgba(173, 184, 184, 0.1);
+}
+
+/* --- nightfly: bluz71/vim-nightfly-colors --- */
+[data-theme="nightfly"] {
+  --chrome: #081e2f;
+  --chrome-ink: #c3ccdc;
+  --chrome-soft: #a1aab8;
+  --chrome-line: #1d3b53;
+  --canvas: #011627;
+  --sheet: #092236;
+  --ink: #c3ccdc;
+  --ink-soft: #acb4c2;
+  --faint: #4b6479;
+  --line: #1d3b53;
+  --hover-line: #2c3043;
+  --accent: #82aaff;
+  --accent-ink: #82aaff;
+  --accent-line: #7fdbca;
+  --accent-soft: rgba(130, 170, 255, 0.14);
+  --danger: #fc514e;
+  --danger-bg: rgba(252, 81, 78, 0.1);
+  --ok: #21c7a8;
+  --input-bg: #011627;
+  --input-border: #1d3b53;
+  --grid-lt: rgba(195, 204, 220, 0.05);
+  --grid-dk: rgba(195, 204, 220, 0.1);
+}
+
+/* --- github dark: primer/github-vscode-theme + primer/primitives --- */
+[data-theme="github-dark"] {
+  --chrome: #161b22;
+  --chrome-ink: #e6edf3;
+  --chrome-soft: #7d8590;
+  --chrome-line: #30363d;
+  --canvas: #0d1117;
+  --sheet: #161b22;
+  --ink: #e6edf3;
+  --ink-soft: #c9d1d9;
+  --faint: #6e7681;
+  --line: #30363d;
+  --hover-line: #3d444d;
+  --accent: #2f81f7;
+  --accent-ink: #4493f8;
+  --accent-line: #1f6feb;
+  --accent-soft: rgba(47, 129, 247, 0.15);
+  --danger: #f85149;
+  --danger-bg: rgba(248, 81, 73, 0.1);
+  --ok: #3fb950;
+  --input-bg: #0d1117;
+  --input-border: #3d444d;
+  --grid-lt: rgba(230, 237, 243, 0.06);
+  --grid-dk: rgba(230, 237, 243, 0.12);
 }
 
 html, body, #root {
@@ -110,3 +293,54 @@ body {
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: var(--hover-line); border-radius: 8px; }
 *::-webkit-scrollbar-track { background: transparent; }
+
+/* ===== Выпадающие меню: одноразовый вход при монтировании — keyframes ===== */
+.menu-drop {
+  animation: menu-in 150ms ease-out;
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== Welcome-модалка: stagger-вход по чанкам (одноразовая сцена — keyframes) ===== */
+.welcome-backdrop {
+  animation: welcome-fade 150ms ease-out;
+}
+@keyframes welcome-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.welcome-backdrop[data-closing="true"] {
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+.welcome-chunk {
+  opacity: 0;
+  transform: translateY(12px);
+  filter: blur(4px);
+  animation: welcome-in 400ms ease-out forwards;
+}
+.welcome-d0 { animation-delay: 0ms; }
+.welcome-d1 { animation-delay: 100ms; }
+.welcome-d2 { animation-delay: 200ms; }
+@keyframes welcome-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+/* Выход приглушённый: короче входа, малый сдвиг вверх */
+.welcome-exit {
+  opacity: 0;
+  transform: translateY(-12px);
+  filter: blur(4px);
+  transition: opacity 150ms ease-out, transform 150ms ease-out, filter 150ms ease-out;
+}
