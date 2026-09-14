@@ -68,6 +68,16 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey, true);
   }, []);
 
+  // Перед печатью коммитим открытый редактор (blur → finishEdit),
+  // иначе печатается пустой textarea вместо формулы
+  useEffect(() => {
+    const commit = () => {
+      (document.activeElement as HTMLElement | null)?.blur?.();
+    };
+    window.addEventListener('beforeprint', commit);
+    return () => window.removeEventListener('beforeprint', commit);
+  }, []);
+
   const openFile = (f: File) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -89,7 +99,7 @@ export default function App() {
   const showWelcome = welcomeForced || (!welcomeDismissed && Object.keys(blocks).length === 0);
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden">
+    <div className="nya-app h-screen w-screen flex flex-col overflow-hidden">
       <MenuBar
         onOpenFile={() => fileRef.current?.click()}
         onShowWelcome={() => setWelcomeForced(true)}
@@ -108,7 +118,7 @@ export default function App() {
         }}
       />
       {/* рабочая зона: док-панели по бокам на всю высоту + холст */}
-      <div className="flex-1 flex flex-row min-h-0 min-w-0">
+      <div className="nya-workspace flex-1 flex flex-row min-h-0 min-w-0">
         {paletteOpen && paletteMode === 'left' && <FunctionPalette />}
         <div className="flex-1 relative flex flex-col min-h-0 min-w-0">
           <Canvas />

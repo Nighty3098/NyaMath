@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
+import { sortBlocksTopDown } from '../engine/dependencies';
 import MathBlockView from './MathBlockView';
 import PlotBlockView from './PlotBlockView';
 import ContourBlockView from './ContourBlockView';
@@ -300,7 +301,7 @@ export default function Canvas() {
     return () => window.removeEventListener('keydown', down);
   }, []);
 
-  const list = Object.values(blocks);
+  const list = useMemo(() => sortBlocksTopDown(Object.values(blocks)), [blocks]);
   const theme = useCanvasStore((s) => s.theme);
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
@@ -330,7 +331,7 @@ export default function Canvas() {
   return (
     <div
       ref={containerRef}
-      className="flex-1 relative overflow-hidden bg-[var(--sheet)] select-none"
+      className="nya-canvas flex-1 relative overflow-hidden bg-[var(--sheet)] select-none"
       role="application"
       aria-label={t('c.aria')}
       style={{
@@ -413,7 +414,7 @@ export default function Canvas() {
 
       {/* пустое состояние — в экранных координатах */}
       {list.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none print:hidden">
           <div className="flex flex-col items-center text-center px-6">
             <img
               src="favicon.svg"
@@ -439,7 +440,7 @@ export default function Canvas() {
 
       {/* controls зума */}
       <div
-        className="absolute right-3 bottom-3 flex items-center gap-1 bg-[var(--chrome)]/95 border border-[var(--chrome-line)] rounded-lg p-1"
+        className="absolute right-3 bottom-3 flex items-center gap-1 bg-[var(--chrome)]/95 border border-[var(--chrome-line)] rounded-lg p-1 print:hidden"
         role="toolbar"
         aria-label={t('c.zoomBar')}
       >

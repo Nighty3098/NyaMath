@@ -345,28 +345,20 @@ body {
   transition: opacity 150ms ease-out, transform 150ms ease-out, filter 150ms ease-out;
 }
 
-/* ===== Печать / PDF: чистый документ без хрома и контролов ===== */
+/* ===== Печать / PDF: лист → вертикальный документ, цвета текущей темы ===== */
 @page {
   margin: 10mm;
 }
 @media print {
-  /* светлая бумага независимо от темы (html[data-theme] сильнее [data-theme]) */
-  html[data-theme] {
-    --canvas: #ffffff;
-    --sheet: #ffffff;
-    --ink: #1f2328;
-    --ink-soft: #424a53;
-    --faint: #6e7781;
-    --line: #d0d7de;
-    --hover-line: #afb8c1;
-    --accent: #0969da;
-    --accent-ink: #0550ae;
-    --accent-line: #0969da;
-    --danger: #cf222e;
-    --danger-bg: transparent;
-    --ok: #1a7f37;
-    --input-bg: #ffffff;
-    --input-border: #d0d7de;
+  /* цвета как на экране (тёмная тема печатается тёмной) */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  html, body, #root {
+    height: auto !important;
+    overflow: visible !important;
+    background: var(--canvas) !important;
   }
   /* хром приложения и оверлеи — скрыть */
   [role="menubar"],
@@ -375,9 +367,56 @@ body {
   [role="toolbar"] {
     display: none !important;
   }
-  /* блоки: без теней, без интерактивных контролов */
+  /* фиксированный layout приложения → обычный поток, иначе обрезка одной страницей */
+  .nya-app {
+    height: auto !important;
+    width: auto !important;
+    overflow: visible !important;
+    display: block !important;
+    background: var(--canvas) !important;
+  }
+  .nya-workspace {
+    display: block !important;
+    overflow: visible !important;
+  }
+  .nya-canvas {
+    overflow: visible !important;
+    height: auto !important;
+    background: var(--canvas) !important;
+    background-image: none !important;
+  }
+  /* бесконечная absolute-сцена → вертикальный поток: браузер сам бьёт на страницы */
+  .nya-sheet {
+    position: static !important;
+    transform: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  /* каждый блок — карточка в потоке поверх инлайновых left/top/width/height */
+  .nya-sheet > .nya-region,
+  .nya-sheet > div.absolute {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    z-index: auto !important;
+    margin: 0 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  /* блоки: без теней, без интерактивных контролов, цвета темы сохраняем */
   .nya-block {
     box-shadow: none !important;
+    max-width: 100% !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
   .nya-block input,
   .nya-block select,
@@ -386,7 +425,12 @@ body {
   .nya-block > span.absolute {
     display: none !important;
   }
-  .nya-sheet {
-    transform: none !important;
+  /* графики в ширину страницы */
+  .nya-sheet svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  .nya-sheet canvas {
+    max-width: 100% !important;
   }
 }
