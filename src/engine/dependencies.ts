@@ -1,7 +1,7 @@
 import { createBaseScope, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, toLatex, valueToLatex, type Scope } from './mathEngine';
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
-import { parseSimDef, runSim, type SimResult, type SimSolver } from './simEngine';
+import { parseSimDef, runSim, type SimResult, type SimSolver, type SimMode } from './simEngine';
 import { t } from '../i18n';
 
 export interface MathBlockData {
@@ -32,6 +32,7 @@ export interface MathBlockData {
   /** Имя переменной, в которую программный блок экспортирует результат */
   exportName?: string;
   /** Sim: модель, состояния, производные, параметры, старт, интервал, решатель, оси */
+  simMode?: SimMode;
   simModel?: string;
   simStates?: string;
   simDerivs?: string;
@@ -42,8 +43,19 @@ export interface MathBlockData {
   simT1?: number;
   simDt?: number;
   simSolver?: SimSolver;
+  simEvents?: string;
   simX?: string;
   simY?: string;
+  /** Sim/FDTD: сетка, источник, слои */
+  simFdtdN?: number;
+  simFdtdL?: number;
+  simFdtdSteps?: number;
+  simFdtdSrc?: 'gauss' | 'sine';
+  simFdtdFreq?: number;
+  simFdtdAmp?: number;
+  simFdtdSrcX?: number;
+  simFdtdDet?: number;
+  simFdtdLayers?: string;
   /** Sim: имя переменной для финального вектора состояний */
   simExport?: string;
   /** Sim: предпочтения плеера (скорость, повтор) */
@@ -148,9 +160,27 @@ export function detectCycles(blocks: MathBlockData[]): Set<string> {
   return cyclic;
 }
 
-/** Зависимости sim-блока: переменные из производных/aux/параметров/старта (кроме состояний и t). */
+/** Зависимости sim-блока: ODE — из производных/aux/параметров/старта; FDTD — из выражений слоёв. */
 function simDeps(b: MathBlockData): string[] {
   const deps = new Set<string>();
+  const addExprDeps = (expr: string, skip?: Set<string>) => {
+    for (const part of expr.split(';')) {
+      try {
+        const p = parseLine(part.trim());
+        for (const d of extractDependencies(p.expr, p.fnParams)) {
+          if (!skip?.has(d) && d !== 't') deps.add(d);
+        }
+      } catch { /* ignore */ }
+    }
+  };
+  if (b.simMode === 'fdtd') {
+    for (const line of (b.simFdtdLayers ?? '').split('\n')) {
+      const l = line.trim();
+      if (!l || l.startsWith('//') || l.startsWith('#')) continue;
+      for (const part of l.split(',')) addExprDeps(part);
+    }
+    return [...deps];
+  }
   const states = new Set(
     (b.simStates ?? '').split(',').map((s) => s.trim()).filter(Boolean),
   );
@@ -160,6 +190,22 @@ function simDeps(b: MathBlockData): string[] {
     (b.simParams ?? '').replace(/^([A-Za-z_]\w*)\s*(:=|=)/gm, ''),
     b.simInit ?? '',
   ];
+  // события: условия целиком + правые части действий
+  for (const line of (b.simEvents ?? '').split('\n')) {
+    const l = line.trim();
+    if (!l || l.startsWith('//') || l.startsWith('#')) continue;
+    const arrow = l.indexOf('=>');
+    if (arrow >= 0) {
+      texts.push(l.slice(0, arrow));
+      texts.push(
+        l.slice(arrow + 2).split(';')
+          .map((a) => a.trim().replace(/^([A-Za-z_]\w*)\s*(:=|=)/, '').replace(/^stop$/i, ''))
+          .join(';'),
+      );
+    } else {
+      texts.push(l);
+    }
+  }
   for (const text of texts) {
     for (const line of text.split('\n')) {
       const t = line.trim();
@@ -233,6 +279,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
     // ---------- симуляция ----------
     if (b.kind === 'sim') {
       const parsed = parseSimDef({
+        mode: b.simMode ?? 'ode',
         states: b.simStates ?? '',
         derivs: b.simDerivs ?? '',
         aux: b.simAux ?? '',
@@ -242,11 +289,24 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
         t1: b.simT1 ?? 10,
         dt: b.simDt ?? 0.01,
         solver: b.simSolver ?? 'rk4',
+        events: b.simEvents ?? '',
+        fdtd: {
+          n: b.simFdtdN ?? 400,
+          length: b.simFdtdL ?? 20,
+          steps: b.simFdtdSteps ?? 1500,
+          src: b.simFdtdSrc ?? 'gauss',
+          freq: b.simFdtdFreq ?? 1,
+          amp: b.simFdtdAmp ?? 1,
+          srcX: b.simFdtdSrcX ?? 4,
+          det: b.simFdtdDet ?? null,
+          layers: b.simFdtdLayers ?? '',
+        },
       });
       cur.dependencies = blockDeps(b);
       cur.isOutput = true;
       const exp = (b.simExport ?? '').trim();
-      cur.definedVar = exp && isValidVarName(exp) ? exp : null;
+      // в FDTD-режиме экспортировать нечего — финального вектора нет
+      cur.definedVar = (b.simMode === 'fdtd' || !exp || !isValidVarName(exp)) ? null : exp;
       if (parsed.error || !parsed.def) {
         cur.error = parsed.error;
         cur.simResult = null;

@@ -180,4 +180,7 @@ export const SNIPPETS: Snippet[] = [
   { pack: 'sim', label: { ru: 'RLC-контур', en: 'RLC circuit' }, hint: { ru: 'переходный процесс', en: 'transient' }, code: 'rlc', kind: 'sim' },
   { pack: 'sim', label: { ru: 'Орбита', en: 'Orbit' }, hint: { ru: 'спутник, RK45', en: 'satellite, RK45' }, code: 'orbit', kind: 'sim' },
   { pack: 'sim', label: { ru: 'Распад A→B→C', en: 'Decay A→B→C' }, hint: { ru: 'ядерная цепочка', en: 'nuclear chain' }, code: 'decay', kind: 'sim' },
+  { pack: 'sim', label: { ru: 'Прыгающий мяч', en: 'Bouncing ball' }, hint: { ru: 'событие удара', en: 'impact event' }, code: 'bounce', kind: 'sim' },
+  { pack: 'sim', label: { ru: 'Восьмёрка 3 тел', en: 'Three-body figure-8' }, hint: { ru: 'гравитация, хаос', en: 'gravity, chaos' }, code: 'figure8', kind: 'sim' },
+  { pack: 'sim', label: { ru: 'Импульс через пластину', en: 'Pulse through slab' }, hint: { ru: 'FDTD, волны', en: 'FDTD, waves' }, code: 'slab', kind: 'sim' },
 ];

@@ -103,6 +103,8 @@ function migrate(raw: unknown): MathBlockData | null {
   const numOrUndef = (v: unknown): number | undefined => (typeof v === 'number' && isFinite(v) ? v : undefined);
   const strOrUndef = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
   const simSolver = b.simSolver === 'euler' || b.simSolver === 'rk4' || b.simSolver === 'rk45' ? b.simSolver : undefined;
+  const simMode = b.simMode === 'fdtd' ? 'fdtd' : undefined;
+  const simFdtdSrc = b.simFdtdSrc === 'sine' ? 'sine' : undefined;
   return {
     ...blank(id, b.x, b.y),
     ...b,
@@ -119,6 +121,7 @@ function migrate(raw: unknown): MathBlockData | null {
     plotResolution: numOrUndef(b.plotResolution),
     plotWireframe: typeof b.plotWireframe === 'boolean' ? b.plotWireframe : undefined,
     simModel: strOrUndef(b.simModel),
+    simMode,
     simStates: strOrUndef(b.simStates),
     simDerivs: strOrUndef(b.simDerivs),
     simAux: strOrUndef(b.simAux),
@@ -128,8 +131,18 @@ function migrate(raw: unknown): MathBlockData | null {
     simT1: numOrUndef(b.simT1),
     simDt: numOrUndef(b.simDt),
     simSolver,
+    simEvents: strOrUndef(b.simEvents),
     simX: strOrUndef(b.simX),
     simY: strOrUndef(b.simY),
+    simFdtdN: numOrUndef(b.simFdtdN),
+    simFdtdL: numOrUndef(b.simFdtdL),
+    simFdtdSteps: numOrUndef(b.simFdtdSteps),
+    simFdtdSrc,
+    simFdtdFreq: numOrUndef(b.simFdtdFreq),
+    simFdtdAmp: numOrUndef(b.simFdtdAmp),
+    simFdtdSrcX: numOrUndef(b.simFdtdSrcX),
+    simFdtdDet: numOrUndef(b.simFdtdDet),
+    simFdtdLayers: strOrUndef(b.simFdtdLayers),
     simExport: typeof b.simExport === 'string' ? b.simExport : undefined,
     simSpeed: numOrUndef(b.simSpeed),
     simLoop: typeof b.simLoop === 'boolean' ? b.simLoop : undefined,
@@ -198,6 +211,10 @@ function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathB
       x.simAux !== y.simAux || x.simParams !== y.simParams || x.simInit !== y.simInit ||
       x.simT0 !== y.simT0 || x.simT1 !== y.simT1 || x.simDt !== y.simDt ||
       x.simSolver !== y.simSolver || x.simX !== y.simX || x.simY !== y.simY ||
+      x.simMode !== y.simMode || x.simEvents !== y.simEvents ||
+      x.simFdtdN !== y.simFdtdN || x.simFdtdL !== y.simFdtdL || x.simFdtdSteps !== y.simFdtdSteps ||
+      x.simFdtdSrc !== y.simFdtdSrc || x.simFdtdFreq !== y.simFdtdFreq || x.simFdtdAmp !== y.simFdtdAmp ||
+      x.simFdtdSrcX !== y.simFdtdSrcX || x.simFdtdDet !== y.simFdtdDet || x.simFdtdLayers !== y.simFdtdLayers ||
       x.simExport !== y.simExport || x.simSpeed !== y.simSpeed || x.simLoop !== y.simLoop
     ) return false;
   }

@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
-import { SIM_DOMAINS, SIM_MODELS, SIM_SOLVERS, getSimModel, simModelPatch, type SimResult, type SimSolver } from '../engine/simEngine';
+import { SIM_DOMAINS, SIM_MODELS, SIM_SOLVERS, getSimModel, simModelPatch, type SimMode, type SimResult, type SimSolver } from '../engine/simEngine';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IResize, IX } from './Icon';
@@ -47,6 +47,7 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
   });
 
   const modelId = block.simModel ?? 'custom';
+  const simMode: SimMode = block.simMode ?? 'ode';
   const [open, setOpen] = useState(modelId === 'custom');
   const [headH, setHeadH] = useState(560);
 
@@ -73,10 +74,18 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
   );
   const model = getSimModel(modelId);
 
-  // Данные для плеера: ось X (t или состояние) + кривые Y
+  // Данные для плеера: ODE — ось X + кривые Y; FDTD — кадры поля E(x)
   const view = useMemo(() => {
     const r = block.simResult;
-    if (!r || r.error || r.ts.length < 2) return null;
+    if (!r || r.error) return null;
+    if (r.field) {
+      if (r.field.snaps.length < 2) return null;
+      return {
+        ts: r.field.ts, xs: r.field.xs, curves: [], steps: r.steps, xIsT: false,
+        field: r.field, tEst: r.tEst, events: [] as { t: number }[], halted: false,
+      };
+    }
+    if (r.ts.length < 2) return null;
     const xName = block.simX ?? 't';
     const xs = xName === 't' ? r.ts : r.series.find((s) => s.name === xName)?.ys;
     if (!xs) return null;
@@ -88,7 +97,7 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
       })
       .filter((c): c is { name: string; ys: number[]; color: string } => c !== null);
     if (!curves.length) return null;
-    return { ts: r.ts, xs, curves, steps: r.steps, xIsT: xName === 't' };
+    return { ts: r.ts, xs, curves, steps: r.steps, xIsT: xName === 't', field: null, tEst: null as number | null, events: r.events, halted: r.halted };
   }, [block.simResult, block.simX, block.simY, pal]);
 
   // Высота всего хрома (шапка + панель плеера под графиком) — измеряем,
@@ -154,6 +163,19 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
                 </optgroup>
               ))}
             </select>
+            <label htmlFor={`simmode-${block.id}`} className="sr-only">{t('sim.mode')}</label>
+            <select
+              id={`simmode-${block.id}`}
+              className="min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent-line)]"
+              value={simMode}
+              title={t('sim.mode')}
+              onChange={(e) => updateSim(block.id, { simMode: e.target.value as SimMode, simModel: 'custom' })}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="ode">{t('sim.modeOde')}</option>
+              <option value="fdtd">{t('sim.modeFdtd')}</option>
+            </select>
             <button
               type="button"
               className="min-h-[32px] px-2 rounded-lg border border-[var(--line)] text-[12px] text-[var(--ink-soft)] hover:border-[var(--accent-line)] hover:text-[var(--ink)] cursor-pointer"
@@ -181,6 +203,7 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
           {/* редактор */}
           {open && (
             <div className="flex flex-col gap-1.5 mb-2 text-[12px] text-[var(--ink-soft)]" onClick={stop}>
+            {simMode === 'ode' ? (<>
               <div className="flex items-center gap-2 flex-wrap">
                 <label className="flex items-center gap-1">
                   {t('sim.states')}
@@ -304,7 +327,58 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
                   />
                 </label>
               </div>
+              <label className="flex flex-col gap-0.5">
+                <span>{t('sim.events')}</span>
+                <textarea
+                  rows={2}
+                  className={`${txtField} w-full resize-y`}
+                  value={block.simEvents ?? ''}
+                  placeholder={t('sim.eventsPh')}
+                  spellCheck={false}
+                  onChange={(e) => edit({ simEvents: e.target.value })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </label>
               <div className="text-[11px] text-[var(--faint)]">{t('sim.hint')}</div>
+            </>) : (<>
+              <div className="flex items-center gap-2 flex-wrap">
+                <label>{t('sim.cells')} <input type="number" step={1} className={numField} value={block.simFdtdN ?? 400} onChange={(e) => edit({ simFdtdN: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
+                <label>{t('sim.flen')} <input type="number" step="any" className={numField} value={block.simFdtdL ?? 20} onChange={(e) => edit({ simFdtdL: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
+                <label>{t('sim.fsteps')} <input type="number" step={1} className={numField} value={block.simFdtdSteps ?? 1500} onChange={(e) => edit({ simFdtdSteps: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
+                <label>{t('sim.source')}
+                  <select
+                    className="ml-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)]"
+                    value={block.simFdtdSrc ?? 'gauss'}
+                    onChange={(e) => edit({ simFdtdSrc: e.target.value as 'gauss' | 'sine' })}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <option value="gauss">{t('sim.srcGauss')}</option>
+                    <option value="sine">{t('sim.srcSine')}</option>
+                  </select>
+                </label>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <label>{t('sim.freq')} <input type="number" step="any" className={numField} value={block.simFdtdFreq ?? 1} onChange={(e) => edit({ simFdtdFreq: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
+                <label>{t('sim.amp')} <input type="number" step="any" className={numField} value={block.simFdtdAmp ?? 1} onChange={(e) => edit({ simFdtdAmp: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
+                <label>{t('sim.srcPos')} <input type="number" step="any" className={numField} value={block.simFdtdSrcX ?? 4} onChange={(e) => edit({ simFdtdSrcX: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
+                <label>{t('sim.det')} <input type="number" step="any" className={numField} value={block.simFdtdDet ?? ''} placeholder="auto" onChange={(e) => edit({ simFdtdDet: e.target.value === '' ? undefined : Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
+              </div>
+              <label className="flex flex-col gap-0.5">
+                <span>{t('sim.layers')}</span>
+                <textarea
+                  rows={2}
+                  className={`${txtField} w-full resize-y`}
+                  value={block.simFdtdLayers ?? ''}
+                  placeholder={t('sim.layersPh')}
+                  spellCheck={false}
+                  onChange={(e) => edit({ simFdtdLayers: e.target.value })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </label>
+            </>)}
             </div>
           )}
         </div>
@@ -318,6 +392,10 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
             xs={view.xs}
             curves={view.curves}
             xIsT={view.xIsT}
+            field={view.field}
+            tEst={view.tEst}
+            events={view.events}
+            halted={view.halted}
             pal={pal}
             pw={pw}
             ph={ph}
@@ -360,12 +438,16 @@ interface Curve {
 }
 
 function SimPlayer({
-  result, xs, curves, xIsT, pal, pw, ph, speed, loop, steps, chromeRef, onSpeed, onLoop,
+  result, xs, curves, xIsT, field, tEst, events, halted, pal, pw, ph, speed, loop, steps, chromeRef, onSpeed, onLoop,
 }: {
   result: SimResult;
   xs: number[];
   curves: Curve[];
   xIsT: boolean;
+  field: { xs: number[]; snaps: number[][]; ts: number[] } | null;
+  tEst: number | null;
+  events: { t: number }[];
+  halted: boolean;
   pal: { svgBg: string; grid: string; gridOpacity: number; tick: string; axis: string; frame: string; legend: string; series: string[] };
   pw: number;
   ph: number;
@@ -376,7 +458,9 @@ function SimPlayer({
   onSpeed: (v: number) => void;
   onLoop: (v: boolean) => void;
 }) {
-  const N = result.ts.length;
+  const isField = !!field;
+  const M = isField ? field.snaps.length : 0;
+  const N = isField ? M : result.ts.length;
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(false);
   const frameRef = useRef(0);
@@ -429,19 +513,32 @@ function SimPlayer({
     const PAD_T = 10;
     const PAD_B = 26;
     const Wpx = pw - 24;
-    let x0 = Math.min(...xs);
-    let x1 = Math.max(...xs);
+    const gxs = isField ? (field as { xs: number[] }).xs : xs;
+    let x0 = Math.min(...gxs);
+    let x1 = Math.max(...gxs);
     if (!(x1 > x0)) {
       x0 -= 1;
       x1 += 1;
     }
     let y0 = Infinity;
     let y1 = -Infinity;
-    for (const c of curves) {
-      for (const v of c.ys) {
-        if (isFinite(v)) {
-          if (v < y0) y0 = v;
-          if (v > y1) y1 = v;
+    if (isField) {
+      const fl = field as { snaps: number[][] };
+      for (const snap of fl.snaps) {
+        for (const v of snap) {
+          if (isFinite(v)) {
+            if (v < y0) y0 = v;
+            if (v > y1) y1 = v;
+          }
+        }
+      }
+    } else {
+      for (const c of curves) {
+        for (const v of c.ys) {
+          if (isFinite(v)) {
+            if (v < y0) y0 = v;
+            if (v > y1) y1 = v;
+          }
         }
       }
     }
@@ -466,7 +563,7 @@ function SimPlayer({
       return out;
     };
     return { Wpx, PAD_L, PAD_R, PAD_T, PAD_B, x0, x1, y0, y1, px, py, full, xt: ticks(x0, x1), yt: ticks(y0, y1) };
-  }, [xs, curves, pw, ph, N]);
+  }, [xs, curves, field, isField, pw, ph, N]);
 
   const at = (arr: number[], f: number): number => {
     const i = Math.max(0, Math.min(N - 2, Math.floor(f)));
@@ -476,21 +573,45 @@ function SimPlayer({
     return a + (b - a) * fr;
   };
   const fi = Math.max(0, Math.min(N - 1, Math.floor(frame)));
-  const tNow = at(result.ts, frame);
+  const tsEff = isField ? (field as { ts: number[] }).ts : result.ts;
+  const xsEff = isField ? (field as { xs: number[] }).xs : xs;
+  const tNow = at(tsEff, frame);
+  // FDTD: интерполированный снимок поля на текущем кадре
+  const snap: number[] = useMemo(() => {
+    if (!isField || !field) return [];
+    const i = Math.max(0, Math.min(field.snaps.length - 2, Math.floor(frame)));
+    const fr = Math.max(0, Math.min(1, frame - i));
+    const a = field.snaps[i];
+    const b = field.snaps[i + 1] ?? a;
+    return a.map((v, k) => v + ((b[k] ?? v) - v) * fr);
+  }, [isField, field, frame]);
+  const curvesEff: Curve[] = isField ? [{ name: 'E', ys: snap, color: pal.series[0] }] : curves;
   const TRAIL = Math.max(2, Math.floor(N / 50));
-  const trails = curves.map((c) => {
-    let d = '';
-    const from = Math.max(0, fi - TRAIL);
-    for (let k = from; k <= fi; k++) {
-      const y = c.ys[k];
-      if (!isFinite(y)) continue;
-      d += `${d ? 'L' : 'M'}${geo.px(xs[k]).toFixed(1)},${geo.py(y).toFixed(1)}`;
-    }
-    const cx = at(xs, frame);
-    const cy = at(c.ys, frame);
-    if (isFinite(cx) && isFinite(cy)) d += `${d ? 'L' : 'M'}${geo.px(cx).toFixed(1)},${geo.py(cy).toFixed(1)}`;
-    return d;
-  });
+  const trails = isField
+    ? [
+        (() => {
+          let d = '';
+          for (let k = 0; k < snap.length; k++) {
+            const y = snap[k];
+            if (!isFinite(y)) continue;
+            d += `${d ? 'L' : 'M'}${geo.px(xsEff[k]).toFixed(1)},${geo.py(y).toFixed(1)}`;
+          }
+          return d;
+        })(),
+      ]
+    : curves.map((c) => {
+        let d = '';
+        const from = Math.max(0, fi - TRAIL);
+        for (let k = from; k <= fi; k++) {
+          const y = c.ys[k];
+          if (!isFinite(y)) continue;
+          d += `${d ? 'L' : 'M'}${geo.px(xs[k]).toFixed(1)},${geo.py(y).toFixed(1)}`;
+        }
+        const cx = at(xs, frame);
+        const cy = at(c.ys, frame);
+        if (isFinite(cx) && isFinite(cy)) d += `${d ? 'L' : 'M'}${geo.px(cx).toFixed(1)},${geo.py(cy).toFixed(1)}`;
+        return d;
+      });
 
   const toggle = () => {
     if (!playing && frame >= N - 1) {
@@ -508,7 +629,7 @@ function SimPlayer({
         className="rounded-lg border border-[var(--line)]"
         style={{ background: pal.svgBg }}
         role="img"
-        aria-label={`sim: ${curves.map((c) => c.name).join(', ')}`}
+        aria-label={`sim: ${curvesEff.map((c) => c.name).join(', ')}`}
       >
         {geo.xt.map((v, i) => (
           <g key={`x${i}`}>
@@ -527,20 +648,28 @@ function SimPlayer({
           </g>
         ))}
         <rect x={geo.PAD_L} y={geo.PAD_T} width={geo.Wpx - geo.PAD_L - geo.PAD_R} height={ph - geo.PAD_T - geo.PAD_B} fill="none" stroke={pal.frame} />
-        {curves.map((c, i) =>
+        {curvesEff.map((c, i) =>
           geo.full[i] ? <path key={`f${i}`} d={geo.full[i]} fill="none" stroke={c.color} strokeOpacity={0.3} strokeWidth={1.5} /> : null,
         )}
-        {xIsT && <line x1={geo.px(at(xs, frame))} y1={geo.PAD_T} x2={geo.px(at(xs, frame))} y2={ph - geo.PAD_B} stroke={pal.axis} strokeWidth={1} strokeDasharray="3 3" />}
-        {curves.map((c, i) =>
+        {xIsT && <line x1={geo.px(at(xsEff, frame))} y1={geo.PAD_T} x2={geo.px(at(xsEff, frame))} y2={ph - geo.PAD_B} stroke={pal.axis} strokeWidth={1} strokeDasharray="3 3" />}
+        {/* маркеры событий на оси времени */}
+        {xIsT &&
+          events.slice(0, 200).map((ev, i) => {
+            if (ev.t < geo.x0 || ev.t > geo.x1) return null;
+            const ex = geo.px(ev.t);
+            return <path key={`e${i}`} d={`M${ex},${geo.PAD_T} l3.5,6 h-7 Z`} fill={pal.axis} opacity={0.8} />;
+          })}
+        {curvesEff.map((c, i) =>
           trails[i] ? <path key={`t${i}`} d={trails[i]} fill="none" stroke={c.color} strokeWidth={2} strokeLinejoin="round" /> : null,
         )}
-        {curves.map((c, i) => {
-          const cx = at(xs, frame);
-          const cy = at(c.ys, frame);
-          if (!isFinite(cx) || !isFinite(cy)) return null;
-          return <circle key={`m${i}`} cx={geo.px(cx)} cy={geo.py(cy)} r={4} fill={c.color} stroke={pal.svgBg} strokeWidth={1.5} />;
-        })}
-        {curves.map((c, i) => (
+        {!isField &&
+          curvesEff.map((c, i) => {
+            const cx = at(xsEff, frame);
+            const cy = at(c.ys, frame);
+            if (!isFinite(cx) || !isFinite(cy)) return null;
+            return <circle key={`m${i}`} cx={geo.px(cx)} cy={geo.py(cy)} r={4} fill={c.color} stroke={pal.svgBg} strokeWidth={1.5} />;
+          })}
+        {curvesEff.map((c, i) => (
           <g key={`l${i}`}>
             <line x1={geo.PAD_L + 8} y1={geo.PAD_T + 12 + i * 15} x2={geo.PAD_L + 26} y2={geo.PAD_T + 12 + i * 15} stroke={c.color} strokeWidth={2.5} />
             <text x={geo.PAD_L + 30} y={geo.PAD_T + 15 + i * 15} fontSize={10} fill={pal.legend}>
@@ -595,6 +724,9 @@ function SimPlayer({
       </div>
       <div className="text-[11px] text-[var(--faint)] mt-1">
         {t('sim.stats', { steps, pts: N })}
+        {events.length > 0 && <> • {t('sim.eventsN', { n: events.length })}</>}
+        {halted && <> • {t('sim.halted')}</>}
+        {tEst != null && <> • {t('sim.transmission', { v: tEst })}</>}
       </div>
       </div>
     </div>

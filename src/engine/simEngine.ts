@@ -17,12 +17,47 @@ export type SimSolver = 'euler' | 'rk4' | 'rk45';
 
 export const SIM_SOLVERS: SimSolver[] = ['euler', 'rk4', 'rk45'];
 
+export type SimMode = 'ode' | 'fdtd';
+
 /** Ограничения: честность вместо молчаливой деградации. */
 const MAX_FIXED_STEPS = 200000;
 const MAX_PTS = 20000;
 const MAX_ITERS = 2000000;
+const MAX_FDTD_CELLS = 1000;
+const MAX_FDTD_STEPS = 8000;
+const MAX_FDTD_SNAPS = 800;
+
+export interface SimEventAction {
+  name: string;
+  expr: string;
+  stop: boolean;
+}
+
+export interface SimEvent {
+  cond: string;
+  actions: SimEventAction[];
+}
+
+export interface SimFdtdLayer {
+  x0: string;
+  x1: string;
+  eps: string;
+}
+
+export interface SimFdtd {
+  n: number;
+  length: number;
+  steps: number;
+  src: 'gauss' | 'sine';
+  freq: number;
+  amp: number;
+  srcX: number;
+  det: number;
+  layers: SimFdtdLayer[];
+}
 
 export interface SimDef {
+  mode: SimMode;
   states: string[];
   derivs: string[];
   aux: { name: string; expr: string }[];
@@ -32,11 +67,19 @@ export interface SimDef {
   t1: number;
   dt: number;
   solver: SimSolver;
+  events: SimEvent[];
+  fdtd: SimFdtd | null;
 }
 
 export interface SimSeries {
   name: string;
   ys: number[];
+}
+
+export interface SimField {
+  xs: number[];
+  snaps: number[][];
+  ts: number[];
 }
 
 export interface SimResult {
@@ -46,12 +89,19 @@ export interface SimResult {
   final: number[];
   steps: number;
   error: string | null;
+  /** сработавшие события (время) + останов событием */
+  events: { t: number }[];
+  halted: boolean;
+  /** FDTD: поле E(x) по кадрам + оценка прохождения */
+  field: SimField | null;
+  tEst: number | null;
 }
 
 const VAR_RE = /^[A-Za-z_]\w*$/;
 
 /** Разобрать текстовые поля sim-блока в SimDef (проверки, без вычисления). */
 export function parseSimDef(raw: {
+  mode?: SimMode;
   states: string;
   derivs: string;
   aux?: string;
@@ -61,7 +111,21 @@ export function parseSimDef(raw: {
   t1: number;
   dt: number;
   solver: SimSolver;
+  events?: string;
+  fdtd?: {
+    n: number;
+    length: number;
+    steps: number;
+    src: string;
+    freq: number;
+    amp: number;
+    srcX: number;
+    det: number | null;
+    layers: string;
+  };
 }): { def: SimDef | null; error: string | null } {
+  const mode: SimMode = raw.mode === 'fdtd' ? 'fdtd' : 'ode';
+  if (mode === 'fdtd') return parseFdtdDef(raw);
   const states = raw.states.split(',').map((s) => s.trim()).filter(Boolean);
   if (!states.length) return { def: null, error: t('e.simNoStates') };
   for (const s of states) {
@@ -101,8 +165,82 @@ export function parseSimDef(raw: {
   if (!(t1 > t0)) return { def: null, error: t('e.simSpanOrder') };
   if (!(dt > 0)) return { def: null, error: t('e.simBadDt') };
   if (!SIM_SOLVERS.includes(raw.solver)) return { def: null, error: t('e.simBadSolver') };
+  const events = parseSimEvents(raw.events ?? '', states);
+  if (!events) return { def: null, error: t('e.simBadEvents') };
   return {
-    def: { states, derivs: derivsClean, aux, params, init, t0, t1, dt, solver: raw.solver },
+    def: { mode: 'ode', states, derivs: derivsClean, aux, params, init, t0, t1, dt, solver: raw.solver, events, fdtd: null },
+    error: null,
+  };
+}
+
+/**
+ * События: строки «условие => действие; действие», действие — «имя := expr» или «stop».
+ * Срабатывание по фронту false→true. Цели присваиваний — только состояния.
+ */
+function parseSimEvents(text: string, states: string[]): SimEvent[] | null {
+  const out: SimEvent[] = [];
+  for (const line of text.split('\n')) {
+    const l = line.trim();
+    if (!l || l.startsWith('//') || l.startsWith('#')) continue;
+    const arrow = l.indexOf('=>');
+    if (arrow < 0) return null;
+    const cond = l.slice(0, arrow).trim();
+    const actions: SimEventAction[] = [];
+    for (const part of l.slice(arrow + 2).split(';')) {
+      const a = part.trim();
+      if (!a) continue;
+      if (/^stop$/i.test(a)) {
+        actions.push({ name: '', expr: '', stop: true });
+        continue;
+      }
+      const m = a.match(/^([A-Za-z_]\w*)\s*(:=|=)\s*(.+)$/);
+      if (!m || !states.includes(m[1])) return null;
+      actions.push({ name: m[1], expr: m[3].trim(), stop: false });
+    }
+    if (!cond || !actions.length) return null;
+    out.push({ cond, actions });
+  }
+  return out;
+}
+
+/** Разбор FDTD-конфигурации (числа уже проверены как числа; слои — выражениями). */
+function parseFdtdDef(raw: Parameters<typeof parseSimDef>[0]): { def: SimDef | null; error: string | null } {
+  const f = raw.fdtd;
+  const num = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
+  const n = num(f?.n);
+  const length = num(f?.length);
+  const steps = num(f?.steps);
+  const freq = num(f?.freq);
+  const amp = num(f?.amp);
+  const srcX = num(f?.srcX);
+  const det = f?.det == null ? null : num(f.det);
+  if (n === null || !Number.isInteger(n) || n < 50 || n > MAX_FDTD_CELLS) {
+    return { def: null, error: t('e.simFdtdCells', { max: MAX_FDTD_CELLS }) };
+  }
+  if (length === null || !(length > 0)) return { def: null, error: t('e.simFdtdNum', { name: 'length' }) };
+  if (steps === null || !Number.isInteger(steps) || steps < 100 || steps > MAX_FDTD_STEPS) {
+    return { def: null, error: t('e.simFdtdSteps', { max: MAX_FDTD_STEPS }) };
+  }
+  const src = f?.src === 'sine' ? 'sine' : 'gauss';
+  if (src === 'sine' && (freq === null || !(freq > 0))) return { def: null, error: t('e.simFdtdNum', { name: 'freq' }) };
+  if (amp === null || amp === 0) return { def: null, error: t('e.simFdtdNum', { name: 'amp' }) };
+  if (srcX === null || srcX < 0 || srcX > length) return { def: null, error: t('e.simFdtdRange', { name: 'srcX' }) };
+  const detV = det ?? 0.85 * length;
+  if (!(detV >= 0 && detV <= length)) return { def: null, error: t('e.simFdtdRange', { name: 'det' }) };
+  const layers: SimFdtdLayer[] = [];
+  for (const line of (f?.layers ?? '').split('\n')) {
+    const l = line.trim();
+    if (!l || l.startsWith('//') || l.startsWith('#')) continue;
+    const parts = l.split(',').map((s) => s.trim());
+    if (parts.length !== 3 || parts.some((p) => !p)) return { def: null, error: t('e.simFdtdLayers') };
+    layers.push({ x0: parts[0], x1: parts[1], eps: parts[2] });
+  }
+  return {
+    def: {
+      mode: 'fdtd', states: [], derivs: [], aux: [], params: [], init: [],
+      t0: 0, t1: 0, dt: 0, solver: 'rk4', events: [],
+      fdtd: { n, length, steps, src, freq: freq ?? 1, amp, srcX, det: detV, layers },
+    },
     error: null,
   };
 }
@@ -130,7 +268,29 @@ function evalExpr(expr: string, scope: Scope): number {
  * Возвращает траекторию или ошибку (без исключений наружу).
  */
 export function runSim(def: SimDef, docScope: Scope): SimResult {
-  const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error });
+  if (def.mode === 'fdtd' && def.fdtd) return runFdtd(def.fdtd, docScope);
+  return runOde(def, docScope);
+}
+
+/** Логика условия события: boolean/число/комплексное, иначе — ошибка. */
+function eventTruthy(expr: string, scope: Scope): boolean {
+  let v: unknown;
+  try {
+    v = math.evaluate(preprocessRanges(preprocessJ(expr, false)), scope);
+  } catch {
+    throw { msg: t('e.simEval', { expr: expr.slice(0, 60) }) };
+  }
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number' && isFinite(v)) return v !== 0;
+  if (v !== null && typeof v === 'object' && 're' in v && 'im' in v) {
+    const c = v as { re: number; im: number };
+    return c.re !== 0 || c.im !== 0;
+  }
+  throw { msg: t('e.simEventCond', { expr: expr.slice(0, 60) }) };
+}
+
+function runOde(def: SimDef, docScope: Scope): SimResult {
+  const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
   try {
     const base: Scope = { ...docScope };
     for (const p of def.params) base[p.name] = evalExpr(p.expr, base);
@@ -144,9 +304,47 @@ export function runSim(def: SimDef, docScope: Scope): SimResult {
       return def.derivs.map((d) => evalExpr(d, s));
     };
 
+    /** Скоп шага для условий/действий событий (состояния + aux + t). */
+    const stepScope = (tt: number, y: number[]): Scope => {
+      const s: Scope = { ...base, t: tt };
+      for (let i = 0; i < n; i++) s[def.states[i]] = y[i];
+      for (const a of def.aux) s[a.name] = evalExpr(a.expr, s);
+      return s;
+    };
+
     const ts: number[] = [def.t0];
     const traj: number[][] = [y0.slice()];
+    const fired: { t: number }[] = [];
+    let halted = false;
     let steps = 0;
+    // фронты: начальные значения условий (без срабатывания на старте)
+    const prev = def.events.map((ev) => eventTruthy(ev.cond, stepScope(def.t0, y0)));
+
+    /** Проверить события после шага; true = останов. Мутирует y на месте. */
+    const fireEvents = (tt: number, y: number[]): boolean => {
+      const s = stepScope(tt, y);
+      for (let e = 0; e < def.events.length; e++) {
+        const ev = def.events[e];
+        const now = eventTruthy(ev.cond, s);
+        if (now && !prev[e]) {
+          fired.push({ t: tt });
+          let stop = false;
+          for (const a of ev.actions) {
+            if (a.stop) {
+              stop = true;
+              continue;
+            }
+            const idx = def.states.indexOf(a.name);
+            const v = evalExpr(a.expr, s);
+            y[idx] = v;
+            s[a.name] = v;
+          }
+          if (stop) return true;
+        }
+        prev[e] = now;
+      }
+      return false;
+    };
 
     const checkFinite = (y: number[], tt: number) => {
       for (let i = 0; i < n; i++) {
@@ -156,7 +354,7 @@ export function runSim(def: SimDef, docScope: Scope): SimResult {
     checkFinite(y0, def.t0);
 
     if (def.solver === 'rk45') {
-      integrateRK45(def, rhs, ts, traj, checkFinite);
+      halted = integrateRK45(def, rhs, ts, traj, checkFinite, fireEvents);
       steps = ts.length - 1;
     } else {
       const total = Math.ceil((def.t1 - def.t0) / def.dt);
@@ -170,8 +368,13 @@ export function runSim(def: SimDef, docScope: Scope): SimResult {
         checkFinite(y, tt);
         traj.push(y.slice());
         ts.push(tt);
+        if (def.events.length && fireEvents(tt, y)) {
+          halted = true;
+          traj[traj.length - 1] = y.slice();
+          break;
+        }
       }
-      steps = total;
+      steps = ts.length - 1;
     }
 
     // Прореживание для отображения/анимации (интеграция уже точная)
@@ -191,7 +394,108 @@ export function runSim(def: SimDef, docScope: Scope): SimResult {
       ys: rtraj.map((row) => row[i]),
     }));
     const last = traj[traj.length - 1];
-    return { ts: rts, series, final: last.slice(), steps, error: null };
+    return { ts: rts, series, final: last.slice(), steps, error: null, events: fired, halted, field: null, tEst: null };
+  } catch (e) {
+    const ce = e as { msg?: string };
+    return fail(typeof ce?.msg === 'string' ? ce.msg : t('e.lineErrDefault'));
+  }
+}
+
+/**
+ * 1D FDTD для уравнений Максвелла (Ey, Hz), нормировка c = 1.
+ * Слоистая среда eps(x), источник (гауссов импульс / синус), Mur-ABC по краям.
+ * Возвращает кадры поля E(x) + оценку прохождения T по детектору.
+ */
+function runFdtd(f: SimFdtd, docScope: Scope): SimResult {
+  const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+  try {
+    const N = f.n;
+    const L = f.length;
+    const dx = L / N;
+    const dt = 0.5 * dx; // CFL = 0.5
+    const steps = f.steps;
+    const eps = new Array<number>(N + 1).fill(1);
+    for (const lay of f.layers) {
+      const x0 = evalExpr(lay.x0, { ...docScope });
+      const x1 = evalExpr(lay.x1, { ...docScope });
+      const e = evalExpr(lay.eps, { ...docScope });
+      if (!(x0 >= 0 && x1 > x0 && x1 <= L)) throw { msg: t('e.simFdtdLayer', { expr: `${lay.x0}, ${lay.x1}, ${lay.eps}`.slice(0, 60) }) };
+      if (!(e >= 1)) throw { msg: t('e.simFdtdLayer', { expr: `${lay.x0}, ${lay.x1}, ${lay.eps}`.slice(0, 60) }) };
+      for (let i = 0; i <= N; i++) {
+        const x = i * dx;
+        if (x >= x0 && x < x1) eps[i] = e;
+      }
+    }
+    const E = new Array<number>(N + 1).fill(0);
+    const H = new Array<number>(N).fill(0);
+    const Eprev = new Array<number>(N + 1).fill(0);
+    // Mur ABC первого порядка (c = 1): coef = (c*dt - dx)/(c*dt + dx)
+    const mur = (dt - dx) / (dt + dx);
+    const is = Math.max(0, Math.min(N, Math.round(f.srcX / dx)));
+    const id = Math.max(0, Math.min(N, Math.round(f.det / dx)));
+    // Зонд падающей волны (правее источника) + окна: инцидент — до возврата
+    // отражений, прохождение — после прихода фронта к детектору.
+    const iInc = Math.min(N, is + 2);
+    let xLayer = L;
+    {
+      const xs0: number[] = [];
+      for (const lay of f.layers) {
+        try {
+          const x0 = evalExpr(lay.x0, { ...docScope });
+          if (x0 > f.srcX) xs0.push(x0);
+        } catch { /* ignore */ }
+      }
+      if (xs0.length) xLayer = Math.min(...xs0);
+    }
+    const tRefl = 2 * (xLayer - f.srcX);
+    const tArr = Math.abs(f.det - f.srcX);
+    const w = 0.3;
+    const tc = 1.5;
+    const srcAt = (tt: number): number => {
+      if (f.src === 'sine') {
+        const ramp = Math.min(1, tt / (2 / f.freq));
+        return f.amp * Math.sin(2 * Math.PI * f.freq * tt) * ramp;
+      }
+      return f.amp * Math.exp(-(((tt - tc) / w) ** 2));
+    };
+    const stride = Math.max(1, Math.ceil(steps / MAX_FDTD_SNAPS));
+    const snaps: number[][] = [];
+    const sts: number[] = [];
+    // T энергетическое: поток Пойнтинга S=E·H у источника (до возврата
+    // отражений) vs у детектора (после прихода фронта).
+    let incFlux = 0;
+    let detFlux = 0;
+    let tt = 0;
+    for (let k = 0; k < steps; k++) {
+      tt = (k + 1) * dt;
+      for (let i = 0; i < N; i++) H[i] -= (dt / dx) * (E[i + 1] - E[i]);
+      Eprev[0] = E[0];
+      Eprev[N] = E[N];
+      const E1old = E[1];
+      const EN1old = E[N - 1];
+      for (let i = 1; i < N; i++) E[i] -= (dt / (eps[i] * dx)) * (H[i] - H[i - 1]);
+      E[0] = E1old + mur * (E[1] - Eprev[0]);
+      E[N] = EN1old + mur * (E[N - 1] - Eprev[N]);
+      E[is] += srcAt(tt);
+      if (tRefl <= 0 || tt < tRefl) incFlux += E[iInc] * H[Math.min(iInc, N - 1)] * dt;
+      if (tt > tArr) detFlux += E[id] * H[Math.min(id, N - 1)] * dt;
+      for (let i = 0; i <= N; i++) {
+        if (!isFinite(E[i]) || !isFinite(H[Math.min(i, N - 1)])) {
+          throw { msg: t('e.simNan', { state: 'E', t: fmtT(tt) }) };
+        }
+      }
+      if (k % stride === 0 || k === steps - 1) {
+        snaps.push(E.slice());
+        sts.push(tt);
+      }
+    }
+    // Оценка прохождения T = поток у детектора / падающий поток
+    const tEst = incFlux > 0 ? Number(Math.min(1.5, detFlux / incFlux).toPrecision(4)) : null;
+    const xs = Array.from({ length: N + 1 }, (_, i) => Number((i * dx).toPrecision(6)));
+    return {
+      ts: sts, series: [], final: [], steps, error: null, events: [], halted: false,
+      field: { xs, snaps, ts: sts }, tEst,
+    };
   } catch (e) {
     const ce = e as { msg?: string };
     return fail(typeof ce?.msg === 'string' ? ce.msg : t('e.lineErrDefault'));
@@ -221,14 +525,15 @@ function stepRK4(rhs: (t: number, y: number[]) => number[], tt: number, y: numbe
   return y.map((v, i) => v + (h / 6) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
 }
 
-/** Адаптивный Дорман–Принс RK45 (rtol 1e-6). Бросает {msg} при превышении лимитов. */
+/** Адаптивный Дорман–Принс RK45 (rtol 1e-6). Возвращает halted. Бросает {msg} при превышении лимитов. */
 function integrateRK45(
   def: SimDef,
   rhs: (t: number, y: number[]) => number[],
   ts: number[],
   traj: number[][],
   checkFinite: (y: number[], t: number) => void,
-): void {
+  fireEvents: (t: number, y: number[]) => boolean,
+): boolean {
   const n = def.states.length;
   const RTOL = 1e-6;
   const ATOL = 1e-9;
@@ -287,9 +592,14 @@ function integrateRK45(
       checkFinite(y, tt);
       ts.push(tt);
       traj.push(y.slice());
+      if (def.events.length && fireEvents(tt, y)) {
+        traj[traj.length - 1] = y.slice();
+        return true;
+      }
     }
     h = Math.max(1e-12, Math.min(hNew, hMax));
   }
+  return false;
 }
 
 /* ---------------- Реестр готовых моделей ---------------- */
@@ -317,6 +627,9 @@ export interface SimModelParam {
 export interface SimModel {
   id: string;
   domain: SimDomain;
+  /** режим (по умолчанию 'ode'); события — текст (по умолчанию '') */
+  mode?: SimMode;
+  events?: string;
   label: LText;
   desc: LText;
   states: string;
@@ -330,6 +643,17 @@ export interface SimModel {
   solver: SimSolver;
   x: string;
   y: string;
+  fdtd?: {
+    n: number;
+    length: number;
+    steps: number;
+    src: 'gauss' | 'sine';
+    freq: number;
+    amp: number;
+    srcX: number;
+    det: number;
+    layers: string;
+  };
 }
 
 const L = (ru: string, en: string): LText => ({ ru, en });
@@ -464,6 +788,53 @@ export const SIM_MODELS: SimModel[] = [
     params: [{ name: 'g', def: '0.5' }],
     init: '1, 0', t0: 0, t1: 15, dt: 0.02, solver: 'rk4', x: 't', y: 'x',
   },
+  {
+    id: 'bounce', domain: 'mechanics',
+    label: L('Прыгающий мяч', 'Bouncing ball'),
+    desc: L('Удар об пол через событие: отражение скорости', 'Floor impact via event: velocity bounce'),
+    states: 'y, vy', derivs: 'vy; -g', aux: '',
+    params: [{ name: 'g', def: '9.81' }, { name: 'e', def: '0.8' }],
+    events: 'y <= 0 => vy := -e*vy; y := 0',
+    init: '5, 0', t0: 0, t1: 6, dt: 0.002, solver: 'rk4', x: 't', y: 'y',
+  },
+  {
+    id: 'binary', domain: 'astro',
+    label: L('Двойная система', 'Binary system'),
+    desc: L('Две звезды вокруг барицентра (m1=2, m2=1)', 'Two stars around barycenter (m1=2, m2=1)'),
+    states: 'x1, y1, vx1, vy1, x2, y2, vx2, vy2',
+    derivs: 'vx1; vy1; -G*m2*(x1-x2)/r^3; -G*m2*(y1-y2)/r^3; vx2; vy2; G*m1*(x1-x2)/r^3; G*m1*(y1-y2)/r^3',
+    aux: 'r := sqrt((x1-x2)^2 + (y1-y2)^2)',
+    params: [{ name: 'G', def: '1' }, { name: 'm1', def: '2' }, { name: 'm2', def: '1' }],
+    init: '-0.6667, 0, 0, -0.4082, 1.3333, 0, 0, 0.8165',
+    t0: 0, t1: 10.3, dt: 0.005, solver: 'rk4', x: 'x1', y: 'y1',
+  },
+  {
+    id: 'figure8', domain: 'astro',
+    label: L('Восьмёрка трёх тел', 'Figure-8 three-body'),
+    desc: L('Знаменитая периодическая орбита Мура (G=m=1)', "Moore's periodic orbit (G=m=1)"),
+    states: 'x1, y1, vx1, vy1, x2, y2, vx2, vy2, x3, y3, vx3, vy3',
+    derivs: 'vx1; vy1; (x2-x1)/r12^3 + (x3-x1)/r13^3; (y2-y1)/r12^3 + (y3-y1)/r13^3; vx2; vy2; (x1-x2)/r12^3 + (x3-x2)/r23^3; (y1-y2)/r12^3 + (y3-y2)/r23^3; vx3; vy3; (x1-x3)/r13^3 + (x2-x3)/r23^3; (y1-y3)/r13^3 + (y2-y3)/r23^3',
+    aux: 'r12 := sqrt((x1-x2)^2 + (y1-y2)^2)\nr13 := sqrt((x1-x3)^2 + (y1-y3)^2)\nr23 := sqrt((x2-x3)^2 + (y2-y3)^2)',
+    params: [],
+    init: '-0.97000436, 0.24308753, 0.466203685, 0.43236573, 0.97000436, -0.24308753, 0.466203685, 0.43236573, 0, 0, -0.93240737, -0.86473146',
+    t0: 0, t1: 6.33, dt: 0.002, solver: 'rk4', x: 'x1', y: 'y1',
+  },
+  {
+    id: 'slab', domain: 'optics', mode: 'fdtd',
+    label: L('Импульс через пластину', 'Pulse through slab'),
+    desc: L('Гауссов импульс: отражение и прохождение слоя eps=4', 'Gaussian pulse: reflection and transmission at eps=4 slab'),
+    states: '', derivs: '', aux: '', params: [], init: '',
+    t0: 0, t1: 0, dt: 0, solver: 'rk4', x: 't', y: '',
+    fdtd: { n: 400, length: 20, steps: 1500, src: 'gauss', freq: 1, amp: 1, srcX: 4, det: 16, layers: '8, 12, 4' },
+  },
+  {
+    id: 'mirror', domain: 'optics', mode: 'fdtd',
+    label: L('Отражение от зеркала', 'Mirror reflection'),
+    desc: L('Импульс отражается от плотного слоя eps=100', 'Pulse reflects off a dense eps=100 slab'),
+    states: '', derivs: '', aux: '', params: [], init: '',
+    t0: 0, t1: 0, dt: 0, solver: 'rk4', x: 't', y: '',
+    fdtd: { n: 400, length: 20, steps: 1500, src: 'gauss', freq: 1, amp: 1, srcX: 4, det: 16, layers: '9, 11, 100' },
+  },
 ];
 
 export function getSimModel(id: string): SimModel | undefined {
@@ -472,6 +843,7 @@ export function getSimModel(id: string): SimModel | undefined {
 
 /** Патч полей блока для применения модели (label локализуется через lx). */
 export function simModelPatch(m: SimModel): {
+  simMode: SimMode;
   simModel: string;
   simStates: string;
   simDerivs: string;
@@ -482,10 +854,21 @@ export function simModelPatch(m: SimModel): {
   simT1: number;
   simDt: number;
   simSolver: SimSolver;
+  simEvents: string;
   simX: string;
   simY: string;
+  simFdtdN?: number;
+  simFdtdL?: number;
+  simFdtdSteps?: number;
+  simFdtdSrc?: 'gauss' | 'sine';
+  simFdtdFreq?: number;
+  simFdtdAmp?: number;
+  simFdtdSrcX?: number;
+  simFdtdDet?: number;
+  simFdtdLayers?: string;
 } {
   return {
+    simMode: m.mode ?? 'ode',
     simModel: m.id,
     simStates: m.states,
     simDerivs: m.derivs,
@@ -496,8 +879,18 @@ export function simModelPatch(m: SimModel): {
     simT1: m.t1,
     simDt: m.dt,
     simSolver: m.solver,
+    simEvents: m.events ?? '',
     simX: m.x,
     simY: m.y,
+    simFdtdN: m.fdtd?.n,
+    simFdtdL: m.fdtd?.length,
+    simFdtdSteps: m.fdtd?.steps,
+    simFdtdSrc: m.fdtd?.src,
+    simFdtdFreq: m.fdtd?.freq,
+    simFdtdAmp: m.fdtd?.amp,
+    simFdtdSrcX: m.fdtd?.srcX,
+    simFdtdDet: m.fdtd?.det,
+    simFdtdLayers: m.fdtd?.layers,
   };
 }
 
