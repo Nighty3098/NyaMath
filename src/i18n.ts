@@ -8,6 +8,7 @@
  * ошибки перегенерируются уже на новом языке.
  */
 import type { ThemeName } from './theme';
+import type { SimDomain, SimSolver } from './engine/simEngine';
 
 export type Lang = 'ru' | 'en';
 
@@ -175,6 +176,35 @@ const ru = {
 
   'mini.aria': 'Автографик {label}: y от {lo} до {hi}',
 
+  'menu.insSim': 'Симуляция',
+  'sim.preset': 'Модель',
+  'sim.custom': 'Своя система',
+  'sim.setup': 'Уравнения и параметры',
+  'sim.states': 'Состояния',
+  'sim.statesPh': 'x, v',
+  'sim.derivs': 'Производные (через ;)',
+  'sim.derivsPh': 'v; -(k*x + c*v)/m',
+  'sim.aux': 'Вспомогательные (каждый шаг)',
+  'sim.auxPh': 'r := sqrt(x^2 + y^2)',
+  'sim.params': 'Параметры',
+  'sim.paramsPh': 'm := 1',
+  'sim.init': 'Старт (через ,)',
+  'sim.initPh': '1, 0',
+  'sim.solver': 'Решатель',
+  'sim.xAxis': 'Ось X',
+  'sim.yAxis': 'Кривые Y (через ;)',
+  'sim.exportPh': 'имя',
+  'sim.exportTitle': 'Переменная документа для финального вектора (пусто — не экспортировать)',
+  'sim.hint': 'Производные видят переменные документа • t — независимая переменная',
+  'sim.play': 'Запустить',
+  'sim.pause': 'Пауза',
+  'sim.speed': 'Скорость',
+  'sim.loop': 'Повтор',
+  'sim.delete': 'Удалить симуляцию',
+  'sim.stats': 'шагов: {steps} • точек: {pts}',
+  'sim.noData': 'Нет траектории — проверьте уравнения',
+  'sim.resize': 'Потянуть — размер блока',
+
   'e.emptyRight': 'Пустое выражение справа от ":="',
   'e.badVar': 'Некорректное имя переменной: "{name}"',
   'e.constI': 'Нельзя переопределять константу "i"',
@@ -202,6 +232,24 @@ const ru = {
   'e.seqRange': 'seq: диапазон слишком большой (>100000). Уменьшите шаг/границы',
   'e.linspaceN': 'linspace: n должно быть 2..100000',
   'e.rmsEmpty': 'rms: пустой вектор',
+  'e.simNoStates': 'Симуляция: задайте состояния (напр. «x, v»)',
+  'e.simBadState': 'Симуляция: плохое имя состояния «{name}»',
+  'e.simDupState': 'Симуляция: имена состояний повторяются',
+  'e.simCount': 'Симуляция: состояний {n}, а производных {m} — нужно поровну',
+  'e.simInitCount': 'Симуляция: нужно {n} начальных значений через запятую',
+  'e.simBadAux': 'Симуляция: aux — только строки «имя := выражение»',
+  'e.simBadParams': 'Симуляция: параметры — только строки «имя := выражение»',
+  'e.simShadow': 'Симуляция: «{name}» занято состоянием или t',
+  'e.simBadSpan': 'Симуляция: t0, t1, dt должны быть числами',
+  'e.simSpanOrder': 'Симуляция: нужно t1 > t0',
+  'e.simBadDt': 'Симуляция: dt должен быть > 0',
+  'e.simBadSolver': 'Симуляция: неизвестный решатель',
+  'e.simEval': 'Симуляция: не посчиталось «{expr}»',
+  'e.simNotNum': 'Симуляция: «{expr}» не число',
+  'e.simNan': 'Симуляция: {state} разошлось при t = {t}',
+  'e.simSteps': 'Симуляция: слишком много шагов (>{max}) — увеличьте dt',
+  'e.simPts': 'Симуляция: слишком плотный вывод (>{max} точек)',
+  'e.simStuck': 'Симуляция: решатель застрял (жёсткая система?)',
 };
 
 export type StrKey = keyof typeof ru;
@@ -336,6 +384,35 @@ const en: Record<StrKey, string> = {
 
   'mini.aria': 'Auto-plot {label}: y from {lo} to {hi}',
 
+  'menu.insSim': 'Simulation',
+  'sim.preset': 'Model',
+  'sim.custom': 'Custom system',
+  'sim.setup': 'Equations & parameters',
+  'sim.states': 'States',
+  'sim.statesPh': 'x, v',
+  'sim.derivs': 'Derivatives (via ;)',
+  'sim.derivsPh': 'v; -(k*x + c*v)/m',
+  'sim.aux': 'Auxiliary (each step)',
+  'sim.auxPh': 'r := sqrt(x^2 + y^2)',
+  'sim.params': 'Parameters',
+  'sim.paramsPh': 'm := 1',
+  'sim.init': 'Start (via ,)',
+  'sim.initPh': '1, 0',
+  'sim.solver': 'Solver',
+  'sim.xAxis': 'X axis',
+  'sim.yAxis': 'Y curves (via ;)',
+  'sim.exportPh': 'name',
+  'sim.exportTitle': 'Document variable for the final state vector (empty — no export)',
+  'sim.hint': 'Derivatives see document variables • t is the independent variable',
+  'sim.play': 'Play',
+  'sim.pause': 'Pause',
+  'sim.speed': 'Speed',
+  'sim.loop': 'Loop',
+  'sim.delete': 'Delete simulation',
+  'sim.stats': 'steps: {steps} • points: {pts}',
+  'sim.noData': 'No trajectory — check the equations',
+  'sim.resize': 'Drag — block size',
+
   'e.emptyRight': 'Empty expression right of ":="',
   'e.badVar': 'Invalid variable name: "{name}"',
   'e.constI': 'Cannot redefine the "i" constant',
@@ -363,6 +440,24 @@ const en: Record<StrKey, string> = {
   'e.seqRange': 'seq: range too large (>100000). Increase the step / shrink the bounds',
   'e.linspaceN': 'linspace: n must be 2..100000',
   'e.rmsEmpty': 'rms: empty vector',
+  'e.simNoStates': 'Sim: define states (e.g. "x, v")',
+  'e.simBadState': 'Sim: bad state name "{name}"',
+  'e.simDupState': 'Sim: duplicate state names',
+  'e.simCount': 'Sim: {n} states but {m} derivatives — must match',
+  'e.simInitCount': 'Sim: need {n} comma-separated initial values',
+  'e.simBadAux': 'Sim: aux accepts only "name := expression" lines',
+  'e.simBadParams': 'Sim: params accepts only "name := expression" lines',
+  'e.simShadow': 'Sim: "{name}" is taken by a state or t',
+  'e.simBadSpan': 'Sim: t0, t1, dt must be numbers',
+  'e.simSpanOrder': 'Sim: need t1 > t0',
+  'e.simBadDt': 'Sim: dt must be > 0',
+  'e.simBadSolver': 'Sim: unknown solver',
+  'e.simEval': 'Sim: could not evaluate "{expr}"',
+  'e.simNotNum': 'Sim: "{expr}" is not a number',
+  'e.simNan': 'Sim: {state} diverged at t = {t}',
+  'e.simSteps': 'Sim: too many steps (>{max}) — increase dt',
+  'e.simPts': 'Sim: output too dense (>{max} points)',
+  'e.simStuck': 'Sim: solver stuck (stiff system?)',
 };
 
 /** Строка на текущем языке с подстановкой {параметров}. */
@@ -394,7 +489,7 @@ export function themeLabel(id: ThemeName): string {
   return themeNames[id][current];
 }
 
-export type PackId = 'matrices' | 'stats' | 'physics' | 'telecom' | 'programs' | 'plots';
+export type PackId = 'matrices' | 'stats' | 'physics' | 'telecom' | 'programs' | 'plots' | 'sim';
 
 const packNames: Record<PackId, { ru: string; en: string }> = {
   matrices: { ru: 'Матрицы', en: 'Matrices' },
@@ -403,6 +498,7 @@ const packNames: Record<PackId, { ru: string; en: string }> = {
   telecom: { ru: 'Телеком', en: 'Telecom' },
   programs: { ru: 'Программы', en: 'Programs' },
   plots: { ru: 'Графики', en: 'Plots' },
+  sim: { ru: 'Симуляции', en: 'Simulations' },
 };
 
 /** Название пака сниппетов на текущем языке. */
@@ -410,7 +506,33 @@ export function packName(id: PackId): string {
   return packNames[id]?.[current] ?? id;
 }
 
-/** Локализованная строка (для подписей/подсказок сниппетов). */
+/** Название раздела симуляций на текущем языке. */
+export function simDomainName(d: SimDomain): string {
+  const names: Record<SimDomain, LText> = {
+    mechanics: { ru: 'Механика', en: 'Mechanics' },
+    osc: { ru: 'Колебания', en: 'Oscillations' },
+    circuits: { ru: 'Цепи', en: 'Circuits' },
+    thermo: { ru: 'Термодинамика', en: 'Thermodynamics' },
+    optics: { ru: 'Оптика', en: 'Optics' },
+    chaos: { ru: 'Хаос', en: 'Chaos' },
+    nuclear: { ru: 'Ядерная', en: 'Nuclear' },
+    molecular: { ru: 'Молекулярная', en: 'Molecular' },
+    astro: { ru: 'Астрофизика', en: 'Astrophysics' },
+  };
+  return names[d][current];
+}
+
+/** Название решателя на текущем языке. */
+export function simSolverName(s: SimSolver): string {
+  const names: Record<SimSolver, LText> = {
+    euler: { ru: 'Эйлер', en: 'Euler' },
+    rk4: { ru: 'RK4', en: 'RK4' },
+    rk45: { ru: 'RK45 адаптивный', en: 'Adaptive RK45' },
+  };
+  return names[s][current];
+}
+
+/** Локализованная строка (для подписей/подсказок сниппетов и моделей). */
 export interface LText {
   ru: string;
   en: string;

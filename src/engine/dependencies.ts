@@ -1,6 +1,7 @@
 import { createBaseScope, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, toLatex, valueToLatex, type Scope } from './mathEngine';
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
+import { parseSimDef, runSim, type SimResult, type SimSolver } from './simEngine';
 import { t } from '../i18n';
 
 export interface MathBlockData {
@@ -18,7 +19,7 @@ export interface MathBlockData {
   definedVar: string | null;
   /** true, если последняя строка блока — вывод (expr / expr =): результат показываем инлайн */
   isOutput: boolean;
-  kind: 'math' | 'plot' | 'text' | 'program' | 'plot3d';
+  kind: 'math' | 'plot' | 'text' | 'program' | 'plot3d' | 'sim';
   plotFn?: string;
   plotXmin?: number;
   plotXmax?: number;
@@ -30,6 +31,26 @@ export interface MathBlockData {
   plotWireframe?: boolean;
   /** Имя переменной, в которую программный блок экспортирует результат */
   exportName?: string;
+  /** Sim: модель, состояния, производные, параметры, старт, интервал, решатель, оси */
+  simModel?: string;
+  simStates?: string;
+  simDerivs?: string;
+  simAux?: string;
+  simParams?: string;
+  simInit?: string;
+  simT0?: number;
+  simT1?: number;
+  simDt?: number;
+  simSolver?: SimSolver;
+  simX?: string;
+  simY?: string;
+  /** Sim: имя переменной для финального вектора состояний */
+  simExport?: string;
+  /** Sim: предпочтения плеера (скорость, повтор) */
+  simSpeed?: number;
+  simLoop?: boolean;
+  /** Sim: посчитанная траектория (не пишем в файл/хранилище) */
+  simResult?: SimResult | null;
   /** Ручной размер: w — ширина региона/графика, h — высота графика. null = авто */
   w?: number | null;
   h?: number | null;
@@ -54,6 +75,7 @@ function blockDeps(b: MathBlockData): string[] {
       return [];
     }
   }
+  if (b.kind === 'sim') return simDeps(b);
   const deps = new Set<string>();
   for (const line of b.rawInput.split('\n')) {
     const t = line.trim();
@@ -69,6 +91,10 @@ function blockDeps(b: MathBlockData): string[] {
 function blockDefs(b: MathBlockData): string[] {
   if (b.kind === 'program') {
     return b.exportName && isValidVarName(b.exportName) ? [b.exportName] : [];
+  }
+  if (b.kind === 'sim') {
+    const exp = (b.simExport ?? '').trim();
+    return exp && isValidVarName(exp) ? [exp] : [];
   }
   if (b.kind !== 'math') return [];
   const defs: string[] = [];
@@ -90,7 +116,7 @@ export function detectCycles(blocks: MathBlockData[]): Set<string> {
   }
   const adj = new Map<string, string[]>();
   for (const b of blocks) {
-    if (b.kind !== 'math' && b.kind !== 'program') continue;
+    if (b.kind !== 'math' && b.kind !== 'program' && b.kind !== 'sim') continue;
     const deps = new Set<string>();
     for (const d of blockDeps(b)) {
       const target = defMap.get(d);
@@ -120,6 +146,35 @@ export function detectCycles(blocks: MathBlockData[]): Set<string> {
     if ((visited.get(b.id) ?? 0) === 0) dfs(b.id);
   }
   return cyclic;
+}
+
+/** Зависимости sim-блока: переменные из производных/aux/параметров/старта (кроме состояний и t). */
+function simDeps(b: MathBlockData): string[] {
+  const deps = new Set<string>();
+  const states = new Set(
+    (b.simStates ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+  );
+  const texts = [
+    b.simDerivs ?? '',
+    (b.simAux ?? '').replace(/^([A-Za-z_]\w*)\s*(:=|=)/gm, ''),
+    (b.simParams ?? '').replace(/^([A-Za-z_]\w*)\s*(:=|=)/gm, ''),
+    b.simInit ?? '',
+  ];
+  for (const text of texts) {
+    for (const line of text.split('\n')) {
+      const t = line.trim();
+      if (!t || t.startsWith('//') || t.startsWith('#')) continue;
+      for (const part of t.split(';')) {
+        try {
+          const p = parseLine(part.trim());
+          for (const d of extractDependencies(p.expr, p.fnParams)) {
+            if (!states.has(d) && d !== 't') deps.add(d);
+          }
+        } catch { /* ignore */ }
+      }
+    }
+  }
+  return [...deps];
 }
 
 export function recalculateAll(list: MathBlockData[]): RecalcResult {
@@ -170,6 +225,49 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
         cur.resultStr = formatResult(r.value);
         cur.resultLatex = valueToLatex(r.value);
         if (cur.definedVar) scope[cur.definedVar] = r.value;
+      }
+      cur.displayLatex = '';
+      continue;
+    }
+
+    // ---------- симуляция ----------
+    if (b.kind === 'sim') {
+      const parsed = parseSimDef({
+        states: b.simStates ?? '',
+        derivs: b.simDerivs ?? '',
+        aux: b.simAux ?? '',
+        params: b.simParams ?? '',
+        init: b.simInit ?? '',
+        t0: b.simT0 ?? 0,
+        t1: b.simT1 ?? 10,
+        dt: b.simDt ?? 0.01,
+        solver: b.simSolver ?? 'rk4',
+      });
+      cur.dependencies = blockDeps(b);
+      cur.isOutput = true;
+      const exp = (b.simExport ?? '').trim();
+      cur.definedVar = exp && isValidVarName(exp) ? exp : null;
+      if (parsed.error || !parsed.def) {
+        cur.error = parsed.error;
+        cur.simResult = null;
+        cur.resultStr = '';
+        cur.resultLatex = '';
+        cur.resultValue = null;
+      } else {
+        const r = runSim(parsed.def, scope);
+        cur.simResult = r;
+        if (r.error) {
+          cur.error = r.error;
+          cur.resultStr = '';
+          cur.resultLatex = '';
+          cur.resultValue = null;
+        } else {
+          cur.error = null;
+          cur.resultValue = r.final;
+          cur.resultStr = formatResult(r.final);
+          cur.resultLatex = valueToLatex(r.final);
+          if (cur.definedVar) scope[cur.definedVar] = r.final;
+        }
       }
       cur.displayLatex = '';
       continue;

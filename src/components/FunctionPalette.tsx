@@ -4,13 +4,14 @@ import { useCanvasStore } from '../store/canvasStore';
 import { lx, packName, t, type PackId } from '../i18n';
 import { IX } from './Icon';
 
-const PACKS: PackId[] = ['matrices', 'stats', 'physics', 'telecom', 'programs', 'plots'];
+const PACKS: PackId[] = ['matrices', 'stats', 'physics', 'telecom', 'programs', 'plots', 'sim'];
 
 export default function FunctionPalette({ onClose }: { onClose: () => void }) {
   const blocks = useCanvasStore((s) => s.blocks);
   const addBlock = useCanvasStore((s) => s.addBlock);
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
   const addProgramBlock = useCanvasStore((s) => s.addProgramBlock);
+  const addSimBlock = useCanvasStore((s) => s.addSimBlock);
   const lang = useCanvasStore((s) => s.lang);
   const [q, setQ] = useState('');
 
@@ -36,6 +37,7 @@ export default function FunctionPalette({ onClose }: { onClose: () => void }) {
     const p = place();
     if (s.kind === 'plot') addPlotBlock(p.x + 420, Math.max(80, p.y - 160), s.code);
     else if (s.kind === 'program') addProgramBlock(p.x, p.y, s.code, s.exportName ?? '');
+    else if (s.kind === 'sim') addSimBlock(p.x, p.y, s.code);
     else addBlock(p.x, p.y, s.code);
   };
 

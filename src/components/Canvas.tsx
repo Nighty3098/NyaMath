@@ -4,6 +4,7 @@ import MathBlockView from './MathBlockView';
 import PlotBlockView from './PlotBlockView';
 import Plot3dBlockView from './Plot3dBlockView';
 import ProgramBlockView from './ProgramBlockView';
+import SimBlockView from './SimBlockView';
 import { isLightTheme } from '../theme';
 import { t } from '../i18n';
 
@@ -328,6 +329,8 @@ export default function Canvas() {
             <Plot3dBlockView key={b.id} block={b} scale={view.k} />
           ) : b.kind === 'program' ? (
             <ProgramBlockView key={b.id} block={b} scale={view.k} />
+          ) : b.kind === 'sim' ? (
+            <SimBlockView key={b.id} block={b} scale={view.k} />
           ) : (
             <MathBlockView key={b.id} block={b} scale={view.k} />
           ),

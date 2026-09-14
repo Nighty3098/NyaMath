@@ -132,7 +132,7 @@ export interface Snippet {
   label: LText;
   hint: LText;
   code: string;
-  kind: 'math' | 'plot' | 'program';
+  kind: 'math' | 'plot' | 'program' | 'sim';
   exportName?: string;
 }
 
@@ -173,4 +173,11 @@ export const SNIPPETS: Snippet[] = [
   // графики
   { pack: 'plots', label: { ru: 'sin + cos', en: 'sin + cos' }, hint: { ru: 'две серии через ;', en: 'two series via ;' }, code: 'sin(x); cos(x/2)', kind: 'plot' },
   { pack: 'plots', label: { ru: 'Затухание', en: 'Damping' }, hint: { ru: 'экспонента × синус', en: 'exponential × sine' }, code: 'exp(-x/5)*sin(x)', kind: 'plot' },
+  // симуляции (code = id модели)
+  { pack: 'sim', label: { ru: 'Маятник', en: 'Pendulum' }, hint: { ru: 'нелинейные колебания', en: 'nonlinear swings' }, code: 'pendulum', kind: 'sim' },
+  { pack: 'sim', label: { ru: 'Бросок тела', en: 'Projectile' }, hint: { ru: 'полёт с сопротивлением', en: 'flight with drag' }, code: 'projectile', kind: 'sim' },
+  { pack: 'sim', label: { ru: 'Лоренц', en: 'Lorenz' }, hint: { ru: 'хаос-бабочка', en: 'butterfly chaos' }, code: 'lorenz', kind: 'sim' },
+  { pack: 'sim', label: { ru: 'RLC-контур', en: 'RLC circuit' }, hint: { ru: 'переходный процесс', en: 'transient' }, code: 'rlc', kind: 'sim' },
+  { pack: 'sim', label: { ru: 'Орбита', en: 'Orbit' }, hint: { ru: 'спутник, RK45', en: 'satellite, RK45' }, code: 'orbit', kind: 'sim' },
+  { pack: 'sim', label: { ru: 'Распад A→B→C', en: 'Decay A→B→C' }, hint: { ru: 'ядерная цепочка', en: 'nuclear chain' }, code: 'decay', kind: 'sim' },
 ];

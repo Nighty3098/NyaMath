@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
-import { IFormula, IPlot, IPlot3d, IProgram, IX, IZap, IDemo, IOpen, IBlank } from './Icon';
+import { IFormula, IPlot, IPlot3d, IProgram, ISim, IX, IZap, IDemo, IOpen, IBlank } from './Icon';
 
 interface WelcomeModalProps {
   onClose: () => void;
@@ -20,6 +20,7 @@ export default function WelcomeModal({ onClose, onOpenFile }: WelcomeModalProps)
   const addProgramBlock = useCanvasStore((s) => s.addProgramBlock);
   const loadTestScenario = useCanvasStore((s) => s.loadTestScenario);
   const loadAdvancedDemo = useCanvasStore((s) => s.loadAdvancedDemo);
+  const addSimBlock = useCanvasStore((s) => s.addSimBlock);
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
 
@@ -59,6 +60,7 @@ export default function WelcomeModal({ onClose, onOpenFile }: WelcomeModalProps)
     { icon: <IPlot />, title: t('w.plot'), sub: t('w.plotSub'), fn: () => addPlotBlock(560, 180) },
     { icon: <IPlot3d />, title: t('w.plot3d'), sub: t('w.plot3dSub'), fn: () => addPlot3dBlock(560, 240) },
     { icon: <IProgram />, title: t('w.program'), sub: 'if · for · while', fn: () => addProgramBlock(240, 260) },
+    { icon: <ISim />, title: t('menu.insSim'), sub: 'ODE · RK4', fn: () => addSimBlock(420, 300) },
   ];
 
   return (

@@ -5,7 +5,7 @@ import { THEMES } from '../theme';
 import { t, themeLabel, type Lang } from '../i18n';
 import {
   IDemo, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IProgram,
-  IRecalc, IRedo, ISave, IUndo, IX, IZap, ISun, IMoon,
+  IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon,
 } from './Icon';
 
 interface MenuBarProps {
@@ -42,6 +42,7 @@ export default function MenuBar({ onOpenFile, onOpenPalette, onShowWelcome }: Me
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
   const addPlot3dBlock = useCanvasStore((s) => s.addPlot3dBlock);
   const addProgramBlock = useCanvasStore((s) => s.addProgramBlock);
+  const addSimBlock = useCanvasStore((s) => s.addSimBlock);
   const loadTestScenario = useCanvasStore((s) => s.loadTestScenario);
   const loadAdvancedDemo = useCanvasStore((s) => s.loadAdvancedDemo);
   const clear = useCanvasStore((s) => s.clear);
@@ -109,6 +110,7 @@ export default function MenuBar({ onOpenFile, onOpenPalette, onShowWelcome }: Me
         { id: 'ins-plot', icon: <IPlot />, label: t('menu.insPlot'), action: run(() => addPlotBlock(600, 200)) },
         { id: 'ins-3d', icon: <IPlot3d />, label: t('menu.ins3d'), action: run(() => addPlot3dBlock(600, 260)) },
         { id: 'ins-prog', icon: <IProgram />, label: t('menu.insProg'), action: run(() => addProgramBlock(300, 300)) },
+        { id: 'ins-sim', icon: <ISim />, label: t('menu.insSim'), action: run(() => addSimBlock(420, 300)) },
         { sep: true },
         { id: 'ins-pal', icon: <IFx />, label: t('menu.insPal'), action: run(onOpenPalette) },
       ],

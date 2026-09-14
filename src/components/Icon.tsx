@@ -57,6 +57,12 @@ export const IProgram = () => (
     <path d="M5.5 4 2.5 8l3 4M10.5 4l3 4-3 4" />
   </Svg>
 );
+export const ISim = () => (
+  <Svg>
+    <circle cx="8" cy="8" r="6" />
+    <path d="M6.8 5.5v5l4-2.5-4-2.5Z" />
+  </Svg>
+);
 export const IFx = () => (
   <Svg>
     <path d="M9.5 2 4 8.5h4L6.5 14 12 7.5H8L9.5 2Z" />

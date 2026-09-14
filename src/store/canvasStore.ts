@@ -4,6 +4,7 @@ import { recalculateAll, type MathBlockData } from '../engine/dependencies';
 import { TEST_SCENARIO_LINES } from '../data/testScenario';
 import { ADVANCED_DEMO } from '../data/demoAdvanced';
 import { loadTheme, saveTheme, THEMES, type ThemeName } from '../theme';
+import { getSimModel, SIM_MODELS, simModelPatch } from '../engine/simEngine';
 import { loadLang, setLangState, t, type Lang } from '../i18n';
 
 const STORAGE_KEY = 'wengineering-doc-v1';
@@ -38,6 +39,8 @@ export interface CanvasState {
   addPlotBlock: (x: number, y: number, fn?: string) => void;
   addPlot3dBlock: (x: number, y: number, fn?: string) => void;
   addProgramBlock: (x: number, y: number, raw?: string, exportName?: string) => void;
+  addSimBlock: (x: number, y: number, modelId?: string) => void;
+  updateSim: (id: string, patch: Partial<MathBlockData>) => void;
   updateInput: (id: string, raw: string) => void;
   setExportName: (id: string, name: string) => void;
   moveBlock: (id: string, x: number, y: number) => void;
@@ -83,8 +86,8 @@ function withRecalc(blocks: Record<string, MathBlockData>): Record<string, MathB
 
 function persist(blocks: Record<string, MathBlockData>) {
   try {
-    // plotPreview — пересчитываемые сэмплы, в файл/хранилище не пишем
-    const slim = Object.values(blocks).map(({ plotPreview: _pp, ...b }) => b);
+    // plotPreview/simResult — пересчитываемые данные, в файл/хранилище не пишем
+    const slim = Object.values(blocks).map(({ plotPreview: _pp, simResult: _sr, ...b }) => b);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
   } catch { /* ignore */ }
 }
@@ -95,9 +98,11 @@ function migrate(raw: unknown): MathBlockData | null {
   const b = raw as Partial<MathBlockData>;
   if (typeof b.x !== 'number' || typeof b.y !== 'number' || typeof b.rawInput !== 'string') return null;
   const id = typeof b.id === 'string' && b.id ? b.id : uuid();
-  const kind = b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'program' || b.kind === 'text' ? b.kind : 'math';
+  const kind = b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'program' || b.kind === 'text' || b.kind === 'sim' ? b.kind : 'math';
   const numOrNull = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
   const numOrUndef = (v: unknown): number | undefined => (typeof v === 'number' && isFinite(v) ? v : undefined);
+  const strOrUndef = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
+  const simSolver = b.simSolver === 'euler' || b.simSolver === 'rk4' || b.simSolver === 'rk45' ? b.simSolver : undefined;
   return {
     ...blank(id, b.x, b.y),
     ...b,
@@ -106,12 +111,28 @@ function migrate(raw: unknown): MathBlockData | null {
     resultLatex: b.resultLatex ?? '',
     isOutput: b.isOutput ?? false,
     plotPreview: null,
+    simResult: null,
     exportName: typeof b.exportName === 'string' ? b.exportName : undefined,
     plotYmin: numOrUndef(b.plotYmin),
     plotYmax: numOrUndef(b.plotYmax),
     plotMode: b.plotMode === 'surface' || b.plotMode === 'points' || b.plotMode === 'matrix' ? b.plotMode : undefined,
     plotResolution: numOrUndef(b.plotResolution),
     plotWireframe: typeof b.plotWireframe === 'boolean' ? b.plotWireframe : undefined,
+    simModel: strOrUndef(b.simModel),
+    simStates: strOrUndef(b.simStates),
+    simDerivs: strOrUndef(b.simDerivs),
+    simAux: strOrUndef(b.simAux),
+    simParams: strOrUndef(b.simParams),
+    simInit: strOrUndef(b.simInit),
+    simT0: numOrUndef(b.simT0),
+    simT1: numOrUndef(b.simT1),
+    simDt: numOrUndef(b.simDt),
+    simSolver,
+    simX: strOrUndef(b.simX),
+    simY: strOrUndef(b.simY),
+    simExport: typeof b.simExport === 'string' ? b.simExport : undefined,
+    simSpeed: numOrUndef(b.simSpeed),
+    simLoop: typeof b.simLoop === 'boolean' ? b.simLoop : undefined,
     w: numOrNull(b.w),
     h: numOrNull(b.h),
   };
@@ -172,7 +193,12 @@ function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathB
       x.plotFn !== y.plotFn || x.plotXmin !== y.plotXmin || x.plotXmax !== y.plotXmax ||
       x.plotYmin !== y.plotYmin || x.plotYmax !== y.plotYmax || x.plotMode !== y.plotMode ||
       x.plotResolution !== y.plotResolution || x.plotWireframe !== y.plotWireframe ||
-      x.exportName !== y.exportName || x.w !== y.w || x.h !== y.h
+      x.exportName !== y.exportName || x.w !== y.w || x.h !== y.h ||
+      x.simModel !== y.simModel || x.simStates !== y.simStates || x.simDerivs !== y.simDerivs ||
+      x.simAux !== y.simAux || x.simParams !== y.simParams || x.simInit !== y.simInit ||
+      x.simT0 !== y.simT0 || x.simT1 !== y.simT1 || x.simDt !== y.simDt ||
+      x.simSolver !== y.simSolver || x.simX !== y.simX || x.simY !== y.simY ||
+      x.simExport !== y.simExport || x.simSpeed !== y.simSpeed || x.simLoop !== y.simLoop
     ) return false;
   }
   return true;
@@ -302,6 +328,28 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const next = withRecalc({ ...get().blocks, [id]: b });
     persist(next);
     set({ blocks: next, selectedIds: [id] });
+  },
+
+  addSimBlock: (x, y, modelId = 'pendulum') => {
+    pushHistory(get, set as SetFn, true);
+    const id = uuid();
+    const m = getSimModel(modelId) ?? getSimModel('pendulum') ?? SIM_MODELS[0];
+    const b: MathBlockData = {
+      ...blank(id, x, y), rawInput: 'sim', kind: 'sim', simExport: '', simSpeed: 1, simLoop: true,
+      ...simModelPatch(m),
+    };
+    const next = withRecalc({ ...get().blocks, [id]: b });
+    persist(next);
+    set({ blocks: next, selectedIds: [id] });
+  },
+
+  updateSim: (id, patch) => {
+    const cur = get().blocks[id];
+    if (!cur || cur.kind !== 'sim') return;
+    pushHistory(get, set as SetFn);
+    // если сменили модель на custom вручную — сбросить привязку (чтобы селект показал Custom)
+    set({ blocks: { ...get().blocks, [id]: { ...cur, ...patch } } });
+    scheduleRecalc(get, set as SetFn, 200);
   },
 
   updateInput: (id, raw) => {
