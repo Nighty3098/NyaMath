@@ -77,82 +77,93 @@ export default function WelcomeModal({ onClose, onOpenFile }: WelcomeModalProps)
         role="dialog"
         aria-modal="true"
         aria-label={t('w.aria')}
-        className={`welcome-card relative w-[520px] max-w-full rounded-[20px] p-2 border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] shadow-2xl ${closing ? 'welcome-exit' : ''}`}
+        className={`welcome-card relative w-[820px] max-w-full rounded-[20px] p-2 border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] shadow-2xl ${closing ? 'welcome-exit' : ''}`}
       >
         <button
           ref={closeBtn}
           type="button"
           onClick={close}
           aria-label={t('w.close')}
-          className="absolute right-3 top-3 p-2 rounded-lg text-[var(--chrome-soft)] hover:text-[var(--chrome-ink)] hover:bg-white/5 cursor-pointer transition-colors duration-150 ease-out active:scale-[0.96]"
+          className="absolute right-3 top-3 p-2 rounded-lg text-[var(--chrome-soft)] hover:text-[var(--chrome-ink)] hover:bg-white/5 cursor-pointer transition-colors duration-150 ease-out active:scale-[0.96] z-10"
         >
           <IX />
         </button>
 
-        <div className="rounded-xl px-5 py-4">
-          <div className="welcome-chunk welcome-d0 pr-8">
-            <div className="font-semibold tracking-tight text-[22px] leading-7">
-              <span className="text-[var(--accent)]">W</span>engineering
+        <div className="flex flex-col sm:flex-row gap-2">
+          {/* левая часть — логотип */}
+          <div className="welcome-chunk welcome-d0 flex flex-1 items-center justify-center rounded-xl px-6 py-8">
+            <img
+              src="favicon.svg"
+              alt=""
+              aria-hidden="true"
+              className="w-[90%] h-auto drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+              draggable={false}
+            />
+          </div>
+
+          {/* правая часть — название, создание, управление, создатель */}
+          <div className="flex-1 min-w-0 rounded-xl px-5 py-4">
+            <div className="welcome-chunk welcome-d0 pr-8">
+              <div className="font-semibold tracking-tight text-[22px] leading-7">
+                <span className="text-[var(--accent)]">W</span>engineering
+              </div>
             </div>
-            <p className="text-[13px] text-[var(--chrome-soft)] mt-1">
-              {t('w.tag')}
+
+            <div className="welcome-chunk welcome-d1 grid grid-cols-2 gap-2 mt-4">
+              {quick.map((q) => (
+                <button
+                  key={q.title}
+                  type="button"
+                  onClick={start(q.fn)}
+                  className="flex items-center gap-3 rounded-xl border border-[var(--chrome-line)] px-3 py-2.5 text-left cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 active:scale-[0.96]"
+                >
+                  <span className="text-[var(--accent)]" aria-hidden="true">{q.icon}</span>
+                  <span>
+                    <span className="block text-[13px] font-medium">{q.title}</span>
+                    <span className="math-input block text-[11px] text-[var(--chrome-soft)]">{q.sub}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="welcome-chunk welcome-d2 flex items-center gap-2 flex-wrap mt-3">
+              <button
+                type="button"
+                onClick={start(loadTestScenario)}
+                className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[var(--accent-line)]/60 bg-[var(--accent-soft)] text-[13px] cursor-pointer transition-colors duration-150 ease-out hover:brightness-125 active:scale-[0.96]"
+              >
+                <IZap /> {t('w.demo1')}
+              </button>
+              <button
+                type="button"
+                onClick={start(loadAdvancedDemo)}
+                className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[var(--chrome-line)] text-[13px] cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 active:scale-[0.96]"
+              >
+                <IDemo /> {t('w.demo2')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenFile();
+                  close();
+                }}
+                className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[var(--chrome-line)] text-[13px] cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 active:scale-[0.96]"
+              >
+                <IOpen /> {t('w.openFile')}
+              </button>
+              <button
+                type="button"
+                onClick={close}
+                className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[var(--chrome-line)] text-[13px] cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 active:scale-[0.96]"
+              >
+                <IBlank /> {t('w.blank')}
+              </button>
+            </div>
+
+            <p className="welcome-chunk welcome-d2 text-[11px] text-[var(--chrome-soft)] mt-3">
+              {t('w.creator')} <a href="https://github.com/Nighty3098">Nighty3098</a>
             </p>
           </div>
-
-          <div className="welcome-chunk welcome-d1 grid grid-cols-2 gap-2 mt-4">
-            {quick.map((q) => (
-              <button
-                key={q.title}
-                type="button"
-                onClick={start(q.fn)}
-                className="flex items-center gap-3 rounded-xl border border-[var(--chrome-line)] px-3 py-2.5 text-left cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 active:scale-[0.96]"
-              >
-                <span className="text-[var(--accent)]" aria-hidden="true">{q.icon}</span>
-                <span>
-                  <span className="block text-[13px] font-medium">{q.title}</span>
-                  <span className="math-input block text-[11px] text-[var(--chrome-soft)]">{q.sub}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className="welcome-chunk welcome-d2 flex items-center gap-2 flex-wrap mt-3">
-            <button
-              type="button"
-              onClick={start(loadTestScenario)}
-              className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[var(--accent-line)]/60 bg-[var(--accent-soft)] text-[13px] cursor-pointer transition-colors duration-150 ease-out hover:brightness-125 active:scale-[0.96]"
-            >
-              <IZap /> {t('w.demo1')}
-            </button>
-            <button
-              type="button"
-              onClick={start(loadAdvancedDemo)}
-              className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[var(--chrome-line)] text-[13px] cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 active:scale-[0.96]"
-            >
-              <IDemo /> {t('w.demo2')}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onOpenFile();
-                close();
-              }}
-              className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[var(--chrome-line)] text-[13px] cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 active:scale-[0.96]"
-            >
-              <IOpen /> {t('w.openFile')}
-            </button>
-            <button
-              type="button"
-              onClick={close}
-              className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[var(--chrome-line)] text-[13px] cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 active:scale-[0.96]"
-            >
-              <IBlank /> {t('w.blank')}
-            </button>
-          </div>
-
-          <p className="welcome-chunk welcome-d2 text-[11px] text-[var(--chrome-soft)] mt-3">
-            {t('w.creator')} <a href="https://github.com/Nighty3098">Nighty3098</a>
-          </p>
         </div>
       </div>
     </div>
