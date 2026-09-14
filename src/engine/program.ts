@@ -9,16 +9,23 @@
  *   for i in expr    ... end      (expr: вектор, матрица, `a..b`, число n → 1..n)
  *   while cond       ... end      (лимит 100000 итераций)
  *   break / continue
+ *   breakpoint       точка останова для отладчика (на выполнение не влияет)
  *
  * Диапазоны: `1..10`, `0,0.5..2` (включительно). Читает глобалы документа,
  * пишет только в локалы; наружу уходит result (+ exportName на уровне стора).
  */
 import {
   math,
+  convertToUnit,
   extractDependencies,
+  formatResult,
   humanizeMathError,
   preprocessJ,
   preprocessRanges,
+  resolveUnit,
+  splitOffUnit,
+  splitOnError,
+  stripOnError,
   type Scope,
 } from './mathEngine';
 import { t } from '../i18n';
@@ -45,8 +52,11 @@ function toLines(src: string): CodeLine[] {
 const ASSIGN_RE = /^([A-Za-z_]\w*)\s*(:=|<-)\s*(.+)$/;
 const FOR_RE = /^for\s+([A-Za-z_]\w*)\s+in\s+(.+)$/i;
 const IF_RE = /^if\s+(.+)$/i;
+const ELSE_IF_RE = /^else\s+if\s+(.+)$/i;
 const WHILE_RE = /^while\s+(.+)$/i;
 const RETURN_RE = /^return\b\s*(.*)$/i;
+const TRACE_RE = /^trace\s+(.+)$/i;
+const BREAKPOINT_RE = /^breakpoint$/i;
 
 export interface ProgramAnalysis {
   dependencies: string[];
@@ -66,17 +76,22 @@ export function analyzeProgram(src: string): ProgramAnalysis {
   const deps = new Set<string>();
   const partOf = (t: string): string => {
     const a = t.match(ASSIGN_RE);
-    if (a) return a[3];
+    if (a) return stripOnError(a[3]);
     const f = t.match(FOR_RE);
     if (f) return rangeToSeq(f[2]);
     const iff = t.match(IF_RE);
     if (iff) return iff[1];
+    const eif = t.match(ELSE_IF_RE);
+    if (eif) return eif[1];
     const w = t.match(WHILE_RE);
     if (w) return w[1];
     const r = t.match(RETURN_RE);
     if (r) return r[1];
-    if (/^(end|else|break|continue)$/i.test(t)) return '';
-    return t;
+    const tr = t.match(TRACE_RE);
+    if (tr) return tr[1];
+    if (BREAKPOINT_RE.test(t)) return '';
+    if (/^(end|else(\s+if\b.*)?|break|continue)$/i.test(t)) return '';
+    return stripOnError(t);
   };
   for (const l of lines) {
     const part = partOf(l.text);
@@ -102,11 +117,36 @@ export interface ProgramResult {
   value: unknown;
   error: string | null;
   errorLine: number | null;
+  /** Лог trace-операторов (до 50 записей) */
+  trace?: string[] | null;
+}
+
+/** Один шаг отладчика: выполненный оператор + слепок локалов после него. */
+export interface DebugStep {
+  /** порядковый номер шага */
+  n: number;
+  line: number;
+  text: string;
+  kind: 'assign' | 'expr' | 'return' | 'breakpoint';
+  value: string;
+  locals: Record<string, string>;
+}
+
+export interface DebugResult {
+  steps: DebugStep[];
+  /** true, если шагов больше лимита и запись оборвана */
+  truncated: boolean;
+  error: string | null;
+  errorLine: number | null;
 }
 
 type Signal = null | 'break' | 'continue' | { ret: unknown };
 
-export function runProgram(src: string, globals: Scope): ProgramResult {
+export function runProgram(
+  src: string,
+  globals: Scope,
+  onStep?: (s: Omit<DebugStep, 'n'>) => void,
+): ProgramResult {
   const lines = toLines(src);
   if (lines.length > MAX_LINES) {
     return { value: null, error: t('e.progTooLong', { n: MAX_LINES }), errorLine: null };
@@ -115,11 +155,62 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
   const scopeOf = (): Scope => ({ ...globals, ...local });
 
   const evalExpr = (expr: string, lineNo: number): unknown => {
-    const pre = preprocessRanges(preprocessJ(expr, false));
+    // `expr on error fallback`: при ошибке main считаем fallback
+    const [main, fallback] = splitOnError(expr);
+    // перевод единиц `x := 10cm = m`
+    const [convLhs, convUnit] = splitOffUnit(main.replace(/=+\s*$/, '').trim());
+    const convTarget = convUnit ? resolveUnit(convUnit, scopeOf()) : null;
+    const pre = preprocessRanges(preprocessJ(convTarget ? convLhs : main, false));
     try {
-      return math.evaluate(pre, scopeOf());
+      const v = math.evaluate(pre, scopeOf());
+      if (convUnit && convTarget) return convertToUnit(v, convUnit, main);
+      return v;
     } catch (err) {
+      if (fallback) {
+        try {
+          return math.evaluate(preprocessRanges(preprocessJ(fallback, false)), scopeOf());
+        } catch (err2) {
+          throw { line: lineNo, msg: humanizeMathError(err2) };
+        }
+      }
       throw { line: lineNo, msg: humanizeMathError(err) };
+    }
+  };
+
+  const traceLog: string[] = [];
+  const snapLocals = (): Record<string, string> => {
+    const out: Record<string, string> = {};
+    const keys = Object.keys(local).slice(0, 24);
+    for (const k of keys) {
+      try {
+        out[k] = formatResult(local[k]);
+      } catch {
+        out[k] = '?';
+      }
+    }
+    return out;
+  };
+  const step = (kind: DebugStep['kind'], lineNo: number, text: string, v: unknown): void => {
+    if (!onStep) return;
+    let value = '';
+    try {
+      value = formatResult(v);
+    } catch {
+      value = '?';
+    }
+    onStep({ line: lineNo, text, kind, value, locals: snapLocals() });
+  };
+  const doTrace = (text: string): void => {
+    if (traceLog.length >= 50) return;
+    const parts = text.split(',').map((s) => s.trim()).filter(Boolean);
+    for (const p of parts) {
+      let v: unknown = null;
+      try {
+        v = math.evaluate(preprocessRanges(preprocessJ(p, false)), scopeOf());
+      } catch {
+        v = '<?>'; // hmm — локализация не нужна, технический маркер
+      }
+      traceLog.push(`${p} = ${formatResult(v)}`);
     }
   };
 
@@ -156,19 +247,32 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
       if (a) {
         last = evalExpr(a[3], no);
         local[a[1]] = last;
+        step('assign', no, text, last);
         i++;
         continue;
       }
-      // --- return / break / continue ---
+      // --- return / break / continue / trace / breakpoint ---
       const r = text.match(RETURN_RE);
       if (r) {
         const v = r[1] ? evalExpr(r[1], no) : last;
+        step('return', no, text, v);
         return { sig: { ret: v }, last: v };
       }
       if (/^break$/i.test(text)) return { sig: 'break', last };
       if (/^continue$/i.test(text)) return { sig: 'continue', last };
+      if (BREAKPOINT_RE.test(text)) {
+        step('breakpoint', no, text, last);
+        i++;
+        continue;
+      }
+      const tr = text.match(TRACE_RE);
+      if (tr) {
+        doTrace(tr[1]);
+        i++;
+        continue;
+      }
 
-      // --- if ---
+      // --- if / else if-цепочка ---
       const iff = text.match(IF_RE);
       if (iff) {
         const { elseIdx, endIdx } = findIfBounds(i, end, no);
@@ -177,9 +281,29 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
           if (res.sig) return res;
           last = res.last;
         } else if (elseIdx >= 0) {
-          const res = exec(elseIdx + 1, endIdx);
-          if (res.sig) return res;
-          last = res.last;
+          // цепочка else if … else: идём по else-узлам на той же глубине
+          let k = elseIdx;
+          for (;;) {
+            const lk = lines[k].text;
+            const m2 = lk.match(ELSE_IF_RE);
+            if (!m2) {
+              // голый else
+              const res = exec(k + 1, endIdx);
+              if (res.sig) return res;
+              last = res.last;
+              break;
+            }
+            const b2 = findIfBounds(k, endIdx + 1, lines[k].no);
+            const stop2 = b2.elseIdx >= 0 ? b2.elseIdx : b2.endIdx;
+            if (truthy(evalExpr(m2[1], lines[k].no), lines[k].no)) {
+              const res = exec(k + 1, stop2);
+              if (res.sig) return res;
+              last = res.last;
+              break;
+            }
+            if (b2.elseIdx < 0) break;
+            k = b2.elseIdx;
+          }
         }
         i = endIdx + 1;
         continue;
@@ -220,12 +344,13 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
         continue;
       }
 
-      if (/^(end|else)$/i.test(text)) {
+      if (/^(end|else(\s+if\b.*)?)$/i.test(text)) {
         throw { line: no, msg: t('e.strayEnd', { text }) };
       }
 
       // --- выражение ---
       last = evalExpr(text, no);
+      step('expr', no, text, last);
       i++;
     }
     return { sig: null, last };
@@ -254,7 +379,8 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
       else if (/^end$/i.test(t)) {
         if (depth === 0) return { elseIdx, endIdx: k };
         depth--;
-      } else if (/^else$/i.test(t) && depth === 0) {
+      } else if (/^else(\s+if\b.*)?$/i.test(t) && depth === 0 && elseIdx < 0) {
+        // только первый else-узел: дальше цепочку разбирает exec
         elseIdx = k;
       }
     }
@@ -265,12 +391,34 @@ export function runProgram(src: string, globals: Scope): ProgramResult {
     if (!lines.length) return { value: null, error: null, errorLine: null };
     const { sig, last } = exec(0, lines.length);
     const value = sig && typeof sig === 'object' ? sig.ret : last;
-    return { value, error: null, errorLine: null };
+    return { value, error: null, errorLine: null, trace: traceLog.length ? [...traceLog] : null };
   } catch (e) {
     const ce = e as { line?: number; msg?: string };
     if (ce && typeof ce.line === 'number') {
-      return { value: null, error: t('e.lineErr', { line: ce.line, msg: ce.msg ?? t('e.lineErrDefault') }), errorLine: ce.line };
+      return { value: null, error: t('e.lineErr', { line: ce.line, msg: ce.msg ?? t('e.lineErrDefault') }), errorLine: ce.line, trace: traceLog.length ? [...traceLog] : null };
     }
-    return { value: null, error: humanizeMathError(e), errorLine: null };
+    return { value: null, error: humanizeMathError(e), errorLine: null, trace: traceLog.length ? [...traceLog] : null };
   }
+}
+
+const MAX_DEBUG_STEPS = 500;
+
+/**
+ * Пошаговое выполнение для отладчика: все выполненные операторы
+ * (включая итерации циклов и ветки) со слепками локалов после каждого шага.
+ * `breakpoint` в тексте помечается kind='breakpoint' — UI останавливается на нём.
+ */
+export function debugProgram(src: string, globals: Scope, maxSteps = MAX_DEBUG_STEPS): DebugResult {
+  const steps: DebugStep[] = [];
+  let truncated = false;
+  let n = 0;
+  const r = runProgram(src, globals, (s) => {
+    if (n >= maxSteps) {
+      truncated = true;
+      return;
+    }
+    n++;
+    steps.push({ n, ...s });
+  });
+  return { steps, truncated, error: r.error, errorLine: r.errorLine };
 }

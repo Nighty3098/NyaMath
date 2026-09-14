@@ -8,11 +8,24 @@
  *  - константы pi, e; функции sqrt/sin/cos/atan/Re/Im/abs/log/ln
  *  - порядок вычислений строго сверху-вниз по Y (см. dependencies.ts)
  */
-import { create, all, type MathJsInstance } from 'mathjs';
+import { create, all, type MathJsInstance, type Unit } from 'mathjs';
 import { buildPackScope, PACK_NAMES } from './packs';
+
 import { t } from '../i18n';
 
 export const math: MathJsInstance = create(all, {});
+
+// rawArgs-решатели паков: mathjs решает raw/eager на этапе компиляции
+// по math-namespace, поэтому импортируем их туда явно (флаг rawArgs сохраняется).
+math.import(
+  Object.fromEntries(
+    [
+      'nlsolve', 'find', 'minerr', 'minimize', 'maximize', 'root', 'bvp',
+      'ndiff', 'nint', 'nsum', 'nprod', 'numdiff', 'numint', 'numsum', 'numprod',
+    ].map((k) => [k, (buildPackScope(math) as Record<string, unknown>)[k]]),
+  ) as never,
+  { override: false },
+);
 
 // --- Кастомные функции / алиасы в стиле Mathcad ---
 // mathjs из коробки: sin cos tan asin acos atan sqrt abs exp re im conj arg ...
@@ -114,6 +127,119 @@ export function preprocessJ(input: string, lhsIsJ: boolean): string {
 
 const FN_DEF_RE = /^([A-Za-z_]\w*)\s*\(([^)]*)\)$/;
 
+/**
+ * Разбить `expr on error fallback` на [main, fallback] (null если нет).
+ * Ищет `on error` на нулевой глубине скобок и вне строк.
+ */
+export function splitOnError(text: string): [string, string | null] {
+  let depth = 0;
+  let instr: string | null = null;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (instr) {
+      if (c === instr) instr = null;
+      else if (c === '\\') i++;
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      instr = c;
+      continue;
+    }
+    if (c === '(' || c === '[' || c === '{') depth++;
+    else if (c === ')' || c === ']' || c === '}') depth = Math.max(0, depth - 1);
+    else if (depth === 0 && (c === 'o' || c === 'O')) {
+      const m = text.slice(i).match(/^on\s+error\b/i);
+      if (m && (i === 0 || /[\s(=,;+\-*/^<>!]/.test(text[i - 1]))) {
+        const main = text.slice(0, i).trim();
+        const fb = text.slice(i + m[0].length).trim();
+        if (main && fb) return [main, fb];
+        return [text, null];
+      }
+    }
+  }
+  return [text, null];
+}
+
+/** Убрать `on error ...` для анализа зависимостей. */
+export function stripOnError(text: string): string {
+  return splitOnError(text)[0];
+}
+
+/**
+ * Правая часть, похожая на единицу измерения: `cm`, `m/s`, `kg*m/s^2`, `degC`.
+ * Без `+`/`-` (чтобы `x = 2+2` не путать с переводом) и без сравнений.
+ */
+const UNIT_RHS_RE = /^[A-Za-z_µΩ°][A-Za-z_0-9µΩ°\s.*/()^*]*$/;
+
+/**
+ * Отщепить суффикс перевода единиц `expr = unit` (Mathcad-стиль: `L = cm`,
+ * `g := 10cm = m`). Возвращает [lhs, unit] или [text, null].
+ * Чисто синтаксический разбор: `==`, `<=`, `>=`, `!=`, `:=` переводом не считаются.
+ */
+export function splitOffUnit(text: string): [string, string | null] {
+  let depth = 0;
+  let instr: string | null = null;
+  let eqPos = -1;
+  let eqCount = 0;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (instr) {
+      if (c === instr) instr = null;
+      else if (c === '\\') i++;
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      instr = c;
+      continue;
+    }
+    if (c === '(' || c === '[' || c === '{') depth++;
+    else if (c === ')' || c === ']' || c === '}') depth = Math.max(0, depth - 1);
+    else if (c === '=' && depth === 0) {
+      const prev = text[i - 1];
+      const next = text[i + 1];
+      // `:=`, `==`, `<=`, `>=`, `!=` — не перевод
+      if (prev === ':' || prev === '=' || prev === '!' || prev === '<' || prev === '>' || next === '=') {
+        return [text, null];
+      }
+      eqPos = i;
+      eqCount++;
+    }
+  }
+  if (eqCount !== 1 || eqPos < 0) return [text, null];
+  const lhs = text.slice(0, eqPos).trim();
+  const rhs = text.slice(eqPos + 1).trim();
+  if (!lhs || !rhs || !UNIT_RHS_RE.test(rhs)) return [text, null];
+  return [lhs, rhs];
+}
+
+/**
+ * Распознать единицу: сначала значение-переменная из scope (если это Unit),
+ * иначе разбор строкой через mathjs (`cm`, `m/s`, `kWh`, `degC`, `lbf`, ...).
+ */
+export function resolveUnit(rhs: string, scope: Scope): Unit | null {
+  const t = rhs.trim();
+  if (/^[A-Za-z_]\w*$/.test(t)) {
+    const v = (scope as Record<string, unknown>)[t];
+    if (v !== null && typeof v === 'object' && math.isUnit(v)) return v as Unit;
+  }
+  try {
+    return math.unit(t);
+  } catch {
+    return null;
+  }
+}
+
+/** Привести значение к единице: Unit → .to(), число → math.unit(n, unit). */
+export function convertToUnit(value: unknown, unitStr: string, exprSlice: string): Unit {
+  if (value !== null && typeof value === 'object' && math.isUnit(value)) {
+    return (value as Unit).to(unitStr);
+  }
+  if (typeof value === 'number' && isFinite(value)) {
+    return math.unit(value, unitStr);
+  }
+  throw new Error(t('e.unitConvert', { q: exprSlice.slice(0, 40), u: unitStr }));
+}
+
 /** Разобрать одну строку Mathcad-стиля. Многострочный ввод бьётся вызывающим кодом. */
 export function parseLine(rawInput: string): ParsedLine {
   const trimmed = rawInput.trim();
@@ -163,7 +289,10 @@ const BUILTINS = new Set([
   'sum', 'prod', 'mean', 'median', 'mode', 'std', 'var', 'quantileSeq', 'cumsum',
   'det', 'inv', 'transpose', 'identity', 'concat', 'flatten', 'sort', 'filter',
   'zeros', 'ones', 'eye', 'size', 'length', 'pi', 'e', 'i', 'j', 'true', 'false',
-  'null', 'Complex', 'Matrix', 'pi_', 'range', 'round', 'clone',
+  'null', 'Complex', 'Matrix', 'pi_', 'range', 'round', 'clone', 'to', 'in',
+  'convertTo', 'inUnits', 'hasUnit',
+  'expand', 'sfactor', 'sint', 'simplify', 'sderiv',
+  'find', 'numdiff', 'numint', 'numsum', 'numprod',
   ...PACK_NAMES,
 ]);
 
@@ -210,6 +339,15 @@ export function evaluateLine(rawInput: string, scope: Scope): EvalResult {
   if (input === '' || input.startsWith('//') || input.startsWith('#')) {
     return { value: null, error: null };
   }
+  // `expr on error fallback`: при ошибке main считаем fallback
+  const [main, fallback] = splitOnError(input);
+  const r = evaluateMain(main, scope);
+  if (r.error && fallback) return evaluateLine(fallback, scope);
+  return r;
+}
+
+/** Собственно вычисление строки без on-error (fallback — через evaluateLine). */
+function evaluateMain(input: string, scope: Scope): EvalResult {
   try {
     const parsed = parseLine(input);
     const lhsIsJ = parsed.kind === 'assign' && parsed.lhs.trim() === 'j';
@@ -235,11 +373,19 @@ export function evaluateLine(rawInput: string, scope: Scope): EvalResult {
         return { value: null, error: t('e.constI') };
       }
       const rhsPre = preprocessRanges(preprocessJ(rhsClean, false));
-      const value = math.evaluate(rhsPre, scope);
+      // суффикс перевода `g := 10cm = m`: значение приводим к единице
+      const [convLhs, convUnit] = splitOffUnit(rhsClean);
+      const convTarget = convUnit ? resolveUnit(convUnit, scope) : null;
+      let value: unknown;
+      if (convUnit && convTarget) {
+        const inner = math.evaluate(preprocessRanges(preprocessJ(convLhs, false)), scope);
+        value = convertToUnit(inner, convUnit, rhsClean);
+      } else {
+        value = math.evaluate(rhsPre, scope);
+      }
       // math.evaluate с присваиванием `x = ...` внутри уже кладёт в scope,
       // но у нас `:=` — делаем вручную для надёжности:
-      scope[parsed.lhs] = value;
-      // особый случай `j := sqrt(-1)` — синхронизируем i
+      scope[parsed.lhs] = value;      // особый случай `j := sqrt(-1)` — синхронизируем i
       if (parsed.lhs === 'j') {
         scope['i'] = value;
       }
@@ -247,6 +393,15 @@ export function evaluateLine(rawInput: string, scope: Scope): EvalResult {
       return { value, error: null };
     }
     // output / eval
+    // суффикс перевода `L = cm`: показать значение в заданной единице
+    // (разбираем исходную строку — parseLine уже отрезал бы RHS)
+    const noShow = input.replace(/=+\s*$/, '').trim();
+    const [outLhs, outUnit] = splitOffUnit(noShow);
+    const outTarget = outUnit && !noShow.includes(':=') ? resolveUnit(outUnit, scope) : null;
+    if (outUnit && outTarget) {
+      const inner = math.evaluate(preprocessRanges(preprocessJ(outLhs, false)), scope);
+      return { value: convertToUnit(inner, outUnit, noShow), error: null };
+    }
     const exprPre = preprocessRanges(preprocessJ(parsed.expr, false));
     if (exprPre === '') return { value: null, error: null };
     const value = math.evaluate(exprPre, scope);
@@ -264,6 +419,7 @@ export function humanizeMathError(err: unknown): string {
     return m ? t('e.undefVar', { name: m[1] }) : t('e.undef');
   }
   if (/Division by zero/i.test(msg)) return t('e.divZero');
+  if (/Units do not match/i.test(msg)) return t('e.unitsMismatch', { msg: msg.slice(0, 160) });
   if (/Cannot convert|Unexpected|Value expected|Parenthesis|Syntax/i.test(msg)) return t('e.syntax', { msg });
   if (/cyclic|recursion|stack/i.test(msg)) return t('e.cyclic');
   return msg.slice(0, 220);
@@ -285,6 +441,14 @@ export function formatResult(value: unknown): string {
     }
     if (typeof value === 'boolean') return value ? 'true' : 'false';
     if (typeof value === 'string') return value;
+    // Единицы измерения: «5.3 m», «44.48 N» — с разумной точностью
+    if (math.isUnit(value)) {
+      try {
+        return math.format(value, { precision: 6 });
+      } catch {
+        return String(value);
+      }
+    }
     // Matrix / Array
     if (math.isMatrix(value)) {
       const arr = (value as { toArray: () => unknown }).toArray();
@@ -334,6 +498,20 @@ export function toLatex(rawInput: string): string {
     return `\\text{${escapeLatex(text)}}`;
   }
   try {
+    // перевод единиц `L = cm`, `g := 10cm = m`: единицу — прямым текстом
+    const noShowL = input.replace(/=+\s*$/, '').trim();
+    const [texLhs, texUnit] = splitOffUnit(noShowL);
+    if (texUnit) {
+      const unitTex = `\\mathrm{${escapeLatex(texUnit)}}`;
+      if (texLhs.includes(':=')) {
+        const idx = texLhs.indexOf(':=');
+        const l = texLhs.slice(0, idx).trim();
+        const r = texLhs.slice(idx + 2).trim();
+        const showT = /=+\s*$/.test(input);
+        return `${safeTex(l)} := ${safeTex(preprocessJ(r, false))} = ${unitTex}${showT ? ' =' : ''}`;
+      }
+      return `${safeTex(preprocessJ(texLhs, false))} = ${unitTex}`;
+    }
     if (input.includes(':=')) {
       const idx = input.indexOf(':=');
       const lhs = input.slice(0, idx).trim();
@@ -409,7 +587,21 @@ export function valueToLatex(value: unknown): string {
   if (typeof value === 'function') return t('e.funcDefinedTex');
   if (typeof value === 'number') return numLatex(value);
   if (typeof value === 'boolean') return `\\text{${value}}`;
-  if (typeof value === 'string') return `\\text{${escapeLatex(value).slice(0, 120)}}`;
+  if (typeof value === 'string') {
+    // строка может быть символьным результатом (simplify/deriv): пробуем как математику
+    try {
+      const tex = math.parse(value).toTex();
+      if (tex && !/\\mathrm\{\\text/.test(tex)) return tex;
+    } catch { /* не математика — ниже как текст */ }
+    return `\\text{${escapeLatex(value).slice(0, 120)}}`;
+  }
+  if (typeof value === 'object' && value !== null && math.isUnit(value)) {
+    try {
+      return math.parse(math.format(value)).toTex();
+    } catch {
+      return `\\text{${escapeLatex(math.format(value)).slice(0, 60)}}`;
+    }
+  }
   if (math.isComplex(value)) {
     const c = value as { re: number; im: number };
     return complexLatex(c.re, c.im);

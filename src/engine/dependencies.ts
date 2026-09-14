@@ -1,4 +1,4 @@
-import { createBaseScope, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, toLatex, valueToLatex, type Scope } from './mathEngine';
+import { createBaseScope, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, splitOffUnit, stripOnError, toLatex, valueToLatex, type Scope } from './mathEngine';
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
 import { parseSimDef, runSim, type SimResult, type SimSolver, type SimMode } from './simEngine';
@@ -19,10 +19,19 @@ export interface MathBlockData {
   definedVar: string | null;
   /** true, если последняя строка блока — вывод (expr / expr =): результат показываем инлайн */
   isOutput: boolean;
-  kind: 'math' | 'plot' | 'text' | 'program' | 'plot3d' | 'sim';
+  kind: 'math' | 'plot' | 'text' | 'program' | 'plot3d' | 'sim' | 'contour';
   plotFn?: string;
   plotXmin?: number;
   plotXmax?: number;
+  /** Проекция/стиль 2D-графика и оформление для публикации */
+  plotProj?: 'xy' | 'polar';
+  plotTrace?: 'line' | 'bar' | 'stem';
+  plotErr?: string;
+  plotTitle?: string;
+  plotXLabel?: string;
+  plotYLabel?: string;
+  plotGrid?: boolean;
+  plotLegend?: boolean;
   /** 3D: диапазон по y, режим, разрешение сетки, каркас поверх поверхности */
   plotYmin?: number;
   plotYmax?: number;
@@ -31,6 +40,8 @@ export interface MathBlockData {
   plotWireframe?: boolean;
   /** Имя переменной, в которую программный блок экспортирует результат */
   exportName?: string;
+  /** Лог trace-операторов программного блока */
+  programTrace?: string[] | null;
   /** Sim: модель, состояния, производные, параметры, старт, интервал, решатель, оси */
   simMode?: SimMode;
   simModel?: string;
@@ -90,10 +101,14 @@ function blockDeps(b: MathBlockData): string[] {
   if (b.kind === 'sim') return simDeps(b);
   const deps = new Set<string>();
   for (const line of b.rawInput.split('\n')) {
-    const t = line.trim();
+    const t = stripOnError(line.trim());
     if (!t || t.startsWith('//') || t.startsWith('#')) continue;
+    // перевод единиц `L = cm`: зависимости — только из левой части
+    const stripped = t.replace(/=+\s*$/, '').trim();
+    const [lhsU, unitU] = splitOffUnit(stripped);
+    const src = unitU ? lhsU : t;
     try {
-      const p = parseLine(t);
+      const p = parseLine(src);
       for (const d of extractDependencies(p.expr, p.fnParams)) deps.add(d);
     } catch { /* ignore */ }
   }
@@ -232,7 +247,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
 
   for (const b of ordered) {
     const cur = out[b.id];
-    if (b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'text') {
+    if (b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'text' || b.kind === 'contour') {
       cur.error = null;
       cur.dependencies = [];
       cur.definedVar = null;
@@ -258,6 +273,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
       const r = runProgram(b.rawInput, scope);
       cur.dependencies = analysis.dependencies;
       cur.isOutput = true;
+      cur.programTrace = r.trace ?? null;
       const exp = (b.exportName ?? '').trim();
       cur.definedVar = exp && isValidVarName(exp) ? exp : null;
       if (r.error) {

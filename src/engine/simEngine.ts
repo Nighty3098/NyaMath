@@ -11,11 +11,12 @@
  */
 import { math, preprocessJ, preprocessRanges } from './mathEngine';
 import type { Scope } from './packs';
+import { solveLinear } from './numeric';
 import { t, type LText } from '../i18n';
 
-export type SimSolver = 'euler' | 'rk4' | 'rk45';
+export type SimSolver = 'euler' | 'rk4' | 'rk45' | 'trbdf2';
 
-export const SIM_SOLVERS: SimSolver[] = ['euler', 'rk4', 'rk45'];
+export const SIM_SOLVERS: SimSolver[] = ['euler', 'rk4', 'rk45', 'trbdf2'];
 
 export type SimMode = 'ode' | 'fdtd';
 
@@ -166,6 +167,7 @@ export function parseSimDef(raw: {
   if (!(dt > 0)) return { def: null, error: t('e.simBadDt') };
   if (!SIM_SOLVERS.includes(raw.solver)) return { def: null, error: t('e.simBadSolver') };
   const events = parseSimEvents(raw.events ?? '', states);
+  if (!events) return { def: null, error: t('e.simBadEvents') };
   if (!events) return { def: null, error: t('e.simBadEvents') };
   return {
     def: { mode: 'ode', states, derivs: derivsClean, aux, params, init, t0, t1, dt, solver: raw.solver, events, fdtd: null },
@@ -363,7 +365,8 @@ function runOde(def: SimDef, docScope: Scope): SimResult {
       let y = y0.slice();
       let tt = def.t0;
       for (let k = 0; k < total; k++) {
-        y = def.solver === 'euler' ? stepEuler(rhs, tt, y, h) : stepRK4(rhs, tt, y, h);
+        if (def.solver === 'trbdf2') y = stepTRBDF2(rhs, tt, y, h);
+        else y = def.solver === 'euler' ? stepEuler(rhs, tt, y, h) : stepRK4(rhs, tt, y, h);
         tt = k === total - 1 ? def.t1 : tt + h;
         checkFinite(y, tt);
         traj.push(y.slice());
@@ -512,6 +515,81 @@ function fmtT(v: number): string {
 function stepEuler(rhs: (t: number, y: number[]) => number[], tt: number, y: number[], h: number): number[] {
   const f = rhs(tt, y);
   return y.map((v, i) => v + h * f[i]);
+}
+
+/**
+ * TR-BDF2: L-устойчивый неявный метод 2-го порядка для жёстких систем.
+ * Стадия 1 — трапеции на γh, стадия 2 — BDF2; γ = 2−√2.
+ * Нелинейности — Ньютоном с численной якобианой.
+ */
+function stepTRBDF2(rhs: (t: number, y: number[]) => number[], tt: number, y: number[], h: number): number[] {
+  const n = y.length;
+  const gamma = 2 - Math.sqrt(2);
+  const newton = (G: (z: number[]) => number[], z0: number[]): number[] => {
+    let z = z0.slice();
+    for (let k = 0; k < 200; k++) {
+      const g = G(z);
+      const norm = Math.sqrt(g.reduce((s, v) => s + v * v, 0));
+      const scale = 1 + Math.sqrt(z.reduce((s, v) => s + v * v, 0));
+      if (norm < 1e-10 * scale) return z;
+      const J: number[][] = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+      for (let j = 0; j < n; j++) {
+        const hh = 1e-8 * Math.max(1, Math.abs(z[j]));
+        const zp = z.slice();
+        zp[j] += hh;
+        const gp = G(zp);
+        for (let i = 0; i < n; i++) J[i][j] = (gp[i] - g[i]) / hh;
+      }
+      let dz: number[];
+      try {
+        dz = solveLinear(J, g.map((v) => -v));
+      } catch {
+        throw { msg: t('e.simStiffFail') };
+      }
+      let lam = 1;
+      let zn = z;
+      let ok = false;
+      for (let d = 0; d < 12; d++) {
+        zn = z.map((v, i) => v + lam * dz[i]);
+        const gn = G(zn);
+        const nn = Math.sqrt(gn.reduce((s, v) => s + v * v, 0));
+        if (nn < norm) {
+          ok = true;
+          break;
+        }
+        lam /= 2;
+      }
+      if (!ok) throw { msg: t('e.simStiffFail') };
+      z = zn;
+    }
+    throw { msg: t('e.simStiffFail') };
+  };
+  // стадия 1: трапеции z = y + (γh/2)(f(y) + f(z))
+  const fy = rhs(tt, y);
+  const c1 = (gamma * h) / 2;
+  const t1 = tt + gamma * h;
+  const z = newton(
+    (zz) => {
+      const fz = rhs(t1, zz);
+      return zz.map((v, i) => v - y[i] - c1 * (fy[i] + fz[i]));
+    },
+    y.map((v, i) => v + gamma * h * fy[i]),
+  );
+  // стадия 2: BDF2 с шагами h1=γh, h2=(1−γ)h
+  const h1 = gamma * h;
+  const h2 = (1 - gamma) * h;
+  const r = h2 / h1;
+  const cA = ((1 + r) ** 2) / (1 + 2 * r);
+  const cB = -(r ** 2) / (1 + 2 * r);
+  const cC = ((1 + r) / (1 + 2 * r)) * h2;
+  const t2 = tt + h;
+  return newton(
+    (w) => {
+      const fw = rhs(t2, w);
+      return w.map((v, i) => v - cA * z[i] - cB * y[i] - cC * fw[i]);
+    },
+    z.map((v, i) => v + h2 * (v - y[i]) / h1),
+  );
 }
 
 function stepRK4(rhs: (t: number, y: number[]) => number[], tt: number, y: number[], h: number): number[] {
