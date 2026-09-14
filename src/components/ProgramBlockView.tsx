@@ -1,6 +1,9 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import katex from 'katex';
 import type { MathBlockData } from '../engine/dependencies';
+import { recalculateAll } from '../engine/dependencies';
+import { createBaseScope } from '../engine/mathEngine';
+import { debugProgram } from '../engine/program';
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
@@ -25,8 +28,11 @@ function ProgramBlockView({ block, scale }: Props) {
   const selectedIds = useCanvasStore((s) => s.selectedIds);
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
+  const blocks = useCanvasStore((s) => s.blocks);
   const [editing, setEditing] = useState(block.rawInput === '');
   const [draft, setDraft] = useState(block.rawInput);
+  const [showDebug, setShowDebug] = useState(false);
+  const [selStep, setSelStep] = useState<number | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const regionRef = useRef<HTMLDivElement>(null);
 
@@ -56,6 +62,20 @@ function ProgramBlockView({ block, scale }: Props) {
 
   const selected = selectedIds.includes(block.id);
   const rows = Math.min(16, Math.max(5, draft.split('\n').length + 1));
+
+  /** Данные отладчика: пошаговый прогон в контексте переменных документа. */
+  const debug = useMemo(() => {
+    if (!showDebug) return null;
+    try {
+      const mathBlocks = Object.values(blocks).filter((b) => b.kind === 'math');
+      const { scope } = recalculateAll(mathBlocks);
+      const base = { ...createBaseScope(), ...scope };
+      return debugProgram(block.rawInput, base);
+    } catch (e) {
+      return { steps: [], truncated: false, error: e instanceof Error ? e.message : String(e), errorLine: null };
+    }
+  }, [showDebug, block.rawInput, blocks]);
+  const selDebugStep = selStep == null ? debug?.steps[debug.steps.length - 1] ?? null : (debug?.steps.find((s) => s.n === selStep) ?? null);
 
   const finishEdit = (value: string) => {
     if (value.trim() === '') removeBlock(block.id);
@@ -131,6 +151,19 @@ function ProgramBlockView({ block, scale }: Props) {
             onClick={(e) => e.stopPropagation()}
             spellCheck={false}
           />
+          <button
+            type="button"
+            className="px-1.5 min-h-[28px] text-[11px] rounded-md border border-[var(--input-border)] text-[var(--faint)] hover:text-[var(--accent-line)] hover:border-[var(--accent-line)] cursor-pointer"
+            title={t('g.debugTitle')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelStep(null);
+              setShowDebug((v) => !v);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            🐞 {t(showDebug ? 'g.debugHide' : 'g.debugShow')}
+          </button>
           <button
             type="button"
             className="ml-auto p-1 text-[var(--faint)] hover:text-[var(--danger)] cursor-pointer"
@@ -217,6 +250,76 @@ function ProgramBlockView({ block, scale }: Props) {
             )}
           </div>
         ) : null}
+
+        {/* trace-лог операторов trace */}
+        {block.programTrace && block.programTrace.length > 0 && (
+          <div className="mt-1 rounded-lg border border-[var(--line)] bg-[var(--input-bg)] px-1.5 py-1">
+            <div className="text-[10px] uppercase tracking-wider text-[var(--faint)]">{t('g.trace')}</div>
+            {block.programTrace.map((line, k) => (
+              <div key={k} className="math-input text-[12px] text-[var(--ink-soft)] whitespace-pre-wrap break-words">
+                {line}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* отладчик: пошаговый прогон */}
+        {showDebug && (
+          <div
+            className="mt-1 rounded-lg border border-[var(--line)] bg-[var(--input-bg)] px-1.5 py-1 max-w-[60vw]"
+            title={t('g.debugTitle')}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {debug?.error && (
+              <div className="text-[12px] text-[var(--danger)]" role="alert">
+                ⚠ {debug.error}
+              </div>
+            )}
+            {(!debug || (!debug.error && debug.steps.length === 0)) && (
+              <div className="text-[12px] text-[var(--faint)]">{t('g.debugEmpty')}</div>
+            )}
+            {debug && debug.steps.length > 0 && (
+              <div className="max-h-[180px] overflow-y-auto" role="list" aria-label={t('g.debugShow')}>
+                {debug.steps.map((s) => (
+                  <button
+                    key={s.n}
+                    type="button"
+                    role="listitem"
+                    onClick={() => setSelStep(s.n)}
+                    className={`w-full text-left math-input text-[12px] px-1 py-px rounded flex items-baseline gap-1.5 cursor-pointer ${
+                      selDebugStep?.n === s.n ? 'bg-white/10 text-[var(--ink)]' : 'text-[var(--ink-soft)] hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-[var(--faint)] shrink-0">#{s.n}·L{s.line}</span>
+                    {s.kind === 'breakpoint' && (
+                      <span className="text-[var(--danger)] shrink-0" aria-hidden="true">
+                        ●
+                      </span>
+                    )}
+                    <span className="truncate flex-1">{s.text}</span>
+                    <span className="text-[var(--accent-ink)] shrink-0">= {s.value}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {debug?.truncated && <div className="text-[11px] text-[var(--faint)]">{t('g.debugTrunc', { n: debug.steps.length })}</div>}
+            {selDebugStep && Object.keys(selDebugStep.locals).length > 0 && (
+              <div className="mt-1 border-t border-[var(--line)] pt-1">
+                <div className="text-[10px] uppercase tracking-wider text-[var(--faint)]">
+                  {t('g.debugLocals')} · #{selDebugStep.n}
+                </div>
+                <div className="flex flex-wrap gap-x-2">
+                  {Object.entries(selDebugStep.locals).map(([k, v]) => (
+                    <span key={k} className="math-input text-[12px] text-[var(--ink-soft)]">
+                      {k} <span className="text-[var(--accent-ink)]">= {v}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

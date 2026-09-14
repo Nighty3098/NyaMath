@@ -34,9 +34,24 @@ export interface CanvasState {
   toggleTheme: () => void;
   lang: Lang;
   setLang: (l: Lang) => void;
+  /** Плавающая палитра функций (окно поверх листа, вкл/выкл через меню Вид) */
+  paletteOpen: boolean;
+  setPaletteOpen: (v: boolean) => void;
+  togglePalette: () => void;
+  /** Режим палитры: float — окно поверх, left/right — док на всю высоту со сдвигом листа */
+  paletteMode: PaletteMode;
+  setPaletteMode: (m: PaletteMode) => void;
+  /** Размер float-окна */
+  paletteW: number;
+  paletteH: number;
+  setPaletteSize: (w: number, h: number) => void;
+  /** Ширина пристыкованной панели */
+  paletteDockW: number;
+  setPaletteDockW: (w: number) => void;
   recalcCounter: number;
-  addBlock: (x: number, y: number, raw?: string) => void;
-  addPlotBlock: (x: number, y: number, fn?: string) => void;
+  addBlock: (x: number, y: number, raw?: string, edit?: boolean) => void;
+  addPlotBlock: (x: number, y: number, fn?: string, patch?: Partial<MathBlockData>) => void;
+  addContourBlock: (x: number, y: number, fn?: string) => void;
   addPlot3dBlock: (x: number, y: number, fn?: string) => void;
   addProgramBlock: (x: number, y: number, raw?: string, exportName?: string) => void;
   addSimBlock: (x: number, y: number, modelId?: string) => void;
@@ -69,6 +84,14 @@ export interface CanvasState {
   redo: () => void;
   /** Снапшот перед жестом (драг/ресайз): вызывается на pointerdown */
   beginGesture: () => void;
+  /** Курсор-прицел в стиле Mathcad (мировые координаты листа) */
+  cross: { x: number; y: number };
+  setCross: (x: number, y: number) => void;
+  nudgeCross: (dx: number, dy: number) => void;
+  /** Блок, для которого надо открыть редактор сразу после создания (печать с прицела) */
+  pendingEditId: string | null;
+  requestEdit: (id: string) => void;
+  consumePendingEdit: (id: string) => boolean;
 }
 
 function blank(id: string, x: number, y: number): MathBlockData {
@@ -98,11 +121,13 @@ function migrate(raw: unknown): MathBlockData | null {
   const b = raw as Partial<MathBlockData>;
   if (typeof b.x !== 'number' || typeof b.y !== 'number' || typeof b.rawInput !== 'string') return null;
   const id = typeof b.id === 'string' && b.id ? b.id : uuid();
-  const kind = b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'program' || b.kind === 'text' || b.kind === 'sim' ? b.kind : 'math';
+  const kind = b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'program' || b.kind === 'text' || b.kind === 'sim' || b.kind === 'contour' ? b.kind : 'math';
   const numOrNull = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
   const numOrUndef = (v: unknown): number | undefined => (typeof v === 'number' && isFinite(v) ? v : undefined);
   const strOrUndef = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
-  const simSolver = b.simSolver === 'euler' || b.simSolver === 'rk4' || b.simSolver === 'rk45' ? b.simSolver : undefined;
+  const plotProj = b.plotProj === 'polar' || b.plotProj === 'xy' ? b.plotProj : undefined;
+  const plotTrace = b.plotTrace === 'bar' || b.plotTrace === 'stem' || b.plotTrace === 'line' ? b.plotTrace : undefined;
+  const simSolver = b.simSolver === 'euler' || b.simSolver === 'rk4' || b.simSolver === 'rk45' || b.simSolver === 'trbdf2' ? b.simSolver : undefined;
   const simMode = b.simMode === 'fdtd' ? 'fdtd' : undefined;
   const simFdtdSrc = b.simFdtdSrc === 'sine' ? 'sine' : undefined;
   return {
@@ -120,6 +145,14 @@ function migrate(raw: unknown): MathBlockData | null {
     plotMode: b.plotMode === 'surface' || b.plotMode === 'points' || b.plotMode === 'matrix' ? b.plotMode : undefined,
     plotResolution: numOrUndef(b.plotResolution),
     plotWireframe: typeof b.plotWireframe === 'boolean' ? b.plotWireframe : undefined,
+    plotProj,
+    plotTrace,
+    plotErr: strOrUndef(b.plotErr),
+    plotTitle: strOrUndef(b.plotTitle),
+    plotXLabel: strOrUndef(b.plotXLabel),
+    plotYLabel: strOrUndef(b.plotYLabel),
+    plotGrid: typeof b.plotGrid === 'boolean' ? b.plotGrid : undefined,
+    plotLegend: typeof b.plotLegend === 'boolean' ? b.plotLegend : undefined,
     simModel: strOrUndef(b.simModel),
     simMode,
     simStates: strOrUndef(b.simStates),
@@ -169,6 +202,41 @@ function restore(): Record<string, MathBlockData> {
 
 let debounceT: ReturnType<typeof setTimeout> | null = null;
 
+/** Режим и размеры палитры (персист отдельно от документа). */
+export type PaletteMode = 'float' | 'left' | 'right';
+
+const PAL_UI_KEY = 'wengineering-palette-ui';
+
+interface PaletteUi {
+  mode: PaletteMode;
+  w: number;
+  h: number;
+  dockW: number;
+}
+
+const DEFAULT_PALETTE_UI: PaletteUi = { mode: 'float', w: 400, h: 560, dockW: 400 };
+
+function loadPaletteUi(): PaletteUi {
+  try {
+    const raw = localStorage.getItem(PAL_UI_KEY);
+    if (!raw) return DEFAULT_PALETTE_UI;
+    const p = JSON.parse(raw) as Partial<PaletteUi>;
+    const mode: PaletteMode = p.mode === 'left' || p.mode === 'right' ? p.mode : 'float';
+    const num = (v: unknown, lo: number, hi: number, fb: number): number =>
+      typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fb;
+    return {
+      mode,
+      w: num(p.w, 320, 720, DEFAULT_PALETTE_UI.w),
+      h: num(p.h, 320, 1200, DEFAULT_PALETTE_UI.h),
+      dockW: num(p.dockW, 280, 640, DEFAULT_PALETTE_UI.dockW),
+    };
+  } catch {
+    return DEFAULT_PALETTE_UI;
+  }
+}
+
+const initialPaletteUi = loadPaletteUi();
+
 /** История: лимит глубины и троттлинг снапшотов при печати (leading edge). */
 const HISTORY_LIMIT = 100;
 const SNAPSHOT_WINDOW_MS = 2000;
@@ -206,6 +274,9 @@ function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathB
       x.plotFn !== y.plotFn || x.plotXmin !== y.plotXmin || x.plotXmax !== y.plotXmax ||
       x.plotYmin !== y.plotYmin || x.plotYmax !== y.plotYmax || x.plotMode !== y.plotMode ||
       x.plotResolution !== y.plotResolution || x.plotWireframe !== y.plotWireframe ||
+      x.plotProj !== y.plotProj || x.plotTrace !== y.plotTrace || x.plotErr !== y.plotErr ||
+      x.plotTitle !== y.plotTitle || x.plotXLabel !== y.plotXLabel || x.plotYLabel !== y.plotYLabel ||
+      x.plotGrid !== y.plotGrid || x.plotLegend !== y.plotLegend ||
       x.exportName !== y.exportName || x.w !== y.w || x.h !== y.h ||
       x.simModel !== y.simModel || x.simStates !== y.simStates || x.simDerivs !== y.simDerivs ||
       x.simAux !== y.simAux || x.simParams !== y.simParams || x.simInit !== y.simInit ||
@@ -249,6 +320,24 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       return { theme: next };
     }),
   lang: loadLang(),
+  paletteOpen: false,
+  setPaletteOpen: (v) => set({ paletteOpen: v }),
+  togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
+  paletteMode: initialPaletteUi.mode,
+  setPaletteMode: (m) => {
+    set({ paletteMode: m });
+    savePaletteUi();
+  },
+  paletteW: initialPaletteUi.w,
+  paletteH: initialPaletteUi.h,
+  setPaletteSize: (w, h) =>
+    set({
+      paletteW: Math.min(720, Math.max(320, Math.round(w))),
+      paletteH: Math.min(1200, Math.max(320, Math.round(h))),
+    }),
+  paletteDockW: initialPaletteUi.dockW,
+  setPaletteDockW: (w) =>
+    set({ paletteDockW: Math.min(640, Math.max(280, Math.round(w))) }),
   setLang: (l) =>
     set((s) => {
       setLangState(l);
@@ -304,19 +393,44 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn, true);
   },
 
-  addBlock: (x, y, raw = '') => {
+  cross: { x: 80, y: 60 },
+  setCross: (x, y) => set({ cross: { x: Math.round(x), y: Math.round(y) } }),
+  nudgeCross: (dx, dy) =>
+    set((s) => ({ cross: { x: Math.round(s.cross.x + dx), y: Math.round(s.cross.y + dy) } })),
+  pendingEditId: null,
+  requestEdit: (id) => set({ pendingEditId: id }),
+  consumePendingEdit: (id) => {
+    if (get().pendingEditId !== id) return false;
+    set({ pendingEditId: null });
+    return true;
+  },
+
+  addBlock: (x, y, raw = '', edit = false) => {
     pushHistory(get, set as SetFn, true);
     const id = uuid();
     const next = withRecalc({ ...get().blocks, [id]: { ...blank(id, x, y), rawInput: raw } });
     persist(next);
-    set({ blocks: next, selectedIds: [id] });
+    set({ blocks: next, selectedIds: [id], pendingEditId: edit ? id : get().pendingEditId });
   },
 
-  addPlotBlock: (x, y, fn = 'sin(x)') => {
+  addPlotBlock: (x, y, fn = 'sin(x)', patch) => {
     pushHistory(get, set as SetFn, true);
     const id = uuid();
     const b: MathBlockData = {
       ...blank(id, x, y), rawInput: 'plot', kind: 'plot', plotFn: fn, plotXmin: -10, plotXmax: 10,
+      ...patch,
+    };
+    const next = withRecalc({ ...get().blocks, [id]: b });
+    persist(next);
+    set({ blocks: next, selectedIds: [id] });
+  },
+
+  addContourBlock: (x, y, fn = 'sin(sqrt(x^2+y^2))') => {
+    pushHistory(get, set as SetFn, true);
+    const id = uuid();
+    const b: MathBlockData = {
+      ...blank(id, x, y), rawInput: 'contour', kind: 'contour', plotFn: fn,
+      plotXmin: -5, plotXmax: 5, plotYmin: -5, plotYmax: 5, plotResolution: 48,
     };
     const next = withRecalc({ ...get().blocks, [id]: b });
     persist(next);
@@ -532,3 +646,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set({ blocks: next });
   },
 }));
+
+/** Сохранить режим/размеры палитры (вызывать по окончании жеста ресайза/дока). */
+export function savePaletteUi() {
+  try {
+    const s = useCanvasStore.getState();
+    const ui: PaletteUi = { mode: s.paletteMode, w: s.paletteW, h: s.paletteH, dockW: s.paletteDockW };
+    localStorage.setItem(PAL_UI_KEY, JSON.stringify(ui));
+  } catch { /* ignore */ }
+}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import MathBlockView from './MathBlockView';
 import PlotBlockView from './PlotBlockView';
+import ContourBlockView from './ContourBlockView';
 import Plot3dBlockView from './Plot3dBlockView';
 import ProgramBlockView from './ProgramBlockView';
 import SimBlockView from './SimBlockView';
@@ -127,7 +128,9 @@ export default function Canvas() {
 
   // Рамка выделения (marquee) в экранных координатах контейнера
   const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
-  const pressRef = useRef<{ x: number; y: number; button: number } | null>(null);
+  const pressRef = useRef<{ x: number; y: number; button: number; cx: number; cy: number } | null>(null);
+  // Курсор-прицел в стиле Mathcad
+  const cross = useCanvasStore((s) => s.cross);
 
   const toLocal = (clientX: number, clientY: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -146,7 +149,7 @@ export default function Canvas() {
       } else {
         // ЛКМ по фону: ждём — это либо клик, либо рамка выделения
         const p = toLocal(e.clientX, e.clientY);
-        pressRef.current = { x: p.x, y: p.y, button: e.button };
+        pressRef.current = { x: p.x, y: p.y, button: e.button, cx: e.clientX, cy: e.clientY };
       }
     }
   };
@@ -195,7 +198,9 @@ export default function Canvas() {
         });
       selectMany(ids);
     } else if (pressRef.current) {
-      // простой клик по фону — снять выделение
+      // простой клик по фону — прицел в точку клика, выделение снять
+      const w = screenToWorld(pressRef.current.cx, pressRef.current.cy);
+      useCanvasStore.getState().setCross(w.x, w.y);
       select(null);
     }
     pressRef.current = null;
@@ -207,6 +212,7 @@ export default function Canvas() {
     const w = screenToWorld(e.clientX, e.clientY);
     // пол бесконечный — клампов нет, блок встаёт ровно под курсор
     addBlock(Math.round(w.x - 40), Math.round(w.y - 20));
+    useCanvasStore.getState().setCross(Math.round(w.x - 40), Math.round(w.y - 20));
   };
 
   const zoomCenter = useCallback(
@@ -255,6 +261,45 @@ export default function Canvas() {
     };
   }, [recalc, removeSelected, selectedIds.length, select]);
 
+  // Курсор-прицел: стрелки — сдвиг, Enter — вниз, печать — новый блок в точке прицела.
+  // Работает, только когда фокус не в поле ввода (редакторы блоков, поиск, меню).
+  useEffect(() => {
+    const STEP = 16;
+    const LINE = 64;
+    const down = (e: KeyboardEvent) => {
+      const ae = document.activeElement;
+      if (
+        ae &&
+        (ae.tagName === 'INPUT' ||
+          ae.tagName === 'TEXTAREA' ||
+          ae.tagName === 'SELECT' ||
+          ae.tagName === 'BUTTON' ||
+          (ae as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const st = useCanvasStore.getState();
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const big = e.shiftKey ? LINE : STEP;
+        if (e.key === 'ArrowLeft') st.nudgeCross(-big, 0);
+        else if (e.key === 'ArrowRight') st.nudgeCross(big, 0);
+        else if (e.key === 'ArrowUp') st.nudgeCross(0, -big);
+        else st.nudgeCross(0, big);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        st.nudgeCross(0, LINE);
+      } else if (e.key.length === 1 && e.key !== ' ') {
+        // пробел — панорама, остальная печать — сразу блок с этим символом
+        e.preventDefault();
+        st.addBlock(st.cross.x, st.cross.y, e.key, true);
+      }
+    };
+    window.addEventListener('keydown', down);
+    return () => window.removeEventListener('keydown', down);
+  }, []);
+
   const list = Object.values(blocks);
   const theme = useCanvasStore((s) => s.theme);
   // подписка ради перерендера при смене языка
@@ -289,7 +334,7 @@ export default function Canvas() {
       role="application"
       aria-label={t('c.aria')}
       style={{
-        cursor: panning ? 'grabbing' : spaceDown ? 'grab' : 'default',
+        cursor: panning ? 'grabbing' : spaceDown ? 'grab' : 'crosshair',
         touchAction: 'none',
         ...gridStyle,
       }}
@@ -299,7 +344,7 @@ export default function Canvas() {
       onPointerCancel={endPointer}
       onDoubleClick={onDoubleClick}
       onContextMenu={(e) => e.preventDefault()}
-      title={t('c.title')}
+      title={`${t('c.title')} • ${t('c.crossHint')}`}
     >
       {/* рамка выделения */}
       {marquee && (
@@ -322,9 +367,38 @@ export default function Canvas() {
           transformOrigin: '0 0',
         }}
       >
+        {/* курсор-прицел в стиле Mathcad */}
+        <div
+          className="absolute z-0 pointer-events-none"
+          style={{ left: cross.x, top: cross.y }}
+          aria-hidden="true"
+        >
+          <div
+            style={{
+              position: 'absolute',
+              left: -13 / view.k,
+              top: -1 / view.k,
+              width: 26 / view.k,
+              height: Math.max(1 / view.k, 0.75),
+              background: 'var(--danger)',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: -13 / view.k,
+              left: -1 / view.k,
+              height: 26 / view.k,
+              width: Math.max(1 / view.k, 0.75),
+              background: 'var(--danger)',
+            }}
+          />
+        </div>
         {list.map((b) =>
           b.kind === 'plot' ? (
             <PlotBlockView key={b.id} block={b} scale={view.k} />
+          ) : b.kind === 'contour' ? (
+            <ContourBlockView key={b.id} block={b} scale={view.k} />
           ) : b.kind === 'plot3d' ? (
             <Plot3dBlockView key={b.id} block={b} scale={view.k} />
           ) : b.kind === 'program' ? (

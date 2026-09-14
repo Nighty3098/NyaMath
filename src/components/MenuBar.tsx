@@ -10,7 +10,6 @@ import {
 
 interface MenuBarProps {
   onOpenFile: () => void;
-  onOpenPalette: () => void;
   onShowWelcome: () => void;
 }
 
@@ -27,19 +26,23 @@ type Entry =
       action: () => void;
     };
 
-/** Разброс для новых мат-блоков (вне рендера — чистый для линтера). */
-function scatterNew(): { x: number; y: number } {
-  return { x: 200 + Math.random() * 200, y: 150 + Math.random() * 120 };
+/** Новая вставка — в точку курсора-прицела; прицел каскадом уходит вниз. */
+function atCross(): { x: number; y: number } {
+  const st = useCanvasStore.getState();
+  const p = { x: st.cross.x, y: st.cross.y };
+  st.nudgeCross(0, 140);
+  return p;
 }
 
 /**
  * Десктопная строка меню: Файл · Вставка · Правка · Вид · Примеры · Справка.
  * Клик — открыть, наведение при открытом — переключить, Esc/клик мимо — закрыть.
  */
-export default function MenuBar({ onOpenFile, onOpenPalette, onShowWelcome }: MenuBarProps) {
+export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
   const blocks = useCanvasStore((s) => s.blocks);
   const addBlock = useCanvasStore((s) => s.addBlock);
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
+  const addContourBlock = useCanvasStore((s) => s.addContourBlock);
   const addPlot3dBlock = useCanvasStore((s) => s.addPlot3dBlock);
   const addProgramBlock = useCanvasStore((s) => s.addProgramBlock);
   const addSimBlock = useCanvasStore((s) => s.addSimBlock);
@@ -49,6 +52,8 @@ export default function MenuBar({ onOpenFile, onOpenPalette, onShowWelcome }: Me
   const recalc = useCanvasStore((s) => s.recalc);
   const toggleGrid = useCanvasStore((s) => s.toggleGrid);
   const showGrid = useCanvasStore((s) => s.showGrid);
+  const paletteOpen = useCanvasStore((s) => s.paletteOpen);
+  const togglePalette = useCanvasStore((s) => s.togglePalette);
   const theme = useCanvasStore((s) => s.theme);
   const setTheme = useCanvasStore((s) => s.setTheme);
   const lang = useCanvasStore((s) => s.lang);
@@ -94,7 +99,7 @@ export default function MenuBar({ onOpenFile, onOpenPalette, onShowWelcome }: Me
       id: 'file',
       label: t('menu.file'),
       items: [
-        { id: 'new-math', icon: <IFormula />, label: t('menu.newMath'), action: run(() => { const p = scatterNew(); addBlock(p.x, p.y); }) },
+        { id: 'new-math', icon: <IFormula />, label: t('menu.newMath'), action: run(() => { const p = atCross(); addBlock(p.x, p.y); }) },
         { sep: true },
         { id: 'save', icon: <ISave />, label: t('menu.save'), hint: 'Ctrl+S', action: run(() => void saveDocument(blocks)) },
         { id: 'open', icon: <IOpen />, label: t('menu.open'), action: run(onOpenFile) },
@@ -106,13 +111,14 @@ export default function MenuBar({ onOpenFile, onOpenPalette, onShowWelcome }: Me
       id: 'insert',
       label: t('menu.insert'),
       items: [
-        { id: 'ins-math', icon: <IFormula />, label: t('menu.insMath'), action: run(() => { const p = scatterNew(); addBlock(p.x, p.y); }) },
-        { id: 'ins-plot', icon: <IPlot />, label: t('menu.insPlot'), action: run(() => addPlotBlock(600, 200)) },
-        { id: 'ins-3d', icon: <IPlot3d />, label: t('menu.ins3d'), action: run(() => addPlot3dBlock(600, 260)) },
-        { id: 'ins-prog', icon: <IProgram />, label: t('menu.insProg'), action: run(() => addProgramBlock(300, 300)) },
-        { id: 'ins-sim', icon: <ISim />, label: t('menu.insSim'), action: run(() => addSimBlock(420, 300)) },
+        { id: 'ins-math', icon: <IFormula />, label: t('menu.insMath'), action: run(() => { const p = atCross(); addBlock(p.x, p.y); }) },
+        { id: 'ins-plot', icon: <IPlot />, label: t('menu.insPlot'), action: run(() => { const p = atCross(); addPlotBlock(p.x, p.y); }) },
+        { id: 'ins-contour', icon: <IPlot />, label: t('menu.insContour'), action: run(() => { const p = atCross(); addContourBlock(p.x, p.y); }) },
+        { id: 'ins-3d', icon: <IPlot3d />, label: t('menu.ins3d'), action: run(() => { const p = atCross(); addPlot3dBlock(p.x, p.y); }) },
+        { id: 'ins-prog', icon: <IProgram />, label: t('menu.insProg'), action: run(() => { const p = atCross(); addProgramBlock(p.x, p.y); }) },
+        { id: 'ins-sim', icon: <ISim />, label: t('menu.insSim'), action: run(() => { const p = atCross(); addSimBlock(p.x, p.y); }) },
         { sep: true },
-        { id: 'ins-pal', icon: <IFx />, label: t('menu.insPal'), action: run(onOpenPalette) },
+        { id: 'ins-pal', icon: <IFx />, label: t('menu.insPal'), action: run(togglePalette) },
       ],
     },
     {
@@ -130,6 +136,7 @@ export default function MenuBar({ onOpenFile, onOpenPalette, onShowWelcome }: Me
       label: t('menu.view'),
       items: [
         { id: 'grid', icon: <IGrid />, label: t('menu.grid'), checked: showGrid, action: run(toggleGrid) },
+        { id: 'palette', icon: <IFx />, label: t('menu.palette'), checked: paletteOpen, action: run(togglePalette) },
         { sep: true },
         ...THEMES.map((th) => ({
           id: `theme-${th.id}`,

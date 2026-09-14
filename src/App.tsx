@@ -12,7 +12,8 @@ export default function App() {
   const lang = useCanvasStore((s) => s.lang);
   const blocks = useCanvasStore((s) => s.blocks);
   const loadDocument = useCanvasStore((s) => s.loadDocument);
-  const [palette, setPalette] = useState(false);
+  const paletteOpen = useCanvasStore((s) => s.paletteOpen);
+  const paletteMode = useCanvasStore((s) => s.paletteMode);
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const [welcomeForced, setWelcomeForced] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -91,7 +92,6 @@ export default function App() {
     <div className="h-screen w-screen flex flex-col overflow-hidden">
       <MenuBar
         onOpenFile={() => fileRef.current?.click()}
-        onOpenPalette={() => setPalette((v) => !v)}
         onShowWelcome={() => setWelcomeForced(true)}
       />
       <input
@@ -107,10 +107,16 @@ export default function App() {
           e.target.value = '';
         }}
       />
-      <div className="flex-1 relative flex flex-col min-h-0">
-        <Canvas />
-        {palette && <FunctionPalette onClose={() => setPalette(false)} />}
+      {/* рабочая зона: док-панели по бокам на всю высоту + холст */}
+      <div className="flex-1 flex flex-row min-h-0 min-w-0">
+        {paletteOpen && paletteMode === 'left' && <FunctionPalette />}
+        <div className="flex-1 relative flex flex-col min-h-0 min-w-0">
+          <Canvas />
+        </div>
+        {paletteOpen && paletteMode === 'right' && <FunctionPalette />}
       </div>
+      {/* плавающая палитра — окно поверх всего, не часть canvas */}
+      {paletteOpen && paletteMode === 'float' && <FunctionPalette />}
       {showWelcome && <WelcomeModal onClose={closeWelcome} onOpenFile={() => fileRef.current?.click()} />}
     </div>
   );

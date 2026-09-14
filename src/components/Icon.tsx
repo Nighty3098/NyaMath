@@ -143,3 +143,58 @@ export const IResize = () => (
     <path d="M13.5 9.5v4h-4M13.5 13.5 9 9" />
   </Svg>
 );
+/** Статистика: столбчатая диаграмма */
+export const IChart = () => (
+  <Svg>
+    <path d="M2 2v11.5h12" />
+    <path d="M5.5 11V8M8.5 11V5M11.5 11V6.5" />
+  </Svg>
+);
+/** Исчисление: знак интеграла */
+export const ICalc = () => (
+  <Svg>
+    <path d="M10 2.5H8.5C6.5 5 7 8 5.5 10.5c-.8 1.4-.5 3 1 3H8" />
+  </Svg>
+);
+/** Единицы: линейка */
+export const IUnits = () => (
+  <Svg>
+    <rect x="2" y="5.5" width="12" height="5" rx="1" />
+    <path d="M5.5 5.5V8M8.5 5.5v3.5M11.5 5.5V8" />
+  </Svg>
+);
+/** Телеком: радиоволны */
+export const ISignal = () => (
+  <Svg>
+    <circle cx="8" cy="11" r="0.8" fill="currentColor" />
+    <path d="M5.2 8.5a4 4 0 0 1 5.6 0M3 6.2a7.2 7.2 0 0 1 10 0" />
+  </Svg>
+);
+/** Контурный график: изолинии */
+export const IContour = () => (
+  <Svg>
+    <path d="M8 2.5c3.2 0 5.5 2.4 5.5 5.5s-2.3 5.5-5.5 5.5S2.5 11.1 2.5 8 4.8 2.5 8 2.5Z" />
+    <path d="M8 5.8c1.3 0 2.2.9 2.2 2.2S9.3 10.2 8 10.2s-2.2-.9-2.2-2.2S6.7 5.8 8 5.8Z" />
+  </Svg>
+);
+/** Пристыковать влево */
+export const IDockLeft = () => (
+  <Svg>
+    <rect x="2" y="2.5" width="12" height="11" rx="1.5" />
+    <path d="M6 2.5v11" />
+  </Svg>
+);
+/** Пристыковать вправо */
+export const IDockRight = () => (
+  <Svg>
+    <rect x="2" y="2.5" width="12" height="11" rx="1.5" />
+    <path d="M10 2.5v11" />
+  </Svg>
+);
+/** Открепить (плавающее окно) */
+export const IUndock = () => (
+  <Svg>
+    <path d="M9.5 2.5H12A1.5 1.5 0 0 1 13.5 4v2.5" />
+    <rect x="2.5" y="5.5" width="10" height="8" rx="1.5" />
+  </Svg>
+);

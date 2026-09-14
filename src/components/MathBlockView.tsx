@@ -20,8 +20,7 @@ interface Props {
 function MathBlockView({ block, scale }: Props) {
   const updateInput = useCanvasStore((s) => s.updateInput);
   const removeBlock = useCanvasStore((s) => s.removeBlock);
-  const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
-  const select = useCanvasStore((s) => s.select);
+  const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);  const select = useCanvasStore((s) => s.select);
   const toggleSelect = useCanvasStore((s) => s.toggleSelect);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
   // подписка ради перерендера при смене языка
@@ -47,6 +46,15 @@ function MathBlockView({ block, scale }: Props) {
       el?.setSelectionRange?.(len, len);
     }
   }, [editing]);
+
+  // Печать с прицела: открыть редактор сразу после создания блока
+  useEffect(() => {
+    if (useCanvasStore.getState().consumePendingEdit(block.id)) {
+      setDraft(block.rawInput);
+      setEditing(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Инлайн-результат в стиле Mathcad: `expr = result` одной строкой KaTeX
   const tex = useMemo(() => {
@@ -79,6 +87,14 @@ function MathBlockView({ block, scale }: Props) {
     if (value.trim() === '') removeBlock(block.id);
     else updateInput(block.id, value);
     setEditing(false);
+  };
+
+  /** Enter в редакторе: подтвердить и увести прицел строкой ниже (как в Mathcad) */
+  const commitAndStepDown = (value: string) => {
+    finishEdit(value);
+    if (value.trim() !== '') {
+      useCanvasStore.getState().setCross(block.x, block.y + 72);
+    }
   };
 
   const onBodyClick = (e: React.MouseEvent) => {
@@ -166,7 +182,7 @@ function MathBlockView({ block, scale }: Props) {
               onChange={(e) => setDraft(e.target.value)}
               onBlur={() => finishEdit(draft)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') finishEdit(draft);
+                if (e.key === 'Enter') commitAndStepDown(draft);
                 if (e.key === 'Escape') {
                   if (draft.trim() === '') removeBlock(block.id);
                   else {
@@ -193,7 +209,7 @@ function MathBlockView({ block, scale }: Props) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  finishEdit(draft);
+                  commitAndStepDown(draft);
                 }
                 if (e.key === 'Escape') {
                   if (draft.trim() === '') removeBlock(block.id);
