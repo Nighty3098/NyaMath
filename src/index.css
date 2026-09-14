@@ -256,7 +256,7 @@ body {
 }
 
 /* Сетка поверх листа — цвет из токенов темы */
-.weng-grid-fine {
+.nya-grid-fine {
   background-image:
     linear-gradient(to right, var(--grid-lt) 1px, transparent 1px),
     linear-gradient(to bottom, var(--grid-lt) 1px, transparent 1px),
@@ -266,7 +266,7 @@ body {
 }
 
 /* Регион Mathcad: прозрачный, размер по содержимому */
-.weng-region {
+.nya-region {
   background: transparent;
   width: max-content;
   max-width: 640px;
@@ -278,8 +278,8 @@ body {
 }
 
 /* Формулы наследуют чернила листа */
-.weng-sheet .katex { color: var(--ink); }
-.weng-sheet .katex-display { margin: 0; }
+.nya-sheet .katex { color: var(--ink); }
+.nya-sheet .katex-display { margin: 0; }
 
 /* Уважение к reduced-motion */
 @media (prefers-reduced-motion: reduce) {

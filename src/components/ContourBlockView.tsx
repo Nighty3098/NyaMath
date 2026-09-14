@@ -156,7 +156,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
     <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: ph + 132 }}>
       <div
         data-block-id={block.id}
-        className={`weng-block relative w-full h-full rounded-xl border px-3 py-2 flex flex-col bg-[var(--sheet)] shadow-[0_1px_2px_rgba(0,0,0,0.22),0_12px_32px_rgba(0,0,0,0.2)] group ${
+        className={`nya-block relative w-full h-full rounded-xl border px-3 py-2 flex flex-col bg-[var(--sheet)] shadow-[0_1px_2px_rgba(0,0,0,0.22),0_12px_32px_rgba(0,0,0,0.2)] group ${
           selected ? 'border-[var(--accent-line)]' : 'border-[var(--line)]'
         }`}
         onClick={(e) => {

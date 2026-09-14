@@ -1,8 +1,8 @@
 {
-  "name": "wengineering-mcp",
+  "name": "nyamath-mcp",
   "version": "0.1.0",
   "private": true,
-  "description": "MCP server: full agent control over Wengineering documents (blocks, solutions, plots, positions)",
+  "description": "MCP server: full agent control over NyaMath documents (blocks, solutions, plots, positions)",
   "type": "module",
   "scripts": {
     "build": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\"",

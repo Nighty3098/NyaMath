@@ -84,11 +84,11 @@ function ProgramBlockView({ block, scale }: Props) {
   };
 
   return (
-    <div className="weng-region absolute z-10" style={{ left: block.x, top: block.y }}>
+    <div className="nya-region absolute z-10" style={{ left: block.x, top: block.y }}>
       <div
         ref={regionRef}
         data-block-id={block.id}
-        className={`weng-block relative rounded-[10px] pl-2.5 pr-1.5 py-1 border-l-[3px] transition-shadow group ${
+        className={`nya-block relative rounded-[10px] pl-2.5 pr-1.5 py-1 border-l-[3px] transition-shadow group ${
           block.error
             ? 'border-[var(--danger)] bg-[var(--danger-bg)] shadow-[0_0_0_1.5px_var(--danger)]'
             : selected

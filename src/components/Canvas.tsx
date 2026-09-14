@@ -124,7 +124,7 @@ export default function Canvas() {
   }, [zoomAt]);
 
   const isInteractive = (t: EventTarget | null) =>
-    (t as HTMLElement | null)?.closest?.('input, textarea, button, select, .weng-block') ?? null;
+    (t as HTMLElement | null)?.closest?.('input, textarea, button, select, .nya-block') ?? null;
 
   // Рамка выделения (marquee) в экранных координатах контейнера
   const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
@@ -361,7 +361,7 @@ export default function Canvas() {
       )}
       {/* бесконечный слой блоков (нулевой размер, hit-area только у самих блоков) */}
       <div
-        className="absolute left-0 top-0 weng-sheet"
+        className="absolute left-0 top-0 nya-sheet"
         style={{
           transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`,
           transformOrigin: '0 0',

@@ -7,12 +7,14 @@ import { loadTheme, saveTheme, THEMES, type ThemeName } from '../theme';
 import { getSimModel, SIM_MODELS, simModelPatch } from '../engine/simEngine';
 import { loadLang, setLangState, t, type Lang } from '../i18n';
 
-const STORAGE_KEY = 'wengineering-doc-v1';
-const GRID_KEY = 'wengineering-show-grid';
+const STORAGE_KEY = 'nyamath-doc-v1';
+const STORAGE_KEY_LEGACY = 'wengineering-doc-v1';
+const GRID_KEY = 'nyamath-show-grid';
+const GRID_KEY_LEGACY = 'wengineering-show-grid';
 
 function loadGrid(): boolean {
   try {
-    return localStorage.getItem(GRID_KEY) === '1';
+    return (localStorage.getItem(GRID_KEY) ?? localStorage.getItem(GRID_KEY_LEGACY)) === '1';
   } catch {
     return false;
   }
@@ -186,7 +188,7 @@ function migrate(raw: unknown): MathBlockData | null {
 
 function restore(): Record<string, MathBlockData> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(STORAGE_KEY_LEGACY);
     if (!raw) return {};
     const arr = JSON.parse(raw) as unknown[];
     const rec: Record<string, MathBlockData> = {};
@@ -205,7 +207,8 @@ let debounceT: ReturnType<typeof setTimeout> | null = null;
 /** Режим и размеры палитры (персист отдельно от документа). */
 export type PaletteMode = 'float' | 'left' | 'right';
 
-const PAL_UI_KEY = 'wengineering-palette-ui';
+const PAL_UI_KEY = 'nyamath-palette-ui';
+const PAL_UI_KEY_LEGACY = 'wengineering-palette-ui';
 
 interface PaletteUi {
   mode: PaletteMode;
@@ -219,7 +222,7 @@ const DEFAULT_PALETTE_UI: PaletteUi = { mode: 'float', w: 400, h: 560, dockW: 40
 
 function loadPaletteUi(): PaletteUi {
   try {
-    const raw = localStorage.getItem(PAL_UI_KEY);
+    const raw = localStorage.getItem(PAL_UI_KEY) ?? localStorage.getItem(PAL_UI_KEY_LEGACY);
     if (!raw) return DEFAULT_PALETTE_UI;
     const p = JSON.parse(raw) as Partial<PaletteUi>;
     const mode: PaletteMode = p.mode === 'left' || p.mode === 'right' ? p.mode : 'float';

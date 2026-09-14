@@ -149,7 +149,8 @@ export const plotPalettes: Record<ThemeName, PlotPalette> = {
   },
 };
 
-const KEY = 'wengineering-theme';
+const KEY = 'nyamath-theme';
+const KEY_LEGACY = 'wengineering-theme';
 
 function isThemeName(v: unknown): v is ThemeName {
   return typeof v === 'string' && (THEMES as { id: string }[]).some((t) => t.id === v);
@@ -157,7 +158,7 @@ function isThemeName(v: unknown): v is ThemeName {
 
 export function loadTheme(): ThemeName {
   try {
-    const v = localStorage.getItem(KEY);
+    const v = localStorage.getItem(KEY) ?? localStorage.getItem(KEY_LEGACY);
     if (isThemeName(v)) return v;
     // миграция со старых имён
     if (v === 'gruvbox' || v === 'dark') return 'gruvbox-dark';

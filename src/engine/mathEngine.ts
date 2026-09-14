@@ -1,5 +1,5 @@
 /**
- * Wengineering Math Engine — кастомный evaluator на базе mathjs.
+ * NyaMath Math Engine — кастомный evaluator на базе mathjs.
  *
  * Поддерживает Mathcad-синтаксис:
  *  - `a := expr`        — определение переменной / функции `f(x) := ...`

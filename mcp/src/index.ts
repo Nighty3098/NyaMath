@@ -1,12 +1,12 @@
 /**
- * Wengineering MCP server — полное управление документом из агента.
+ * NyaMath MCP server — полное управление документом из агента.
  *
  * Документ: те же блоки, что в веб-приложении (math/text/plot/program),
  * тот же движок (mathjs, :=, j, матрицы, программы), тот же пересчёт сверху-вниз.
  * Агент может: читать решения и scope, строить/править/двигать блоки,
  * забирать данные графиков (серии точек), сохранять/открывать файлы.
  *
- * Transport: stdio. Документ по умолчанию: $WENG_DOC или ./wengineering-doc.json
+ * Transport: stdio. Документ по умолчанию: $NYAMATH_DOC или ./nyamath-doc.json
  */
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -31,7 +31,7 @@ import { ADVANCED_DEMO } from '../../src/data/demoAdvanced.js';
 /* ---------------- состояние документа ---------------- */
 
 let blocks: MathBlockData[] = [];
-let docPath: string | null = process.env['WENG_DOC'] ?? null;
+let docPath: string | null = process.env['NYAMATH_DOC'] ?? process.env['WENG_DOC'] ?? null;
 let lastScope: Scope = createBaseScope();
 
 function blank(id: string, x: number, y: number, kind: MathBlockData['kind'] = 'math'): MathBlockData {
@@ -124,10 +124,10 @@ function stride<T>(arr: T[], maxPoints: number): T[] {
 
 /* ---------------- сервер ---------------- */
 
-const server = new McpServer({ name: 'wengineering', version: '0.1.0' });
+const server = new McpServer({ name: 'nyamath', version: '0.1.0' });
 
 server.tool(
-  'weng_status',
+  'nya_status',
   'Состояние документа: число блоков, ошибки, число переменных в scope, путь файла',
   {},
   async (): Promise<CallToolResult> => {
@@ -138,7 +138,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_list_blocks',
+  'nya_list_blocks',
   'Список блоков документа (id, тип, позиция, ввод, переменная, ошибка, результат)',
   {
     kind: z.enum(['math', 'text', 'plot', 'plot3d', 'program']).optional().describe('Фильтр по типу'),
@@ -152,7 +152,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_get_block',
+  'nya_get_block',
   'Полные данные блока: результат, LaTeX, зависимости, мета превью-графика',
   { id: z.string().describe('ID блока') },
   async ({ id }): Promise<CallToolResult> => {
@@ -195,7 +195,7 @@ const AddBlockShape = {
 };
 
 server.tool(
-  'weng_add_block',
+  'nya_add_block',
   'Добавить блок в документ (пересчёт автоматический). Возвращает блок с результатом/ошибкой',
   AddBlockShape,
   async (args): Promise<CallToolResult> => {
@@ -221,7 +221,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_update_block',
+  'nya_update_block',
   'Изменить содержимое блока (rawInput / plotFn / диапазон / exportName). Пересчёт автоматический',
   {
     id: z.string(),
@@ -255,7 +255,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_move_block',
+  'nya_move_block',
   'Переместить блок (позиция влияет на порядок вычислений сверху-вниз)',
   { id: z.string(), x: z.number(), y: z.number() },
   async ({ id, x, y }): Promise<CallToolResult> => {
@@ -269,7 +269,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_move_blocks',
+  'nya_move_blocks',
   'Пакетное перемещение нескольких блоков [{id, x, y}]',
   { moves: z.array(z.object({ id: z.string(), x: z.number(), y: z.number() })).min(1).max(500) },
   async ({ moves }): Promise<CallToolResult> => {
@@ -286,7 +286,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_resize_block',
+  'nya_resize_block',
   'Ручной размер блока: w — ширина, h — высота графика (null = авто)',
   { id: z.string(), w: z.number().positive().nullable().optional(), h: z.number().positive().nullable().optional() },
   async ({ id, w, h }): Promise<CallToolResult> => {
@@ -299,7 +299,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_remove_block',
+  'nya_remove_block',
   'Удалить блок по id',
   { id: z.string() },
   async ({ id }): Promise<CallToolResult> => {
@@ -311,7 +311,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_clear',
+  'nya_clear',
   'Очистить документ (требует confirm: true)',
   { confirm: z.boolean().describe('Должно быть true') },
   async ({ confirm }): Promise<CallToolResult> => {
@@ -323,7 +323,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_evaluate',
+  'nya_evaluate',
   'Вычислить выражение в текущем scope документа (только чтение, scope не меняется). Пример: "sqrt(Re(Z_c)^2 + Im(Z_c)^2)"',
   { expression: z.string() },
   async ({ expression }): Promise<CallToolResult> => {
@@ -334,7 +334,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_get_scope',
+  'nya_get_scope',
   'Все переменные документа с вычисленными значениями (имя → значение)',
   {},
   async (): Promise<CallToolResult> => {
@@ -348,7 +348,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_get_plot_data',
+  'nya_get_plot_data',
   'Данные графика: серии точек [{expr, xs, ys}]. Для plot-блока — его серии; для math-блока с автографиком — превью',
   { id: z.string().describe('ID plot- или math-блока'), max_points: z.number().int().min(8).max(1000).default(120) },
   async ({ id, max_points }): Promise<CallToolResult> => {
@@ -383,13 +383,13 @@ server.tool(
 );
 
 server.tool(
-  'weng_get_plot3d_data',
+  'nya_get_plot3d_data',
   'Данные 3D-блока: поверхность {gx, gy, zs} или точки [{x,y,z}] + границы. Для plot3d-блока',
   { id: z.string().describe('ID plot3d-блока'), max_points: z.number().int().min(8).max(4000).default(2500) },
   async ({ id, max_points }): Promise<CallToolResult> => {
     const b = find(id);
     if (!b) return fail(`Блок ${id} не найден`);
-    if (b.kind !== 'plot3d') return fail('Блок не plot3d (для 2D используйте weng_get_plot_data)');
+    if (b.kind !== 'plot3d') return fail('Блок не plot3d (для 2D используйте nya_get_plot_data)');
     const s = samplePlot3d(b.plotFn ?? 'sin(sqrt(x^2+y^2))', lastScope, {
       xmin: b.plotXmin ?? -5,
       xmax: b.plotXmax ?? 5,
@@ -428,7 +428,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_open',
+  'nya_open',
   'Открыть документ из JSON-файла (формат "Сохранить" приложения)',
   { path: z.string().describe('Путь к .json файлу') },
   async ({ path: p }): Promise<CallToolResult> => {
@@ -454,11 +454,11 @@ server.tool(
 );
 
 server.tool(
-  'weng_save',
+  'nya_save',
   'Сохранить документ в JSON-файл (тот же формат, что открывает приложение)',
-  { path: z.string().optional().describe('По умолчанию — текущий путь или ./wengineering-doc.json') },
+  { path: z.string().optional().describe('По умолчанию — текущий путь или ./nyamath-doc.json') },
   async ({ path: p }): Promise<CallToolResult> => {
-    const target = p ?? docPath ?? path.resolve(process.cwd(), 'wengineering-doc.json');
+    const target = p ?? docPath ?? path.resolve(process.cwd(), 'nyamath-doc.json');
     try {
       const slim = blocks.map((b) => {
         const { plotPreview: _pp, ...rest } = b;
@@ -475,7 +475,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_load_example',
+  'nya_load_example',
   'Загрузить встроенный пример: variant20 (электродинамика, 35 строк) или advanced (матрицы, статистика, программы)',
   { name: z.enum(['variant20', 'advanced']) },
   async ({ name }): Promise<CallToolResult> => {
@@ -503,7 +503,7 @@ server.tool(
 );
 
 server.tool(
-  'weng_recalc',
+  'nya_recalc',
   'Принудительный пересчёт всего документа',
   {},
   async (): Promise<CallToolResult> => {
@@ -515,12 +515,12 @@ server.tool(
 
 server.resource(
   'document',
-  new ResourceTemplate('weng://document', { list: undefined }),
+  new ResourceTemplate('nya://document', { list: undefined }),
   async (): Promise<ReadResourceResult> => {
     return {
       contents: [
         {
-          uri: 'weng://document',
+          uri: 'nya://document',
           mimeType: 'application/json',
           text: JSON.stringify({ blocks: blocks.map(summarize), docPath }, null, 2),
         },
@@ -530,7 +530,7 @@ server.resource(
 );
 
 async function main(): Promise<void> {
-  // Автозагрузка: $WENG_DOC, если файл существует
+  // Автозагрузка: $NYAMATH_DOC, если файл существует
   if (docPath && fs.existsSync(docPath)) {
     try {
       const raw = JSON.parse(fs.readFileSync(docPath, 'utf-8')) as unknown;

@@ -107,11 +107,11 @@ function MathBlockView({ block, scale }: Props) {
   };
 
   return (
-    <div className="weng-region absolute z-10" style={{ left: block.x, top: block.y }}>
+    <div className="nya-region absolute z-10" style={{ left: block.x, top: block.y }}>
       <div
         ref={regionRef}
         data-block-id={block.id}
-        className={`weng-block relative rounded-[10px] px-1.5 py-0.5 transition-shadow group ${
+        className={`nya-block relative rounded-[10px] px-1.5 py-0.5 transition-shadow group ${
           block.error
             ? 'shadow-[0_0_0_1.5px_var(--danger)] bg-[var(--danger-bg)]'
             : selected

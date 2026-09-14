@@ -12,8 +12,8 @@ export async function saveDocument(blocks: Record<string, MathBlockData>): Promi
   if (window.showSaveFilePicker) {
     try {
       const handle = await window.showSaveFilePicker({
-        suggestedName: 'wengineering-doc.json',
-        types: [{ description: 'Wengineering document', accept: { 'application/json': ['.json'] } }],
+        suggestedName: 'nyamath-doc.json',
+        types: [{ description: 'NyaMath document', accept: { 'application/json': ['.json'] } }],
       });
       const stream = await handle.createWritable();
       await stream.write(payload);
@@ -28,8 +28,8 @@ export async function saveDocument(blocks: Record<string, MathBlockData>): Promi
     // Firefox/Safari: сайты не могут открыть системный диалог (API не поддерживается).
     // Диалог появится, если в браузере включено «всегда спрашивать, куда сохранять».
     try {
-      if (!localStorage.getItem('weng-save-hint-shown')) {
-        localStorage.setItem('weng-save-hint-shown', '1');
+      if (!localStorage.getItem('nya-save-hint-shown') && !localStorage.getItem('weng-save-hint-shown')) {
+        localStorage.setItem('nya-save-hint-shown', '1');
         alert(t('save.hint'));
       }
     } catch { /* localStorage недоступен — просто скачиваем */ }
@@ -37,7 +37,7 @@ export async function saveDocument(blocks: Record<string, MathBlockData>): Promi
   const blob = new Blob([payload], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'wengineering-doc.json';
+  a.download = 'nyamath-doc.json';
   a.click();
   URL.revokeObjectURL(a.href);
 }

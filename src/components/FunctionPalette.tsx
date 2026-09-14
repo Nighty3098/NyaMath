@@ -29,7 +29,8 @@ const KIND_ICONS: Record<Snippet['kind'], () => React.JSX.Element> = {
   sim: ISim,
 };
 
-const POS_KEY = 'wengineering-palette-pos';
+const POS_KEY = 'nyamath-palette-pos';
+const POS_KEY_LEGACY = 'wengineering-palette-pos';
 /** Зона прилипания к краям экрана, px */
 const SNAP_ZONE = 28;
 /** Сдвиг, после которого тяга док-панели превращается в открепление */
@@ -38,7 +39,7 @@ const UNDOCK_DIST = 14;
 function loadPos(): { x: number; y: number } {
   const fallback = { x: 8, y: 48 };
   try {
-    const raw = localStorage.getItem(POS_KEY);
+    const raw = localStorage.getItem(POS_KEY) ?? localStorage.getItem(POS_KEY_LEGACY);
     if (!raw) return fallback;
     const p = JSON.parse(raw) as { x?: unknown; y?: unknown };
     if (typeof p.x !== 'number' || typeof p.y !== 'number') return fallback;

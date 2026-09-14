@@ -12,13 +12,14 @@ import type { SimDomain, SimSolver } from './engine/simEngine';
 
 export type Lang = 'ru' | 'en';
 
-const LANG_KEY = 'wengineering-lang';
+const LANG_KEY = 'nyamath-lang';
+const LANG_KEY_LEGACY = 'wengineering-lang';
 
 let current: Lang = detect();
 
 function detect(): Lang {
   try {
-    const v = localStorage.getItem(LANG_KEY);
+    const v = localStorage.getItem(LANG_KEY) ?? localStorage.getItem(LANG_KEY_LEGACY);
     if (v === 'ru' || v === 'en') return v;
     if (typeof navigator !== 'undefined' && navigator.language?.toLowerCase().startsWith('ru')) return 'ru';
     return 'en';
@@ -76,7 +77,7 @@ const ru = {
   'confirm.clear': 'Очистить холст?',
 
   'app.badJson': 'Не удалось прочитать файл: это не корректный JSON',
-  'doc.notArray': 'Файл не похож на проект Wengineering (ожидается массив блоков)',
+  'doc.notArray': 'Файл не похож на проект NyaMath (ожидается массив блоков)',
   'doc.tooMany': 'Слишком много блоков (>5000)',
   'doc.noBlocks': 'В файле нет корректных блоков',
   'doc.loaded': 'Загружено блоков: {n}{bad}',
@@ -86,7 +87,7 @@ const ru = {
     'Чтобы выбирать путь и имя при сохранении, включите в настройках браузера:\n' +
     '«Всегда спрашивать, куда сохранять файлы» (Настройки → Основные → Файлы и приложения).',
 
-  'w.aria': 'Добро пожаловать в Wengineering',
+  'w.aria': 'Добро пожаловать в NyaMath',
   'w.close': 'Закрыть приветствие',
   'w.tag': 'Инженерный лист: формулы, графики и программы.',
   'w.formula': 'Формула',
@@ -357,7 +358,7 @@ const en: Record<StrKey, string> = {
   'confirm.clear': 'Clear the canvas?',
 
   'app.badJson': 'Could not read the file: not valid JSON',
-  'doc.notArray': 'File does not look like a Wengineering project (expected an array of blocks)',
+  'doc.notArray': 'File does not look like a NyaMath project (expected an array of blocks)',
   'doc.tooMany': 'Too many blocks (>5000)',
   'doc.noBlocks': 'No valid blocks in the file',
   'doc.loaded': 'Loaded blocks: {n}{bad}',
@@ -367,7 +368,7 @@ const en: Record<StrKey, string> = {
     'To pick a path and name on save, enable in browser settings:\n' +
     '"Always ask where to save files" (Settings → General → Files and Applications).',
 
-  'w.aria': 'Welcome to Wengineering',
+  'w.aria': 'Welcome to NyaMath',
   'w.close': 'Close welcome dialog',
   'w.tag': 'Engineering sheet: formulas, plots and programs.',
   'w.formula': 'Formula',
