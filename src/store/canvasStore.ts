@@ -212,9 +212,10 @@ interface PaletteUi {
   w: number;
   h: number;
   dockW: number;
+  open: boolean;
 }
 
-const DEFAULT_PALETTE_UI: PaletteUi = { mode: 'float', w: 400, h: 560, dockW: 400 };
+const DEFAULT_PALETTE_UI: PaletteUi = { mode: 'float', w: 400, h: 560, dockW: 400, open: false };
 
 function loadPaletteUi(): PaletteUi {
   try {
@@ -229,6 +230,7 @@ function loadPaletteUi(): PaletteUi {
       w: num(p.w, 320, 720, DEFAULT_PALETTE_UI.w),
       h: num(p.h, 320, 1200, DEFAULT_PALETTE_UI.h),
       dockW: num(p.dockW, 280, 640, DEFAULT_PALETTE_UI.dockW),
+      open: p.open === true,
     };
   } catch {
     return DEFAULT_PALETTE_UI;
@@ -320,9 +322,15 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       return { theme: next };
     }),
   lang: loadLang(),
-  paletteOpen: false,
-  setPaletteOpen: (v) => set({ paletteOpen: v }),
-  togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
+  paletteOpen: initialPaletteUi.open,
+  setPaletteOpen: (v) => {
+    set({ paletteOpen: v });
+    savePaletteUi();
+  },
+  togglePalette: () => {
+    set((s) => ({ paletteOpen: !s.paletteOpen }));
+    savePaletteUi();
+  },
   paletteMode: initialPaletteUi.mode,
   setPaletteMode: (m) => {
     set({ paletteMode: m });
@@ -647,11 +655,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 }));
 
-/** Сохранить режим/размеры палитры (вызывать по окончании жеста ресайза/дока). */
+/** Сохранить режим/размеры/показ палитры (вызывать по окончании жеста ресайза/дока). */
 export function savePaletteUi() {
   try {
     const s = useCanvasStore.getState();
-    const ui: PaletteUi = { mode: s.paletteMode, w: s.paletteW, h: s.paletteH, dockW: s.paletteDockW };
+    const ui: PaletteUi = { mode: s.paletteMode, w: s.paletteW, h: s.paletteH, dockW: s.paletteDockW, open: s.paletteOpen };
     localStorage.setItem(PAL_UI_KEY, JSON.stringify(ui));
   } catch { /* ignore */ }
 }

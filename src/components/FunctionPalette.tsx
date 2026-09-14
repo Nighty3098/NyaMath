@@ -105,7 +105,11 @@ export default function FunctionPalette() {
         if (dx * dx + dy * dy > UNDOCK_DIST * UNDOCK_DIST) {
           dockPend.current = null;
           setPaletteMode('float');
-          setPos({ x: e.clientX - 200, y: Math.max(0, e.clientY - 16) });
+          const np = { x: e.clientX - 200, y: Math.max(0, e.clientY - 16) };
+          setPos(np);
+          try {
+            localStorage.setItem(POS_KEY, JSON.stringify(np));
+          } catch { /* ignore */ }
           floatDrag.current = { dx: 200, dy: 16 };
           setSnap(null);
           return;
