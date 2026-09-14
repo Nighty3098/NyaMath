@@ -6,8 +6,9 @@ import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IResize, IX } from './Icon';
+import { IResize, ISave, IX } from './Icon';
 import { t } from '../i18n';
+import { exportSvgElementToPng, safeFilename } from '../lib/exportFiles';
 
 const W = 460;
 const H = 300;
@@ -89,6 +90,7 @@ function isolines(
 function ContourBlockView({ block, scale }: { block: MathBlockData; scale: number }) {
   const removeBlock = useCanvasStore((s) => s.removeBlock);
   const boxRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
   const { onGripDown, onGripMove, onGripUp } = useRegionDrag(block.id, scale, false);
   const { onResizeDown, onResizeMove, onResizeUp } = useRegionResize(block.id, scale, boxRef, {
     height: true,
@@ -152,6 +154,16 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
 
   const selected = selectedIds.includes(block.id);
 
+  /** PNG снимок отрендеренного SVG (×2) */
+  const doExportPng = () => {
+    if (!svgRef.current || data.err) {
+      alert(t('p3.noData'));
+      return;
+    }
+    const name = safeFilename(title || fnText, 'contour');
+    void exportSvgElementToPng(svgRef.current, `${name}.png`).catch(() => alert(t('p3.noData')));
+  };
+
   return (
     <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: ph + 132 }}>
       <div
@@ -166,7 +178,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
         }}
       >
         <div
-          className="flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing select-none"
+          className="flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing select-none print:hidden"
           onPointerDown={onGripDown}
           onPointerMove={onGripMove}
           onPointerUp={onGripUp}
@@ -188,6 +200,19 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
           />
           <button
             type="button"
+            className="p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              doExportPng();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            title={t('p2.png')}
+            aria-label={t('p2.png')}
+          >
+            <ISave />
+          </button>
+          <button
+            type="button"
             className="p-1.5 text-[var(--faint)] hover:text-[var(--danger)] cursor-pointer"
             onClick={() => removeBlock(block.id)}
             onPointerDown={(e) => e.stopPropagation()}
@@ -196,7 +221,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
             <IX />
           </button>
         </div>
-        <div className="flex items-center gap-2 flex-wrap text-[12px] text-[var(--ink-soft)] mb-1">
+        <div className="flex items-center gap-2 flex-wrap text-[12px] text-[var(--ink-soft)] mb-1 print:hidden">
           <label>xmin <input type="number" aria-label={t('p3.xmin')} className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={xmin} onChange={(e) => updatePlot(block.id, { plotXmin: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
           <label>xmax <input type="number" aria-label={t('p3.xmax')} className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={xmax} onChange={(e) => updatePlot(block.id, { plotXmax: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
           <label>ymin <input type="number" aria-label={t('p3.ymin')} className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={ymin} onChange={(e) => updatePlot(block.id, { plotYmin: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
@@ -210,6 +235,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
           <div className="text-[var(--danger)] text-[12px]" role="alert">⚠ {data.err}</div>
         ) : (
           <svg
+            ref={svgRef}
             width={pw - 24}
             height={ph}
             className="rounded-lg border border-[var(--line)]"

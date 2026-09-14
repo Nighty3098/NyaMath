@@ -6,7 +6,8 @@ import { plotPalettes } from '../theme';
 import { t } from '../i18n';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IResize, IX } from './Icon';
+import { IResize, ISave, ITable, IX } from './Icon';
+import { columnsToCsv, downloadTextFile, exportSvgElementToPng, safeFilename } from '../lib/exportFiles';
 
 const W = 460;
 const H = 300;
@@ -61,9 +62,18 @@ interface PolarGrid {
   maxR: number;
 }
 
+/** Сырые точки серий (для CSV-экспорта) */
+interface RawRow {
+  expr: string;
+  xs: number[];
+  ys: number[];
+  es: (number | null)[];
+}
+
 function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }) {
   const removeBlock = useCanvasStore((s) => s.removeBlock);
   const boxRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
   const { onGripDown, onGripMove, onGripUp } = useRegionDrag(block.id, scale, false);
   const { onResizeDown, onResizeMove, onResizeUp } = useRegionResize(block.id, scale, boxRef, {
     height: true,
@@ -98,8 +108,8 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   const pw = block.w ?? W;
   const ph = Math.max(180, (block.h ?? H + HEAD) - HEAD);
 
-  const { series, ymin, ymax, err, xticks, yticks, polar } = useMemo(() => {
-    const fail = (e: string) => ({ series: [] as Series[], ymin: -1, ymax: 1, err: e, xticks: [] as number[], yticks: [] as number[], polar: null as PolarGrid | null });
+  const { series, ymin, ymax, err, xticks, yticks, polar, raw: table } = useMemo(() => {
+    const fail = (e: string) => ({ series: [] as Series[], ymin: -1, ymax: 1, err: e, xticks: [] as number[], yticks: [] as number[], polar: null as PolarGrid | null, raw: [] as RawRow[] });
     try {
       const exprs = fnText
         .split(/[;\n]/)
@@ -127,7 +137,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
       };
 
       const allY: number[] = [];
-      const raw: { expr: string; xs: number[]; ys: number[]; es: (number | null)[] }[] = [];
+      const raw: RawRow[] = [];
       exprs.forEach((expr) => {
         const hasX = /\bx\b/.test(preprocessJ(expr, false));
         const xs: number[] = [];
@@ -191,7 +201,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
         raw.push({ expr, xs, ys, es });
       });
 
-      if (!allY.length) return { ...fail(t('p2.noData')), series: raw.map((r): Series => ({ expr: r.expr, color: '', d: '', dashed: true })) };
+      if (!allY.length) return { ...fail(t('p2.noData')), series: raw.map((r): Series => ({ expr: r.expr, color: '', d: '', dashed: true })), raw };
       let lo = Math.min(...allY);
       let hi = Math.max(...allY);
       if (lo === hi) {
@@ -215,7 +225,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             if (isFinite(y)) maxR = Math.max(maxR, Math.abs(y));
           }
         }
-        if (!(maxR > 0)) return { ...fail(t('p2.noData')), series: raw.map((r): Series => ({ expr: r.expr, color: '', d: '', dashed: true })) };
+        if (!(maxR > 0)) return { ...fail(t('p2.noData')), series: raw.map((r): Series => ({ expr: r.expr, color: '', d: '', dashed: true })), raw };
         const cx = PAD_L + (pw - PAD_L - PAD_R) / 2;
         const cy = padT + (ph - padT - PAD_B) / 2;
         const R = (Math.min(pw - PAD_L - PAD_R, ph - padT - PAD_B) / 2 - 8) / maxR;
@@ -237,7 +247,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           });
           out.push({ expr: r.expr, color: pal.series[si % pal.series.length], d, errs });
         });
-        return { series: out, ymin: -maxR, ymax: maxR, err: null as string | null, xticks: [], yticks: [], polar: polarInfo };
+        return { series: out, ymin: -maxR, ymax: maxR, err: null as string | null, xticks: [], yticks: [], polar: polarInfo, raw };
       }
 
       // декартова проекция
@@ -308,7 +318,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           out.push({ expr: r.expr, color, d, errs });
         }
       });
-      return { series: out, ymin: lo, ymax: hi, err: null as string | null, xticks: niceTicks(xmin, xmax), yticks: niceTicks(lo, hi), polar: null };
+      return { series: out, ymin: lo, ymax: hi, err: null as string | null, xticks: niceTicks(xmin, xmax), yticks: niceTicks(lo, hi), polar: null, raw };
     } catch (e) {
       return fail(e instanceof Error ? e.message : String(e));
     }
@@ -317,6 +327,30 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   const X = (x: number) => PAD_L + ((x - xmin) / (xmax - xmin)) * (pw - PAD_L - PAD_R);
   const Y = (y: number) => ph - PAD_B - ((y - ymin) / (ymax - ymin)) * (ph - padT - PAD_B);
   const selected = selectedIds.includes(block.id);
+  const baseName = safeFilename(title || fnText, 'plot');
+
+  /** PNG снимок отрендеренного SVG (×2) */
+  const doExportPng = () => {
+    if (!svgRef.current) {
+      alert(t('p2.noData'));
+      return;
+    }
+    void exportSvgElementToPng(svgRef.current, `${baseName}.png`).catch(() => alert(t('p2.noData')));
+  };
+
+  /** CSV: x + по колонке y на серию (дырки — пустые ячейки) */
+  const doExportCsv = () => {
+    if (!table.length) {
+      alert(t('p2.noData'));
+      return;
+    }
+    const headers = ['x', ...table.map((s) => `y(${s.expr})`)];
+    const num = (v: number | undefined): number | null =>
+      typeof v === 'number' && isFinite(v) ? v : null;
+    const columns: (number | null)[][] = [table[0]?.xs.map(num) ?? []];
+    for (const s of table) columns.push(s.ys.map(num));
+    downloadTextFile(`${baseName}.csv`, columnsToCsv(headers, columns), 'text/csv;charset=utf-8');
+  };
   const zeroY = proj === 'xy' && ymin < 0 && ymax > 0 ? Y(0) : null;
   const zeroX = proj === 'xy' && xmin < 0 && xmax > 0 ? X(0) : null;
   const svgW = pw - 24;
@@ -351,7 +385,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
         }}
       >
         <div
-          className="flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing select-none"
+          className="flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing select-none print:hidden"
           onPointerDown={onGripDown}
           onPointerMove={onGripMove}
           onPointerUp={onGripUp}
@@ -377,6 +411,32 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           />
           <button
             type="button"
+            className="p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              doExportPng();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            title={t('p2.png')}
+            aria-label={t('p2.png')}
+          >
+            <ISave />
+          </button>
+          <button
+            type="button"
+            className="p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              doExportCsv();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            title={t('p2.csv')}
+            aria-label={t('p2.csv')}
+          >
+            <ITable />
+          </button>
+          <button
+            type="button"
             className="p-1.5 text-[var(--faint)] hover:text-[var(--danger)] cursor-pointer"
             onClick={() => removeBlock(block.id)}
             onPointerDown={(e) => e.stopPropagation()}
@@ -385,7 +445,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             <IX />
           </button>
         </div>
-        <div className="flex items-center gap-2 text-[12px] text-[var(--ink-soft)] mb-1 flex-wrap">
+        <div className="flex items-center gap-2 text-[12px] text-[var(--ink-soft)] mb-1 flex-wrap print:hidden">
           <label>
             xmin{' '}
             <input
@@ -484,7 +544,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             {proj === 'polar' ? `r ≤ ${fmtTick(polar?.maxR ?? ymax)}` : `y ∈ [${fmtTick(ymin)}, ${fmtTick(ymax)}]`}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-[12px] text-[var(--ink-soft)] mb-1 flex-wrap">
+        <div className="flex items-center gap-2 text-[12px] text-[var(--ink-soft)] mb-1 flex-wrap print:hidden">
           <label className="flex-1 min-w-[120px]">
             {t('p2.title')}{' '}
             <input
@@ -525,12 +585,17 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             />
           </label>
         </div>
+        {/* заголовок для печати (контролы выше скрыты в print) */}
+        <div className="hidden print:block text-[13px] font-medium text-[var(--ink)] mb-1">
+          {title || fnText}
+        </div>
         {err ? (
           <div className="text-[var(--danger)] text-[12px]" role="alert">
             ⚠ {err}
           </div>
         ) : proj === 'polar' && polar ? (
           <svg
+            ref={svgRef}
             width={svgW}
             height={ph}
             className="rounded-lg border border-[var(--line)]"
@@ -582,6 +647,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           </svg>
         ) : (
           <svg
+            ref={svgRef}
             width={svgW}
             height={ph}
             className="rounded-lg border border-[var(--line)]"

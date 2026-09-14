@@ -58,6 +58,7 @@ const ru = {
   'menu.newMath': 'Новый мат-блок',
   'menu.save': 'Сохранить проект…',
   'menu.open': 'Открыть проект…',
+  'menu.print': 'Печать / PDF…',
   'menu.clear': 'Очистить холст',
   'menu.insMath': 'Мат-блок f(x)',
   'menu.insPlot': 'График plot',
@@ -140,6 +141,8 @@ const ru = {
   'm.autoplot': 'автографик f(x), x ∈ [-10, 10]',
   'm.expandPlot': 'Развернуть в plot ⤢',
   'm.expandTitle': 'Создать полноценный plot-блок с этой функцией',
+  'm.copyTex': 'Скопировать LaTeX',
+  'm.copied': 'Скопировано ✓',
 
   'p2.fnLabel': 'Функции графика, несколько — через точку с запятой',
   'p2.fnTitle': 'f(x); несколько серий через «;». Без x — вектор из документа по индексу',
@@ -168,6 +171,8 @@ const ru = {
   'p2.yLabel': 'Подпись Y',
   'p2.grid': 'Сетка',
   'p2.legend': 'Легенда',
+  'p2.png': 'Скачать PNG',
+  'p2.csv': 'Скачать CSV',
 
   'ctr.fnLabel': 'Выражение контура: f(x,y)',
   'ctr.fnTitle': 'f(x,y) — изолинии уровня',
@@ -339,6 +344,7 @@ const en: Record<StrKey, string> = {
   'menu.newMath': 'New math block',
   'menu.save': 'Save project…',
   'menu.open': 'Open project…',
+  'menu.print': 'Print / PDF…',
   'menu.clear': 'Clear canvas',
   'menu.insMath': 'Math block f(x)',
   'menu.insPlot': 'Plot graph',
@@ -421,6 +427,8 @@ const en: Record<StrKey, string> = {
   'm.autoplot': 'auto-plot f(x), x ∈ [-10, 10]',
   'm.expandPlot': 'Expand to plot ⤢',
   'm.expandTitle': 'Create a full plot block with this function',
+  'm.copyTex': 'Copy LaTeX',
+  'm.copied': 'Copied ✓',
 
   'p2.fnLabel': 'Plot functions, several — separated by semicolon',
   'p2.fnTitle': 'f(x); several series via ";". Without x — document vector by index',
@@ -449,6 +457,8 @@ const en: Record<StrKey, string> = {
   'p2.yLabel': 'Y label',
   'p2.grid': 'Grid',
   'p2.legend': 'Legend',
+  'p2.png': 'Download PNG',
+  'p2.csv': 'Download CSV',
 
   'ctr.fnLabel': 'Contour expression: f(x,y)',
   'ctr.fnTitle': 'f(x,y) — level isolines',

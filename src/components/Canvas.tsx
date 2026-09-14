@@ -369,7 +369,7 @@ export default function Canvas() {
       >
         {/* курсор-прицел в стиле Mathcad */}
         <div
-          className="absolute z-0 pointer-events-none"
+          className="absolute z-0 pointer-events-none print:hidden"
           style={{ left: cross.x, top: cross.y }}
           aria-hidden="true"
         >
@@ -423,7 +423,7 @@ export default function Canvas() {
               draggable={false}
             />
             <div className="font-semibold tracking-tight text-[22px] leading-7 text-[var(--ink)] mt-3">
-              <span className="text-[var(--accent)]">W</span>engineering
+              <span className="text-[var(--accent)]">Nya</span>Math
             </div>
             <div className="text-[13px] text-[var(--faint)] mt-1">{t('c.emptyNew')}</div>
             <div className="flex items-center gap-1.5 flex-wrap justify-center mt-3 text-[12px] text-[var(--ink-soft)]">

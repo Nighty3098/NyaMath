@@ -4,7 +4,7 @@ import { saveDocument } from '../lib/saveDocument';
 import { THEMES } from '../theme';
 import { t, themeLabel, type Lang } from '../i18n';
 import {
-  IDemo, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IProgram,
+  IDemo, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
   IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon,
 } from './Icon';
 
@@ -103,6 +103,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
         { sep: true },
         { id: 'save', icon: <ISave />, label: t('menu.save'), hint: 'Ctrl+S', action: run(() => void saveDocument(blocks)) },
         { id: 'open', icon: <IOpen />, label: t('menu.open'), action: run(onOpenFile) },
+        { id: 'print', icon: <IPrint />, label: t('menu.print'), hint: 'Ctrl+P', action: run(() => window.print()) },
         { sep: true },
         { id: 'clear', icon: <IX />, label: t('menu.clear'), danger: true, action: run(() => { if (confirm(t('confirm.clear'))) clear(); }) },
       ],
@@ -176,7 +177,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
       aria-label={t('menu.main')}
     >
       <div className="font-semibold tracking-tight text-[14px] whitespace-nowrap mr-2 pl-1">
-        <span className="text-[var(--accent)]">W</span>engineering
+        <span className="text-[var(--accent)]">Nya</span>Math
       </div>
       {menus.map((m) => (
         <div key={m.id} className="relative">

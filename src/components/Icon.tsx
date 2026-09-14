@@ -198,3 +198,25 @@ export const IUndock = () => (
     <rect x="2.5" y="5.5" width="10" height="8" rx="1.5" />
   </Svg>
 );
+/** Копировать (буфер обмена) */
+export const ICopy = () => (
+  <Svg>
+    <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+    <path d="M10.5 5.5v-2a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2" />
+  </Svg>
+);
+/** Таблица (CSV-данные) */
+export const ITable = () => (
+  <Svg>
+    <rect x="2.5" y="3" width="11" height="10" rx="1" />
+    <path d="M2.5 6.5h11M2.5 9.8h11M7 3v10" />
+  </Svg>
+);
+/** Принтер (печать / PDF) */
+export const IPrint = () => (
+  <Svg>
+    <path d="M5 6V2.5h6V6" />
+    <rect x="2.5" y="6" width="11" height="5.5" rx="1.5" />
+    <rect x="5" y="9.5" width="6" height="4" />
+  </Svg>
+);

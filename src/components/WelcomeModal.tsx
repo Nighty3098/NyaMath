@@ -105,7 +105,7 @@ export default function WelcomeModal({ onClose, onOpenFile }: WelcomeModalProps)
           <div className="flex-1 min-w-0 rounded-xl px-5 py-4">
             <div className="welcome-chunk welcome-d0 pr-8">
               <div className="font-semibold tracking-tight text-[22px] leading-7">
-                <span className="text-[var(--accent)]">W</span>engineering
+                <span className="text-[var(--accent)]">Nya</span>Math
               </div>
             </div>
 

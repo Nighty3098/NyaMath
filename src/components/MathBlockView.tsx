@@ -4,8 +4,9 @@ import type { MathBlockData } from '../engine/dependencies';
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IGrip, IResize, IX } from './Icon';
+import { IGrip, ICopy, IResize, IX } from './Icon';
 import MiniPlot from './MiniPlot';
+import { copyTextToClipboard } from '../lib/exportFiles';
 
 interface Props {
   block: MathBlockData;
@@ -27,6 +28,8 @@ function MathBlockView({ block, scale }: Props) {
   useCanvasStore((s) => s.lang);
   const [editing, setEditing] = useState(block.rawInput === '' && block.kind === 'math');
   const [draft, setDraft] = useState(block.rawInput);
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const regionRef = useRef<HTMLDivElement>(null);
@@ -55,6 +58,22 @@ function MathBlockView({ block, scale }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => () => {
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+  }, []);
+
+  /** Копировать формулу как LaTeX (результат — если есть) */
+  const doCopyTex = () => {
+    const src = tex || block.rawInput;
+    if (!src) return;
+    void copyTextToClipboard(src).then((ok) => {
+      if (!ok) return;
+      setCopied(true);
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 1200);
+    });
+  };
 
   // Инлайн-результат в стиле Mathcad: `expr = result` одной строкой KaTeX
   const tex = useMemo(() => {
@@ -158,6 +177,23 @@ function MathBlockView({ block, scale }: Props) {
         >
           <IX />
         </button>
+        {/* копировать LaTeX */}
+        {!editing && (
+          <button
+            type="button"
+            className="absolute -right-7 top-8 p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] opacity-0 group-hover:opacity-100 cursor-pointer"
+            style={{ opacity: selected || copied ? 1 : undefined }}
+            title={copied ? t('m.copied') : t('m.copyTex')}
+            aria-label={t('m.copyTex')}
+            onClick={(e) => {
+              e.stopPropagation();
+              doCopyTex();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {copied ? <span className="text-[13px] leading-4 text-[var(--ok)]">✓</span> : <ICopy />}
+          </button>
+        )}
         {/* ручка ширины */}
         <span
           className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize opacity-0 group-hover:opacity-100 text-[var(--faint)] hover:text-[var(--accent-line)] select-none"

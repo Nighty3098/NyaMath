@@ -344,3 +344,49 @@ body {
   filter: blur(4px);
   transition: opacity 150ms ease-out, transform 150ms ease-out, filter 150ms ease-out;
 }
+
+/* ===== Печать / PDF: чистый документ без хрома и контролов ===== */
+@page {
+  margin: 10mm;
+}
+@media print {
+  /* светлая бумага независимо от темы (html[data-theme] сильнее [data-theme]) */
+  html[data-theme] {
+    --canvas: #ffffff;
+    --sheet: #ffffff;
+    --ink: #1f2328;
+    --ink-soft: #424a53;
+    --faint: #6e7781;
+    --line: #d0d7de;
+    --hover-line: #afb8c1;
+    --accent: #0969da;
+    --accent-ink: #0550ae;
+    --accent-line: #0969da;
+    --danger: #cf222e;
+    --danger-bg: transparent;
+    --ok: #1a7f37;
+    --input-bg: #ffffff;
+    --input-border: #d0d7de;
+  }
+  /* хром приложения и оверлеи — скрыть */
+  [role="menubar"],
+  [role="dialog"],
+  [role="complementary"],
+  [role="toolbar"] {
+    display: none !important;
+  }
+  /* блоки: без теней, без интерактивных контролов */
+  .nya-block {
+    box-shadow: none !important;
+  }
+  .nya-block input,
+  .nya-block select,
+  .nya-block button,
+  .nya-block textarea,
+  .nya-block > span.absolute {
+    display: none !important;
+  }
+  .nya-sheet {
+    transform: none !important;
+  }
+}
