@@ -414,12 +414,25 @@ export default function Canvas() {
       {/* пустое состояние — в экранных координатах */}
       {list.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center">
-            <div className="text-2xl text-slate-200 font-semibold">Wengineering</div>
-            <div className="text-sm text-slate-400 mt-1">
-              {t('c.emptyNew')} • <span className="math-input">:=</span> {t('c.emptyAssign')} •{' '}
-              <span className="math-input">=</span> {t('c.emptyOutput')}
+          <div className="flex flex-col items-center text-center px-6">
+            <img
+              src="favicon.svg"
+              alt=""
+              aria-hidden="true"
+              className="w-16 h-16 opacity-90"
+              draggable={false}
+            />
+            <div className="font-semibold tracking-tight text-[22px] leading-7 text-[var(--ink)] mt-3">
+              <span className="text-[var(--accent)]">W</span>engineering
             </div>
+            <div className="text-[13px] text-[var(--faint)] mt-1">{t('c.emptyNew')}</div>
+            <div className="flex items-center gap-1.5 flex-wrap justify-center mt-3 text-[12px] text-[var(--ink-soft)]">
+              <kbd className="math-input px-1.5 py-0.5 rounded-md border border-[var(--line)] bg-[var(--chrome)]">:=</kbd>
+              <span>{t('c.emptyAssign')}</span>
+              <kbd className="math-input px-1.5 py-0.5 rounded-md border border-[var(--line)] bg-[var(--chrome)] ml-2">=</kbd>
+              <span>{t('c.emptyOutput')}</span>
+            </div>
+            <div className="text-[11px] text-[var(--faint)] mt-2">{t('c.crossHint')}</div>
           </div>
         </div>
       )}
@@ -467,7 +480,7 @@ function ZoomBtn({
     <button
       type="button"
       aria-label={label}
-      className="w-9 h-9 text-[16px] text-[var(--chrome-ink)] rounded-md hover:bg-white/10 border border-transparent hover:border-[var(--chrome-line)] cursor-pointer active:scale-95"
+      className="w-9 h-9 text-[16px] text-[var(--chrome-ink)] rounded-md hover:bg-white/10 border border-transparent hover:border-[var(--chrome-line)] cursor-pointer transition-transform duration-150 ease-out active:scale-[0.96]"
       onClick={(e) => {
         e.stopPropagation();
         onClick();
