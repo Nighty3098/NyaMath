@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { saveDocument } from '../lib/saveDocument';
+import { downloadLatexReport, downloadMarkdown } from '../lib/report';
 import { SHARE_WARN_CHARS, shareDocument } from '../lib/share';
 import { THEMES } from '../theme';
 import { t, themeLabel, type Lang } from '../i18n';
@@ -124,6 +125,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
         { id: 'open', icon: <IOpen />, label: t('menu.open'), action: run(onOpenFile) },
         { id: 'share', icon: <ICopy />, label: t('menu.share'), action: run(() => void shareCurrentSheet()) },
         { id: 'print', icon: <IPrint />, label: t('menu.print'), hint: 'Ctrl+P', action: run(() => window.print()) },
+        { id: 'export-md', icon: <ICopy />, label: t('menu.exportMd'), action: run(() => downloadMarkdown(blocks)) },
+        { id: 'export-tex', icon: <ICopy />, label: t('menu.exportTex'), action: run(() => downloadLatexReport(blocks)) },
         { sep: true },
         { id: 'clear', icon: <IX />, label: t('menu.clear'), danger: true, action: run(() => { if (confirm(t('confirm.clear'))) clear(); }) },
       ],
