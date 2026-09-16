@@ -5,6 +5,7 @@ import WelcomeModal from './components/WelcomeModal';
 import FunctionPalette from './components/FunctionPalette';
 import { useCanvasStore } from './store/canvasStore';
 import { saveDocument } from './lib/saveDocument';
+import { clearShareParamFromUrl, decodeShareParam, readShareParamFromUrl, readTemplateFromUrl } from './lib/share';
 import { t } from './i18n';
 
 export default function App() {
@@ -76,6 +77,53 @@ export default function App() {
     };
     window.addEventListener('beforeprint', commit);
     return () => window.removeEventListener('beforeprint', commit);
+  }, []);
+
+  // Входящая share-ссылка `#t=…` (пример) или `#d=…` (данные): загрузить лист при старте.
+  useEffect(() => {
+    const tpl = readTemplateFromUrl();
+    if (tpl) {
+      const st = useCanvasStore.getState();
+      if (Object.keys(st.blocks).length > 0) {
+        if (!confirm(t('share.overwrite'))) {
+          clearShareParamFromUrl();
+          return;
+        }
+      }
+      if (tpl === 'ex20') st.loadTestScenario();
+      else st.loadAdvancedDemo();
+      clearShareParamFromUrl();
+      alert(t('share.loaded', { n: Object.keys(useCanvasStore.getState().blocks).length }));
+      return;
+    }
+    const param = readShareParamFromUrl();
+    if (!param) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await decodeShareParam(param);
+        if (cancelled) return;
+        const cur = useCanvasStore.getState().blocks;
+        if (Object.keys(cur).length > 0) {
+          if (!confirm(t('share.loaded', { n: data.length }))) {
+            clearShareParamFromUrl();
+            return;
+          }
+        }
+        const r = useCanvasStore.getState().loadDocument(data);
+        clearShareParamFromUrl();
+        alert(r.ok ? t('share.loaded', { n: data.length }) : r.message);
+      } catch {
+        if (!cancelled) {
+          clearShareParamFromUrl();
+          alert(t('share.badLink'));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openFile = (f: File) => {

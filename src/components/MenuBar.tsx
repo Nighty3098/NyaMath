@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { saveDocument } from '../lib/saveDocument';
+import { SHARE_WARN_CHARS, shareDocument } from '../lib/share';
 import { THEMES } from '../theme';
 import { t, themeLabel, type Lang } from '../i18n';
 import {
   IDemo, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
-  IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon,
+  IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy,
 } from './Icon';
 
 interface MenuBarProps {
@@ -87,6 +88,23 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
     fn();
   };
 
+  /** Поделиться: JSON → slim → deflate → base64url → ссылка в буфере обмена. */
+  const shareCurrentSheet = async () => {
+    const cur = useCanvasStore.getState().blocks;
+    if (!Object.keys(cur).length) {
+      alert(t('share.empty'));
+      return;
+    }
+    try {
+      const r = await shareDocument(cur);
+      const warn = r.urlLength > SHARE_WARN_CHARS ? t('share.longWarn', { chars: r.urlLength }) : '';
+      if (r.copied) alert(t('share.copied', { n: r.count, chars: r.urlLength }) + warn);
+      else prompt(t('share.copyManual', { n: r.count, chars: r.urlLength, url: '' }), r.url);
+    } catch {
+      alert(t('share.failed'));
+    }
+  };
+
   const langEntry = (id: string, l: Lang, label: string): Entry => ({
     id,
     label,
@@ -103,6 +121,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
         { sep: true },
         { id: 'save', icon: <ISave />, label: t('menu.save'), hint: 'Ctrl+S', action: run(() => void saveDocument(blocks)) },
         { id: 'open', icon: <IOpen />, label: t('menu.open'), action: run(onOpenFile) },
+        { id: 'share', icon: <ICopy />, label: t('menu.share'), action: run(() => void shareCurrentSheet()) },
         { id: 'print', icon: <IPrint />, label: t('menu.print'), hint: 'Ctrl+P', action: run(() => window.print()) },
         { sep: true },
         { id: 'clear', icon: <IX />, label: t('menu.clear'), danger: true, action: run(() => { if (confirm(t('confirm.clear'))) clear(); }) },
