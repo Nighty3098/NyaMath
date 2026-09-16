@@ -5,7 +5,7 @@ import WelcomeModal from './components/WelcomeModal';
 import FunctionPalette from './components/FunctionPalette';
 import { useCanvasStore } from './store/canvasStore';
 import { saveDocument } from './lib/saveDocument';
-import { clearShareParamFromUrl, decodeShareParam, readShareParamFromUrl, readTemplateFromUrl } from './lib/share';
+import { clearShareParamFromUrl, decodeShareParam, readLangFromUrl, readShareParamFromUrl, readTemplateFromUrl } from './lib/share';
 import { t } from './i18n';
 
 export default function App() {
@@ -79,25 +79,36 @@ export default function App() {
     return () => window.removeEventListener('beforeprint', commit);
   }, []);
 
-  // Входящая share-ссылка `#t=…` (пример) или `#d=…` (данные): загрузить лист при старте.
+  // Входящая share-ссылка: `&lang=` применяем сразу (и в localStorage),
+  // `#t=…` (пример) или `#d=…` (данные) — грузим лист, справку не показываем.
+  const [shareIncoming, setShareIncoming] = useState(
+    () => readTemplateFromUrl() !== null || readShareParamFromUrl() !== null,
+  );
   useEffect(() => {
+    const incomingLang = readLangFromUrl();
+    if (incomingLang) useCanvasStore.getState().setLang(incomingLang);
     const tpl = readTemplateFromUrl();
     if (tpl) {
       const st = useCanvasStore.getState();
       if (Object.keys(st.blocks).length > 0) {
         if (!confirm(t('share.overwrite'))) {
           clearShareParamFromUrl();
+          setShareIncoming(false);
           return;
         }
       }
       if (tpl === 'ex20') st.loadTestScenario();
       else st.loadAdvancedDemo();
       clearShareParamFromUrl();
+      setShareIncoming(false);
       alert(t('share.loaded', { n: Object.keys(useCanvasStore.getState().blocks).length }));
       return;
     }
     const param = readShareParamFromUrl();
-    if (!param) return;
+    if (!param) {
+      setShareIncoming(false);
+      return;
+    }
     let cancelled = false;
     void (async () => {
       try {
@@ -107,15 +118,18 @@ export default function App() {
         if (Object.keys(cur).length > 0) {
           if (!confirm(t('share.loaded', { n: data.length }))) {
             clearShareParamFromUrl();
+            setShareIncoming(false);
             return;
           }
         }
         const r = useCanvasStore.getState().loadDocument(data);
         clearShareParamFromUrl();
+        setShareIncoming(false);
         alert(r.ok ? t('share.loaded', { n: data.length }) : r.message);
       } catch {
         if (!cancelled) {
           clearShareParamFromUrl();
+          setShareIncoming(false);
           alert(t('share.badLink'));
         }
       }
@@ -144,7 +158,7 @@ export default function App() {
     setWelcomeForced(false);
     setWelcomeDismissed(true);
   };
-  const showWelcome = welcomeForced || (!welcomeDismissed && Object.keys(blocks).length === 0);
+  const showWelcome = welcomeForced || (!welcomeDismissed && !shareIncoming && Object.keys(blocks).length === 0);
 
   return (
     <div className="nya-app h-screen w-screen flex flex-col overflow-hidden">

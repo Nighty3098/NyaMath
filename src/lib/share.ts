@@ -29,6 +29,7 @@
  * Учебные листы почти целиком состоят из этих фраз → −30-35% к ссылке.
  */
 import type { MathBlockData } from '../engine/dependencies';
+import type { Lang } from '../i18n';
 import { TEST_SCENARIO_LINES } from '../data/testScenario';
 import { ADVANCED_DEMO } from '../data/demoAdvanced';
 import { FROZEN_PHRASES } from './sharePhrases';
@@ -459,17 +460,31 @@ function urlBase(): string {
   return '';
 }
 
-/** Полный URL для шаринга (фрагмент — сервер не трогаем, статический хостинг ок). */
-export function buildShareUrl(param: string): string {
-  return `${urlBase()}#${SHARE_KEY}=${param}`;
-}
-
 /** Ключ шаблона в ссылке. */
 export const TEMPLATE_KEY = 't';
 
+/** Ключ языка интерфейса в ссылке. */
+export const LANG_KEY = 'lang';
+
+/** Строго ru/en, всё остальное — игнорируем (не даём мусору переключать язык). */
+export function normalizeLang(v: unknown): Lang | null {
+  return v === 'ru' || v === 'en' ? v : null;
+}
+
+/** Суффикс `&lang=xx` для шаринговых ссылок (пусто — язык не кладём). */
+function langSuffix(lang: unknown): string {
+  const l = normalizeLang(lang);
+  return l ? `&${LANG_KEY}=${l}` : '';
+}
+
+/** Полный URL для шаринга (фрагмент — сервер не трогаем, статический хостинг ок). */
+export function buildShareUrl(param: string, lang?: unknown): string {
+  return `${urlBase()}#${SHARE_KEY}=${param}${langSuffix(lang)}`;
+}
+
 /** Короткая ссылка на нетронутый пример: байт данных нет вообще. */
-export function buildTemplateUrl(key: TemplateKey): string {
-  return `${urlBase()}#${TEMPLATE_KEY}=${key}`;
+export function buildTemplateUrl(key: TemplateKey, lang?: unknown): string {
+  return `${urlBase()}#${TEMPLATE_KEY}=${key}${langSuffix(lang)}`;
 }
 
 /** Ключ шаблона из URL (`#t=` / `?t=`), null — обычная ссылка или её нет. */
@@ -487,6 +502,22 @@ export function readTemplateFromUrl(): TemplateKey | null {
   }
 }
 
+/** Язык интерфейса из URL (`#lang=` / `?lang=`), null — флага нет или мусор. */
+export function readLangFromUrl(): Lang | null {
+  try {
+    const hash = location.hash.startsWith('#') ? location.hash.slice(1) : location.hash;
+    for (const part of hash.split('&')) {
+      const [k, ...rest] = part.split('=');
+      if (k === LANG_KEY && rest.length) {
+        const l = normalizeLang(rest.join('='));
+        if (l) return l;
+      }
+    }
+    return normalizeLang(new URLSearchParams(location.search).get(LANG_KEY));
+  } catch {
+    return null;
+  }
+}
 /** Достать параметр шаринга из URL: сначала `#d=`, потом `?d=`/`?s=` (совместимость). */
 export function readShareParamFromUrl(): string | null {
   const hash = location.hash.startsWith('#') ? location.hash.slice(1) : location.hash;
@@ -513,14 +544,15 @@ export function clearShareParamFromUrl(): void {
 }
 
 /**
- * Поделиться: упаковать, скопировать ссылку в буфер, вернуть метаданные.
+ * Поделиться: упаковать, прицепить текущий язык (`&lang=`), скопировать в буфер.
  * Ошибки буфера не роняем — ссылку всё равно возвращаем (покажем в диалоге).
  */
 export async function shareDocument(
   blocks: Record<string, MathBlockData>,
+  lang?: unknown,
 ): Promise<{ url: string; copied: boolean } & ShareEncoded> {
   const enc = await encodeShare(blocks);
-  const url = enc.template ? buildTemplateUrl(enc.template) : buildShareUrl(enc.param as string);
+  const url = enc.template ? buildTemplateUrl(enc.template, lang) : buildShareUrl(enc.param as string, lang);
   const copied = await copyTextToClipboard(url);
-  return { ...enc, url, copied };
+  return { ...enc, url, urlLength: url.length, copied };
 }

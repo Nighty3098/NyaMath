@@ -88,7 +88,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
     fn();
   };
 
-  /** Поделиться: JSON → slim → deflate → base64url → ссылка в буфере обмена. */
+  /** Поделиться: JSON → slim → фразы → deflate → base64url → ссылка в буфере (+язык). */
   const shareCurrentSheet = async () => {
     const cur = useCanvasStore.getState().blocks;
     if (!Object.keys(cur).length) {
@@ -96,7 +96,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
       return;
     }
     try {
-      const r = await shareDocument(cur);
+      const r = await shareDocument(cur, useCanvasStore.getState().lang);
       const warn = r.urlLength > SHARE_WARN_CHARS ? t('share.longWarn', { chars: r.urlLength }) : '';
       if (r.copied) alert(t('share.copied', { n: r.count, chars: r.urlLength }) + warn);
       else prompt(t('share.copyManual', { n: r.count, chars: r.urlLength, url: '' }), r.url);
