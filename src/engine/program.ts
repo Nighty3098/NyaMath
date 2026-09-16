@@ -5,6 +5,7 @@
  *   x := expr        локальное присваивание (также `x <- expr`)
  *   expr             выражение (значение запоминается; последнее = результат)
  *   return expr      вернуть значение досрочно
+ *   assert cond      контракт: ошибка с номером строки, если условие ложно
  *   if cond          ... [else ...] end
  *   for i in expr    ... end      (expr: вектор, матрица, `a..b`, число n → 1..n)
  *   while cond       ... end      (лимит 100000 итераций)
@@ -55,6 +56,7 @@ const IF_RE = /^if\s+(.+)$/i;
 const ELSE_IF_RE = /^else\s+if\s+(.+)$/i;
 const WHILE_RE = /^while\s+(.+)$/i;
 const RETURN_RE = /^return\b\s*(.*)$/i;
+const ASSERT_RE = /^assert\s+(.+)$/i;
 const TRACE_RE = /^trace\s+(.+)$/i;
 const BREAKPOINT_RE = /^breakpoint$/i;
 
@@ -87,6 +89,8 @@ export function analyzeProgram(src: string): ProgramAnalysis {
     if (w) return w[1];
     const r = t.match(RETURN_RE);
     if (r) return r[1];
+    const am = t.match(ASSERT_RE);
+    if (am) return am[1];
     const tr = t.match(TRACE_RE);
     if (tr) return tr[1];
     if (BREAKPOINT_RE.test(t)) return '';
@@ -260,6 +264,14 @@ export function runProgram(
       }
       if (/^break$/i.test(text)) return { sig: 'break', last };
       if (/^continue$/i.test(text)) return { sig: 'continue', last };
+      // --- assert: контракт, ложь = ошибка с номером строки ---
+      const am = text.match(ASSERT_RE);
+      if (am) {
+        const ok = truthy(evalExpr(am[1], no), no);
+        if (!ok) throw { line: no, msg: t('e.assertFail', { cond: am[1].slice(0, 80) }) };
+        i++;
+        continue;
+      }
       if (BREAKPOINT_RE.test(text)) {
         step('breakpoint', no, text, last);
         i++;
