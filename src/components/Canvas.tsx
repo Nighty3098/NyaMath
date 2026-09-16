@@ -130,6 +130,55 @@ export default function Canvas() {
   // Рамка выделения (marquee) в экранных координатах контейнера
   const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const pressRef = useRef<{ x: number; y: number; button: number; cx: number; cy: number } | null>(null);
+  // --- Тач-жесты: один палец — панорама, два — pinch-zoom, дабл-тап — новый блок ---
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ pd: number; pmx: number; pmy: number } | null>(null);
+  const touchRef = useRef<{
+    sx: number; sy: number; lx: number; ly: number; cx: number; cy: number;
+    t: number; panning: boolean; marquee: boolean;
+  } | null>(null);
+  const longTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTapRef = useRef<{ t: number; x: number; y: number } | null>(null);
+  const touchNewRef = useRef(0);
+  const TAP_MOVE = 10;
+  const TAP_TIME = 350;
+  const DBL_DIST = 28;
+  const DBL_TIME = 320;
+  const LONG_MS = 550;
+
+  const clearLongTimer = () => {
+    if (longTimer.current) {
+      clearTimeout(longTimer.current);
+      longTimer.current = null;
+    }
+  };
+
+  const pinchDistMid = () => {
+    const pts = [...pointersRef.current.values()];
+    const [a, b] = pts as [{ x: number; y: number }, { x: number; y: number }];
+    if (!a || !b) return null;
+    return {
+      d: Math.hypot(a.x - b.x, a.y - b.y),
+      mx: (a.x + b.x) / 2,
+      my: (a.y + b.y) / 2,
+    };
+  };
+
+  /** Мгновенный зум+сдвиг для пальцев (без инерции ease — прямой отклик) */
+  const pinchView = useCallback((mx: number, my: number, factor: number, dx: number, dy: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    const sx = mx - (rect?.left ?? 0);
+    const sy = my - (rect?.top ?? 0);
+    const v = viewRef.current;
+    const k = clamp(v.k * factor, MIN_SCALE, MAX_SCALE);
+    const f = k / v.k;
+    // сначала сдвиг за средней точкой, потом зум вокруг неё
+    const px = v.x + dx;
+    const py = v.y + dy;
+    const n = { k, x: sx - (sx - px) * f, y: sy - (sy - py) * f };
+    targetRef.current = n;
+    setView(n);
+  }, []);
   // Курсор-прицел в стиле Mathcad
   const cross = useCanvasStore((s) => s.cross);
 
@@ -140,7 +189,47 @@ export default function Canvas() {
 
   const onPointerDown = (e: React.PointerEvent) => {
     const bg = !isInteractive(e.target);
+    const isTouch = e.pointerType !== 'mouse';
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // Два пальца — переход в pinch (отменяем всё остальное)
+    if (pointersRef.current.size === 2) {
+      clearLongTimer();
+      pressRef.current = null;
+      touchRef.current = null;
+      panRef.current = null;
+      setPanning(false);
+      setMarquee(null);
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      const pm = pinchDistMid();
+      if (pm) pinchRef.current = { pd: pm.d, pmx: pm.mx, pmy: pm.my };
+      return;
+    }
+    if (pointersRef.current.size > 2) return;
     const forcePan = spaceRef.current || e.button === 1 || e.button === 2;
+    if (isTouch) {
+      // Палец по блоку уходит в stopPropagation внутри блока — сюда доходит только фон.
+      // Один палец всегда панорама (рамка — по long-press, новый блок — дабл-тап).
+      if (forcePan || bg) {
+        e.preventDefault();
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        const p = toLocal(e.clientX, e.clientY);
+        touchRef.current = {
+          sx: p.x, sy: p.y, lx: e.clientX, ly: e.clientY,
+          cx: e.clientX, cy: e.clientY, t: Date.now(), panning: false, marquee: false,
+        };
+        setPanning(true);
+        longTimer.current = setTimeout(() => {
+          const tr = touchRef.current;
+          if (!tr || tr.panning) return;
+          tr.marquee = true;
+          setMarquee({ x0: tr.sx, y0: tr.sy, x1: tr.sx, y1: tr.sy });
+          try {
+            navigator.vibrate?.(15);
+          } catch { /* ignore */ }
+        }, LONG_MS);
+      }
+      return;
+    }
     if (forcePan || (e.button === 0 && bg)) {
       e.preventDefault();
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -156,6 +245,43 @@ export default function Canvas() {
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    const entry = pointersRef.current.get(e.pointerId);
+    if (entry) {
+      entry.x = e.clientX;
+      entry.y = e.clientY;
+    }
+    // Pinch двумя пальцами
+    const pinch = pinchRef.current;
+    if (pinch && pointersRef.current.size >= 2) {
+      const pm = pinchDistMid();
+      if (pm && pm.d > 0 && pinch.pd > 0) {
+        pinchView(pm.mx, pm.my, pm.d / pinch.pd, pm.mx - pinch.pmx, pm.my - pinch.pmy);
+        pinchRef.current = { pd: pm.d, pmx: pm.mx, pmy: pm.my };
+      }
+      return;
+    }
+    // Один палец: панорама после порога, иначе ждём тап/long-press
+    const tr = touchRef.current;
+    if (tr && e.pointerType !== 'mouse') {
+      if (tr.marquee) {
+        const q = toLocal(e.clientX, e.clientY);
+        setMarquee({ x0: tr.sx, y0: tr.sy, x1: q.x, y1: q.y });
+        return;
+      }
+      const moved = Math.abs(e.clientX - tr.cx) + Math.abs(e.clientY - tr.cy);
+      if (!tr.panning && moved > TAP_MOVE) {
+        tr.panning = true;
+        tr.lx = e.clientX;
+        tr.ly = e.clientY;
+        clearLongTimer();
+      }
+      if (tr.panning) {
+        shiftView(e.clientX - tr.lx, e.clientY - tr.ly);
+        tr.lx = e.clientX;
+        tr.ly = e.clientY;
+      }
+      return;
+    }
     const p = panRef.current;
     if (p) {
       shiftView(e.clientX - p.px, e.clientY - p.py);
@@ -173,31 +299,69 @@ export default function Canvas() {
     }
   };
 
-  const endPointer = () => {
+  const newBlockAt = (clientX: number, clientY: number) => {
+    const w = screenToWorld(clientX, clientY);
+    addBlock(Math.round(w.x - 40), Math.round(w.y - 20));
+    useCanvasStore.getState().setCross(Math.round(w.x - 40), Math.round(w.y - 20));
+  };
+
+  const endPointer = (e?: React.PointerEvent) => {
+    if (e) pointersRef.current.delete(e.pointerId);
+    clearLongTimer();
+    // Отпустили один палец из pinch — оставшийся продолжает панораму без прыжка
+    if (pinchRef.current) {
+      pinchRef.current = null;
+      if (pointersRef.current.size === 1) {
+        const [[, pt]] = [...pointersRef.current.entries()];
+        if (e && e.pointerType !== 'mouse') {
+          const p = toLocal(pt.x, pt.y);
+          touchRef.current = {
+            sx: p.x, sy: p.y, lx: pt.x, ly: pt.y,
+            cx: pt.x, cy: pt.y, t: Date.now(), panning: true, marquee: false,
+          };
+          setPanning(true);
+        } else if (e) {
+          panRef.current = { px: pt.x, py: pt.y };
+          setPanning(true);
+        }
+      } else {
+        setPanning(false);
+      }
+      return;
+    }
+    // Тап / дабл-тап одним пальцем
+    const tr = touchRef.current;
+    if (tr && (!e || e.pointerType !== 'mouse')) {
+      touchRef.current = null;
+      setPanning(false);
+      const quick = Date.now() - tr.t < TAP_TIME;
+      if (tr.marquee) {
+        // рамка из long-press — как обычное выделение
+        if (marquee) {
+          selectMarquee();
+        } else {
+          setMarquee(null);
+        }
+      } else if (!tr.panning && quick) {
+        const last = lastTapRef.current;
+        const now = Date.now();
+        if (last && now - last.t < DBL_TIME && Math.abs(tr.cx - last.x) + Math.abs(tr.cy - last.y) < DBL_DIST) {
+          lastTapRef.current = null;
+          touchNewRef.current = now;
+          newBlockAt(tr.cx, tr.cy);
+        } else {
+          lastTapRef.current = { t: now, x: tr.cx, y: tr.cy };
+          const w = screenToWorld(tr.cx, tr.cy);
+          useCanvasStore.getState().setCross(w.x, w.y);
+          select(null);
+        }
+      }
+      return;
+    }
     panRef.current = null;
     setPanning(false);
     if (marquee) {
-      // какие регионы попали в рамку (в экранных координатах — меряем DOM)
-      const x0 = Math.min(marquee.x0, marquee.x1);
-      const x1 = Math.max(marquee.x0, marquee.x1);
-      const y0 = Math.min(marquee.y0, marquee.y1);
-      const y1 = Math.max(marquee.y0, marquee.y1);
-      const cRect = containerRef.current?.getBoundingClientRect();
-      const ids: string[] = [];
-      containerRef.current
-        ?.querySelectorAll('[data-block-id]')
-        .forEach((el) => {
-          const r = (el as HTMLElement).getBoundingClientRect();
-          const ex0 = r.left - (cRect?.left ?? 0);
-          const ex1 = r.right - (cRect?.left ?? 0);
-          const ey0 = r.top - (cRect?.top ?? 0);
-          const ey1 = r.bottom - (cRect?.top ?? 0);
-          if (ex0 < x1 && ex1 > x0 && ey0 < y1 && ey1 > y0) {
-            const id = (el as HTMLElement).dataset.blockId;
-            if (id) ids.push(id);
-          }
-        });
-      selectMany(ids);
+      selectMarquee();
     } else if (pressRef.current) {
       // простой клик по фону — прицел в точку клика, выделение снять
       const w = screenToWorld(pressRef.current.cx, pressRef.current.cy);
@@ -208,12 +372,38 @@ export default function Canvas() {
     setMarquee(null);
   };
 
+  const selectMarquee = () => {
+    if (!marquee) return;
+    // какие регионы попали в рамку (в экранных координатах — меряем DOM)
+    const x0 = Math.min(marquee.x0, marquee.x1);
+    const x1 = Math.max(marquee.x0, marquee.x1);
+    const y0 = Math.min(marquee.y0, marquee.y1);
+    const y1 = Math.max(marquee.y0, marquee.y1);
+    const cRect = containerRef.current?.getBoundingClientRect();
+    const ids: string[] = [];
+    containerRef.current
+      ?.querySelectorAll('[data-block-id]')
+      .forEach((el) => {
+        const r = (el as HTMLElement).getBoundingClientRect();
+        const ex0 = r.left - (cRect?.left ?? 0);
+        const ex1 = r.right - (cRect?.left ?? 0);
+        const ey0 = r.top - (cRect?.top ?? 0);
+        const ey1 = r.bottom - (cRect?.top ?? 0);
+        if (ex0 < x1 && ex1 > x0 && ey0 < y1 && ey1 > y0) {
+          const id = (el as HTMLElement).dataset.blockId;
+          if (id) ids.push(id);
+        }
+      });
+    selectMany(ids);
+    setMarquee(null);
+  };
+
   const onDoubleClick = (e: React.MouseEvent) => {
+    // дабл-тап на таче уже создал блок сам — браузерный dblclick игнорируем
+    if (Date.now() - touchNewRef.current < 600) return;
     if (isInteractive(e.target)) return;
-    const w = screenToWorld(e.clientX, e.clientY);
     // пол бесконечный — клампов нет, блок встаёт ровно под курсор
-    addBlock(Math.round(w.x - 40), Math.round(w.y - 20));
-    useCanvasStore.getState().setCross(Math.round(w.x - 40), Math.round(w.y - 20));
+    newBlockAt(e.clientX, e.clientY);
   };
 
   const zoomCenter = useCallback(
@@ -305,6 +495,10 @@ export default function Canvas() {
   const theme = useCanvasStore((s) => s.theme);
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
+  // Тач-скрин: другие подсказки (жесты вместо мыши/клавиатуры)
+  const [coarse] = useState(
+    () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches,
+  );
 
   // Бесконечная сетка в экранных координатах: шаг и сдвиг следуют за камерой
   const mod = (a: number, n: number) => ((a % n) + n) % n;
@@ -426,21 +620,23 @@ export default function Canvas() {
             <div className="font-semibold tracking-tight text-[22px] leading-7 text-[var(--ink)] mt-3">
               <span className="text-[var(--accent)]">Nya</span>Math
             </div>
-            <div className="text-[13px] text-[var(--faint)] mt-1">{t('c.emptyNew')}</div>
+            <div className="text-[13px] text-[var(--faint)] mt-1">
+              {coarse ? t('c.emptyNewTouch') : t('c.emptyNew')}
+            </div>
             <div className="flex items-center gap-1.5 flex-wrap justify-center mt-3 text-[12px] text-[var(--ink-soft)]">
               <kbd className="math-input px-1.5 py-0.5 rounded-md border border-[var(--line)] bg-[var(--chrome)]">:=</kbd>
               <span>{t('c.emptyAssign')}</span>
               <kbd className="math-input px-1.5 py-0.5 rounded-md border border-[var(--line)] bg-[var(--chrome)] ml-2">=</kbd>
               <span>{t('c.emptyOutput')}</span>
             </div>
-            <div className="text-[11px] text-[var(--faint)] mt-2">{t('c.crossHint')}</div>
+            {!coarse && <div className="text-[11px] text-[var(--faint)] mt-2">{t('c.crossHint')}</div>}
           </div>
         </div>
       )}
 
       {/* controls зума */}
       <div
-        className="absolute right-3 bottom-3 flex items-center gap-1 bg-[var(--chrome)]/95 border border-[var(--chrome-line)] rounded-lg p-1 print:hidden"
+        className="nya-zoombar absolute right-3 bottom-3 flex items-center gap-1 bg-[var(--chrome)]/95 border border-[var(--chrome-line)] rounded-lg p-1 print:hidden"
         role="toolbar"
         aria-label={t('c.zoomBar')}
       >

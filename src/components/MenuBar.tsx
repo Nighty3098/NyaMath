@@ -191,7 +191,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
   return (
     <div
       ref={barRef}
-      className="h-10 shrink-0 flex items-center gap-0.5 px-2 border-b border-[var(--chrome-line)] bg-[var(--chrome)]/90 backdrop-blur-xl text-[var(--chrome-ink)] z-20 select-none"
+      className="nya-menubar h-10 shrink-0 flex items-center gap-0.5 px-2 border-b border-[var(--chrome-line)] bg-[var(--chrome)]/90 backdrop-blur-xl text-[var(--chrome-ink)] z-20 select-none"
       role="menubar"
       aria-label={t('menu.main')}
     >

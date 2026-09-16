@@ -241,11 +241,100 @@ html, body, #root {
   overscroll-behavior: none;
 }
 
+/* 100vh на мобильных включает зону под тулбаром браузера — лист обрезается.
+   dvh следит за видимой высотой; первая строка — фолбэк для старых. */
+.nya-app {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Холст: без iOS-выноски при long-press (рамка выделения — свой жест) */
+.nya-canvas {
+  -webkit-touch-callout: none;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
   background: var(--canvas);
   color: var(--chrome-ink);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== Тач и мобильные: крупные цели, видимые ручки, safe-area ===== */
+/* Ручки блоков видны только по hover — на таче hover нет, показываем всегда */
+@media (hover: none), (pointer: coarse) {
+  .nya-region .nya-block > .opacity-0 {
+    opacity: 1;
+  }
+  /* шире хит-зоны у ручек перетаскивания/ресайза/удаления (позиция absolute — вид не едет) */
+  .nya-region .nya-block > span {
+    padding: 10px;
+  }
+  .nya-region .nya-block > button {
+    padding: 10px;
+  }
+  /* цели не меньше ~44px */
+  .menu-drop button {
+    min-height: 44px;
+  }
+  .nya-zoombar button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .welcome-card button {
+    min-height: 44px;
+  }
+  /* крестик закрытия — прямой потомок карточки */
+  .welcome-card > button {
+    min-width: 44px;
+  }
+  /* iOS зумит фокус инпутов мельче 16px — поднимаем только на таче */
+  .nya-block input,
+  .nya-block textarea,
+  .nya-block select,
+  .nya-palette-float input {
+    font-size: 16px;
+  }
+}
+
+/* Менюбар: скролл на узких экранах + отступ под чёлку */
+.nya-menubar {
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-top: env(safe-area-inset-top);
+}
+.nya-menubar::-webkit-scrollbar {
+  display: none;
+}
+.nya-menubar > div {
+  flex-shrink: 0;
+}
+.menu-drop {
+  max-width: min(15rem, calc(100vw - 16px));
+}
+
+/* Тулбар зума над домашним индикатором */
+.nya-zoombar {
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  right: calc(12px + env(safe-area-inset-right));
+}
+
+/* Палитра на телефоне — нижний шит во всю ширину вместо плавающего окна */
+@media (max-width: 640px) {
+  .nya-palette-float {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    top: auto !important;
+    bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+    max-height: 56vh !important;
+  }
+  /* шит занял низ — зумбар переезжает под менюбар */
+  .nya-zoombar {
+    top: calc(48px + env(safe-area-inset-top));
+    bottom: auto;
+  }
 }
 
 /* Видимые focus-кольца везде (a11y: focus-states) */
