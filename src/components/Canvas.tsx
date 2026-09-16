@@ -82,13 +82,19 @@ export default function Canvas() {
     };
   }, []);
 
-  /** Мгновенно и view, и target (панорама должна быть отзывчивой, без инерции) */
-  const shiftView = useCallback((dx: number, dy: number) => {
-    const v = viewRef.current;
-    const n = { ...v, x: v.x + dx, y: v.y + dy };
+  /** Мгновенно view + target + синхронное зеркало.
+   * Без зеркала два move в одном кадре читают stale-базу и теряют дельты (рывки). */
+  const applyView = useCallback((n: View) => {
+    viewRef.current = n;
     targetRef.current = n;
     setView(n);
   }, []);
+
+  /** Мгновенно и view, и target (панорама должна быть отзывчивой, без инерции) */
+  const shiftView = useCallback((dx: number, dy: number) => {
+    const v = viewRef.current;
+    applyView({ ...v, x: v.x + dx, y: v.y + dy });
+  }, [applyView]);
 
   const zoomAt = useCallback((clientX: number, clientY: number, factor: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -153,6 +159,18 @@ export default function Canvas() {
     }
   };
 
+  /** Скоалесцированная позиция (Android шлёт пачки touchmove — берём свежайшую) */
+  const coalescedPos = (e: React.PointerEvent) => {
+    try {
+      const list = (e.nativeEvent as PointerEvent).getCoalescedEvents?.();
+      if (list && list.length) {
+        const last = list[list.length - 1];
+        return { x: last.clientX, y: last.clientY };
+      }
+    } catch { /* ignore */ }
+    return { x: e.clientX, y: e.clientY };
+  };
+
   const pinchDistMid = () => {
     const pts = [...pointersRef.current.values()];
     const [a, b] = pts as [{ x: number; y: number }, { x: number; y: number }];
@@ -170,15 +188,14 @@ export default function Canvas() {
     const sx = mx - (rect?.left ?? 0);
     const sy = my - (rect?.top ?? 0);
     const v = viewRef.current;
-    const k = clamp(v.k * factor, MIN_SCALE, MAX_SCALE);
+    // кламп шага: почти сомкнутые пальцы иначе дают взрывной зум
+    const k = clamp(v.k * clamp(factor, 0.85, 1.18), MIN_SCALE, MAX_SCALE);
     const f = k / v.k;
     // сначала сдвиг за средней точкой, потом зум вокруг неё
     const px = v.x + dx;
     const py = v.y + dy;
-    const n = { k, x: sx - (sx - px) * f, y: sy - (sy - py) * f };
-    targetRef.current = n;
-    setView(n);
-  }, []);
+    applyView({ k, x: sx - (sx - px) * f, y: sy - (sy - py) * f });
+  }, [applyView]);
   // Курсор-прицел в стиле Mathcad
   const cross = useCanvasStore((s) => s.cross);
 
@@ -201,7 +218,8 @@ export default function Canvas() {
       setMarquee(null);
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       const pm = pinchDistMid();
-      if (pm) pinchRef.current = { pd: pm.d, pmx: pm.mx, pmy: pm.my };
+      // почти сомкнутые пальцы — не старт: иначе первый же шаг взрывает зум
+      if (pm && pm.d > 24) pinchRef.current = { pd: pm.d, pmx: pm.mx, pmy: pm.my };
       return;
     }
     if (pointersRef.current.size > 2) return;
@@ -255,7 +273,9 @@ export default function Canvas() {
     if (pinch && pointersRef.current.size >= 2) {
       const pm = pinchDistMid();
       if (pm && pm.d > 0 && pinch.pd > 0) {
-        pinchView(pm.mx, pm.my, pm.d / pinch.pd, pm.mx - pinch.pmx, pm.my - pinch.pmy);
+        // пальцы сошлись вплотную — только пан, без зума
+        const f = pm.d < 12 || pinch.pd < 12 ? 1 : pm.d / pinch.pd;
+        pinchView(pm.mx, pm.my, f, pm.mx - pinch.pmx, pm.my - pinch.pmy);
         pinchRef.current = { pd: pm.d, pmx: pm.mx, pmy: pm.my };
       }
       return;
@@ -263,22 +283,23 @@ export default function Canvas() {
     // Один палец: панорама после порога, иначе ждём тап/long-press
     const tr = touchRef.current;
     if (tr && e.pointerType !== 'mouse') {
+      const pos = coalescedPos(e);
       if (tr.marquee) {
-        const q = toLocal(e.clientX, e.clientY);
+        const q = toLocal(pos.x, pos.y);
         setMarquee({ x0: tr.sx, y0: tr.sy, x1: q.x, y1: q.y });
         return;
       }
-      const moved = Math.abs(e.clientX - tr.cx) + Math.abs(e.clientY - tr.cy);
+      const moved = Math.abs(pos.x - tr.cx) + Math.abs(pos.y - tr.cy);
       if (!tr.panning && moved > TAP_MOVE) {
         tr.panning = true;
-        tr.lx = e.clientX;
-        tr.ly = e.clientY;
+        tr.lx = pos.x;
+        tr.ly = pos.y;
         clearLongTimer();
       }
       if (tr.panning) {
-        shiftView(e.clientX - tr.lx, e.clientY - tr.ly);
-        tr.lx = e.clientX;
-        tr.ly = e.clientY;
+        shiftView(pos.x - tr.lx, pos.y - tr.ly);
+        tr.lx = pos.x;
+        tr.ly = pos.y;
       }
       return;
     }
