@@ -97,7 +97,7 @@ formulas and programs).
 | `nya_status` | Document state: block count, errors, scope variable count, file path |
 | `nya_list_blocks` | Block list (`kind` filter, `limit`/`offset`) |
 | `nya_get_block` | Full block: result, LaTeX, dependencies, auto-plot preview meta |
-| `nya_add_block` | New block (`math`/`text`/`plot`/`program` + fields) |
+| `nya_add_block` | New block (`math`/`text`/`plot`/`plot3d`/`program`/`slider` + fields) |
 | `nya_update_block` | Edit content / plotFn / range / exportName |
 | `nya_move_block` / `nya_move_blocks` | Positions (affect evaluation order!) |
 | `nya_resize_block` | Manual size `w`/`h` |

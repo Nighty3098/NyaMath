@@ -55,7 +55,7 @@ function validateBlock(raw: unknown): MathBlockData | null {
   if (typeof b['x'] !== 'number' || typeof b['y'] !== 'number' || typeof b['rawInput'] !== 'string') return null;
   const id = typeof b['id'] === 'string' && b['id'] ? b['id'] : uuid();
   const kind: MathBlockData['kind'] =
-    b['kind'] === 'plot' || b['kind'] === 'plot3d' || b['kind'] === 'program' || b['kind'] === 'text' ? b['kind'] : 'math';
+    b['kind'] === 'plot' || b['kind'] === 'plot3d' || b['kind'] === 'program' || b['kind'] === 'text' || b['kind'] === 'slider' ? b['kind'] : 'math';
   const numOrUndef = (v: unknown): number | undefined => (typeof v === 'number' && isFinite(v) ? v : undefined);
   return {
     ...blank(id, b['x'], b['y'], kind),
@@ -68,6 +68,11 @@ function validateBlock(raw: unknown): MathBlockData | null {
     plotMode: b['plotMode'] === 'surface' || b['plotMode'] === 'points' || b['plotMode'] === 'matrix' ? b['plotMode'] : undefined,
     plotResolution: numOrUndef(b['plotResolution']),
     plotWireframe: typeof b['plotWireframe'] === 'boolean' ? b['plotWireframe'] : undefined,
+    sliderVar: typeof b['sliderVar'] === 'string' ? b['sliderVar'] : undefined,
+    sliderMin: numOrUndef(b['sliderMin']),
+    sliderMax: numOrUndef(b['sliderMax']),
+    sliderStep: numOrUndef(b['sliderStep']),
+    sliderVal: numOrUndef(b['sliderVal']),
     w: typeof b['w'] === 'number' && (b['w'] as number) > 0 ? (b['w'] as number) : null,
     h: typeof b['h'] === 'number' && (b['h'] as number) > 0 ? (b['h'] as number) : null,
   };
@@ -141,7 +146,7 @@ server.tool(
   'nya_list_blocks',
   'Список блоков документа (id, тип, позиция, ввод, переменная, ошибка, результат)',
   {
-    kind: z.enum(['math', 'text', 'plot', 'plot3d', 'program']).optional().describe('Фильтр по типу'),
+    kind: z.enum(['math', 'text', 'plot', 'plot3d', 'program', 'slider']).optional().describe('Фильтр по типу'),
     limit: z.number().int().min(1).max(1000).default(200),
     offset: z.number().int().min(0).default(0),
   },
@@ -179,7 +184,7 @@ server.tool(
 );
 
 const AddBlockShape = {
-  kind: z.enum(['math', 'text', 'plot', 'plot3d', 'program']).default('math'),
+  kind: z.enum(['math', 'text', 'plot', 'plot3d', 'program', 'slider']).default('math'),
   x: z.number().default(80),
   y: z.number().default(80),
   rawInput: z.string().default('').describe('Текст блока; для math: "f := 10*10^9", "Z_c_abs =", "f(x) := sin(x)"'),
@@ -192,6 +197,11 @@ const AddBlockShape = {
   plotResolution: z.number().int().min(8).max(100).optional().describe('Для plot3d: разрешение сетки'),
   plotWireframe: z.boolean().optional().describe('Для plot3d: каркас поверх поверхности'),
   exportName: z.string().optional().describe('Для program: переменная результата'),
+  sliderVar: z.string().optional().describe('Для slider: имя переменной'),
+  sliderMin: z.number().optional().describe('Для slider: минимум'),
+  sliderMax: z.number().optional().describe('Для slider: максимум'),
+  sliderStep: z.number().optional().describe('Для slider: шаг'),
+  sliderVal: z.number().optional().describe('Для slider: текущее значение'),
 };
 
 server.tool(
@@ -203,7 +213,7 @@ server.tool(
     const is3d = args.kind === 'plot3d';
     const b: MathBlockData = {
       ...blank(id, args.x, args.y, args.kind),
-      rawInput: args.kind === 'plot' ? 'plot' : is3d ? 'plot3d' : args.rawInput,
+      rawInput: args.kind === 'plot' ? 'plot' : is3d ? 'plot3d' : args.kind === 'slider' ? 'slider' : args.rawInput,
       plotFn: args.plotFn ?? (args.kind === 'plot' ? args.rawInput || 'sin(x)' : is3d ? args.rawInput || 'sin(sqrt(x^2+y^2))' : undefined),
       plotXmin: args.plotXmin ?? (is3d ? -5 : undefined),
       plotXmax: args.plotXmax ?? (is3d ? 5 : undefined),
@@ -213,6 +223,11 @@ server.tool(
       plotResolution: args.plotResolution ?? (is3d ? 48 : undefined),
       plotWireframe: args.plotWireframe ?? (is3d ? false : undefined),
       exportName: args.exportName ?? undefined,
+      sliderVar: args.kind === 'slider' ? (args.sliderVar ?? 'k') : undefined,
+      sliderMin: args.kind === 'slider' ? (args.sliderMin ?? 0) : undefined,
+      sliderMax: args.kind === 'slider' ? (args.sliderMax ?? 10) : undefined,
+      sliderStep: args.kind === 'slider' ? (args.sliderStep ?? 0.5) : undefined,
+      sliderVal: args.kind === 'slider' ? (args.sliderVal ?? 5) : undefined,
     };
     blocks.push(b);
     refresh();
@@ -222,7 +237,7 @@ server.tool(
 
 server.tool(
   'nya_update_block',
-  'Изменить содержимое блока (rawInput / plotFn / диапазон / exportName). Пересчёт автоматический',
+  'Изменить содержимое блока (rawInput / plotFn / диапазон / exportName / слайдер). Пересчёт автоматический',
   {
     id: z.string(),
     rawInput: z.string().optional(),
@@ -235,8 +250,13 @@ server.tool(
     plotResolution: z.number().int().min(8).max(100).optional(),
     plotWireframe: z.boolean().optional(),
     exportName: z.string().optional(),
+    sliderVar: z.string().optional(),
+    sliderMin: z.number().optional(),
+    sliderMax: z.number().optional(),
+    sliderStep: z.number().optional(),
+    sliderVal: z.number().optional(),
   },
-  async ({ id, rawInput, plotFn, plotXmin, plotXmax, plotYmin, plotYmax, plotMode, plotResolution, plotWireframe, exportName }): Promise<CallToolResult> => {
+  async ({ id, rawInput, plotFn, plotXmin, plotXmax, plotYmin, plotYmax, plotMode, plotResolution, plotWireframe, exportName, sliderVar, sliderMin, sliderMax, sliderStep, sliderVal }): Promise<CallToolResult> => {
     const b = find(id);
     if (!b) return fail(`Блок ${id} не найден`);
     if (rawInput !== undefined) b.rawInput = rawInput;
@@ -249,6 +269,11 @@ server.tool(
     if (plotResolution !== undefined) b.plotResolution = plotResolution;
     if (plotWireframe !== undefined) b.plotWireframe = plotWireframe;
     if (exportName !== undefined) b.exportName = exportName;
+    if (sliderVar !== undefined) b.sliderVar = sliderVar;
+    if (sliderMin !== undefined) b.sliderMin = sliderMin;
+    if (sliderMax !== undefined) b.sliderMax = sliderMax;
+    if (sliderStep !== undefined) b.sliderStep = sliderStep;
+    if (sliderVal !== undefined) b.sliderVal = sliderVal;
     refresh();
     return ok(summarize(find(id) as MathBlockData));
   },
