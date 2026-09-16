@@ -220,3 +220,17 @@ export const IPrint = () => (
     <rect x="5" y="9.5" width="6" height="4" />
   </Svg>
 );
+/** Вычислительная техника: чип */
+export const IChip = () => (
+  <Svg>
+    <rect x="4" y="4" width="8" height="8" rx="1" />
+    <path d="M6 2v2M8 2v2M10 2v2M6 12v2M8 12v2M10 12v2M2 6h2M2 8h2M2 10h2M12 6h2M12 8h2M12 10h2" />
+  </Svg>
+);
+/** ЭМ поля: волна от излучателя */
+export const IField = () => (
+  <Svg>
+    <circle cx="3.5" cy="8" r="0.8" fill="currentColor" />
+    <path d="M6 5.5a3.6 3.6 0 0 1 0 5M8.2 3.8a6.4 6.4 0 0 1 0 8.4M10.5 2a9.2 9.2 0 0 1 0 12" />
+  </Svg>
+);

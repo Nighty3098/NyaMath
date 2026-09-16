@@ -666,7 +666,7 @@ export function themeLabel(id: ThemeName): string {
   return themeNames[id][current];
 }
 
-export type PackId = 'matrices' | 'stats' | 'physics' | 'telecom' | 'programs' | 'plots' | 'sim' | 'units' | 'calc';
+export type PackId = 'matrices' | 'stats' | 'physics' | 'telecom' | 'programs' | 'plots' | 'sim' | 'units' | 'calc' | 'computing' | 'em';
 
 const packNames: Record<PackId, { ru: string; en: string }> = {
   matrices: { ru: 'Матрицы', en: 'Matrices' },
@@ -678,6 +678,8 @@ const packNames: Record<PackId, { ru: string; en: string }> = {
   sim: { ru: 'Симуляции', en: 'Simulations' },
   units: { ru: 'Единицы', en: 'Units' },
   calc: { ru: 'Исчисление', en: 'Calculus' },
+  computing: { ru: 'Выч. техника', en: 'Computing' },
+  em: { ru: 'ЭМ поля', en: 'EM fields' },
 };
 
 /** Название пака сниппетов на текущем языке. */

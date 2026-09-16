@@ -429,6 +429,276 @@ export function buildPackScope(math: MathJsInstance): Scope {
     }
   };
 
+  /* ----- общие помощники новых паков (ВТ / высшая математика / физика / ЭМ) ----- */
+  const ETA0 = Math.sqrt(MU0 / EPS0);
+  const R_GAS = 8.314462618;
+  const SIGMA_SB = 5.670374419e-8;
+  const G_STD = 9.80665;
+
+  const truncI = (v: unknown): number => {
+    const n = Number(v);
+    if (typeof v === 'boolean' || !isFinite(n) || Math.floor(n) !== n) throw new Error(t('e.calcArgs'));
+    return n;
+  };
+  const optInt = (v: unknown, dflt: number): number => (v === undefined ? dflt : truncI(v));
+  const optNum = (v: unknown, dflt: number): number => (v === undefined ? dflt : needNum(v));
+  const maskOf = (w: number): number => (w >= 32 ? 0xffffffff : ((1 << w) - 1) >>> 0);
+  const u32of = (v: unknown): number => {
+    const n = Number(v);
+    if (typeof v === 'boolean' || !isFinite(n)) throw new Error(t('e.calcArgs'));
+    return Math.trunc(n) >>> 0;
+  };
+  const checkWidth = (w: number, max = 32): void => {
+    if (!Number.isInteger(w) || w < 1 || w > max) throw new Error(t('e.calcArgs'));
+  };
+
+  /** dec -> строка в основании base; digits = минимум цифр (дополнить нулями). */
+  const dec2base = (v: unknown, w: unknown, base: number): string => {
+    let n = Number(v);
+    if (typeof v === 'boolean' || !isFinite(n)) throw new Error(t('e.calcArgs'));
+    n = Math.trunc(n);
+    const W = w === undefined ? 0 : truncI(w);
+    if (W < 0 || W > 32) throw new Error(t('e.calcArgs'));
+    const digits = '0123456789ABCDEF'.slice(0, base);
+    const conv = (m: number): string => {
+      if (m === 0) return '0';
+      let s = '';
+      let q = m;
+      while (q > 0) {
+        s = digits[q % base] + s;
+        q = Math.floor(q / base);
+      }
+      return s;
+    };
+    // двоичное с шириной: отрицательные — дополнительный код (как в МК)
+    if (base === 2 && n < 0 && W > 0) {
+      if (W > 32 || n < -(2 ** (W - 1)) || n >= 2 ** (W - 1)) throw new Error(t('e.calcArgs'));
+      return conv(2 ** W + n).padStart(W, '0');
+    }
+    const body = conv(Math.abs(n)).padStart(W, '0');
+    return (n < 0 ? '-' : '') + body;
+  };
+  const stripPrefix = (s: string, p: string): string => (s.toLowerCase().startsWith(p) ? s.slice(p.length) : s);
+  const cleanIntStr = (v: unknown): string => String(v).replace(/[\s_]/g, '');
+
+  const erfImpl = (x: number): number => {
+    const s = x < 0 ? -1 : 1;
+    const ax = Math.abs(x);
+    const tt = 1 / (1 + 0.3275911 * ax);
+    const y =
+      1 -
+      (((((1.061405429 * tt - 1.453152027) * tt + 1.421413741) * tt - 0.284496736) * tt + 0.254829592) * tt) *
+        Math.exp(-ax * ax);
+    return s * y;
+  };
+
+  interface CNum {
+    re: number;
+    im: number;
+  }
+  const toC = (v: unknown): CNum => {
+    if (typeof v === 'number' && isFinite(v)) return { re: v, im: 0 };
+    if (v !== null && typeof v === 'object' && 're' in v && 'im' in v) {
+      const c = v as { re: unknown; im: unknown };
+      const re = Number(c.re);
+      const im = Number(c.im);
+      if (isFinite(re) && isFinite(im)) return { re, im };
+    }
+    throw new Error(t('e.calcArgs'));
+  };
+  /** БПФ для степени двойки, иначе прямое ДПФ O(n^2). */
+  const fftCore = (a: CNum[], invert: boolean): CNum[] => {
+    const n = a.length;
+    if (n > 1 && (n & (n - 1)) === 0) {
+      // итеративное radix-2 DIT: сначала бит-реверсная перестановка
+      const bits = Math.log2(n);
+      const out: CNum[] = new Array(n);
+      for (let i = 0; i < n; i++) {
+        let r = 0;
+        for (let b = 0; b < bits; b++) r |= ((i >>> b) & 1) << (bits - 1 - b);
+        out[r] = { re: a[i].re, im: a[i].im };
+      }
+      for (let len = 2; len <= n; len <<= 1) {
+        const ang = ((invert ? 2 : -2) * Math.PI) / len;
+        const wlen = { re: Math.cos(ang), im: Math.sin(ang) };
+        for (let i = 0; i < n; i += len) {
+          let w = { re: 1, im: 0 };
+          for (let j = 0; j < len / 2; j++) {
+            const u = out[i + j];
+            const v0 = out[i + j + len / 2];
+            const v = { re: v0.re * w.re - v0.im * w.im, im: v0.re * w.im + v0.im * w.re };
+            out[i + j] = { re: u.re + v.re, im: u.im + v.im };
+            out[i + j + len / 2] = { re: u.re - v.re, im: u.im - v.im };
+            w = { re: w.re * wlen.re - w.im * wlen.im, im: w.re * wlen.im + w.im * wlen.re };
+          }
+        }
+      }
+      if (invert) {
+        for (let i = 0; i < n; i++) {
+          out[i].re /= n;
+          out[i].im /= n;
+        }
+      }
+      return out;
+    }
+    const res: CNum[] = [];
+    for (let k = 0; k < n; k++) {
+      let re = 0;
+      let im = 0;
+      for (let m = 0; m < n; m++) {
+        const ang = ((invert ? 2 : -2) * Math.PI * k * m) / n;
+        re += a[m].re * Math.cos(ang) - a[m].im * Math.sin(ang);
+        im += a[m].re * Math.sin(ang) + a[m].im * Math.cos(ang);
+      }
+      if (invert) {
+        re /= n;
+        im /= n;
+      }
+      res.push({ re, im });
+    }
+    return res;
+  };
+  const dftImpl = (v: unknown, invert: boolean): unknown => {
+    const arr = asArrD(v);
+    if (!arr.length || arr.length > 8192) throw new Error(t('e.calcArgs'));
+    const r = fftCore(arr.map(toC), invert);
+    return math.matrix(r.map((c) => math.complex(c.re, c.im)));
+  };
+
+  const to2D = (m: unknown): number[][] => {
+    const mm = math.matrix(m as never);
+    const arr = (mm as unknown as { toArray: () => unknown }).toArray() as unknown[];
+    if (!arr.length) throw new Error(t('e.calcArgs'));
+    const rows2: number[][] = Array.isArray(arr[0])
+      ? (arr as unknown[][]).map((r) => r.map(Number))
+      : [(arr as unknown[]).map(Number)];
+    if (!rows2.length || !rows2[0].length || rows2.some((r) => r.length !== rows2[0].length || r.some((z) => !isFinite(z)))) {
+      throw new Error(t('e.calcArgs'));
+    }
+    return rows2;
+  };
+  const frobNorm = (a: number[][]): number => Math.sqrt(a.reduce((s, r) => s + r.reduce((s2, z) => s2 + z * z, 0), 0));
+
+  const rankImpl = (m: unknown, tol?: unknown): number => {
+    const a = to2D(m).map((r) => r.slice());
+    const R = a.length;
+    const Cc = a[0].length;
+    const T = tol === undefined ? 1e-10 : needNum(tol);
+    if (!(T > 0)) throw new Error(t('e.calcArgs'));
+    const sc = frobNorm(a) || 1;
+    let rank = 0;
+    let row = 0;
+    for (let col = 0; col < Cc && row < R; col++) {
+      let piv = row;
+      for (let i = row + 1; i < R; i++) {
+        if (Math.abs(a[i][col]) > Math.abs(a[piv][col])) piv = i;
+      }
+      if (Math.abs(a[piv][col]) <= T * sc) continue;
+      [a[row], a[piv]] = [a[piv], a[row]];
+      for (let i = row + 1; i < R; i++) {
+        const f = a[i][col] / a[row][col];
+        for (let j = col; j < Cc; j++) a[i][j] -= f * a[row][j];
+      }
+      row++;
+      rank++;
+    }
+    return rank;
+  };
+
+  const cNKImpl = (n: number, k: number): number => {
+    if (k < 0 || k > n) return 0;
+    k = Math.min(k, n - k);
+    let r = 1;
+    for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i;
+    return Math.round(r);
+  };
+  const pNKImpl = (n: number, k: number): number => {
+    if (k < 0 || k > n) return 0;
+    let r = 1;
+    for (let i = 0; i < k; i++) r *= n - i;
+    return r;
+  };
+
+  /** Модуль комплексного/числа через mathjs (работает и для Complex). */
+  const cAbs = (v: unknown): number => {
+    const a = (math as unknown as { abs: (x: unknown) => unknown }).abs(v as never);
+    const n = Number(a);
+    if (!isFinite(n)) throw new Error(t('e.calcArgs'));
+    return n;
+  };
+
+  const zinLineImpl = (ZL: unknown, Z0: unknown, betaL: unknown): unknown => {
+    const bl = needNum(betaL);
+    if (cAbs(Z0) === 0) throw new Error(t('e.calcArgs'));
+    const tt = Math.tan(bl);
+    const m = math as unknown as {
+      multiply: (a: unknown, b: unknown) => unknown;
+      add: (a: unknown, b: unknown) => unknown;
+      divide: (a: unknown, b: unknown) => unknown;
+    };
+    const j = math.complex(0, 1);
+    const num = m.add(ZL as never, m.multiply(m.multiply(j, Z0 as never), tt));
+    const den = m.add(Z0 as never, m.multiply(m.multiply(j, ZL as never), tt));
+    return m.multiply(Z0 as never, m.divide(num, den));
+  };
+
+  const propConstImpl = (epsR: unknown, tanD: unknown, f: unknown, muR?: unknown): unknown => {
+    const er = needNum(epsR);
+    const td = needNum(tanD);
+    const ff = needNum(f);
+    const mr = muR === undefined ? 1 : needNum(muR);
+    if (!(er > 0 && td >= 0 && ff > 0 && mr > 0)) throw new Error(t('e.calcArgs'));
+    const om = 2 * Math.PI * ff;
+    const k = om * Math.sqrt(EPS0 * er * MU0 * mr);
+    const s = Math.sqrt(1 + td * td);
+    return math.matrix([k * Math.sqrt((s - 1) / 2), k * Math.sqrt((s + 1) / 2)]);
+  };
+
+  const microstripImpl = (W: unknown, H: unknown, epsR: unknown): number => {
+    const w = needNum(W);
+    const h = needNum(H);
+    const er = needNum(epsR);
+    if (!(w > 0 && h > 0 && er > 1)) throw new Error(t('e.calcArgs'));
+    const wh = w / h;
+    if (wh <= 1) {
+      const ee = (er + 1) / 2 + ((er - 1) / 2) * (1 / Math.sqrt(1 + 12 / wh) + 0.04 * (1 - wh) ** 2);
+      return (60 / Math.sqrt(ee)) * Math.log(8 / wh + 0.25 * wh);
+    }
+    const ee = (er + 1) / 2 + ((er - 1) / 2) / Math.sqrt(1 + 12 / wh);
+    return 120 * Math.PI / (Math.sqrt(ee) * (wh + 1.393 + 0.667 * Math.log(wh + 1.444)));
+  };
+
+  const crc16Impl = (s: string): number => {
+    let crc = 0xffff;
+    for (let i = 0; i < s.length; i++) {
+      crc ^= s.charCodeAt(i);
+      for (let b = 0; b < 8; b++) crc = crc & 1 ? (crc >>> 1) ^ 0xa001 : crc >>> 1;
+    }
+    return crc >>> 0;
+  };
+  const CRC32_TAB = (() => {
+    const tab = new Array<number>(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      tab[i] = c >>> 0;
+    }
+    return tab;
+  })();
+  const crc32Impl = (s: string): number => {
+    let crc = 0xffffffff;
+    for (let i = 0; i < s.length; i++) crc = CRC32_TAB[(crc ^ s.charCodeAt(i)) & 0xff] ^ (crc >>> 8);
+    return (crc ^ 0xffffffff) >>> 0;
+  };
+  const fnv1aImpl = (s: string): number => {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return h >>> 0;
+  };
+
   const S: Scope = {
     // ---------- математика ----------
     seq,
@@ -821,6 +1091,700 @@ export function buildPackScope(math: MathJsInstance): Scope {
         throw new Error(t('e.calcNoConv'));
       }
     },
+
+    // ---------- вычислительная техника: системы счисления и биты ----------
+    // dec2bin(13) → "1101"; dec2bin(-3, 8) → дополнительный код "11111101"
+    dec2bin: (n: unknown, w?: unknown) => dec2base(n, w, 2),
+    dec2hex: (n: unknown, w?: unknown) => dec2base(n, w, 16),
+    dec2oct: (n: unknown, w?: unknown) => dec2base(n, w, 8),
+    bin2dec: (s: unknown) => {
+      const c = stripPrefix(cleanIntStr(needStr(s)), '0b');
+      if (!/^[01]+$/.test(c) || c.length > 53) throw new Error(t('e.calcArgs'));
+      return parseInt(c, 2);
+    },
+    hex2dec: (s: unknown) => {
+      const c = stripPrefix(cleanIntStr(needStr(s)), '0x');
+      if (!/^[0-9a-fA-F]+$/.test(c) || c.length > 13) throw new Error(t('e.calcArgs'));
+      return parseInt(c, 16);
+    },
+    oct2dec: (s: unknown) => {
+      const c = stripPrefix(cleanIntStr(needStr(s)), '0o');
+      if (!/^[0-7]+$/.test(c) || c.length > 17) throw new Error(t('e.calcArgs'));
+      return parseInt(c, 8);
+    },
+    bitand: (a: unknown, b: unknown) => (u32of(a) & u32of(b)) >>> 0,
+    bitor: (a: unknown, b: unknown) => (u32of(a) | u32of(b)) >>> 0,
+    bitxor: (a: unknown, b: unknown) => (u32of(a) ^ u32of(b)) >>> 0,
+    bitnot: (a: unknown, w?: unknown) => {
+      const W = optInt(w, 8);
+      checkWidth(W);
+      return (~u32of(a)) & maskOf(W);
+    },
+    shl: (a: unknown, n: unknown) => (u32of(a) << (truncI(n) & 31)) >>> 0,
+    shr: (a: unknown, n: unknown) => u32of(a) >>> (truncI(n) & 31),
+    rol: (a: unknown, n: unknown, w?: unknown) => {
+      const W = optInt(w, 8);
+      checkWidth(W);
+      const m = maskOf(W);
+      const v = u32of(a) & m;
+      const k = ((truncI(n) % W) + W) % W;
+      return (((v << k) | (v >>> (W - k))) & m) >>> 0;
+    },
+    ror: (a: unknown, n: unknown, w?: unknown) => {
+      const W = optInt(w, 8);
+      checkWidth(W);
+      const m = maskOf(W);
+      const v = u32of(a) & m;
+      const k = ((truncI(n) % W) + W) % W;
+      return (((v >>> k) | (v << (W - k))) & m) >>> 0;
+    },
+    popcount: (a: unknown) => {
+      let x = u32of(a);
+      let c = 0;
+      while (x) {
+        c += x & 1;
+        x >>>= 1;
+      }
+      return c;
+    },
+    parity: (a: unknown) => {
+      let x = u32of(a);
+      let p = 0;
+      while (x) {
+        p ^= x & 1;
+        x >>>= 1;
+      }
+      return p;
+    },
+    hammdist: (a: unknown, b: unknown) => {
+      let x = (u32of(a) ^ u32of(b)) >>> 0;
+      let c = 0;
+      while (x) {
+        c += x & 1;
+        x >>>= 1;
+      }
+      return c;
+    },
+    isPow2: (n: unknown) => {
+      const v = truncI(n);
+      return v > 0 && (v & (v - 1)) === 0;
+    },
+    nextPow2: (n: unknown) => {
+      const v = truncI(n);
+      if (v <= 1) return 1;
+      if (v > 2 ** 31) throw new Error(t('e.calcArgs'));
+      return 2 ** Math.ceil(Math.log2(v));
+    },
+    // bytesFmt(1536) → "1.5 KiB"
+    bytesFmt: (n: unknown) => {
+      const v = Number(n);
+      if (typeof n === 'boolean' || !isFinite(v) || v < 0) throw new Error(t('e.calcArgs'));
+      const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
+      let q = v;
+      let u = 0;
+      while (q >= 1024 && u < units.length - 1) {
+        q /= 1024;
+        u++;
+      }
+      const s = u === 0 ? String(Math.round(q)) : String(Number(q.toPrecision(4)));
+      return `${s} ${units[u]}`;
+    },
+    // АЦП/тракт: adcSNR(12) → дБ, shannonCap(20e6, 30) → бит/с
+    adcSNR: (b: unknown) => {
+      const v = needNum(b);
+      if (!(v >= 1 && v <= 32)) throw new Error(t('e.calcArgs'));
+      return 6.02 * v + 1.76;
+    },
+    adcLevels: (b: unknown) => {
+      const v = truncI(b);
+      if (v < 1 || v > 32) throw new Error(t('e.calcArgs'));
+      return 2 ** v;
+    },
+    quantStep: (vref: unknown, b: unknown) => {
+      const v = needNum(vref);
+      const bb = truncI(b);
+      if (!(v > 0) || bb < 1 || bb > 32) throw new Error(t('e.calcArgs'));
+      return v / 2 ** bb;
+    },
+    shannonCap: (B: unknown, snrDb: unknown) => {
+      const b = needNum(B);
+      const s = needNum(snrDb);
+      if (!(b > 0)) throw new Error(t('e.calcArgs'));
+      return b * Math.log2(1 + 10 ** (s / 10));
+    },
+    thermalNoiseV: (T: unknown, R: unknown, B: unknown) => {
+      const tt = needNum(T);
+      const r = needNum(R);
+      const b = needNum(B);
+      if (!(tt > 0 && r > 0 && b > 0)) throw new Error(t('e.calcArgs'));
+      return Math.sqrt(4 * 1.380649e-23 * tt * r * b);
+    },
+    // хеш/CRC строки (для протоколов и учебных задач)
+    fnv1a: (s: unknown) => fnv1aImpl(needStr(s)),
+    crc16: (s: unknown) => crc16Impl(needStr(s)),
+    crc32: (s: unknown) => crc32Impl(needStr(s)),
+    // lfsrSeq(0x1F, 0x1B, 16, 5): 16 бит ПСП с 5-битным регистром
+    lfsrSeq: (seed: unknown, mask: unknown, n: unknown, w?: unknown) => {
+      const W = optInt(w, 8);
+      checkWidth(W, 31);
+      const N = truncI(n);
+      if (N < 1 || N > 100000) throw new Error(t('e.calcArgs'));
+      let st = u32of(seed) & maskOf(W);
+      const taps = u32of(mask) & maskOf(W);
+      if (st === 0) throw new Error(t('e.calcArgs'));
+      const out: number[] = [];
+      for (let k = 0; k < N; k++) {
+        out.push(st & 1);
+        let fb = 0;
+        let x = st & taps;
+        while (x) {
+          fb ^= x & 1;
+          x >>>= 1;
+        }
+        st = ((st >>> 1) | (fb << (W - 1))) & maskOf(W);
+      }
+      return math.matrix(out);
+    },
+
+    // ---------- высшая математика ----------
+    // taylor("sin(x)", "x", 0, 5) → строка-полином; видит переменные документа
+    taylor: raw((args, _m, scope) => {
+      if (args.length < 4) throw new Error(t('e.calcArgs'));
+      const expr = needStr(evNode(args[0], scope));
+      const v = needStr(evNode(args[1], scope));
+      const a = needNum(evNode(args[2], scope));
+      const N = truncI(evNode(args[3], scope));
+      if (!/^[A-Za-z_]\w*$/.test(v) || N < 0 || N > 12) throw new Error(t('e.calcArgs'));
+      const fmtK = (c: number): string => String(Number(c.toPrecision(8)));
+      let dk = expr;
+      const terms: string[] = [];
+      for (let k = 0; k <= N; k++) {
+        let c: number;
+        try {
+          const val = math.evaluate(preprocessRanges(preprocessJ(dk, false)), { ...plainScope(scope), [v]: a });
+          c = Number(val);
+        } catch {
+          throw new Error(t('e.calcNoConv'));
+        }
+        if (!isFinite(c)) throw new Error(t('e.calcNoConv'));
+        if (Math.abs(c) > 1e-12) {
+          let fact = 1;
+          for (let i = 2; i <= k; i++) fact *= i;
+          const coef = c / fact;
+          const cs = fmtK(coef);
+          if (k === 0) terms.push(`(${cs})`);
+          else if (k === 1) terms.push(`(${cs})*(${v} - (${fmtK(a)}))`);
+          else terms.push(`(${cs})*(${v} - (${fmtK(a)}))^${k}`);
+        }
+        if (k < N) {
+          try {
+            dk = String(math.derivative(dk, v));
+          } catch {
+            throw new Error(t('e.calcArgs'));
+          }
+        }
+      }
+      return terms.length ? terms.join(' + ') : '0';
+    }),
+    // limit("sin(x)/x", "x", 0) — численный предел по сходящейся сетке
+    limit: raw((args, _m, scope) => {
+      if (args.length < 3) throw new Error(t('e.calcArgs'));
+      const expr = needStr(evNode(args[0], scope));
+      const v = needStr(evNode(args[1], scope));
+      const a = needNum(evNode(args[2], scope));
+      const dir = args.length > 3 ? truncI(evNode(args[3], scope)) : 0;
+      if (!/^[A-Za-z_]\w*$/.test(v) || ![-1, 0, 1].includes(dir)) throw new Error(t('e.calcArgs'));
+      const f = (x: number): number => evExpr(expr, scope, { [v]: x });
+      const sc = Math.max(1, Math.abs(a));
+      const probe = (h: number, side: number): number => f(a + side * h * sc);
+      const sides = dir === 0 ? [-1, 1] : [dir];
+      let cand = 0;
+      for (const side of sides) {
+        const vals: number[] = [];
+        for (let k = 1; k <= 12; k++) {
+          const h = 10 ** -k;
+          let y: number;
+          try {
+            y = probe(h, side);
+          } catch {
+            throw new Error(t('e.calcNoConv'));
+          }
+          if (!isFinite(y)) throw new Error(t('e.calcNoConv'));
+          vals.push(y);
+        }
+        const tail = vals.slice(-4);
+        const mx = Math.max(...tail.map(Math.abs), 1);
+        if (Math.max(...tail) - Math.min(...tail) > 1e-6 * mx) throw new Error(t('e.calcNoConv'));
+        cand = side === sides[0] ? tail[3] : (cand + tail[3]) / 2;
+      }
+      return cand;
+    }),
+    // numgrad("x^2+y^2", ["x","y"], [1,2]) → [2, 4]
+    numgrad: raw((args, _m, scope) => {
+      if (args.length < 3) throw new Error(t('e.calcArgs'));
+      const expr = needStr(evNode(args[0], scope));
+      const vars = needStrVec(evNode(args[1], scope));
+      const pt = needNumVec(evNode(args[2], scope));
+      if (!vars.length || vars.length !== pt.length || vars.some((x) => !/^[A-Za-z_]\w*$/.test(x))) {
+        throw new Error(t('e.calcArgs'));
+      }
+      const at = (bind: Record<string, number>): number => evExpr(expr, scope, bind);
+      const base: Record<string, number> = {};
+      vars.forEach((x, i) => {
+        base[x] = pt[i];
+      });
+      const g = vars.map((x, i) => {
+        const h = 1e-8 * Math.max(1, Math.abs(pt[i]));
+        const p1 = { ...base, [x]: pt[i] + h };
+        const p2 = { ...base, [x]: pt[i] - h };
+        return (at(p1) - at(p2)) / (2 * h);
+      });
+      return math.matrix(g);
+    }),
+    // ДПФ/ОДПФ (степень двойки — БПФ, иначе прямое ДПФ)
+    dft: (v: unknown) => dftImpl(v, false),
+    idft: (v: unknown) => dftImpl(v, true),
+    dftMag: (v: unknown) => {
+      const arr = asArrD(v);
+      if (!arr.length || arr.length > 8192) throw new Error(t('e.calcArgs'));
+      return math.matrix(fftCore(arr.map(toC), false).map((c) => Math.hypot(c.re, c.im)));
+    },
+    // eigen([[2,1],[1,2]]) → [3, 1]
+    eigen: (A: unknown) => {
+      try {
+        const ev = (math as unknown as { eigs: (m: unknown) => { values: unknown } }).eigs(A as never);
+        const arr = asArrD(ev.values);
+        return math.matrix(arr as never);
+      } catch {
+        throw new Error(t('e.calcNoConv'));
+      }
+    },
+    rankMat: (A: unknown, tol?: unknown) => rankImpl(A, tol),
+    condNum: (A: unknown) => {
+      const a = to2D(A);
+      const n = a.length;
+      if (a.some((r) => r.length !== n)) throw new Error(t('e.calcArgs'));
+      try {
+        // точное 2-нормное число: σmax/σmin через собственные числа AᵀA
+        const AtA = a.map((_, i) => a.map((__, j) => {
+          let s = 0;
+          for (let k = 0; k < n; k++) s += a[k][i] * a[k][j];
+          return s;
+        }));
+        const ev = (math as unknown as { eigs: (m: unknown) => { values: unknown } }).eigs(math.matrix(AtA));
+        const lam = asArrD(ev.values).map((z) => {
+          const c = toC(z);
+          if (Math.abs(c.im) > 1e-9 * Math.max(1, Math.abs(c.re))) throw new Error('complex-eig');
+          return c.re;
+        });
+        if (!lam.length || lam.some((z) => !isFinite(z))) throw new Error('no-eig');
+        const mx = Math.max(...lam);
+        const mn = Math.min(...lam);
+        if (!(mx > 0) || mn <= mx * 1e-15) return Infinity;
+        return Math.sqrt(mx / mn);
+      } catch {
+        return Infinity;
+      }
+    },
+    vecNorm: (v: unknown, p?: unknown) => {
+      const f = flat(v).map(Number);
+      if (!f.length || f.some((z) => !isFinite(z))) throw new Error(t('e.calcArgs'));
+      if (p === undefined) return Math.hypot(...f);
+      if (typeof p === 'string' && p.toLowerCase() === 'inf') return Math.max(...f.map(Math.abs));
+      const q = Number(p);
+      if (!isFinite(q) || q <= 0) throw new Error(t('e.calcArgs'));
+      return Math.pow(f.reduce((s, z) => s + Math.abs(z) ** q, 0), 1 / q);
+    },
+    matNormF: (A: unknown) => frobNorm(to2D(A)),
+    cNK: (n: unknown, k: unknown) => {
+      const N = truncI(n);
+      const K = truncI(k);
+      if (N < 0 || N > 10000) throw new Error(t('e.calcArgs'));
+      return cNKImpl(N, K);
+    },
+    pNK: (n: unknown, k: unknown) => {
+      const N = truncI(n);
+      const K = truncI(k);
+      if (N < 0 || N > 10000) throw new Error(t('e.calcArgs'));
+      return pNKImpl(N, K);
+    },
+    erf: (x: unknown) => erfImpl(needNum(x)),
+    normpdf: (x: unknown, mu?: unknown, sig?: unknown) => {
+      const xv = needNum(x);
+      const m = optNum(mu, 0);
+      const s = optNum(sig, 1);
+      if (!(s > 0)) throw new Error(t('e.calcArgs'));
+      const z = (xv - m) / s;
+      return Math.exp(-0.5 * z * z) / (s * Math.sqrt(2 * Math.PI));
+    },
+    normcdf: (x: unknown, mu?: unknown, sig?: unknown) => {
+      const xv = needNum(x);
+      const m = optNum(mu, 0);
+      const s = optNum(sig, 1);
+      if (!(s > 0)) throw new Error(t('e.calcArgs'));
+      return 0.5 * (1 + erfImpl((xv - m) / (s * Math.SQRT2)));
+    },
+    binomPmf: (k: unknown, n: unknown, p: unknown) => {
+      const K = truncI(k);
+      const N = truncI(n);
+      const P = needNum(p);
+      if (N < 0 || N > 10000 || K < 0 || K > N || !(P >= 0 && P <= 1)) throw new Error(t('e.calcArgs'));
+      return cNKImpl(N, K) * P ** K * (1 - P) ** (N - K);
+    },
+    poissonPmf: (k: unknown, lam: unknown) => {
+      const K = truncI(k);
+      const L = needNum(lam);
+      if (K < 0 || K > 10000 || !(L > 0)) throw new Error(t('e.calcArgs'));
+      let fact = 1;
+      for (let i = 2; i <= K; i++) fact *= i;
+      return (L ** K * Math.exp(-L)) / fact;
+    },
+    // interpLin([0,1,2],[0,10,40], 1.5) → 25
+    interpLin: (xv: unknown, yv: unknown, x: unknown) => {
+      const xs = asArrD(xv).map(Number);
+      const ys = asArrD(yv).map(Number);
+      const q = needNum(x);
+      if (xs.length !== ys.length || xs.length < 2 || !xs.every(isFinite) || !ys.every(isFinite)) {
+        throw new Error(t('e.calcArgs'));
+      }
+      for (let i = 1; i < xs.length; i++) {
+        if (!(xs[i] > xs[i - 1])) throw new Error(t('e.calcArgs'));
+      }
+      if (q < xs[0] || q > xs[xs.length - 1]) throw new Error(t('e.calcArgs'));
+      for (let i = 0; i + 1 < xs.length; i++) {
+        if (q >= xs[i] && q <= xs[i + 1]) {
+          const a = (q - xs[i]) / (xs[i + 1] - xs[i]);
+          return ys[i] * (1 - a) + ys[i + 1] * a;
+        }
+      }
+      return ys[ys.length - 1];
+    },
+    // polyvalM([1,2,3], 2) = 1+4+12 = 17 (коэфф. по возрастанию)
+    polyvalM: (c: unknown, x: unknown) => {
+      const cf = asArrD(c).map(Number);
+      const xv = needNum(x);
+      if (!cf.length || !cf.every(isFinite)) throw new Error(t('e.calcArgs'));
+      let r = 0;
+      for (let i = cf.length - 1; i >= 0; i--) r = r * xv + cf[i];
+      return r;
+    },
+    trapzY: (y: unknown, dx?: unknown) => {
+      const ys = asArrD(y).map(Number);
+      const d = optNum(dx, 1);
+      if (ys.length < 2 || !ys.every(isFinite) || !(d > 0)) throw new Error(t('e.calcArgs'));
+      let s = 0;
+      for (let i = 0; i + 1 < ys.length; i++) s += (ys[i] + ys[i + 1]) / 2;
+      return s * d;
+    },
+    trapzXY: (x: unknown, y: unknown) => {
+      const xs = asArrD(x).map(Number);
+      const ys = asArrD(y).map(Number);
+      if (xs.length !== ys.length || xs.length < 2 || !xs.every(isFinite) || !ys.every(isFinite)) {
+        throw new Error(t('e.calcArgs'));
+      }
+      let s = 0;
+      for (let i = 0; i + 1 < xs.length; i++) {
+        if (!(xs[i + 1] > xs[i])) throw new Error(t('e.calcArgs'));
+        s += ((ys[i] + ys[i + 1]) / 2) * (xs[i + 1] - xs[i]);
+      }
+      return s;
+    },
+
+    // ---------- физика: формулы ----------
+    R_gas: R_GAS,
+    sigma_sb: SIGMA_SB,
+    g_std: G_STD,
+    atm_pa: 101325,
+    au_m: 1.495978707e11,
+    ly_m: 9.4607304725808e15,
+    kinE: (m: unknown, v: unknown) => {
+      const mm = needNum(m);
+      const vv = needNum(v);
+      if (!(mm >= 0)) throw new Error(t('e.calcArgs'));
+      return 0.5 * mm * vv * vv;
+    },
+    potE: (m: unknown, h: unknown, g?: unknown) => needNum(m) * needNum(h) * optNum(g, G_STD),
+    momP: (m: unknown, v: unknown) => needNum(m) * needNum(v),
+    orbitVel: (M: unknown, r: unknown) => {
+      const mm = needNum(M);
+      const rr = needNum(r);
+      if (!(mm > 0 && rr > 0)) throw new Error(t('e.calcArgs'));
+      return Math.sqrt(6.6743e-11 * mm / rr);
+    },
+    escapeVel: (M: unknown, r: unknown) => {
+      const mm = needNum(M);
+      const rr = needNum(r);
+      if (!(mm > 0 && rr > 0)) throw new Error(t('e.calcArgs'));
+      return Math.sqrt((2 * 6.6743e-11 * mm) / rr);
+    },
+    orbitPeriod: (r: unknown, M: unknown) => {
+      const rr = needNum(r);
+      const mm = needNum(M);
+      if (!(rr > 0 && mm > 0)) throw new Error(t('e.calcArgs'));
+      return 2 * Math.PI * Math.sqrt((rr ** 3) / (6.6743e-11 * mm));
+    },
+    dopplerSnd: (f: unknown, vs: unknown, vo?: unknown, c?: unknown) => {
+      const ff = needNum(f);
+      const s = needNum(vs);
+      const o = optNum(vo, 0);
+      const cc = optNum(c, 343);
+      if (!(ff > 0 && cc > 0 && Math.abs(s) < cc)) throw new Error(t('e.calcArgs'));
+      return ff * ((cc + o) / (cc - s));
+    },
+    gammaRel: (v: unknown) => {
+      const vv = Math.abs(needNum(v));
+      if (!(vv < C)) throw new Error(t('e.calcArgs'));
+      return 1 / Math.sqrt(1 - (vv / C) ** 2);
+    },
+    deBroglie: (m: unknown, v: unknown) => {
+      const mm = needNum(m);
+      const vv = needNum(v);
+      if (!(mm > 0 && vv !== 0)) throw new Error(t('e.calcArgs'));
+      return 6.62607015e-34 / (mm * Math.abs(vv));
+    },
+    photonE: (lam: unknown) => {
+      const l = needNum(lam);
+      if (!(l > 0)) throw new Error(t('e.calcArgs'));
+      return (6.62607015e-34 * C) / l;
+    },
+    decayN: (N0: unknown, lam: unknown, tt: unknown) => {
+      const n0 = needNum(N0);
+      const l = needNum(lam);
+      const time = needNum(tt);
+      if (!(n0 >= 0 && l >= 0)) throw new Error(t('e.calcArgs'));
+      return n0 * Math.exp(-l * time);
+    },
+    half2lam: (T12: unknown) => {
+      const v = needNum(T12);
+      if (!(v > 0)) throw new Error(t('e.calcArgs'));
+      return Math.LN2 / v;
+    },
+    blackbodyP: (T: unknown, A: unknown, eps?: unknown) => {
+      const tt = needNum(T);
+      const aa = needNum(A);
+      const e = optNum(eps, 1);
+      if (!(tt >= 0 && aa > 0 && e >= 0 && e <= 1)) throw new Error(t('e.calcArgs'));
+      return e * SIGMA_SB * aa * tt ** 4;
+    },
+    rcTau: (R: unknown, Cc: unknown) => {
+      const r = needNum(R);
+      const c = needNum(Cc);
+      if (!(r > 0 && c > 0)) throw new Error(t('e.calcArgs'));
+      return r * c;
+    },
+    lcFreq: (L: unknown, Cc: unknown) => {
+      const l = needNum(L);
+      const c = needNum(Cc);
+      if (!(l > 0 && c > 0)) throw new Error(t('e.calcArgs'));
+      return 1 / (2 * Math.PI * Math.sqrt(l * c));
+    },
+    rlcQ: (R: unknown, L: unknown, Cc: unknown) => {
+      const r = needNum(R);
+      const l = needNum(L);
+      const c = needNum(Cc);
+      if (!(r > 0 && l > 0 && c > 0)) throw new Error(t('e.calcArgs'));
+      return (1 / r) * Math.sqrt(l / c);
+    },
+
+    // ---------- электромагнитные поля ----------
+    eta0: ETA0,
+    // gammaZL(75, 50) → 0.2; работает и с комплексными Z
+    gammaZL: (ZL: unknown, Z0: unknown) => {
+      if (cAbs(Z0) === 0) throw new Error(t('e.calcArgs'));
+      const m = math as unknown as {
+        add: (a: unknown, b: unknown) => unknown;
+        subtract: (a: unknown, b: unknown) => unknown;
+        divide: (a: unknown, b: unknown) => unknown;
+      };
+      return m.divide(m.subtract(ZL as never, Z0 as never), m.add(ZL as never, Z0 as never));
+    },
+    // vswr(0.2) или vswr(75, 50)
+    vswr: (a: unknown, b?: unknown) => {
+      const g = b === undefined ? cAbs(a) : cAbs((S.gammaZL as (x: unknown, y: unknown) => unknown)(a, b));
+      if (!(g >= 0)) throw new Error(t('e.calcArgs'));
+      if (g >= 1) return Infinity;
+      return (1 + g) / (1 - g);
+    },
+    reflPow: (g: unknown) => {
+      const m = cAbs(g);
+      return m * m;
+    },
+    transPow: (g: unknown) => {
+      const m = cAbs(g);
+      return 1 - m * m;
+    },
+    // zinLine(75, 50, pi/4): входное сопротивление отрезка линии
+    zinLine: (ZL: unknown, Z0: unknown, betaL: unknown) => zinLineImpl(ZL, Z0, betaL),
+    skinDepth: (f: unknown, sigma: unknown, muR?: unknown) => {
+      const ff = needNum(f);
+      const s = needNum(sigma);
+      const mr = optNum(muR, 1);
+      if (!(ff > 0 && s > 0 && mr > 0)) throw new Error(t('e.calcArgs'));
+      return Math.sqrt(2 / (2 * Math.PI * ff * MU0 * mr * s));
+    },
+    waveImp: (epsR: unknown, muR?: unknown) => {
+      const er = needNum(epsR);
+      const mr = optNum(muR, 1);
+      if (!(er > 0 && mr > 0)) throw new Error(t('e.calcArgs'));
+      return ETA0 * Math.sqrt(mr / er);
+    },
+    // propConst(3.3, 0.012, 10e9) → [alpha, beta]
+    propConst: (epsR: unknown, tanD: unknown, f: unknown, muR?: unknown) => propConstImpl(epsR, tanD, f, muR),
+    attenDb: (alpha: unknown, len: unknown) => needNum(alpha) * needNum(len) * 8.686,
+    phaseDeg: (beta: unknown, len: unknown) => (needNum(beta) * needNum(len) * 180) / Math.PI,
+    // коаксиал: a — внутр. радиус, b — внешний (м); ёмкость/индуктивность на метр
+    coaxCap: (epsR: unknown, a: unknown, b: unknown) => {
+      const er = needNum(epsR);
+      const aa = needNum(a);
+      const bb = needNum(b);
+      if (!(er > 0 && aa > 0 && bb > aa)) throw new Error(t('e.calcArgs'));
+      return ((2 * Math.PI * EPS0 * er) / Math.log(bb / aa));
+    },
+    coaxInd: (a: unknown, b: unknown) => {
+      const aa = needNum(a);
+      const bb = needNum(b);
+      if (!(aa > 0 && bb > aa)) throw new Error(t('e.calcArgs'));
+      return ((MU0 / (2 * Math.PI)) * Math.log(bb / aa));
+    },
+    coaxZ: (epsR: unknown, a: unknown, b: unknown) => {
+      const er = needNum(epsR);
+      const aa = needNum(a);
+      const bb = needNum(b);
+      if (!(er > 0 && aa > 0 && bb > aa)) throw new Error(t('e.calcArgs'));
+      return (60 / Math.sqrt(er)) * Math.log(bb / aa);
+    },
+    plateCap: (epsR: unknown, area: unknown, d: unknown) => {
+      const er = needNum(epsR);
+      const s = needNum(area);
+      const dd = needNum(d);
+      if (!(er > 0 && s > 0 && dd > 0)) throw new Error(t('e.calcArgs'));
+      return (EPS0 * er * s) / dd;
+    },
+    solenoidL: (muR: unknown, N: unknown, area: unknown, len: unknown) => {
+      const mr = needNum(muR);
+      const nn = needNum(N);
+      const s = needNum(area);
+      const l = needNum(len);
+      if (!(mr > 0 && nn > 0 && s > 0 && l > 0)) throw new Error(t('e.calcArgs'));
+      return (MU0 * mr * nn * nn * s) / l;
+    },
+    microstripZ: (W: unknown, H: unknown, epsR: unknown) => microstripImpl(W, H, epsR),
+    wgCutoff: (a: unknown) => {
+      const aa = needNum(a);
+      if (!(aa > 0)) throw new Error(t('e.calcArgs'));
+      return C / (2 * aa);
+    },
+    wgLambda: (f: unknown, a: unknown) => {
+      const ff = needNum(f);
+      const aa = needNum(a);
+      if (!(ff > 0 && aa > 0)) throw new Error(t('e.calcArgs'));
+      const fc = C / (2 * aa);
+      if (!(ff > fc)) throw new Error(t('e.calcArgs'));
+      return C / ff / Math.sqrt(1 - (fc / ff) ** 2);
+    },
+    coulombF: (q1: unknown, q2: unknown, r: unknown) => {
+      const rr = needNum(r);
+      if (!(rr > 0)) throw new Error(t('e.calcArgs'));
+      return ((needNum(q1) * needNum(q2)) / (4 * Math.PI * EPS0 * rr * rr));
+    },
+    ePointQ: (q: unknown, r: unknown) => {
+      const rr = needNum(r);
+      if (!(rr > 0)) throw new Error(t('e.calcArgs'));
+      return (needNum(q) / (4 * Math.PI * EPS0 * rr * rr));
+    },
+    bWire: (I: unknown, r: unknown) => {
+      const rr = needNum(r);
+      if (!(rr > 0)) throw new Error(t('e.calcArgs'));
+      return ((MU0 * needNum(I)) / (2 * Math.PI * rr));
+    },
+    cycFreq: (q: unknown, B: unknown, m: unknown) => {
+      const mm = needNum(m);
+      if (!(mm > 0)) throw new Error(t('e.calcArgs'));
+      return (Math.abs(needNum(q) * needNum(B)) / (2 * Math.PI * mm));
+    },
+    // Фриис: Pt — Вт, Gt/Gr — разы, lam/d — м → Pr, Вт
+    friisPr: (Pt: unknown, Gt: unknown, Gr: unknown, lam: unknown, d: unknown) => {
+      const pt = needNum(Pt);
+      const gt = needNum(Gt);
+      const gr = needNum(Gr);
+      const l = needNum(lam);
+      const dd = needNum(d);
+      if (!(pt >= 0 && gt > 0 && gr > 0 && l > 0 && dd > 0)) throw new Error(t('e.calcArgs'));
+      return pt * gt * gr * ((l / (4 * Math.PI * dd)) ** 2);
+    },
+    friisDb: (PtDbm: unknown, GtDb: unknown, GrDb: unknown, f: unknown, d: unknown) => {
+      const pt = needNum(PtDbm);
+      const gt = needNum(GtDb);
+      const gr = needNum(GrDb);
+      const ff = needNum(f);
+      const dd = needNum(d);
+      if (!(ff > 0 && dd > 0)) throw new Error(t('e.calcArgs'));
+      const fspl = 20 * Math.log10((4 * Math.PI * dd * ff) / C);
+      return pt + gt + gr - fspl;
+    },
+    sMag2db: (s: unknown) => {
+      const m = cAbs(s);
+      if (!(m > 0)) throw new Error(t('e.calcArgs'));
+      return 20 * Math.log10(m);
+    },
+    db2mag: (db: unknown) => 10 ** (needNum(db) / 20),
+
+    // ---------- программирование: строки / массивы / контрольные суммы ----------
+    chrU: (c: unknown) => {
+      const v = truncI(c);
+      if (v < 0 || v > 0x10ffff) throw new Error(t('e.calcArgs'));
+      return String.fromCodePoint(v);
+    },
+    ordU: (s: unknown) => {
+      const str = needStr(s);
+      if (![...str].length) throw new Error(t('e.calcArgs'));
+      return [...str][0].codePointAt(0) ?? 0;
+    },
+    strlenU: (s: unknown) => [...needStr(s)].length,
+    strUpper: (s: unknown) => needStr(s).toUpperCase(),
+    strLower: (s: unknown) => needStr(s).toLowerCase(),
+    substrU: (s: unknown, start: unknown, len?: unknown) => {
+      const chars = [...needStr(s)];
+      const st = truncI(start);
+      if (st < 0 || st > chars.length) throw new Error(t('e.calcArgs'));
+      if (len === undefined) return chars.slice(st).join('');
+      const L = truncI(len);
+      if (L < 0) throw new Error(t('e.calcArgs'));
+      return chars.slice(st, st + L).join('');
+    },
+    splitStr: (s: unknown, sep: unknown) => math.matrix(needStr(s).split(needStr(sep))),
+    joinStr: (v: unknown, sep: unknown) => asArr(v).map(String).join(needStr(sep)),
+    parseNum: (s: unknown) => {
+      const n = Number(String(s).trim().replace(',', '.'));
+      if (!isFinite(n)) throw new Error(t('e.calcArgs'));
+      return n;
+    },
+    uniqueVals: (v: unknown) => {
+      const arr = asArr(v);
+      const seen = new Map<string, unknown>();
+      for (const item of arr) {
+        const k = `${typeof item}:${String(item)}`;
+        if (!seen.has(k)) seen.set(k, item);
+      }
+      return math.matrix([...seen.values()] as never);
+    },
+    histC: (v: unknown, nbins?: unknown) => {
+      const f = asArrD(v).map(Number);
+      const nb = optInt(nbins, 10);
+      if (!f.length || f.some((z) => !isFinite(z)) || nb < 1 || nb > 1000) throw new Error(t('e.calcArgs'));
+      const lo = Math.min(...f);
+      const hi = Math.max(...f);
+      const counts = new Array<number>(nb).fill(0);
+      if (hi === lo) {
+        counts[0] = f.length;
+        return math.matrix(counts);
+      }
+      for (const z of f) {
+        const idx = Math.min(nb - 1, Math.floor(((z - lo) / (hi - lo)) * nb));
+        counts[idx]++;
+      }
+      return math.matrix(counts);
+    },
   };
   // ----- алиасы в стиле Mathcad -----
   // find — то же, что nlsolve; numdiff/numint/numsum/numprod — численные
@@ -856,12 +1820,37 @@ export function buildPackScope(math: MathJsInstance): Scope {
 export const PACK_NAMES = [
   'seq', 'linspace', 'rows', 'cols', 'rms', 'sinc', 'augment', 'zscore',
   'c_light', 'mu_0', 'eps_0', 'h_planck', 'hbar', 'k_B', 'q_e', 'N_A', 'G_const', 'm_e', 'm_p',
+  'R_gas', 'sigma_sb', 'g_std', 'atm_pa', 'au_m', 'ly_m',
   'dB', 'dBV', 'idB', 'dBm', 'WdBm', 'lambda_f', 'fspl', 'fspl_dB', 'defunit',
   'convertTo', 'inUnits', 'hasUnit',
   'simplify', 'sderiv', 'expand', 'sfactor', 'sint',
   'nlsolve', 'find', 'minerr', 'minimize', 'maximize', 'root', 'bvp',
   'ndiff', 'nint', 'nsum', 'nprod', 'numdiff', 'numint', 'numsum', 'numprod',
   'lsolve', 'polyroots', 'linfit', 'polyfit',
+  // вычислительная техника
+  'dec2bin', 'dec2hex', 'dec2oct', 'bin2dec', 'hex2dec', 'oct2dec',
+  'bitand', 'bitor', 'bitxor', 'bitnot', 'shl', 'shr', 'rol', 'ror',
+  'popcount', 'parity', 'hammdist', 'isPow2', 'nextPow2', 'bytesFmt',
+  'adcSNR', 'adcLevels', 'quantStep', 'shannonCap', 'thermalNoiseV',
+  'fnv1a', 'crc16', 'crc32', 'lfsrSeq',
+  // высшая математика
+  'taylor', 'limit', 'numgrad', 'dft', 'idft', 'dftMag',
+  'eigen', 'rankMat', 'condNum', 'vecNorm', 'matNormF',
+  'cNK', 'pNK', 'erf', 'normpdf', 'normcdf', 'binomPmf', 'poissonPmf',
+  'interpLin', 'polyvalM', 'trapzY', 'trapzXY',
+  // физика
+  'kinE', 'potE', 'momP', 'orbitVel', 'escapeVel', 'orbitPeriod',
+  'dopplerSnd', 'gammaRel', 'deBroglie', 'photonE', 'decayN', 'half2lam',
+  'blackbodyP', 'rcTau', 'lcFreq', 'rlcQ',
+  // ЭМ поля
+  'eta0', 'gammaZL', 'vswr', 'reflPow', 'transPow', 'zinLine',
+  'skinDepth', 'waveImp', 'propConst', 'attenDb', 'phaseDeg',
+  'coaxCap', 'coaxInd', 'coaxZ', 'plateCap', 'solenoidL', 'microstripZ',
+  'wgCutoff', 'wgLambda', 'coulombF', 'ePointQ', 'bWire', 'cycFreq',
+  'friisPr', 'friisDb', 'sMag2db', 'db2mag',
+  // программирование: строки/массивы
+  'chrU', 'ordU', 'strlenU', 'strUpper', 'strLower', 'substrU',
+  'splitStr', 'joinStr', 'parseNum', 'uniqueVals', 'histC',
 ];
 
 /* ---------------- Палитра вставки ---------------- */
@@ -973,4 +1962,59 @@ export const SNIPPETS: Snippet[] = [
   { pack: 'sim', label: { ru: 'Прыгающий мяч', en: 'Bouncing ball' }, hint: { ru: 'событие удара', en: 'impact event' }, code: 'bounce', kind: 'sim' },
   { pack: 'sim', label: { ru: 'Восьмёрка 3 тел', en: 'Three-body figure-8' }, hint: { ru: 'гравитация, хаос', en: 'gravity, chaos' }, code: 'figure8', kind: 'sim' },
   { pack: 'sim', label: { ru: 'Импульс через пластину', en: 'Pulse through slab' }, hint: { ru: 'FDTD, волны', en: 'FDTD, waves' }, code: 'slab', kind: 'sim' },
+  { pack: 'sim', label: { ru: 'Зеркало Брэгга', en: 'Bragg mirror' }, hint: { ru: 'FDTD, два слоя', en: 'FDTD, two slabs' }, code: 'bragg', kind: 'sim' },
+  { pack: 'sim', label: { ru: 'LC-контур', en: 'LC tank' }, hint: { ru: 'свободные колебания', en: 'free oscillations' }, code: 'lctank', kind: 'sim' },
+  { pack: 'sim', label: { ru: 'RLC под синусом', en: 'Driven RLC' }, hint: { ru: 'вынужденный отклик', en: 'forced response' }, code: 'drivenRLC', kind: 'sim' },
+  { pack: 'sim', label: { ru: 'Даффинг', en: 'Duffing' }, hint: { ru: 'хаос, двуямный', en: 'chaos, double-well' }, code: 'duffing', kind: 'sim' },
+  // вычислительная техника
+  { pack: 'computing', label: { ru: 'DEC → BIN/HEX', en: 'DEC to BIN/HEX' }, hint: { ru: 'системы счисления', en: 'number bases' }, code: 'dec2bin(13) =\ndec2hex(255) =', kind: 'math' },
+  { pack: 'computing', label: { ru: 'Битовые операции', en: 'Bit operations' }, hint: { ru: 'и/или/искл.или, сдвиги', en: 'and/or/xor, shifts' }, code: 'bitand(12, 10) =\nbitor(12, 10) =\nshl(3, 2) =', kind: 'math' },
+  { pack: 'computing', label: { ru: 'Популяция битов', en: 'Popcount' }, hint: { ru: 'число единиц, чётность', en: 'ones count, parity' }, code: 'popcount(255) =\nparity(13) =\nhammdist(12, 10) =', kind: 'math' },
+  { pack: 'computing', label: { ru: 'АЦП: SNR и шаг', en: 'ADC: SNR and step' }, hint: { ru: 'разрядность → дБ', en: 'bits → dB' }, code: 'adcSNR(12) =\nquantStep(3.3, 12) =', kind: 'math' },
+  { pack: 'computing', label: { ru: 'Шеннон', en: 'Shannon' }, hint: { ru: 'пропускная способность', en: 'channel capacity' }, code: 'shannonCap(20*10^6, 30) =', kind: 'math' },
+  { pack: 'computing', label: { ru: 'CRC / хеш строки', en: 'CRC / string hash' }, hint: { ru: 'контрольные суммы', en: 'checksums' }, code: 'crc16("123456789") =\ncrc32("123456789") =', kind: 'math' },
+  { pack: 'computing', label: { ru: 'LFSR-последовательность', en: 'LFSR sequence' }, hint: { ru: 'псевдослучайные биты', en: 'pseudorandom bits' }, code: 'lfsrSeq(31, 27, 16, 5) =', kind: 'math' },
+  { pack: 'computing', label: { ru: 'Размер в байтах', en: 'Byte size' }, hint: { ru: 'B/KiB/MiB…', en: 'B/KiB/MiB…' }, code: 'bytesFmt(1536) =', kind: 'math' },
+  // высшая математика
+  { pack: 'calc', label: { ru: 'Ряд Тейлора', en: 'Taylor series' }, hint: { ru: 'полином в точке', en: 'polynomial at a point' }, code: 'taylor("sin(x)", "x", 0, 5) =', kind: 'math' },
+  { pack: 'calc', label: { ru: 'Предел', en: 'Limit' }, hint: { ru: 'численный предел', en: 'numeric limit' }, code: 'limit("sin(x)/x", "x", 0) =', kind: 'math' },
+  { pack: 'calc', label: { ru: 'Градиент', en: 'Gradient' }, hint: { ru: 'численные производные', en: 'numeric derivatives' }, code: 'numgrad("x^2+y^2", ["x", "y"], [1, 2]) =', kind: 'math' },
+  { pack: 'calc', label: { ru: 'ДПФ и спектр', en: 'DFT and spectrum' }, hint: { ru: 'dft, амплитуды', en: 'dft, magnitudes' }, code: 'dftMag([0, 1, 0, -1]) =', kind: 'math' },
+  { pack: 'calc', label: { ru: 'Собственные числа', en: 'Eigenvalues' }, hint: { ru: 'спектр матрицы', en: 'matrix spectrum' }, code: 'eigen([2, 1; 1, 2]) =', kind: 'math' },
+  { pack: 'calc', label: { ru: 'Ранг и число обусловленности', en: 'Rank and condition' }, hint: { ru: 'rankMat, condNum', en: 'rankMat, condNum' }, code: 'rankMat([1, 2; 2, 4]) =\ncondNum([1, 2; 3, 4]) =', kind: 'math' },
+  { pack: 'calc', label: { ru: 'Нормальное распределение', en: 'Normal distribution' }, hint: { ru: 'pdf/cdf', en: 'pdf/cdf' }, code: 'normpdf(0) =\nnormcdf(1.96) =', kind: 'math' },
+  { pack: 'calc', label: { ru: 'Интерполяция и трапеции', en: 'Interp and trapz' }, hint: { ru: 'табличные данные', en: 'tabular data' }, code: 'interpLin([0, 1, 2], [0, 10, 40], 1.5) =\ntrapzY([0, 10, 40], 1) =', kind: 'math' },
+  // физика
+  { pack: 'physics', label: { ru: 'Кинетика', en: 'Kinetics' }, hint: { ru: 'энергия и импульс', en: 'energy and momentum' }, code: 'kinE(2, 10) =\nmomP(2, 10) =', kind: 'math' },
+  { pack: 'physics', label: { ru: 'Орбита', en: 'Orbit' }, hint: { ru: 'скорость и период', en: 'velocity and period' }, code: 'orbitVel(5.97*10^24, 6771000) =\nescapeVel(5.97*10^24, 6371000) =', kind: 'math' },
+  { pack: 'physics', label: { ru: 'Чёрное тело', en: 'Black body' }, hint: { ru: 'Стефан–Больцман', en: 'Stefan–Boltzmann' }, code: 'blackbodyP(5800, 1) =', kind: 'math' },
+  { pack: 'physics', label: { ru: 'Распад', en: 'Decay' }, hint: { ru: 'экспонента, T1/2', en: 'exponential, half-life' }, code: 'lam := half2lam(10)\ndecayN(1000, lam, 5) =', kind: 'math' },
+  { pack: 'physics', label: { ru: 'Резонанс LC', en: 'LC resonance' }, hint: { ru: 'частота и добротность', en: 'frequency and Q' }, code: 'lcFreq(0.1, 10*10^-6) =\nrlcQ(10, 0.1, 10*10^-6) =', kind: 'math' },
+  // ЭМ поля
+  { pack: 'em', label: { ru: 'Гамма и КСВ', en: 'Gamma and VSWR' }, hint: { ru: 'отражение от нагрузки', en: 'load reflection' }, code: 'gammaZL(75, 50) =\nvswr(75, 50) =', kind: 'math' },
+  { pack: 'em', label: { ru: 'Входное сопротивление линии', en: 'Line input impedance' }, hint: { ru: 'отрезок βl', en: 'βl section' }, code: 'zinLine(75, 50, pi/4) =', kind: 'math' },
+  { pack: 'em', label: { ru: 'Скин-слой', en: 'Skin depth' }, hint: { ru: 'глубина проникновения', en: 'penetration depth' }, code: 'skinDepth(50, 5.8*10^7) =', kind: 'math' },
+  { pack: 'em', label: { ru: 'Потери в диэлектрике', en: 'Dielectric loss' }, hint: { ru: 'alpha, beta', en: 'alpha, beta' }, code: 'propConst(3.3, 0.012, 10*10^9) =', kind: 'math' },
+  { pack: 'em', label: { ru: 'Коаксиал 50 Ом', en: '50 Ohm coax' }, hint: { ru: 'геометрия по Z', en: 'geometry for Z' }, code: 'coaxZ(2.1, 0.5*10^-3, 1.65*10^-3) =\ncoaxCap(2.1, 0.5*10^-3, 1.65*10^-3) =', kind: 'math' },
+  { pack: 'em', label: { ru: 'Микрополосок', en: 'Microstrip' }, hint: { ru: 'Хаммерстад', en: 'Hammerstad' }, code: 'microstripZ(3*10^-3, 1.5*10^-3, 4.4) =', kind: 'math' },
+  { pack: 'em', label: { ru: 'Волновод', en: 'Waveguide' }, hint: { ru: 'отсечка TE10', en: 'TE10 cutoff' }, code: 'wgCutoff(23*10^-3) =\nwgLambda(10*10^9, 23*10^-3) =', kind: 'math' },
+  { pack: 'em', label: { ru: 'Линия связи (Фриис)', en: 'Link budget (Friis)' }, hint: { ru: 'дБм на приёмнике', en: 'dBm at receiver' }, code: 'friisDb(20, 2, 2, 2.4*10^9, 1000) =', kind: 'math' },
+  { pack: 'em', label: { ru: 'Поле заряда и провода', en: 'Charge and wire field' }, hint: { ru: 'Кулон, Био–Савар', en: 'Coulomb, Biot–Savart' }, code: 'ePointQ(1.6*10^-19, 10^-10) =\nbWire(1, 10^-3) =', kind: 'math' },
+  // программирование
+  {
+    pack: 'programs', label: { ru: 'Бинарный поиск', en: 'Binary search' }, hint: { ru: 'деление пополам, assert', en: 'bisection, assert' },
+    code: 'a := [1, 3, 5, 7, 9, 11]\nkey := 7\nlo := 1\nhi := 6\nwhile lo <= hi\n  mid := floor((lo + hi)/2)\n  if a[mid] == key\n    break\n  end\n  if a[mid] < key\n    lo := mid + 1\n  else\n    hi := mid - 1\n  end\nend\nassert lo <= hi\nmid', kind: 'program', exportName: 'mid',
+  },
+  {
+    pack: 'programs', label: { ru: 'Хорнер (полином)', en: 'Horner (polynomial)' }, hint: { ru: 'коэфф. по возрастанию', en: 'coeffs ascending' },
+    code: 'c := [1, -3, 2]\nx := 5\nr := 0\ni := 3\nwhile i >= 1\n  r := r*x + c[i]\n  i := i - 1\nend\nr', kind: 'program',
+  },
+  {
+    pack: 'programs', label: { ru: 'CRC16 в цикле', en: 'CRC16 loop' }, hint: { ru: 'Modbus побитово', en: 'bitwise Modbus' },
+    code: 'msg := [49, 50, 51]\ncrc := 65535\nfor b in msg\n  crc := bitxor(crc, b)\n  for k in 1..8\n    if bitand(crc, 1) == 1\n      crc := bitxor(shr(crc, 1), 40961)\n    else\n      crc := shr(crc, 1)\n    end\n  end\nend\ncrc', kind: 'program',
+  },
+  {
+    pack: 'programs', label: { ru: ' assert-контракт', en: 'assert contract' }, hint: { ru: 'предусловие функции', en: 'function precondition' },
+    code: 'n := 7\nassert n > 0\nf := 1\nfor i in 2..n\n  f := f*i\nend\nf', kind: 'program', exportName: 'fact',
+  },
 ];

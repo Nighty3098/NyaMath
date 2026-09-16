@@ -17,15 +17,22 @@ export const math: MathJsInstance = create(all, {});
 
 // rawArgs-решатели паков: mathjs решает raw/eager на этапе компиляции
 // по math-namespace, поэтому импортируем их туда явно (флаг rawArgs сохраняется).
-math.import(
-  Object.fromEntries(
-    [
-      'nlsolve', 'find', 'minerr', 'minimize', 'maximize', 'root', 'bvp',
-      'ndiff', 'nint', 'nsum', 'nprod', 'numdiff', 'numint', 'numsum', 'numprod',
-    ].map((k) => [k, (buildPackScope(math) as Record<string, unknown>)[k]]),
-  ) as never,
-  { override: false },
-);
+// Поштучно и в try/catch: часть имён (напр. grad) зарезервирована внутри mathjs —
+// тогда остаётся scope-версия из createBaseScope (у неё приоритет при вычислении).
+{
+  const packScope = buildPackScope(math) as Record<string, unknown>;
+  for (const k of [
+    'nlsolve', 'find', 'minerr', 'minimize', 'maximize', 'root', 'bvp',
+    'ndiff', 'nint', 'nsum', 'nprod', 'numdiff', 'numint', 'numsum', 'numprod',
+    'taylor', 'limit', 'numgrad',
+  ]) {
+    try {
+      math.import({ [k]: packScope[k] } as never, { override: false });
+    } catch {
+      /* уже есть в mathjs — используем scope-версию */
+    }
+  }
+}
 
 // --- Кастомные функции / алиасы в стиле Mathcad ---
 // mathjs из коробки: sin cos tan asin acos atan sqrt abs exp re im conj arg ...

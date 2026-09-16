@@ -3,18 +3,20 @@ import { SNIPPETS, type Snippet } from '../engine/packs';
 import { savePaletteUi, useCanvasStore } from '../store/canvasStore';
 import { lx, packName, t, type PackId } from '../i18n';
 import {
-  ICalc, IChart, IContour, IFx, IFormula, IGrid,
+  ICalc, IChart, IChip, IContour, IFx, IField, IFormula, IGrid,
   IPlot, IProgram, IResize, ISignal, ISim, IUnits, IX, IZap,
 } from './Icon';
 
-const PACKS: PackId[] = ['matrices', 'stats', 'physics', 'units', 'calc', 'telecom', 'programs', 'plots', 'sim'];
+const PACKS: PackId[] = ['matrices', 'stats', 'physics', 'em', 'units', 'calc', 'computing', 'telecom', 'programs', 'plots', 'sim'];
 
 const PACK_ICONS: Record<PackId, () => React.JSX.Element> = {
   matrices: IGrid,
   stats: IChart,
   physics: IZap,
+  em: IField,
   units: IUnits,
   calc: ICalc,
+  computing: IChip,
   telecom: ISignal,
   programs: IProgram,
   plots: IPlot,
