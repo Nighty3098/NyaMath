@@ -576,6 +576,8 @@ export default function Canvas() {
           }}
         />
       )}
+      {/* слой теней перетаскивания (DOM, без ре-рендеров) */}
+      <div className="nya-ghost-layer print:hidden" aria-hidden="true" />
       {/* бесконечный слой блоков (нулевой размер, hit-area только у самих блоков) */}
       <div
         className="absolute left-0 top-0 nya-sheet"

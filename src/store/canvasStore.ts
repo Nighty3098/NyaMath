@@ -64,8 +64,8 @@ export interface CanvasState {
   updateInput: (id: string, raw: string) => void;
   setExportName: (id: string, name: string) => void;
   moveBlock: (id: string, x: number, y: number) => void;
-  /** Живое перетаскивание (без пересчёта); финал — через commitDrag */
-  dragTo: (id: string, x: number, y: number) => void;
+  /** Финал перетаскивания тени: батч координат + один пересчёт (без push истории) */
+  dropBlocks: (positions: Record<string, { x: number; y: number }>) => void;
   commitDrag: () => void;
   /** Ручной размер (без пересчёта формул); persist — через commitDrag */
   sizeTo: (id: string, w: number | null, h?: number | null) => void;
@@ -559,11 +559,24 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     scheduleRecalc(get, set as SetFn, 250);
   },
 
-  dragTo: (id, x, y) => {
-    const cur = get().blocks[id];
-    if (!cur) return;
-    // только позиция, без пересчёта и persist — для плавного drag регионов
-    set({ blocks: { ...get().blocks, [id]: { ...cur, x, y } } });
+  /** Финал перетаскивания тени: разом ставим координаты, один пересчёт + persist.
+   * История уже снята в beginGesture на pointerdown — сюда без push. */
+  dropBlocks: (positions: Record<string, { x: number; y: number }>) => {
+    const cur = get().blocks;
+    let changed = false;
+    const next = { ...cur };
+    for (const [gid, p] of Object.entries(positions)) {
+      const b = next[gid];
+      if (b && (b.x !== p.x || b.y !== p.y)) {
+        next[gid] = { ...b, x: p.x, y: p.y };
+        changed = true;
+      }
+    }
+    if (!changed) return;
+    // порядок сверху-вниз зависит от Y → пересчёт сразу (телепорт без задержки)
+    const rec = withRecalc(next);
+    persist(rec);
+    set((s) => ({ blocks: rec, recalcCounter: s.recalcCounter + 1 }));
   },
 
   commitDrag: () => {
