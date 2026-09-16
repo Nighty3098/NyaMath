@@ -10,7 +10,7 @@ import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
 import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IResize, IX } from './Icon';
+import { IGrip, IResize, IWarn, IX } from './Icon';
 
 const W = 560;
 const HEADER = 170;
@@ -330,8 +330,8 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
     <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: ph + HEADER }}>
       <div
         data-block-id={block.id}
-        className={`nya-block relative w-full h-full rounded-xl border px-3 py-2 flex flex-col bg-[var(--sheet)] shadow-[0_1px_2px_rgba(0,0,0,0.22),0_12px_32px_rgba(0,0,0,0.2)] group ${
-          selected ? 'border-[var(--accent-line)]' : 'border-[var(--line)]'
+        className={`nya-block relative w-full h-full rounded-xl px-3 py-2 flex flex-col bg-[var(--sheet)] shadow-[0_1px_2px_rgba(0,0,0,0.18),0_8px_24px_rgba(0,0,0,0.16)] group ${
+          selected ? 'outline outline-2 outline-offset-2 outline-[var(--accent-line)]' : ''
         }`}
         onClick={(e) => {
           e.stopPropagation();
@@ -347,7 +347,7 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
           onPointerCancel={onGripUp}
           onDoubleClick={(e) => e.stopPropagation()}
         >
-          <span className="text-[var(--faint)] text-[12px]" aria-hidden="true">⠿</span>
+          <span className="text-[var(--faint)] inline-flex" aria-hidden="true"><IGrip /></span>
           <span className="text-[11px] uppercase tracking-wider text-[var(--accent-ink)]">plot3d</span>
           <label htmlFor={`plot3dfn-${block.id}`} className="sr-only">{t('p3.fnLabel')}</label>
           <input
@@ -392,7 +392,7 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
         </div>
 
         {err || !sample ? (
-          <div className="text-[var(--danger)] text-[12px]" role="alert">⚠ {err ?? t('p3.noData')}</div>
+          <div className="flex items-center gap-1.5 text-[var(--danger)] text-[12px]" role="alert"><IWarn /> {err ?? t('p3.noData')}</div>
         ) : (
           <div
             ref={viewRef}

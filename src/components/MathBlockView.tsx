@@ -4,7 +4,7 @@ import type { MathBlockData } from '../engine/dependencies';
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IGrip, ICopy, IResize, IX } from './Icon';
+import { IGrip, ICopy, IResize, IWarn, IX } from './Icon';
 import MiniPlot from './MiniPlot';
 import { copyTextToClipboard } from '../lib/exportFiles';
 
@@ -130,7 +130,7 @@ function MathBlockView({ block, scale }: Props) {
       <div
         ref={regionRef}
         data-block-id={block.id}
-        className={`nya-block relative rounded-[10px] px-1.5 py-0.5 transition-shadow group ${
+        className={`nya-block relative rounded-xl px-2 py-1 transition-shadow group ${
           block.error
             ? 'shadow-[0_0_0_1.5px_var(--danger)] bg-[var(--danger-bg)]'
             : selected
@@ -277,8 +277,8 @@ function MathBlockView({ block, scale }: Props) {
               <div className="math-input text-[14px] text-[var(--ink)]">{block.rawInput || '—'}</div>
             )}
             {block.error && (
-              <div className="text-[12px] leading-5 text-[var(--danger)]" role="alert">
-                ⚠ {block.error}
+              <div className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--danger)]" role="alert">
+                <IWarn /> {block.error}
               </div>
             )}
             {block.plotPreview && !block.error && (

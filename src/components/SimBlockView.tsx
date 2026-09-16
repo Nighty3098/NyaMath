@@ -4,7 +4,7 @@ import { plotPalettes } from '../theme';
 import { SIM_DOMAINS, SIM_MODELS, SIM_SOLVERS, getSimModel, simModelPatch, type SimMode, type SimResult, type SimSolver } from '../engine/simEngine';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IResize, IX } from './Icon';
+import { IGrip, IResize, IWarn, IX } from './Icon';
 import { lx, simDomainName, simSolverName, t } from '../i18n';
 
 const W = 560;
@@ -123,8 +123,8 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
     <div ref={boxRef} className="absolute z-10 min-h-fit" style={{ left: block.x, top: block.y, width: pw, height: ph + headH }}>
       <div
         data-block-id={block.id}
-        className={`nya-block relative w-full h-full rounded-xl border px-3 py-2 flex flex-col bg-[var(--sheet)] shadow-[0_1px_2px_rgba(0,0,0,0.22),0_12px_32px_rgba(0,0,0,0.2)] group ${
-          selected ? 'border-[var(--accent-line)]' : 'border-[var(--line)]'
+        className={`nya-block relative w-full h-full rounded-xl px-3 py-2 flex flex-col bg-[var(--sheet)] shadow-[0_1px_2px_rgba(0,0,0,0.18),0_8px_24px_rgba(0,0,0,0.16)] group ${
+          selected ? 'outline outline-2 outline-offset-2 outline-[var(--accent-line)]' : ''
         }`}
         onClick={(e) => {
           e.stopPropagation();
@@ -142,7 +142,7 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
             onPointerCancel={onGripUp}
             onDoubleClick={(e) => e.stopPropagation()}
           >
-            <span className="text-[var(--faint)] text-[12px]" aria-hidden="true">⠿</span>
+            <span className="text-[var(--faint)] inline-flex" aria-hidden="true"><IGrip /></span>
             <span className="text-[11px] uppercase tracking-wider text-[var(--accent-ink)]">sim</span>
             <label htmlFor={`simmodel-${block.id}`} className="sr-only">{t('sim.preset')}</label>
             <select
@@ -385,7 +385,7 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
 
         {/* график + плеер */}
         {block.error ? (
-          <div ref={footRef} className="text-[var(--danger)] text-[12px] mb-1" role="alert">⚠ {block.error}</div>
+          <div ref={footRef} className="flex items-center gap-1.5 text-[var(--danger)] text-[12px] mb-1" role="alert"><IWarn /> {block.error}</div>
         ) : view ? (
           <SimPlayer
             result={block.simResult as SimResult}

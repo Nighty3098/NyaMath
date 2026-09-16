@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
-import { IFormula, IPlot, IPlot3d, IProgram, ISim, IX, IZap, IDemo, IOpen, IBlank } from './Icon';
+import { IFormula, IPaw, IPlot, IPlot3d, IProgram, ISim, IX, IZap, IDemo, IOpen, IBlank } from './Icon';
 
 interface WelcomeModalProps {
   onClose: () => void;
@@ -10,8 +10,8 @@ interface WelcomeModalProps {
 
 /**
  * Приветствие на пустом листе: быстрый старт в один клик.
- * Вход — stagger по смысловым чанкам (400ms ease-out, задержки 0/100/200ms),
- * выход — приглушённый (150ms ease-out, translateY −12px).
+ * Минимализм: одна колонка, тихая типографика, спокойные кнопки.
+ * Вход — stagger по смысловым чанкам, выход — приглушённый.
  */
 export default function WelcomeModal({ onClose, onOpenFile }: WelcomeModalProps) {
   const addBlock = useCanvasStore((s) => s.addBlock);
@@ -63,108 +63,86 @@ export default function WelcomeModal({ onClose, onOpenFile }: WelcomeModalProps)
     { icon: <ISim />, title: t('menu.insSim'), sub: 'ODE · RK4', fn: () => addSimBlock(420, 300) },
   ];
 
+  const ghostBtn =
+    'inline-flex items-center gap-1.5 min-h-[34px] px-3 rounded-lg border border-[var(--chrome-line)] text-[13px] text-[var(--chrome-soft)] hover:text-[var(--chrome-ink)] cursor-pointer transition-colors duration-150 ease-out active:scale-[0.97]';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="presentation">
       {/* backdrop */}
       <div
-        className="welcome-backdrop absolute inset-0 bg-black/55 backdrop-blur-[2px]"
+        className="welcome-backdrop absolute inset-0 bg-black/45"
         data-closing={closing}
         onClick={close}
         aria-hidden="true"
       />
-      {/* карточка: outer 20px = inner 12px + padding 8px */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label={t('w.aria')}
-        className={`welcome-card relative w-[820px] max-w-full rounded-[20px] p-2 border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] shadow-2xl ${closing ? 'welcome-exit' : ''}`}
+        className={`welcome-card relative w-[560px] max-w-full rounded-[18px] border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] shadow-2xl px-7 py-6 ${closing ? 'welcome-exit' : ''}`}
       >
         <button
           ref={closeBtn}
           type="button"
           onClick={close}
           aria-label={t('w.close')}
-          className="absolute right-3 top-3 p-2 rounded-lg text-[var(--chrome-soft)] hover:text-[var(--chrome-ink)] hover:bg-white/5 cursor-pointer transition-colors duration-150 ease-out active:scale-[0.96] z-10"
+          className="nya-tbtn absolute right-4 top-4"
         >
           <IX />
         </button>
 
-        <div className="flex flex-col sm:flex-row gap-2">
-          {/* левая часть — логотип */}
-          <div className="welcome-chunk welcome-d0 flex flex-1 items-center justify-center rounded-xl px-6 py-8">
-            <img
-              src="favicon.svg"
-              alt=""
-              aria-hidden="true"
-              className="w-[90%] h-auto drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
-              draggable={false}
-            />
-          </div>
-
-          {/* правая часть — название, создание, управление, создатель */}
-          <div className="flex-1 min-w-0 rounded-xl px-5 py-4">
-            <div className="welcome-chunk welcome-d0 pr-8">
-              <div className="font-semibold tracking-tight text-[22px] leading-7">
-                <span className="text-[var(--accent)]">Nya</span>Math
-              </div>
-            </div>
-
-            <div className="welcome-chunk welcome-d1 grid grid-cols-2 gap-2 mt-4">
-              {quick.map((q) => (
-                <button
-                  key={q.title}
-                  type="button"
-                  onClick={start(q.fn)}
-                  className="flex items-center gap-3 rounded-xl border border-[var(--chrome-line)] px-3 py-2.5 text-left cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 active:scale-[0.96]"
-                >
-                  <span className="text-[var(--accent)]" aria-hidden="true">{q.icon}</span>
-                  <span>
-                    <span className="block text-[13px] font-medium">{q.title}</span>
-                    <span className="math-input block text-[11px] text-[var(--chrome-soft)]">{q.sub}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="welcome-chunk welcome-d2 flex items-center gap-2 flex-wrap mt-3">
-              <button
-                type="button"
-                onClick={start(loadTestScenario)}
-                className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[var(--accent-line)]/60 bg-[var(--accent-soft)] text-[13px] cursor-pointer transition-colors duration-150 ease-out hover:brightness-125 active:scale-[0.96]"
-              >
-                <IZap /> {t('w.demo1')}
-              </button>
-              <button
-                type="button"
-                onClick={start(loadAdvancedDemo)}
-                className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[var(--chrome-line)] text-[13px] cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 active:scale-[0.96]"
-              >
-                <IDemo /> {t('w.demo2')}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onOpenFile();
-                  close();
-                }}
-                className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[var(--chrome-line)] text-[13px] cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 active:scale-[0.96]"
-              >
-                <IOpen /> {t('w.openFile')}
-              </button>
-              <button
-                type="button"
-                onClick={close}
-                className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-lg border border-[var(--chrome-line)] text-[13px] cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 active:scale-[0.96]"
-              >
-                <IBlank /> {t('w.blank')}
-              </button>
-            </div>
-
-            <p className="welcome-chunk welcome-d2 text-[11px] text-[var(--chrome-soft)] mt-3">
-              {t('w.creator')} <a href="https://github.com/Nighty3098">Nighty3098</a>
-            </p>
-          </div>
+        <div className="welcome-chunk welcome-d0 flex items-center gap-2.5">
+          <span className="text-[var(--accent)] text-[18px] inline-flex" aria-hidden="true"><IPaw /></span>
+          <span className="font-semibold tracking-tight text-[19px]">NyaMath</span>
         </div>
+        <p className="welcome-chunk welcome-d0 text-[13px] leading-5 text-[var(--chrome-soft)] mt-1.5">
+          {t('w.tag')}
+        </p>
+
+        <div className="welcome-chunk welcome-d1 grid grid-cols-2 sm:grid-cols-3 gap-2 mt-5">
+          {quick.map((q) => (
+            <button
+              key={q.title}
+              type="button"
+              onClick={start(q.fn)}
+              className="flex flex-col gap-1 rounded-xl border border-[var(--chrome-line)] px-3 py-3 text-left cursor-pointer transition-colors duration-150 ease-out hover:border-[var(--accent-line)] hover:bg-[var(--accent-soft)]/40 active:scale-[0.97]"
+            >
+              <span className="text-[var(--accent)]" aria-hidden="true">{q.icon}</span>
+              <span className="block text-[13px] font-medium leading-4">{q.title}</span>
+              <span className="math-input block text-[11px] leading-4 text-[var(--chrome-soft)] truncate">{q.sub}</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              onOpenFile();
+              close();
+            }}
+            className="flex flex-col gap-1 rounded-xl border border-dashed border-[var(--chrome-line)] px-3 py-3 text-left cursor-pointer transition-colors duration-150 ease-out hover:border-[var(--accent-line)] active:scale-[0.97]"
+          >
+            <span className="text-[var(--chrome-soft)]" aria-hidden="true"><IOpen /></span>
+            <span className="block text-[13px] font-medium leading-4">{t('w.openFile')}</span>
+            <span className="math-input block text-[11px] leading-4 text-[var(--chrome-soft)]">.json</span>
+          </button>
+        </div>
+
+        <div className="welcome-chunk welcome-d2 flex items-center gap-2 flex-wrap mt-4 pt-4 border-t border-[var(--chrome-line)]">
+          <button type="button" onClick={start(loadTestScenario)} className={ghostBtn}>
+            <IZap /> {t('w.demo1')}
+          </button>
+          <button type="button" onClick={start(loadAdvancedDemo)} className={ghostBtn}>
+            <IDemo /> {t('w.demo2')}
+          </button>
+          <button type="button" onClick={close} className={`${ghostBtn} ml-auto`}>
+            <IBlank /> {t('w.blank')}
+          </button>
+        </div>
+
+        <p className="welcome-chunk welcome-d2 text-[11px] text-[var(--chrome-soft)] mt-4">
+          {t('w.creator')} <a className="underline underline-offset-2 hover:text-[var(--chrome-ink)]" href="https://github.com/Nighty3098">Nighty3098</a>
+          <span className="mx-1.5" aria-hidden="true">·</span>
+          <span className="math-input">x := 5 → x = 5</span>
+        </p>
       </div>
     </div>
   );

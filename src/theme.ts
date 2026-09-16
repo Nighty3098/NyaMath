@@ -128,24 +128,24 @@ export const plotPalettes: Record<ThemeName, PlotPalette> = {
     series: ['#82aaff', '#21c7a8', '#ecc48d', '#fc514e', '#7fdbca', '#c792ea', '#e3d18a'],
   },
   'github-dark': {
-    svgBg: '#161b22',
-    grid: '#e6edf3',
+    svgBg: '#262422',
+    grid: '#ede9e2',
     gridOpacity: 0.12,
-    tick: '#7d8590',
-    axis: '#3d444d',
-    frame: '#30363d',
-    legend: '#e6edf3',
-    series: ['#4493f8', '#3fb950', '#d29922', '#f85149', '#39c5cf', '#a371f7', '#db61a2'],
+    tick: '#a39e96',
+    axis: '#4b4440',
+    frame: '#38342f',
+    legend: '#ede9e2',
+    series: ['#d97757', '#7db383', '#e8c468', '#e4685e', '#7dc4c4', '#a88bd4', '#e08bb0'],
   },
   'github-light': {
     svgBg: '#ffffff',
-    grid: '#1f2328',
+    grid: '#1f1e1d',
     gridOpacity: 0.08,
-    tick: '#656d76',
-    axis: '#8c959f',
-    frame: '#d0d7de',
-    legend: '#1f2328',
-    series: ['#0969da', '#1a7f37', '#9a6700', '#cf222e', '#039172', '#8250df', '#cf4797'],
+    tick: '#6f6e69',
+    axis: '#9b9993',
+    frame: '#e8e6e1',
+    legend: '#1f1e1d',
+    series: ['#c15f3c', '#3e7c43', '#1c6fb8', '#b7791f', '#2a7f7f', '#7c5cbf', '#c44b7a'],
   },
 };
 
@@ -161,11 +161,12 @@ export function loadTheme(): ThemeName {
     const v = localStorage.getItem(KEY) ?? localStorage.getItem(KEY_LEGACY);
     if (isThemeName(v)) return v;
     // миграция со старых имён
-    if (v === 'gruvbox' || v === 'dark') return 'gruvbox-dark';
+    if (v === 'gruvbox' || v === 'dark') return 'github-dark';
     if (v === 'light') return 'github-light';
-    return 'gruvbox-dark';
+    // по умолчанию — тёмная инженерная тема
+    return 'github-dark';
   } catch {
-    return 'gruvbox-dark';
+    return 'github-dark';
   }
 }
 

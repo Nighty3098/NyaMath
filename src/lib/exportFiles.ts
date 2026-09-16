@@ -84,7 +84,7 @@ export async function exportSvgElementToPng(svg: SVGSVGElement, filename: string
   clone.setAttribute('width', String(w * scale));
   clone.setAttribute('height', String(h * scale));
   clone.setAttribute('viewBox', `0 0 ${w} ${h}`);
-  clone.setAttribute('font-family', 'system-ui, -apple-system, "Segoe UI", sans-serif');
+  clone.setAttribute('font-family', 'Inter, system-ui, -apple-system, "Segoe UI", sans-serif');
   if (opaque) {
     const rect = document.createElementNS(SVG_NS, 'rect');
     rect.setAttribute('width', String(w));

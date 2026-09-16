@@ -8,7 +8,7 @@ import Plot3dBlockView from './Plot3dBlockView';
 import ProgramBlockView from './ProgramBlockView';
 import SimBlockView from './SimBlockView';
 import SliderBlockView from './SliderBlockView';
-import { isLightTheme } from '../theme';
+import { IPaw } from './Icon';
 import { t } from '../i18n';
 
 const MIN_SCALE = 0.25;
@@ -514,7 +514,6 @@ export default function Canvas() {
   }, []);
 
   const list = useMemo(() => sortBlocksTopDown(Object.values(blocks)), [blocks]);
-  const theme = useCanvasStore((s) => s.theme);
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
   // Тач-скрин: другие подсказки (жесты вместо мыши/клавиатуры)
@@ -522,24 +521,15 @@ export default function Canvas() {
     () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches,
   );
 
-  // Бесконечная сетка в экранных координатах: шаг и сдвиг следуют за камерой
+  // Точечная сетка в экранных координатах (Notion-стиль): шаг следует за камерой
   const mod = (a: number, n: number) => ((a % n) + n) % n;
   const gridStyle: React.CSSProperties = showGrid
     ? (() => {
-        const light = isLightTheme(theme);
-        const minor = light ? 'rgba(15,23,42,0.07)' : 'rgba(235,219,178,0.05)';
-        const major = light ? 'rgba(15,23,42,0.13)' : 'rgba(235,219,178,0.11)';
-        const s1 = 14 * view.k;
-        const s2 = 140 * view.k;
+        const s = 22 * view.k;
         return {
-          backgroundImage: [
-            `linear-gradient(to right, ${minor} 1px, transparent 1px)`,
-            `linear-gradient(to bottom, ${minor} 1px, transparent 1px)`,
-            `linear-gradient(to right, ${major} 1px, transparent 1px)`,
-            `linear-gradient(to bottom, ${major} 1px, transparent 1px)`,
-          ].join(','),
-          backgroundSize: `${s1}px ${s1}px, ${s1}px ${s1}px, ${s2}px ${s2}px, ${s2}px ${s2}px`,
-          backgroundPosition: `${mod(view.x, s1)}px ${mod(view.y, s1)}px, ${mod(view.x, s1)}px ${mod(view.y, s1)}px, ${mod(view.x, s2)}px ${mod(view.y, s2)}px, ${mod(view.x, s2)}px ${mod(view.y, s2)}px`,
+          backgroundImage: 'radial-gradient(circle, var(--grid-dk) 1.2px, transparent 1.3px)',
+          backgroundSize: `${s}px ${s}px`,
+          backgroundPosition: `${mod(view.x, s)}px ${mod(view.y, s)}px`,
         };
       })()
     : {};
@@ -635,34 +625,32 @@ export default function Canvas() {
       {/* пустое состояние — в экранных координатах */}
       {list.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none print:hidden">
-          <div className="flex flex-col items-center text-center px-6">
-            <img
-              src="favicon.svg"
-              alt=""
-              aria-hidden="true"
-              className="w-16 h-16 opacity-90"
-              draggable={false}
-            />
-            <div className="font-semibold tracking-tight text-[22px] leading-7 text-[var(--ink)] mt-3">
-              <span className="text-[var(--accent)]">Nya</span>Math
+          <div className="flex flex-col items-center text-center px-6 max-w-[420px]">
+            <span className="text-[var(--accent)] text-[22px] inline-flex" aria-hidden="true"><IPaw /></span>
+            <div className="font-semibold tracking-tight text-[19px] leading-7 text-[var(--ink)] mt-3">
+              NyaMath
             </div>
-            <div className="text-[13px] text-[var(--faint)] mt-1">
+            <div className="text-[13px] leading-5 text-[var(--faint)] mt-1">
               {coarse ? t('c.emptyNewTouch') : t('c.emptyNew')}
             </div>
-            <div className="flex items-center gap-1.5 flex-wrap justify-center mt-3 text-[12px] text-[var(--ink-soft)]">
-              <kbd className="math-input px-1.5 py-0.5 rounded-md border border-[var(--line)] bg-[var(--chrome)]">:=</kbd>
-              <span>{t('c.emptyAssign')}</span>
-              <kbd className="math-input px-1.5 py-0.5 rounded-md border border-[var(--line)] bg-[var(--chrome)] ml-2">=</kbd>
-              <span>{t('c.emptyOutput')}</span>
+            <div className="flex items-center gap-2 flex-wrap justify-center mt-4">
+              <span className="nya-kbd">x := 5</span>
+              <span className="text-[var(--faint)] text-[12px]">→</span>
+              <span className="nya-kbd">x = 5</span>
             </div>
-            {!coarse && <div className="text-[11px] text-[var(--faint)] mt-2">{t('c.crossHint')}</div>}
+            <div className="flex items-center gap-2 flex-wrap justify-center mt-2">
+              <span className="nya-kbd">f(x) := sin(x)</span>
+              <span className="text-[var(--faint)] text-[12px]">→</span>
+              <span className="nya-kbd">⤢</span>
+            </div>
+            {!coarse && <div className="text-[11px] leading-4 text-[var(--faint)] mt-4 opacity-80">{t('c.crossHint')}</div>}
           </div>
         </div>
       )}
 
       {/* controls зума */}
       <div
-        className="nya-zoombar absolute right-3 bottom-3 flex items-center gap-1 bg-[var(--chrome)]/95 border border-[var(--chrome-line)] rounded-lg p-1 print:hidden"
+        className="nya-zoombar absolute right-3 bottom-3 flex items-center gap-0.5 bg-[var(--chrome)]/85 border border-[var(--chrome-line)] px-1.5 py-1 print:hidden"
         role="toolbar"
         aria-label={t('c.zoomBar')}
       >
@@ -671,7 +659,7 @@ export default function Canvas() {
         </ZoomBtn>
         <button
           type="button"
-          className="text-[12px] math-input text-[var(--chrome-ink)] min-w-14 min-h-[36px] px-1 rounded-md hover:bg-white/5"
+          className="text-[12px] math-input tabular-nums text-[var(--chrome-soft)] hover:text-[var(--chrome-ink)] min-w-13 min-h-[32px] px-2 rounded-full transition-colors"
           onClick={() => {
             const n = { x: 80, y: 40, k: 1 };
             targetRef.current = n;
@@ -703,7 +691,7 @@ function ZoomBtn({
     <button
       type="button"
       aria-label={label}
-      className="w-9 h-9 text-[16px] text-[var(--chrome-ink)] rounded-md hover:bg-white/10 border border-transparent hover:border-[var(--chrome-line)] cursor-pointer transition-transform duration-150 ease-out active:scale-[0.96]"
+      className="nya-tbtn w-8 h-8 text-[15px]"
       onClick={(e) => {
         e.stopPropagation();
         onClick();

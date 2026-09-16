@@ -7,8 +7,8 @@ import { SHARE_WARN_CHARS, shareDocument } from '../lib/share';
 import { THEMES } from '../theme';
 import { t, themeLabel, type Lang } from '../i18n';
 import {
-  IDemo, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
-  IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy, ISignal,
+  IFx, IFormula, IGrid, IOpen, IPaw, IPlot, IPlot3d, IPrint, IProgram,
+  IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo,
 } from './Icon';
 
 interface MenuBarProps {
@@ -18,6 +18,7 @@ interface MenuBarProps {
 
 type Entry =
   | { sep: true }
+  | { head: string }
   | {
       id: string;
       icon?: React.ReactNode;
@@ -38,7 +39,8 @@ function atCross(): { x: number; y: number } {
 }
 
 /**
- * Десктопная строка меню: Файл · Вставка · Правка · Вид · Примеры · Справка.
+ * Минималистичный тулбар: 5 меню + сегмент быстрой вставки +
+ * вынесенные undo/redo/пересчёт и тихий статус листа.
  * Клик — открыть, наведение при открытом — переключить, Esc/клик мимо — закрыть.
  */
 export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
@@ -60,6 +62,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
   const togglePalette = useCanvasStore((s) => s.togglePalette);
   const theme = useCanvasStore((s) => s.theme);
   const setTheme = useCanvasStore((s) => s.setTheme);
+  const toggleTheme = useCanvasStore((s) => s.toggleTheme);
   const lang = useCanvasStore((s) => s.lang);
   const setLang = useCanvasStore((s) => s.setLang);
   const undo = useCanvasStore((s) => s.undo);
@@ -115,16 +118,20 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
     action: run(() => setLang(l)),
   });
 
+  const insertAt = (fn: (x: number, y: number) => void) => () => {
+    const p = atCross();
+    fn(p.x, p.y);
+  };
+
   const menus: { id: string; label: string; alignRight?: boolean; items: Entry[] }[] = [
     {
       id: 'file',
       label: t('menu.file'),
       items: [
-        { id: 'new-math', icon: <IFormula />, label: t('menu.newMath'), action: run(() => { const p = atCross(); addBlock(p.x, p.y); }) },
-        { sep: true },
         { id: 'save', icon: <ISave />, label: t('menu.save'), hint: 'Ctrl+S', action: run(() => void saveDocument(blocks)) },
         { id: 'open', icon: <IOpen />, label: t('menu.open'), action: run(onOpenFile) },
         { id: 'share', icon: <ICopy />, label: t('menu.share'), action: run(() => void shareCurrentSheet()) },
+        { sep: true },
         { id: 'print-color', icon: <IPrint />, label: t('menu.printColor'), hint: 'Ctrl+P', action: run(() => printDocument('color')) },
         { id: 'print-bw', icon: <IPrint />, label: t('menu.printBw'), action: run(() => printDocument('bw')) },
         { id: 'export-md', icon: <ICopy />, label: t('menu.exportMd'), action: run(() => downloadMarkdown(blocks)) },
@@ -137,25 +144,15 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
       id: 'insert',
       label: t('menu.insert'),
       items: [
-        { id: 'ins-math', icon: <IFormula />, label: t('menu.insMath'), action: run(() => { const p = atCross(); addBlock(p.x, p.y); }) },
-        { id: 'ins-plot', icon: <IPlot />, label: t('menu.insPlot'), action: run(() => { const p = atCross(); addPlotBlock(p.x, p.y); }) },
-        { id: 'ins-contour', icon: <IPlot />, label: t('menu.insContour'), action: run(() => { const p = atCross(); addContourBlock(p.x, p.y); }) },
-        { id: 'ins-3d', icon: <IPlot3d />, label: t('menu.ins3d'), action: run(() => { const p = atCross(); addPlot3dBlock(p.x, p.y); }) },
-        { id: 'ins-prog', icon: <IProgram />, label: t('menu.insProg'), action: run(() => { const p = atCross(); addProgramBlock(p.x, p.y); }) },
-        { id: 'ins-slider', icon: <ISignal />, label: t('menu.insSlider'), action: run(() => { const p = atCross(); addSliderBlock(p.x, p.y); }) },
-        { id: 'ins-sim', icon: <ISim />, label: t('menu.insSim'), action: run(() => { const p = atCross(); addSimBlock(p.x, p.y); }) },
+        { id: 'ins-math', icon: <IFormula />, label: t('menu.insMath'), action: run(insertAt((x, y) => addBlock(x, y))) },
+        { id: 'ins-plot', icon: <IPlot />, label: t('menu.insPlot'), action: run(insertAt((x, y) => addPlotBlock(x, y))) },
+        { id: 'ins-contour', icon: <IPlot />, label: t('menu.insContour'), action: run(insertAt((x, y) => addContourBlock(x, y))) },
+        { id: 'ins-3d', icon: <IPlot3d />, label: t('menu.ins3d'), action: run(insertAt((x, y) => addPlot3dBlock(x, y))) },
+        { id: 'ins-prog', icon: <IProgram />, label: t('menu.insProg'), action: run(insertAt((x, y) => addProgramBlock(x, y))) },
+        { id: 'ins-slider', icon: <ISignal />, label: t('menu.insSlider'), action: run(insertAt((x, y) => addSliderBlock(x, y))) },
+        { id: 'ins-sim', icon: <ISim />, label: t('menu.insSim'), action: run(insertAt((x, y) => addSimBlock(x, y))) },
         { sep: true },
-        { id: 'ins-pal', icon: <IFx />, label: t('menu.insPal'), action: run(togglePalette) },
-      ],
-    },
-    {
-      id: 'edit',
-      label: t('menu.edit'),
-      items: [
-        { id: 'undo', icon: <IUndo />, label: t('menu.undo'), hint: 'Ctrl+Z', disabled: !canUndo, action: run(undo) },
-        { id: 'redo', icon: <IRedo />, label: t('menu.redo'), hint: 'Ctrl+Shift+Z', disabled: !canRedo, action: run(redo) },
-        { sep: true },
-        { id: 'recalc', icon: <IRecalc />, label: t('menu.recalc'), hint: 'Ctrl+Enter', action: run(recalc) },
+        { id: 'ins-pal', icon: <IFx />, label: t('menu.insPal'), hint: 'ƒx', action: run(togglePalette) },
       ],
     },
     {
@@ -164,6 +161,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
       items: [
         { id: 'grid', icon: <IGrid />, label: t('menu.grid'), checked: showGrid, action: run(toggleGrid) },
         { id: 'palette', icon: <IFx />, label: t('menu.palette'), checked: paletteOpen, action: run(togglePalette) },
+        { id: 'recalc', icon: <IRecalc />, label: t('menu.recalc'), hint: 'Ctrl+↵', action: run(recalc) },
         { sep: true },
         ...THEMES.map((th) => ({
           id: `theme-${th.id}`,
@@ -195,16 +193,52 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
     },
   ];
 
+  const drop = (m: (typeof menus)[number]) => (
+    <div
+      role="menu"
+      aria-label={m.label}
+      className={`menu-drop absolute top-full mt-1.5 min-w-60 border border-[var(--chrome-line)] bg-[var(--chrome)] z-30 ${
+        m.alignRight ? 'right-0' : 'left-0'
+      }`}
+    >
+      {m.items.map((it, i) => {
+        if ('sep' in it) return <div key={`sep${i}`} className="menu-sep" role="separator" />;
+        if ('head' in it) return <div key={`h${i}`} className="menu-head">{it.head}</div>;
+        return (
+          <button
+            key={it.id}
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={it.checked ?? undefined}
+            disabled={it.disabled}
+            onClick={it.action}
+            className="menu-item"
+          >
+            <span className="w-4 shrink-0 inline-flex justify-center" aria-hidden="true">
+              {it.checked ? <span className="text-[var(--accent)]">✓</span> : it.icon}
+            </span>
+            <span className={`flex-1 ${it.danger ? 'text-[var(--danger)]' : ''}`}>{it.label}</span>
+            {it.hint && <kbd>{it.hint}</kbd>}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div
       ref={barRef}
-      className="nya-menubar h-10 shrink-0 flex items-center gap-0.5 px-2 border-b border-[var(--chrome-line)] bg-[var(--chrome)]/90 backdrop-blur-xl text-[var(--chrome-ink)] z-20 select-none"
+      className="nya-menubar h-11 shrink-0 flex items-center gap-1 px-3 border-b border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] z-20 select-none"
       role="menubar"
       aria-label={t('menu.main')}
     >
-      <div className="font-semibold tracking-tight text-[14px] whitespace-nowrap mr-2 pl-1">
-        <span className="text-[var(--accent)]">Nya</span>Math
+      <div className="flex items-center gap-2 mr-1 select-none">
+        <span className="text-[var(--accent)] inline-flex" aria-hidden="true"><IPaw /></span>
+        <span className="font-semibold tracking-tight text-[14px] whitespace-nowrap">
+          NyaMath
+        </span>
       </div>
+
       {menus.map((m) => (
         <div key={m.id} className="relative">
           <button
@@ -212,9 +246,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
             role="menuitem"
             aria-haspopup="menu"
             aria-expanded={open === m.id}
-            className={`min-h-[32px] px-2.5 rounded-md text-[13px] cursor-pointer transition-colors duration-150 ease-out active:scale-[0.96] ${
-              open === m.id ? 'bg-white/10 text-[var(--chrome-ink)]' : 'text-[var(--chrome-soft)] hover:text-[var(--chrome-ink)] hover:bg-white/5'
-            }`}
+            className={`nya-mbtn ${open === m.id ? 'is-open' : ''}`}
             onClick={() => setOpen((v) => (v === m.id ? null : m.id))}
             onMouseEnter={() => {
               if (open !== null && open !== m.id) setOpen(m.id);
@@ -222,41 +254,38 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
           >
             {m.label}
           </button>
-          {open === m.id && (
-            <div
-              role="menu"
-              aria-label={m.label}
-              className={`menu-drop absolute top-full mt-1 min-w-60 py-1 rounded-xl border border-[var(--chrome-line)] bg-[var(--chrome)] shadow-2xl z-30 ${
-                m.alignRight ? 'right-0' : 'left-0'
-              }`}
-            >
-              {m.items.map((it, i) =>
-                'sep' in it ? (
-                  <div key={`sep${i}`} className="my-1 border-t border-[var(--chrome-line)]" role="separator" />
-                ) : (
-                  <button
-                    key={it.id}
-                    type="button"
-                    role="menuitemcheckbox"
-                    aria-checked={it.checked ?? undefined}
-                    disabled={it.disabled}
-                    onClick={it.action}
-                    className="w-full flex items-center gap-2.5 px-3 min-h-[36px] text-[13px] text-left cursor-pointer transition-colors duration-150 ease-out hover:bg-white/5 hover:text-[var(--chrome-ink)] text-[var(--chrome-soft)] disabled:opacity-40 disabled:pointer-events-none"
-                  >
-                    <span className="w-4 shrink-0 inline-flex justify-center" aria-hidden="true">
-                      {it.checked ? <span className="text-[var(--accent)]">✓</span> : it.icon}
-                    </span>
-                    <span className={`flex-1 ${it.danger ? 'text-[var(--danger)]' : ''}`}>{it.label}</span>
-                    {it.hint && (
-                      <kbd className="math-input text-[11px] text-[var(--chrome-soft)] opacity-80">{it.hint}</kbd>
-                    )}
-                  </button>
-                ),
-              )}
-            </div>
-          )}
+          {open === m.id && drop(m)}
         </div>
       ))}
+
+      <div className="flex-1" />
+
+      {/* частые действия — всегда под рукой */}
+      <div className="flex items-center gap-0.5" role="toolbar" aria-label={t('menu.edit')}>
+        <button type="button" className="nya-tbtn" onClick={undo} disabled={!canUndo} title={`${t('menu.undo')} · Ctrl+Z`} aria-label={t('menu.undo')}>
+          <IUndo />
+        </button>
+        <button type="button" className="nya-tbtn" onClick={redo} disabled={!canRedo} title={`${t('menu.redo')} · Ctrl+Shift+Z`} aria-label={t('menu.redo')}>
+          <IRedo />
+        </button>
+        <button type="button" className="nya-tbtn" onClick={recalc} title={`${t('menu.recalc')} · Ctrl+↵`} aria-label={t('menu.recalc')}>
+          <IRecalc />
+        </button>
+        <span className="w-px h-5 bg-[var(--chrome-line)] mx-1" aria-hidden="true" />
+        <button
+          type="button"
+          className={`nya-tbtn ${paletteOpen ? 'is-on' : ''}`}
+          onClick={togglePalette}
+          title={t('menu.palette')}
+          aria-label={t('menu.palette')}
+          aria-pressed={paletteOpen}
+        >
+          <IFx />
+        </button>
+        <button type="button" className="nya-tbtn" onClick={toggleTheme} title={theme} aria-label={theme}>
+          {THEMES.find((x) => x.id === theme)?.kind === 'light' ? <IMoon /> : <ISun />}
+        </button>
+      </div>
     </div>
   );
 }

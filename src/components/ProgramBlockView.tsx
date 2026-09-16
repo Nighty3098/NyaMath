@@ -7,7 +7,7 @@ import { debugProgram } from '../engine/program';
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IGrip, IResize, IX } from './Icon';
+import { IBug, IGrip, IResize, IWarn, IX } from './Icon';
 
 interface Props {
   block: MathBlockData;
@@ -88,7 +88,7 @@ function ProgramBlockView({ block, scale }: Props) {
       <div
         ref={regionRef}
         data-block-id={block.id}
-        className={`nya-block relative rounded-[10px] pl-2.5 pr-1.5 py-1 border-l-[3px] transition-shadow group ${
+        className={`nya-block relative rounded-xl pl-2.5 pr-1.5 py-1 border-l-[3px] transition-shadow group ${
           block.error
             ? 'border-[var(--danger)] bg-[var(--danger-bg)] shadow-[0_0_0_1.5px_var(--danger)]'
             : selected
@@ -153,7 +153,7 @@ function ProgramBlockView({ block, scale }: Props) {
           />
           <button
             type="button"
-            className="px-1.5 min-h-[28px] text-[11px] rounded-md border border-[var(--input-border)] text-[var(--faint)] hover:text-[var(--accent-line)] hover:border-[var(--accent-line)] cursor-pointer"
+            className="inline-flex items-center gap-1 px-1.5 min-h-[28px] text-[11px] rounded-md border border-[var(--input-border)] text-[var(--faint)] hover:text-[var(--accent-line)] hover:border-[var(--accent-line)] cursor-pointer"
             title={t('g.debugTitle')}
             onClick={(e) => {
               e.stopPropagation();
@@ -162,7 +162,7 @@ function ProgramBlockView({ block, scale }: Props) {
             }}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            🐞 {t(showDebug ? 'g.debugHide' : 'g.debugShow')}
+            <IBug /> {t(showDebug ? 'g.debugHide' : 'g.debugShow')}
           </button>
           <button
             type="button"
@@ -232,8 +232,8 @@ function ProgramBlockView({ block, scale }: Props) {
         )}
 
         {block.error ? (
-          <div className="text-[12px] leading-5 text-[var(--danger)]" role="alert">
-            ⚠ {block.error}
+          <div className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--danger)]" role="alert">
+            <IWarn /> {block.error}
           </div>
         ) : block.resultLatex ? (
           <div className="flex items-center gap-2 mt-0.5">
@@ -272,8 +272,8 @@ function ProgramBlockView({ block, scale }: Props) {
             onPointerDown={(e) => e.stopPropagation()}
           >
             {debug?.error && (
-              <div className="text-[12px] text-[var(--danger)]" role="alert">
-                ⚠ {debug.error}
+              <div className="flex items-center gap-1.5 text-[12px] text-[var(--danger)]" role="alert">
+                <IWarn /> {debug.error}
               </div>
             )}
             {(!debug || (!debug.error && debug.steps.length === 0)) && (

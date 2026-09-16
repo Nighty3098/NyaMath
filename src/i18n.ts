@@ -161,6 +161,8 @@ const ru = {
   'm.copied': 'Скопировано ✓',
 
   'p2.fnLabel': 'Функции графика, несколько — через точку с запятой',
+  'p2.options': 'Опции',
+  'p2.moreOptions': 'Дополнительные настройки графика',
   'p2.fnTitle': 'f(x); несколько серий через «;». Без x — вектор из документа по индексу',
   'p2.delete': 'Удалить график',
   'p2.xmin': 'Минимум x',
@@ -473,6 +475,8 @@ const en: Record<StrKey, string> = {
   'm.copied': 'Copied ✓',
 
   'p2.fnLabel': 'Plot functions, several — separated by semicolon',
+  'p2.options': 'Options',
+  'p2.moreOptions': 'More plot settings',
   'p2.fnTitle': 'f(x); several series via ";". Without x — document vector by index',
   'p2.delete': 'Delete plot',
   'p2.xmin': 'Minimum x',
@@ -689,8 +693,8 @@ const themeNames: Record<ThemeName, { ru: string; en: string }> = {
   'solarized-dark': { ru: 'Solarized тёмная', en: 'Solarized dark' },
   'osaka-solarized': { ru: 'Osaka Solarized', en: 'Osaka Solarized' },
   nightfly: { ru: 'Nightfly', en: 'Nightfly' },
-  'github-dark': { ru: 'GitHub тёмная', en: 'GitHub dark' },
-  'github-light': { ru: 'GitHub светлая', en: 'GitHub light' },
+  'github-dark': { ru: 'Paper тёмная', en: 'Paper dark' },
+  'github-light': { ru: 'Paper светлая', en: 'Paper light' },
 };
 
 /** Название темы на текущем языке. */

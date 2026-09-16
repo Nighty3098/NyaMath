@@ -6,7 +6,7 @@ import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IResize, ISave, IX } from './Icon';
+import { IGrip, IResize, ISave, IWarn, IX } from './Icon';
 import { t } from '../i18n';
 import { exportSvgElementToPng, safeFilename } from '../lib/exportFiles';
 
@@ -168,8 +168,8 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
     <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: ph + 132 }}>
       <div
         data-block-id={block.id}
-        className={`nya-block relative w-full h-full rounded-xl border px-3 py-2 flex flex-col bg-[var(--sheet)] shadow-[0_1px_2px_rgba(0,0,0,0.22),0_12px_32px_rgba(0,0,0,0.2)] group ${
-          selected ? 'border-[var(--accent-line)]' : 'border-[var(--line)]'
+        className={`nya-block relative w-full h-full rounded-xl px-3 py-2 flex flex-col bg-[var(--sheet)] shadow-[0_1px_2px_rgba(0,0,0,0.18),0_8px_24px_rgba(0,0,0,0.16)] group ${
+          selected ? 'outline outline-2 outline-offset-2 outline-[var(--accent-line)]' : ''
         }`}
         onClick={(e) => {
           e.stopPropagation();
@@ -185,7 +185,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
           onPointerCancel={onGripUp}
           onDoubleClick={(e) => e.stopPropagation()}
         >
-          <span className="text-[var(--faint)] text-[12px]" aria-hidden="true">⠿</span>
+          <span className="text-[var(--faint)] inline-flex" aria-hidden="true"><IGrip /></span>
           <span className="text-[11px] uppercase tracking-wider text-[var(--accent-ink)]">contour</span>
           <label htmlFor={`contourfn-${block.id}`} className="sr-only">{t('ctr.fnLabel')}</label>
           <input
@@ -232,7 +232,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
         </div>
         {title && <div className="text-center text-[13px] font-medium text-[var(--ink)] mb-1">{title}</div>}
         {data.err ? (
-          <div className="text-[var(--danger)] text-[12px]" role="alert">⚠ {data.err}</div>
+          <div className="flex items-center gap-1.5 text-[var(--danger)] text-[12px]" role="alert"><IWarn /> {data.err}</div>
         ) : (
           <svg
             ref={svgRef}

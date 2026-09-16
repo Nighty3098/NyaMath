@@ -2,29 +2,31 @@
 @import "katex/dist/katex.min.css";
 
 /* ===== Семантические токены тем (hex — canonical палитры с GitHub, см. src/theme.ts) ===== */
+/* Светлая по умолчанию — тёплая «бумага» в духе Claude/Notion: кремовый хром,
+   белые карточки, терракотовый акцент вместо холодного синего. */
 :root, [data-theme="github-light"] {
-  --chrome: #f6f8fa;
-  --chrome-ink: #1f2328;
-  --chrome-soft: #656d76;
-  --chrome-line: #d0d7de;
-  --canvas: #f6f8fa;
+  --chrome: #faf9f5;
+  --chrome-ink: #1f1e1d;
+  --chrome-soft: #6f6e69;
+  --chrome-line: #e8e6e1;
+  --canvas: #f0eee6;
   --sheet: #ffffff;
-  --ink: #1f2328;
-  --ink-soft: #424a53;
-  --faint: #8c959f;
-  --line: #d0d7de;
-  --hover-line: #afb8c1;
-  --accent: #0969da;
-  --accent-ink: #0550ae;
-  --accent-line: #0969da;
-  --accent-soft: rgba(9, 105, 218, 0.1);
-  --danger: #cf222e;
-  --danger-bg: rgba(207, 34, 46, 0.06);
-  --ok: #1a7f37;
+  --ink: #1f1e1d;
+  --ink-soft: #4a4845;
+  --faint: #9b9993;
+  --line: #e8e6e1;
+  --hover-line: #d9d6cd;
+  --accent: #c15f3c;
+  --accent-ink: #a34e31;
+  --accent-line: #c15f3c;
+  --accent-soft: rgba(193, 95, 60, 0.1);
+  --danger: #c4322b;
+  --danger-bg: rgba(196, 50, 43, 0.06);
+  --ok: #3e7c43;
   --input-bg: #ffffff;
-  --input-border: #d0d7de;
-  --grid-lt: rgba(31, 35, 40, 0.055);
-  --grid-dk: rgba(31, 35, 40, 0.11);
+  --input-border: #e0ddd5;
+  --grid-lt: rgba(31, 30, 29, 0.1);
+  --grid-dk: rgba(31, 30, 29, 0.17);
 }
 
 /* --- gruvbox dark: morhetz/gruvbox --- */
@@ -209,30 +211,30 @@
   --grid-dk: rgba(195, 204, 220, 0.1);
 }
 
-/* --- github dark: primer/github-vscode-theme + primer/primitives --- */
+/* --- github dark: тёплый charcoal под стать светлой «бумаге» (Claude-стиль) --- */
 [data-theme="github-dark"] {
-  --chrome: #161b22;
-  --chrome-ink: #e6edf3;
-  --chrome-soft: #7d8590;
-  --chrome-line: #30363d;
-  --canvas: #0d1117;
-  --sheet: #161b22;
-  --ink: #e6edf3;
-  --ink-soft: #c9d1d9;
-  --faint: #6e7681;
-  --line: #30363d;
-  --hover-line: #3d444d;
-  --accent: #2f81f7;
-  --accent-ink: #4493f8;
-  --accent-line: #1f6feb;
-  --accent-soft: rgba(47, 129, 247, 0.15);
-  --danger: #f85149;
-  --danger-bg: rgba(248, 81, 73, 0.1);
-  --ok: #3fb950;
-  --input-bg: #0d1117;
-  --input-border: #3d444d;
-  --grid-lt: rgba(230, 237, 243, 0.06);
-  --grid-dk: rgba(230, 237, 243, 0.12);
+  --chrome: #211f1d;
+  --chrome-ink: #ede9e2;
+  --chrome-soft: #a39e96;
+  --chrome-line: #38342f;
+  --canvas: #1b1a18;
+  --sheet: #262422;
+  --ink: #ede9e2;
+  --ink-soft: #c9c3b9;
+  --faint: #7d766d;
+  --line: #38342f;
+  --hover-line: #4b4440;
+  --accent: #d97757;
+  --accent-ink: #e89b7d;
+  --accent-line: #d97757;
+  --accent-soft: rgba(217, 119, 87, 0.15);
+  --danger: #e4685e;
+  --danger-bg: rgba(228, 104, 94, 0.1);
+  --ok: #7db383;
+  --input-bg: #1b1a18;
+  --input-border: #4b4440;
+  --grid-lt: rgba(237, 233, 226, 0.07);
+  --grid-dk: rgba(237, 233, 226, 0.13);
 }
 
 html, body, #root {
@@ -254,12 +256,30 @@ html, body, #root {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv11", "ss01";
   background: var(--canvas);
   color: var(--chrome-ink);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Белые оверлеи из старых классов — переводим на нейтральный currentColor-микс,
+   чтобы одинаково тихо смотрелись и на тёплой бумаге, и в тёмных темах. */
+.hover\:bg-white\/5:hover { background: color-mix(in srgb, currentColor 8%, transparent) !important; }
+.hover\:bg-white\/10:hover { background: color-mix(in srgb, currentColor 12%, transparent) !important; }
+.bg-white\/10 { background: color-mix(in srgb, currentColor 10%, transparent) !important; }
+.bg-white\/5 { background: color-mix(in srgb, currentColor 6%, transparent) !important; }
+
+/* Режим «без бордеров»: все нейтральные рамки прозрачны во всём приложении.
+   Через атрибут-селектор (без экранирований — их не переваривает парсер).
+   Смысловые не трогаем: акцент редактирования/выбора, danger, is-on состояния. */
+[class*="border-[var(--line)]"],
+[class*="border-[var(--chrome-line)]"],
+[class*="border-[var(--input-border)]"] {
+  border-color: transparent !important;
+}
+.menu-sep { border-top-color: transparent; }
 
 /* ===== Тач и мобильные: крупные цели, видимые ручки, safe-area ===== */
 /* Ручки блоков видны только по hover — на таче hover нет, показываем всегда */
@@ -350,14 +370,10 @@ body {
   border-radius: 4px;
 }
 
-/* Сетка поверх листа — цвет из токенов темы */
+/* Сетка-точки в духе Notion/Excalidraw — спокойнее линейной */
 .nya-grid-fine {
-  background-image:
-    linear-gradient(to right, var(--grid-lt) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-lt) 1px, transparent 1px),
-    linear-gradient(to right, var(--grid-dk) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-dk) 1px, transparent 1px);
-  background-size: 14px 14px, 14px 14px, 140px 140px, 140px 140px;
+  background-image: radial-gradient(circle, var(--grid-dk) 1.2px, transparent 1.3px);
+  background-size: 22px 22px;
 }
 
 /* Регион Mathcad: прозрачный, размер по содержимому */
@@ -387,7 +403,7 @@ body {
 }
 
 .math-input {
-  font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -407,6 +423,156 @@ body {
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: var(--hover-line); border-radius: 8px; }
 *::-webkit-scrollbar-track { background: transparent; }
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* ===== Минималистичная дизайн-система: единый ритм, мягкие поверхности ===== */
+/* Notion/Claude-стиль: компактные радиусы, едва заметные тени, тёплые нейтрали. */
+:root {
+  --radius-s: 6px;
+  --radius-m: 8px;
+  --radius-l: 12px;
+  --shadow-card: 0 1px 2px rgba(31, 30, 29, 0.06), 0 4px 16px rgba(31, 30, 29, 0.07);
+  --shadow-pop: 0 12px 40px rgba(31, 30, 29, 0.16), 0 2px 8px rgba(31, 30, 29, 0.1);
+  --chrome-blur: saturate(1.1) blur(10px);
+}
+
+/* Тулбар: спокойные кнопки с единой геометрией */
+.nya-tbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 6px;
+  border-radius: var(--radius-s);
+  color: var(--chrome-soft);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 140ms ease-out, color 140ms ease-out, border-color 140ms ease-out, transform 140ms ease-out;
+}
+.nya-tbtn:hover {
+  color: var(--chrome-ink);
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+.nya-tbtn:active { transform: scale(0.94); }
+.nya-tbtn:disabled { opacity: 0.35; pointer-events: none; }
+.nya-tbtn.is-on {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent-line) 35%, transparent);
+}
+.nya-mbtn {
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: var(--radius-s);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--chrome-soft);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 140ms ease-out, color 140ms ease-out, transform 140ms ease-out;
+}
+.nya-mbtn:hover { color: var(--chrome-ink); background: color-mix(in srgb, currentColor 7%, transparent); }
+.nya-mbtn:active { transform: scale(0.96); }
+.nya-mbtn.is-open { color: var(--chrome-ink); background: color-mix(in srgb, currentColor 10%, transparent); }
+
+/* Выпадающие меню: воздушные, с секциями */
+.menu-drop {
+  min-width: 15.5rem;
+  padding: 6px;
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-pop);
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 10px;
+  border-radius: var(--radius-s);
+  font-size: 13px;
+  line-height: 18px;
+  text-align: left;
+  color: var(--chrome-soft);
+  cursor: pointer;
+  transition: background 120ms ease-out, color 120ms ease-out;
+}
+.menu-item:hover { background: var(--accent-soft); color: var(--chrome-ink); }
+.menu-item:disabled { opacity: 0.4; pointer-events: none; }
+.menu-item kbd {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  opacity: 0.7;
+}
+.menu-sep { margin: 6px 4px; border-top: 1px solid var(--chrome-line); }
+.menu-head {
+  padding: 6px 10px 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* Поля ввода: тихие, с акцентом только в фокусе */
+.nya-input {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-s);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+}
+.nya-input:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft); }
+.nya-input::placeholder { color: var(--faint); }
+
+/* Подсказки-клавиши в пустом состоянии и справке */
+.nya-kbd {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--chrome);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* Блоки: единый минимализм — мягкая рамка, спокойная тень, акцент только у выбранного */
+.nya-block {
+  border-radius: var(--radius-m);
+  transition: box-shadow 150ms ease-out, border-color 150ms ease-out, background 150ms ease-out;
+}
+.nya-region .nya-block:focus-within > .opacity-0 { opacity: 1; }
+.nya-block-error {
+  border-left: 3px solid var(--danger);
+}
+.nya-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--ok);
+}
+.nya-status-dot.is-err { background: var(--danger); }
+
+/* Зумбар-пилюля и палитра: стекло, минимум шума */
+.nya-zoombar {
+  border-radius: 999px;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: var(--chrome-blur);
+}
+.nya-palette-float { box-shadow: var(--shadow-pop); }
+.pal-pack {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  backdrop-filter: var(--chrome-blur);
+  background: color-mix(in srgb, var(--chrome) 88%, transparent);
+}
 
 /* ===== Выпадающие меню: одноразовый вход при монтировании — keyframes ===== */
 .menu-drop {

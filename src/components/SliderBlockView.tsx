@@ -2,7 +2,7 @@ import { memo, useRef } from 'react';
 import type { MathBlockData } from '../engine/dependencies';
 import { useCanvasStore } from '../store/canvasStore';
 import { useRegionDrag } from './useRegionDrag';
-import { IGrip, IX } from './Icon';
+import { IGrip, IWarn, IX } from './Icon';
 import { t } from '../i18n';
 
 interface Props {
@@ -113,7 +113,7 @@ function SliderBlockView({ block, scale }: Props) {
     <div className="nya-region absolute z-10" style={{ left: block.x, top: block.y }}>
       <div
         data-block-id={block.id}
-        className={`nya-block relative rounded-[10px] px-2 py-1.5 transition-shadow group min-w-[240px] ${
+        className={`nya-block relative rounded-xl px-2 py-1.5 transition-shadow group min-w-[240px] ${
           block.error
             ? 'shadow-[0_0_0_1.5px_var(--danger)] bg-[var(--danger-bg)]'
             : selected
@@ -228,8 +228,8 @@ function SliderBlockView({ block, scale }: Props) {
         </div>
 
         {block.error && (
-          <div className="text-[12px] leading-5 text-[var(--danger)] mt-1" role="alert">
-            ⚠ {block.error}
+          <div className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--danger)] mt-1" role="alert">
+            <IWarn /> {block.error}
           </div>
         )}
       </div>

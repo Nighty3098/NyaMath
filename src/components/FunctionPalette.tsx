@@ -181,7 +181,7 @@ export default function FunctionPalette() {
 
   const header = (
     <div
-      className="flex items-center gap-1.5 px-3 py-2 border-b border-[var(--chrome-line)] select-none cursor-grab active:cursor-grabbing touch-none"
+      className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--chrome-line)] select-none cursor-grab active:cursor-grabbing touch-none"
       onPointerDown={(e) => {
         if ((e.target as HTMLElement).closest('input,button')) return;
         e.preventDefault();
@@ -196,23 +196,22 @@ export default function FunctionPalette() {
       <span className="text-[var(--accent)] shrink-0" aria-hidden="true">
         <IFx />
       </span>
-      <span className="text-[13px] font-semibold whitespace-nowrap">{t('pal.insert')}</span>
-      <span className="math-input text-[11px] text-[var(--chrome-soft)]">{items.length}</span>
       <label htmlFor="fx-search" className="sr-only">
         {t('pal.searchLabel')}
       </label>
       <input
         id="fx-search"
-        className="flex-1 min-w-0 min-h-[36px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-2 py-1 text-[13px] outline-none focus:border-[var(--accent-line)] cursor-text"
+        className="nya-input flex-1 min-w-0 min-h-[34px] px-2.5 py-1 text-[13px]"
         placeholder={t('pal.searchPh')}
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onPointerDown={(e) => e.stopPropagation()}
         autoFocus={!docked}
       />
+      <span className="math-input tabular-nums text-[11px] text-[var(--chrome-soft)] shrink-0">{items.length}</span>
       <button
         type="button"
-        className="min-w-[36px] min-h-[36px] inline-flex items-center justify-center rounded-lg text-[var(--chrome-soft)] hover:text-[var(--chrome-ink)] hover:bg-white/5 cursor-pointer"
+        className="nya-tbtn w-8 h-8 shrink-0"
         onClick={close}
         aria-label={t('pal.close')}
       >
@@ -222,19 +221,19 @@ export default function FunctionPalette() {
   );
 
   const list = (
-    <div className="flex-1 min-h-0 overflow-y-auto p-2">
+    <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2">
       {PACKS.map((pack) => {
         const rows = items.filter((s) => s.pack === pack);
         if (!rows.length) return null;
         const PackIcon = PACK_ICONS[pack];
         return (
-          <div key={pack} className="mb-2">
-            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-[var(--chrome-soft)] px-1 mb-1">
+          <div key={pack} className="mt-1.5">
+            <div className="pal-pack flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--faint)] px-2 py-1.5 rounded-lg">
               <span aria-hidden="true">
                 <PackIcon />
               </span>
               {packName(pack)}
-              <span className="math-input normal-case tracking-normal opacity-70">{rows.length}</span>
+              <span className="math-input normal-case font-normal tracking-normal opacity-70">{rows.length}</span>
             </div>
             {rows.map((s) => {
               const KindIcon = KIND_ICONS[s.kind];
@@ -242,21 +241,20 @@ export default function FunctionPalette() {
                 <button
                   key={pack + lx(s.label)}
                   type="button"
-                  className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-[var(--hover-line)] group cursor-pointer"
+                  className="w-full text-left px-2 py-1.5 rounded-lg border border-transparent hover:border-[var(--chrome-line)] hover:bg-[var(--accent-soft)]/50 group cursor-pointer transition-colors duration-120 ease-out"
                   onClick={() => insert(s)}
                   title={lx(s.hint)}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <span className="text-[var(--accent)] shrink-0" aria-hidden="true">
                       <KindIcon />
                     </span>
-                    <span className="text-[13px]">{lx(s.label)}</span>
-                    <span className="text-[11px] text-[var(--chrome-soft)] truncate">{lx(s.hint)}</span>
-                    <span className="ml-auto text-[var(--accent)] opacity-0 group-hover:opacity-100 text-[16px]" aria-hidden="true">
+                    <span className="text-[13px] leading-4 truncate">{lx(s.label)}</span>
+                    <span className="ml-auto text-[var(--faint)] group-hover:text-[var(--accent)] group-hover:opacity-100 opacity-0 text-[15px] leading-4 shrink-0 transition-opacity" aria-hidden="true">
                       +
                     </span>
                   </div>
-                  <div className="math-input text-[12px] text-[var(--accent-ink)]/80 truncate pl-6">
+                  <div className="math-input text-[11.5px] leading-4 text-[var(--chrome-soft)] truncate pl-6 mt-0.5">
                     {s.code.split('\n')[0]}
                     {s.code.includes('\n') ? ' …' : ''}
                   </div>
@@ -299,9 +297,7 @@ export default function FunctionPalette() {
     );
     return (
       <div
-        className={`h-full shrink-0 flex items-stretch bg-[var(--chrome)] text-[var(--chrome-ink)] ${
-          mode === 'left' ? 'border-r' : 'border-l'
-        } border-[var(--chrome-line)]`}
+        className="h-full shrink-0 flex items-stretch bg-[var(--chrome)] text-[var(--chrome-ink)]"
         style={{ width: dockW }}
         role="complementary"
         aria-label={t('pal.aria')}
