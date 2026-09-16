@@ -5,6 +5,7 @@ import WelcomeModal from './components/WelcomeModal';
 import FunctionPalette from './components/FunctionPalette';
 import { useCanvasStore } from './store/canvasStore';
 import { saveDocument } from './lib/saveDocument';
+import { installPrintCleanup } from './lib/print';
 import { clearShareParamFromUrl, decodeShareParam, readLangFromUrl, readShareParamFromUrl, readTemplateFromUrl } from './lib/share';
 import { t } from './i18n';
 
@@ -70,14 +71,10 @@ export default function App() {
   }, []);
 
   // Перед печатью коммитим открытый редактор (blur → finishEdit),
-  // иначе печатается пустой textarea вместо формулы
-  useEffect(() => {
-    const commit = () => {
-      (document.activeElement as HTMLElement | null)?.blur?.();
-    };
-    window.addEventListener('beforeprint', commit);
-    return () => window.removeEventListener('beforeprint', commit);
-  }, []);
+  // иначе печатается пустой textarea вместо формулы.
+  // Ctrl+P / системная печать в обход меню — по умолчанию цвет темы;
+  // afterprint сбрасывает data-print, чтобы ч/б не прилипал к экрану.
+  useEffect(() => installPrintCleanup(), []);
 
   // Входящая share-ссылка: `&lang=` применяем сразу (и в localStorage),
   // `#t=…` (пример) или `#d=…` (данные) — грузим лист, справку не показываем.

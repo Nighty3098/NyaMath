@@ -459,9 +459,13 @@ body {
   transition: opacity 150ms ease-out, transform 150ms ease-out, filter 150ms ease-out;
 }
 
-/* ===== Печать / PDF: лист → вертикальный документ, цвета текущей темы ===== */
+/* ===== Печать / PDF: лист → вертикальный документ =====
+   @page margin 0: убирает белые поля вокруг тёмной темы и штатные
+   колонтитулы браузера (URL, дата, «4 of 5» живут в полях страницы).
+   Внутренние поля задаём отступом .nya-sheet, фон — цветом темы. */
 @page {
-  margin: 10mm;
+  size: A4;
+  margin: 0;
 }
 @media print {
   /* цвета как на экране (тёмная тема печатается тёмной) */
@@ -508,7 +512,9 @@ body {
     gap: 10px !important;
     width: 100% !important;
     max-width: 100% !important;
-    padding: 0 !important;
+    padding: 10mm !important;
+    background: var(--canvas) !important;
+    box-sizing: border-box !important;
   }
   /* каждый блок — карточка в потоке поверх инлайновых left/top/width/height */
   .nya-sheet > .nya-region,
@@ -546,5 +552,57 @@ body {
   }
   .nya-sheet canvas {
     max-width: 100% !important;
+  }
+
+  /* ===== Ч/Б режим: data-print="bw" — чёрный текст, белый фон ===== */
+  html[data-print="bw"],
+  html[data-print="bw"] body,
+  html[data-print="bw"] #root,
+  html[data-print="bw"] .nya-app,
+  html[data-print="bw"] .nya-workspace,
+  html[data-print="bw"] .nya-canvas,
+  html[data-print="bw"] .nya-sheet {
+    --canvas: #ffffff;
+    --sheet: #ffffff;
+    --chrome: #ffffff;
+    --chrome-ink: #000000;
+    --chrome-soft: #333333;
+    --chrome-line: #000000;
+    --ink: #000000;
+    --ink-soft: #111111;
+    --faint: #444444;
+    --line: #000000;
+    --hover-line: #000000;
+    --accent: #000000;
+    --accent-ink: #000000;
+    --accent-line: #000000;
+    --accent-soft: rgba(0, 0, 0, 0.05);
+    --danger: #000000;
+    --danger-bg: rgba(0, 0, 0, 0.05);
+    --ok: #000000;
+    --input-bg: #ffffff;
+    --input-border: #000000;
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
+  }
+  html[data-print="bw"] .nya-block {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
+  }
+  html[data-print="bw"] .nya-sheet .katex,
+  html[data-print="bw"] .nya-sheet .katex * {
+    color: #000000 !important;
+  }
+  /* SVG-графики: белый фон + grayscale (инлайновые fill/stroke палитры иначе останутся тёмными) */
+  html[data-print="bw"] .nya-sheet svg {
+    background: #ffffff !important;
+    filter: grayscale(1) contrast(1.05);
+  }
+  html[data-print="bw"] .nya-sheet canvas {
+    background: #ffffff !important;
+    filter: grayscale(1) contrast(1.05);
   }
 }
