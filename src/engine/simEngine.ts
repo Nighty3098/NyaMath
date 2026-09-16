@@ -811,6 +811,36 @@ export const SIM_MODELS: SimModel[] = [
     init: '6771000, 0, 0, 7672', t0: 0, t1: 6000, dt: 5, solver: 'rk45', x: 'x', y: 'y',
   },
   {
+    id: 'lctank', domain: 'circuits',
+    label: L('LC-контур', 'LC tank'),
+    desc: L('Свободные колебания с малыми потерями', 'Free oscillations with small losses'),
+    states: 'q, i', derivs: 'i; -q/(L*C) - R*i/L', aux: '',
+    params: [{ name: 'L', def: '0.01' }, { name: 'C', def: '1e-6' }, { name: 'R', def: '0.5' }],
+    init: '1e-6, 0', t0: 0, t1: 0.01, dt: 0.00001, solver: 'rk4', x: 't', y: 'q; i',
+  },
+  {
+    id: 'drivenRLC', domain: 'circuits',
+    label: L('RLC под синусом', 'Driven RLC'),
+    desc: L('Вынужденный отклик последовательного контура', 'Forced response of a series circuit'),
+    states: 'q, i', derivs: 'i; (V*cos(w*t) - R*i - q/C)/L', aux: '',
+    params: [
+      { name: 'R', def: '10' }, { name: 'L', def: '0.1' }, { name: 'C', def: '1e-5' },
+      { name: 'V', def: '5' }, { name: 'w', def: '1000' },
+    ],
+    init: '0, 0', t0: 0, t1: 0.05, dt: 0.00002, solver: 'rk4', x: 't', y: 'q; i',
+  },
+  {
+    id: 'duffing', domain: 'chaos',
+    label: L('Осциллятор Даффинга', 'Duffing oscillator'),
+    desc: L('Двухъямный потенциал, хаос под накачкой', 'Double-well potential, driven chaos'),
+    states: 'x, v', derivs: 'v; -d*v - a*x - b*x^3 + F*cos(w*t)', aux: '',
+    params: [
+      { name: 'd', def: '0.2' }, { name: 'a', def: '-1' }, { name: 'b', def: '1' },
+      { name: 'F', def: '0.3' }, { name: 'w', def: '1.2' },
+    ],
+    init: '1, 0', t0: 0, t1: 60, dt: 0.02, solver: 'rk4', x: 'x', y: 'v',
+  },
+  {
     id: 'rlc', domain: 'circuits',
     label: L('RLC-контур', 'RLC circuit'),
     desc: L('Последовательный контур под постоянным напряжением', 'Series circuit under DC voltage'),
@@ -912,6 +942,14 @@ export const SIM_MODELS: SimModel[] = [
     states: '', derivs: '', aux: '', params: [], init: '',
     t0: 0, t1: 0, dt: 0, solver: 'rk4', x: 't', y: '',
     fdtd: { n: 400, length: 20, steps: 1500, src: 'gauss', freq: 1, amp: 1, srcX: 4, det: 16, layers: '9, 11, 100' },
+  },
+  {
+    id: 'bragg', domain: 'optics', mode: 'fdtd',
+    label: L('Зеркало Брэгга', 'Bragg mirror'),
+    desc: L('Два слоя eps=4: многократные отражения', 'Two eps=4 slabs: multiple reflections'),
+    states: '', derivs: '', aux: '', params: [], init: '',
+    t0: 0, t1: 0, dt: 0, solver: 'rk4', x: 't', y: '',
+    fdtd: { n: 400, length: 20, steps: 2000, src: 'gauss', freq: 1, amp: 1, srcX: 4, det: 16, layers: '8, 9, 4\n11, 12, 4' },
   },
 ];
 
