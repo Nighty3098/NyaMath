@@ -6,7 +6,7 @@ import { THEMES } from '../theme';
 import { t, themeLabel, type Lang } from '../i18n';
 import {
   IDemo, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
-  IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy,
+  IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy, ISignal,
 } from './Icon';
 
 interface MenuBarProps {
@@ -47,6 +47,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
   const addPlot3dBlock = useCanvasStore((s) => s.addPlot3dBlock);
   const addProgramBlock = useCanvasStore((s) => s.addProgramBlock);
   const addSimBlock = useCanvasStore((s) => s.addSimBlock);
+  const addSliderBlock = useCanvasStore((s) => s.addSliderBlock);
   const loadTestScenario = useCanvasStore((s) => s.loadTestScenario);
   const loadAdvancedDemo = useCanvasStore((s) => s.loadAdvancedDemo);
   const clear = useCanvasStore((s) => s.clear);
@@ -136,6 +137,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
         { id: 'ins-contour', icon: <IPlot />, label: t('menu.insContour'), action: run(() => { const p = atCross(); addContourBlock(p.x, p.y); }) },
         { id: 'ins-3d', icon: <IPlot3d />, label: t('menu.ins3d'), action: run(() => { const p = atCross(); addPlot3dBlock(p.x, p.y); }) },
         { id: 'ins-prog', icon: <IProgram />, label: t('menu.insProg'), action: run(() => { const p = atCross(); addProgramBlock(p.x, p.y); }) },
+        { id: 'ins-slider', icon: <ISignal />, label: t('menu.insSlider'), action: run(() => { const p = atCross(); addSliderBlock(p.x, p.y); }) },
         { id: 'ins-sim', icon: <ISim />, label: t('menu.insSim'), action: run(() => { const p = atCross(); addSimBlock(p.x, p.y); }) },
         { sep: true },
         { id: 'ins-pal', icon: <IFx />, label: t('menu.insPal'), action: run(togglePalette) },

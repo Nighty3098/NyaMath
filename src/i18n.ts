@@ -66,6 +66,7 @@ const ru = {
   'menu.insContour': 'Контурный график',
   'menu.ins3d': '3D-график',
   'menu.insProg': 'Программный блок',
+  'menu.insSlider': 'Слайдер параметра',
   'menu.insPal': 'Палитра функций…',
   'menu.undo': 'Отменить',
   'menu.redo': 'Вернуть',
@@ -230,6 +231,13 @@ const ru = {
 
   'mini.aria': 'Автографик {label}: y от {lo} до {hi}',
 
+  'slider.title': 'Слайдер параметра: значение уходит в переменную документа',
+  'slider.var': 'Переменная',
+  'slider.min': 'Мин',
+  'slider.max': 'Макс',
+  'slider.step': 'Шаг',
+  'slider.aria': 'Ползунок параметра',
+
   'menu.insSim': 'Симуляция',
   'sim.preset': 'Модель',
   'sim.custom': 'Своя система',
@@ -290,6 +298,8 @@ const ru = {
   'e.badUnitName': 'Плохое имя единицы: "{name}"',
   'e.calcArgs': 'Неверные аргументы функции',
   'e.calcNoConv': 'Не сошлось — смените старт или постановку',
+  'e.sliderVar': 'Слайдер: плохое имя переменной',
+  'e.sliderRange': 'Слайдер: нужно мин < макс',
   'e.calcBracket': 'Нет смены знака на [a, b]',
   'e.calcIntRange': 'Нужны целые a<=b (не более 10^6 шагов)',
   'e.syntax': 'Синтаксическая ошибка: {msg}',
@@ -364,6 +374,7 @@ const en: Record<StrKey, string> = {
   'menu.insContour': 'Contour plot',
   'menu.ins3d': '3D graph',
   'menu.insProg': 'Program block',
+  'menu.insSlider': 'Parameter slider',
   'menu.insPal': 'Function palette…',
   'menu.undo': 'Undo',
   'menu.redo': 'Redo',
@@ -528,6 +539,13 @@ const en: Record<StrKey, string> = {
 
   'mini.aria': 'Auto-plot {label}: y from {lo} to {hi}',
 
+  'slider.title': 'Parameter slider: the value feeds a document variable',
+  'slider.var': 'Variable',
+  'slider.min': 'Min',
+  'slider.max': 'Max',
+  'slider.step': 'Step',
+  'slider.aria': 'Parameter slider',
+
   'menu.insSim': 'Simulation',
   'sim.preset': 'Model',
   'sim.custom': 'Custom system',
@@ -588,6 +606,8 @@ const en: Record<StrKey, string> = {
   'e.badUnitName': 'Bad unit name: "{name}"',
   'e.calcArgs': 'Bad function arguments',
   'e.calcNoConv': 'Did not converge — change start or setup',
+  'e.sliderVar': 'Slider: bad variable name',
+  'e.sliderRange': 'Slider: need min < max',
   'e.calcBracket': 'No sign change on [a, b]',
   'e.calcIntRange': 'Need integer a<=b (at most 10^6 steps)',
   'e.syntax': 'Syntax error: {msg}',

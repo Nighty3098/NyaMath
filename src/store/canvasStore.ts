@@ -58,6 +58,9 @@ export interface CanvasState {
   addProgramBlock: (x: number, y: number, raw?: string, exportName?: string) => void;
   addSimBlock: (x: number, y: number, modelId?: string) => void;
   updateSim: (id: string, patch: Partial<MathBlockData>) => void;
+  addSliderBlock: (x: number, y: number) => void;
+  setSliderValue: (id: string, val: number) => void;
+  updateSlider: (id: string, patch: Partial<MathBlockData>) => void;
   updateInput: (id: string, raw: string) => void;
   setExportName: (id: string, name: string) => void;
   moveBlock: (id: string, x: number, y: number) => void;
@@ -123,7 +126,7 @@ function migrate(raw: unknown): MathBlockData | null {
   const b = raw as Partial<MathBlockData>;
   if (typeof b.x !== 'number' || typeof b.y !== 'number' || typeof b.rawInput !== 'string') return null;
   const id = typeof b.id === 'string' && b.id ? b.id : uuid();
-  const kind = b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'program' || b.kind === 'text' || b.kind === 'sim' || b.kind === 'contour' ? b.kind : 'math';
+  const kind = b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'program' || b.kind === 'text' || b.kind === 'sim' || b.kind === 'contour' || b.kind === 'slider' ? b.kind : 'math';
   const numOrNull = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
   const numOrUndef = (v: unknown): number | undefined => (typeof v === 'number' && isFinite(v) ? v : undefined);
   const strOrUndef = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
@@ -181,6 +184,11 @@ function migrate(raw: unknown): MathBlockData | null {
     simExport: typeof b.simExport === 'string' ? b.simExport : undefined,
     simSpeed: numOrUndef(b.simSpeed),
     simLoop: typeof b.simLoop === 'boolean' ? b.simLoop : undefined,
+    sliderVar: strOrUndef(b.sliderVar),
+    sliderMin: numOrUndef(b.sliderMin),
+    sliderMax: numOrUndef(b.sliderMax),
+    sliderStep: numOrUndef(b.sliderStep),
+    sliderVal: numOrUndef(b.sliderVal),
     w: numOrNull(b.w),
     h: numOrNull(b.h),
   };
@@ -291,7 +299,9 @@ function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathB
       x.simFdtdN !== y.simFdtdN || x.simFdtdL !== y.simFdtdL || x.simFdtdSteps !== y.simFdtdSteps ||
       x.simFdtdSrc !== y.simFdtdSrc || x.simFdtdFreq !== y.simFdtdFreq || x.simFdtdAmp !== y.simFdtdAmp ||
       x.simFdtdSrcX !== y.simFdtdSrcX || x.simFdtdDet !== y.simFdtdDet || x.simFdtdLayers !== y.simFdtdLayers ||
-      x.simExport !== y.simExport || x.simSpeed !== y.simSpeed || x.simLoop !== y.simLoop
+      x.simExport !== y.simExport || x.simSpeed !== y.simSpeed || x.simLoop !== y.simLoop ||
+      x.sliderVar !== y.sliderVar || x.sliderMin !== y.sliderMin || x.sliderMax !== y.sliderMax ||
+      x.sliderStep !== y.sliderStep || x.sliderVal !== y.sliderVal
     ) return false;
   }
   return true;
@@ -492,6 +502,35 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     // если сменили модель на custom вручную — сбросить привязку (чтобы селект показал Custom)
     set({ blocks: { ...get().blocks, [id]: { ...cur, ...patch } } });
     scheduleRecalc(get, set as SetFn, 200);
+  },
+
+  addSliderBlock: (x, y) => {
+    pushHistory(get, set as SetFn, true);
+    const id = uuid();
+    const b: MathBlockData = {
+      ...blank(id, x, y), rawInput: 'slider', kind: 'slider',
+      sliderVar: 'k', sliderMin: 0, sliderMax: 10, sliderStep: 0.5, sliderVal: 5,
+    };
+    const next = withRecalc({ ...get().blocks, [id]: b });
+    persist(next);
+    set({ blocks: next, selectedIds: [id] });
+  },
+
+  /** Живое движение ползунка: без истории (история — один снапшот на жест, см. beginGesture). */
+  setSliderValue: (id, val) => {
+    const cur = get().blocks[id];
+    if (!cur || cur.kind !== 'slider') return;
+    set({ blocks: { ...get().blocks, [id]: { ...cur, sliderVal: val } } });
+    scheduleRecalc(get, set as SetFn, 120);
+  },
+
+  updateSlider: (id, patch) => {
+    const cur = get().blocks[id];
+    if (!cur || cur.kind !== 'slider') return;
+    pushHistory(get, set as SetFn);
+    const next = withRecalc({ ...get().blocks, [id]: { ...cur, ...patch } });
+    persist(next);
+    set((s) => ({ blocks: next, recalcCounter: s.recalcCounter + 1 }));
   },
 
   updateInput: (id, raw) => {

@@ -19,7 +19,13 @@ export interface MathBlockData {
   definedVar: string | null;
   /** true, если последняя строка блока — вывод (expr / expr =): результат показываем инлайн */
   isOutput: boolean;
-  kind: 'math' | 'plot' | 'text' | 'program' | 'plot3d' | 'sim' | 'contour';
+  kind: 'math' | 'plot' | 'text' | 'program' | 'plot3d' | 'sim' | 'contour' | 'slider';
+  /** Слайдер: имя переменной, диапазон, шаг и текущее значение */
+  sliderVar?: string;
+  sliderMin?: number;
+  sliderMax?: number;
+  sliderStep?: number;
+  sliderVal?: number;
   plotFn?: string;
   plotXmin?: number;
   plotXmax?: number;
@@ -99,6 +105,7 @@ function blockDeps(b: MathBlockData): string[] {
     }
   }
   if (b.kind === 'sim') return simDeps(b);
+  if (b.kind === 'slider') return [];
   const deps = new Set<string>();
   for (const line of b.rawInput.split('\n')) {
     const t = stripOnError(line.trim());
@@ -123,6 +130,10 @@ function blockDefs(b: MathBlockData): string[] {
     const exp = (b.simExport ?? '').trim();
     return exp && isValidVarName(exp) ? [exp] : [];
   }
+  if (b.kind === 'slider') {
+    const v = (b.sliderVar ?? '').trim();
+    return v && isValidVarName(v) && v !== 'i' ? [v] : [];
+  }
   if (b.kind !== 'math') return [];
   const defs: string[] = [];
   for (const line of b.rawInput.split('\n')) {
@@ -143,7 +154,7 @@ export function detectCycles(blocks: MathBlockData[]): Set<string> {
   }
   const adj = new Map<string, string[]>();
   for (const b of blocks) {
-    if (b.kind !== 'math' && b.kind !== 'program' && b.kind !== 'sim') continue;
+    if (b.kind !== 'math' && b.kind !== 'program' && b.kind !== 'sim' && b.kind !== 'slider') continue;
     const deps = new Set<string>();
     for (const d of blockDeps(b)) {
       const target = defMap.get(d);
@@ -264,6 +275,40 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
       cur.dependencies = [];
       cur.definedVar = null;
       cur.isOutput = false;
+      continue;
+    }
+
+    // ---------- слайдер: значение ползунка уходит в scope как переменная ----------
+    if (b.kind === 'slider') {
+      cur.dependencies = [];
+      cur.isOutput = true;
+      cur.displayLatex = '';
+      const v = (b.sliderVar ?? '').trim();
+      const lo = b.sliderMin;
+      const hi = b.sliderMax;
+      const badVar = !v || !isValidVarName(v) || v === 'i';
+      if (badVar) {
+        cur.error = t('e.sliderVar');
+      } else if (typeof lo !== 'number' || typeof hi !== 'number' || !isFinite(lo) || !isFinite(hi) || !(hi > lo)) {
+        cur.error = t('e.sliderRange');
+      } else {
+        cur.error = null;
+      }
+      if (cur.error) {
+        cur.resultStr = '';
+        cur.resultLatex = '';
+        cur.resultValue = null;
+        cur.definedVar = null;
+        continue;
+      }
+      const val = typeof b.sliderVal === 'number' && isFinite(b.sliderVal)
+        ? Math.min(hi as number, Math.max(lo as number, b.sliderVal))
+        : (lo as number);
+      cur.definedVar = v;
+      cur.resultValue = val;
+      cur.resultStr = formatResult(val);
+      cur.resultLatex = valueToLatex(val);
+      scope[v] = val;
       continue;
     }
 

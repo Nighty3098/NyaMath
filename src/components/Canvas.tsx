@@ -7,6 +7,7 @@ import ContourBlockView from './ContourBlockView';
 import Plot3dBlockView from './Plot3dBlockView';
 import ProgramBlockView from './ProgramBlockView';
 import SimBlockView from './SimBlockView';
+import SliderBlockView from './SliderBlockView';
 import { isLightTheme } from '../theme';
 import { t } from '../i18n';
 
@@ -621,6 +622,8 @@ export default function Canvas() {
             <ProgramBlockView key={b.id} block={b} scale={view.k} />
           ) : b.kind === 'sim' ? (
             <SimBlockView key={b.id} block={b} scale={view.k} />
+          ) : b.kind === 'slider' ? (
+            <SliderBlockView key={b.id} block={b} scale={view.k} />
           ) : (
             <MathBlockView key={b.id} block={b} scale={view.k} />
           ),

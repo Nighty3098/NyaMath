@@ -15,7 +15,7 @@
  * Формат v1 (compact): `[1, [[dy, kind, main, extra?], …]]`
  *   - `dy` — дельта Y от предыдущего блока (первый — абсолютный), округлена.
  *     Порядок сверху-вниз = порядок вычислений движка.
- *   - `kind`: 0 math, 1 text, 2 plot, 3 plot3d, 4 program, 5 sim, 6 contour.
+ *   - `kind`: 0 math, 1 text, 2 plot, 3 plot3d, 4 program, 5 sim, 6 contour, 7 slider.
  *   - `main`: rawInput (math/text/program), plotFn (plot/plot3d/contour), '' (sim).
  *   - `extra`: только нестандартные поля (x≠80, диапазоны, exportName, sim-поля…).
  *     Пустой extra опускается. id НЕ храним (36 символов × N) — генерим заново.
@@ -46,9 +46,9 @@ export const SHARE_KEY = 'd';
 export const SHARE_WARN_CHARS = 7000;
 
 const KIND_TO_CODE: Record<string, number> = {
-  math: 0, text: 1, plot: 2, plot3d: 3, program: 4, sim: 5, contour: 6,
+  math: 0, text: 1, plot: 2, plot3d: 3, program: 4, sim: 5, contour: 6, slider: 7,
 };
-const CODE_TO_KIND = ['math', 'text', 'plot', 'plot3d', 'program', 'sim', 'contour'] as const;
+const CODE_TO_KIND = ['math', 'text', 'plot', 'plot3d', 'program', 'sim', 'contour', 'slider'] as const;
 
 type CompactExtra = Record<string, string | number | boolean>;
 type CompactBlock = [number, number, string] | [number, number, string, CompactExtra];
@@ -107,6 +107,13 @@ function slimBlocks(blocks: Record<string, SlimSource>): CompactBlock[] {
     } else if (b.kind === 'program') {
       if (b.exportName) extra.e = b.exportName;
       out.push(fin(dy, kind, b.rawInput, extra));
+    } else if (b.kind === 'slider') {
+      if (b.sliderVar) extra.v = b.sliderVar;
+      put(extra, 'a', b.sliderMin, undefined as unknown as number);
+      put(extra, 'b', b.sliderMax, undefined as unknown as number);
+      put(extra, 's', b.sliderStep, undefined as unknown as number);
+      put(extra, 'u', b.sliderVal, undefined as unknown as number);
+      out.push(fin(dy, kind, '', extra));
     } else if (b.kind === 'sim') {
       // sim-поля — полными именами (редкие блоки, deflate съест повторы ключей).
       for (const k of ['simModel', 'simMode', 'simStates', 'simDerivs', 'simAux', 'simParams',
@@ -168,6 +175,13 @@ function expandBlocks(data: CompactBlock[]): Record<string, unknown>[] {
       }
     } else if (kind === 'program') {
       if (typeof extra.e === 'string') b.exportName = extra.e;
+    } else if (kind === 'slider') {
+      b.rawInput = 'slider';
+      if (typeof extra.v === 'string') b.sliderVar = extra.v;
+      if (typeof extra.a === 'number') b.sliderMin = extra.a;
+      if (typeof extra.b === 'number') b.sliderMax = extra.b;
+      if (typeof extra.s === 'number') b.sliderStep = extra.s;
+      if (typeof extra.u === 'number') b.sliderVal = extra.u;
     } else if (kind === 'sim') {
       // extra уже содержит только sim-поля (+x): rawInput/kind/y не пересекаются.
       Object.assign(b, extra);
@@ -351,6 +365,11 @@ interface SlimSource {
   simExport?: string;
   simSpeed?: number;
   simLoop?: boolean;
+  sliderVar?: string;
+  sliderMin?: number;
+  sliderMax?: number;
+  sliderStep?: number;
+  sliderVal?: number;
 }
 
 /** Каноническая запись примера — та же геометрия, что в сторе (loadTestScenario). */
