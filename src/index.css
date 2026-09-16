@@ -298,17 +298,23 @@ body {
   }
 }
 
-/* Менюбар: скролл на узких экранах + отступ под чёлку */
+/* Менюбар: отступ под чёлку. Скролл тут нельзя (overflow режет absolute-дропдауны),
+   поэтому на узких экранах — компактные кнопки вместо прокрутки. */
 .nya-menubar {
-  overflow-x: auto;
-  scrollbar-width: none;
   padding-top: env(safe-area-inset-top);
-}
-.nya-menubar::-webkit-scrollbar {
-  display: none;
 }
 .nya-menubar > div {
   flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  /* бренд прячем — место только под пункты */
+  .nya-menubar > div:first-child {
+    display: none;
+  }
+  .nya-menubar button[role="menuitem"] {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
 }
 .menu-drop {
   max-width: min(15rem, calc(100vw - 16px));
