@@ -532,6 +532,25 @@ body {
 .nya-input:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft); }
 .nya-input::placeholder { color: var(--faint); }
 
+/* Окошко редактирования блока: спокойная карточка, ничего лишнего.
+   Своего кольца не рисует — единый внешний аутлайн даёт .nya-block. */
+.nya-editor {
+  width: 440px;
+  max-width: 60vw;
+  background: var(--input-bg);
+  border: 1px solid transparent;
+  border-radius: var(--radius-l);
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  outline: none;
+  box-shadow: none;
+  caret-color: var(--accent-ink);
+}
+.nya-editor::placeholder { color: var(--faint); }
+textarea.nya-editor { resize: none; }
+
 /* Подсказки-клавиши в пустом состоянии и справке */
 .nya-kbd {
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;

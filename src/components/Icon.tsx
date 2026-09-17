@@ -48,8 +48,8 @@ import {
  * Имена экспортов сохранены (IFormula, IPlot, …) — все потребители работают без правок.
  * Размер выравнивается под прежнюю 16px-сетку через fixedWidth + fontSize.
  */
-function Fa({ icon }: { icon: IconDefinition }) {
-  return <FontAwesomeIcon icon={icon} fixedWidth style={{ fontSize: 14 }} aria-hidden="true" />;
+function Fa({ icon, size = 14 }: { icon: IconDefinition; size?: number }) {
+  return <FontAwesomeIcon icon={icon} fixedWidth style={{ fontSize: size }} aria-hidden="true" />;
 }
 
 export const IPlus = () => <Fa icon={faPlus} />;
@@ -60,7 +60,7 @@ export const IPlot3d = () => <Fa icon={faCube} />;
 export const IBlank = () => <Fa icon={faFile} />;
 export const IProgram = () => <Fa icon={faCode} />;
 export const ISim = () => <Fa icon={faPlay} />;
-export const IPaw = () => <Fa icon={faPaw} />;
+export const IPaw = ({ size }: { size?: number } = {}) => <Fa icon={faPaw} size={size} />;
 export const IFx = () => <Fa icon={faSuperscript} />;
 export const IRecalc = () => <Fa icon={faRotateRight} />;
 export const IUndo = () => <Fa icon={faArrowRotateLeft} />;

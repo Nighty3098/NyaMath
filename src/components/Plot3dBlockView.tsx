@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useDocScope } from './useDocScope';
@@ -10,10 +10,11 @@ import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
 import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IGrip, IResize, IWarn, IX } from './Icon';
+import { IGrip, IWarn, IX } from './Icon';
 
 const W = 560;
-const HEADER = 170;
+/** Стартовая оценка высоты шапки — точное значение замеряем (см. chromeH ниже) */
+const HEADER = 148;
 const N_MIN = 8;
 const N_MAX = 100;
 /** Дебаунс ресемплинга: слайдер/ресайз шлют изменения на каждый кадр */
@@ -47,6 +48,8 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
   useCanvasStore((s) => s.lang);
 
   const boxRef = useRef<HTMLDivElement>(null);
+  const headRef = useRef<HTMLDivElement>(null);
+  const footRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const { onGripDown, onGripMove, onGripUp } = useRegionDrag(block.id, scale, false);
@@ -67,7 +70,9 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
   const res = Math.min(N_MAX, Math.max(N_MIN, Math.round(block.plotResolution ?? 48)));
   const wire = block.plotWireframe ?? false;
   const pw = block.w ?? W;
-  const ph = Math.max(240, (block.h ?? W) - HEADER);
+  // Замер хрома вместо магической константы (см. PlotBlockView): иначе зазор внизу.
+  const [chromeH, setChromeH] = useState(HEADER);
+  const ph = Math.max(240, (block.h ?? W) - chromeH);
   // Scope последнего пересчёта стора (#2): без повторного recalculateAll.
   const base = useDocScope(blocks);
   // Дебаунс + превью (#8): пока документ «живой» — половинная сетка,
@@ -90,6 +95,18 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
       return { sample: null, err: e instanceof Error ? e.message : String(e) };
     }
   }, [fnText, xmin, xmax, ymin, ymax, effRes, mode, dbBase]);
+
+  const noSample = sample === null;
+  useEffect(() => {
+    const measure = () => {
+      setChromeH((headRef.current?.offsetHeight ?? 0) + (footRef.current?.offsetHeight ?? 0) + 12);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (headRef.current) ro.observe(headRef.current);
+    if (footRef.current) ro.observe(footRef.current);
+    return () => ro.disconnect();
+  }, [theme, err, noSample]);
 
   // ---- three.js сцена: пересоздаётся при смене данных/темы/каркаса ----
   useEffect(() => {
@@ -332,7 +349,7 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
         : '';
 
   return (
-    <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: ph + HEADER }}>
+    <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: err || !sample ? 'auto' : ph + chromeH }}>
       <div
         data-block-id={block.id}
         className={`nya-block relative w-full h-full rounded-xl px-3 py-2 flex flex-col bg-[var(--sheet)] shadow-[0_1px_2px_rgba(0,0,0,0.18),0_8px_24px_rgba(0,0,0,0.16)] group ${
@@ -344,6 +361,7 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
           else select(block.id);
         }}
       >
+        <div ref={headRef}>
         <div
           className="flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing select-none"
           onPointerDown={onGripDown}
@@ -395,6 +413,7 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
             {t('p3.wireLabel')}
           </label>
         </div>
+        </div>
 
         {err || !sample ? (
           <div className="flex items-center gap-1.5 text-[var(--danger)] text-[12px]" role="alert"><IWarn /> {err ?? t('p3.noData')}</div>
@@ -418,12 +437,11 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
             </div>
           </div>
         )}
-        <div className="text-[11px] text-[var(--faint)] mt-1 truncate">
+        <div ref={footRef} className="text-[11px] text-[var(--faint)] mt-1 truncate">
           {t('p3.footer')}
         </div>
         <span
-          className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize opacity-0 group-hover:opacity-100 text-[var(--faint)] hover:text-[var(--accent-line)] select-none"
-          style={{ opacity: selected ? 1 : undefined }}
+          className="absolute -right-3 -bottom-3 w-7 h-7 cursor-nwse-resize touch-none select-none"
           title={t('p3.resize')}
           onPointerDown={onResizeDown}
           onPointerMove={onResizeMove}
@@ -431,9 +449,7 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
           onPointerCancel={onResizeUp}
           onDoubleClick={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
-        >
-          <IResize />
-        </span>
+        />
       </div>
     </div>
   );

@@ -517,10 +517,6 @@ export default function Canvas() {
   const list = useMemo(() => sortBlocksTopDown(Object.values(blocks)), [blocks]);
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
-  // Тач-скрин: другие подсказки (жесты вместо мыши/клавиатуры)
-  const [coarse] = useState(
-    () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches,
-  );
 
   // Точечная сетка в экранных координатах (Notion-стиль): шаг следует за камерой
   const mod = (a: number, n: number) => ((a % n) + n) % n;
@@ -638,24 +634,10 @@ export default function Canvas() {
       {list.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none print:hidden">
           <div className="flex flex-col items-center text-center px-6 max-w-[420px]">
-            <span className="text-[var(--accent)] text-[22px] inline-flex" aria-hidden="true"><IPaw /></span>
+            <span className="text-[var(--accent)] inline-flex" aria-hidden="true"><IPaw size={56} /></span>
             <div className="font-semibold tracking-tight text-[19px] leading-7 text-[var(--ink)] mt-3">
               NyaMath
             </div>
-            <div className="text-[13px] leading-5 text-[var(--faint)] mt-1">
-              {coarse ? t('c.emptyNewTouch') : t('c.emptyNew')}
-            </div>
-            <div className="flex items-center gap-2 flex-wrap justify-center mt-4">
-              <span className="nya-kbd">x := 5</span>
-              <span className="text-[var(--faint)] text-[12px]">→</span>
-              <span className="nya-kbd">x = 5</span>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap justify-center mt-2">
-              <span className="nya-kbd">f(x) := sin(x)</span>
-              <span className="text-[var(--faint)] text-[12px]">→</span>
-              <span className="nya-kbd">⤢</span>
-            </div>
-            {!coarse && <div className="text-[11px] leading-4 text-[var(--faint)] mt-4 opacity-80">{t('c.crossHint')}</div>}
           </div>
         </div>
       )}

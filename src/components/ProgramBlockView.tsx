@@ -6,7 +6,7 @@ import { debugProgram } from '../engine/program';
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IBug, IGrip, IResize, IWarn, IX } from './Icon';
+import { IBug, IGrip, IWarn, IX } from './Icon';
 
 interface Props {
   block: MathBlockData;
@@ -115,8 +115,7 @@ function ProgramBlockView({ block, scale }: Props) {
         </span>
         {/* ручка ширины */}
         <span
-          className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize opacity-0 group-hover:opacity-100 text-[var(--faint)] hover:text-[var(--accent-line)] select-none"
-          style={{ opacity: selected ? 1 : undefined }}
+          className="absolute -right-3 -bottom-3 w-7 h-7 cursor-nwse-resize touch-none select-none"
           title={t('ui.resizeW')}
           onPointerDown={onResizeDown}
           onPointerMove={onResizeMove}
@@ -124,9 +123,7 @@ function ProgramBlockView({ block, scale }: Props) {
           onPointerCancel={onResizeUp}
           onDoubleClick={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
-        >
-          <IResize />
-        </span>
+        />
 
         {/* мини-панель: экспорт + удаление */}
         <div
@@ -180,7 +177,7 @@ function ProgramBlockView({ block, scale }: Props) {
           <textarea
             ref={taRef}
             rows={rows}
-            className="math-input w-[440px] max-w-[60vw] bg-[var(--input-bg)] border border-[var(--accent-line)] rounded-lg px-1.5 py-1 text-[13px] leading-5 text-[var(--ink)] outline-none resize-none select-text"
+            className="math-input nya-editor select-text"
             value={draft}
             onChange={(e) => {
               setDraft(e.target.value);

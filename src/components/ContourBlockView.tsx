@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useDocScope } from './useDocScope';
 import { useDebouncedValue } from './useDebouncedValue';
 import { samplePlot3d } from '../engine/plot3dSample';
@@ -6,7 +6,7 @@ import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IGrip, IResize, ISave, IWarn, IX } from './Icon';
+import { IGrip, ISave, IWarn, IX } from './Icon';
 import { t } from '../i18n';
 import { exportSvgElementToPng, safeFilename } from '../lib/exportFiles';
 
@@ -92,7 +92,11 @@ function isolines(
 function ContourBlockView({ block, scale }: { block: MathBlockData; scale: number }) {
   const removeBlock = useCanvasStore((s) => s.removeBlock);
   const boxRef = useRef<HTMLDivElement>(null);
+  const headRef = useRef<HTMLDivElement>(null);
+  const footRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  // Замер хрома вместо магической константы (см. PlotBlockView): иначе зазор внизу.
+  const [chromeH, setChromeH] = useState(108);
   const { onGripDown, onGripMove, onGripUp } = useRegionDrag(block.id, scale, false);
   const { onResizeDown, onResizeMove, onResizeUp } = useRegionResize(block.id, scale, boxRef, {
     height: true,
@@ -118,7 +122,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
   const ymax = block.plotYmax ?? 5;
   const res = Math.min(100, Math.max(8, Math.round(block.plotResolution ?? 48)));
   const pw = block.w ?? W;
-  const ph = Math.max(180, (block.h ?? H + 132) - 132);
+  const ph = Math.max(180, (block.h ?? H + chromeH) - chromeH);
   const showGrid = block.plotGrid ?? true;
   const title = (block.plotTitle ?? '').trim();
   // Scope последнего пересчёта стора (#2): без повторного recalculateAll.
@@ -159,6 +163,17 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
 
   const selected = selectedIds.includes(block.id);
 
+  useEffect(() => {
+    const measure = () => {
+      setChromeH((headRef.current?.offsetHeight ?? 0) + (footRef.current?.offsetHeight ?? 0) + 12);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (headRef.current) ro.observe(headRef.current);
+    if (footRef.current) ro.observe(footRef.current);
+    return () => ro.disconnect();
+  }, [theme, title, data.err]);
+
   /** PNG снимок отрендеренного SVG (×2) */
   const doExportPng = () => {
     if (!svgRef.current || data.err) {
@@ -170,7 +185,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
   };
 
   return (
-    <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: ph + 132 }}>
+    <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: data.err ? 'auto' : ph + chromeH }}>
       <div
         data-block-id={block.id}
         className={`nya-block relative w-full h-full rounded-xl px-3 py-2 flex flex-col bg-[var(--sheet)] shadow-[0_1px_2px_rgba(0,0,0,0.18),0_8px_24px_rgba(0,0,0,0.16)] group ${
@@ -182,6 +197,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
           else select(block.id);
         }}
       >
+        <div ref={headRef}>
         <div
           className="flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing select-none print:hidden"
           onPointerDown={onGripDown}
@@ -236,6 +252,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
           </span>
         </div>
         {title && <div className="text-center text-[13px] font-medium text-[var(--ink)] mb-1">{title}</div>}
+        </div>
         {data.err ? (
           <div className="flex items-center gap-1.5 text-[var(--danger)] text-[12px]" role="alert"><IWarn /> {data.err}</div>
         ) : (
@@ -277,12 +294,11 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
             })}
           </svg>
         )}
-        <div className="text-[11px] text-[var(--faint)] mt-1 truncate">
+        <div ref={footRef} className="text-[11px] text-[var(--faint)] mt-1 truncate">
           {t('ctr.footer', { fn: fnText })} • {data.levels.filter((l) => l.d).length}/{LEVELS}
         </div>
         <span
-          className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize opacity-0 group-hover:opacity-100 text-[var(--faint)] hover:text-[var(--accent-line)] select-none"
-          style={{ opacity: selected ? 1 : undefined }}
+          className="absolute -right-3 -bottom-3 w-7 h-7 cursor-nwse-resize touch-none select-none"
           title={t('ctr.resize')}
           onPointerDown={onResizeDown}
           onPointerMove={onResizeMove}
@@ -290,9 +306,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
           onPointerCancel={onResizeUp}
           onDoubleClick={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
-        >
-          <IResize />
-        </span>
+        />
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { compilePlotExpr, evaluateLine, preprocessJ, preprocessRanges } from '../engine/mathEngine';
 import type { EvalFunction } from 'mathjs';
 import { useDocScope } from './useDocScope';import { useCanvasStore } from '../store/canvasStore';
@@ -6,7 +6,7 @@ import { plotPalettes } from '../theme';
 import { t } from '../i18n';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IGrip, IResize, ISave, ITable, ITune, IWarn, IX } from './Icon';
+import { IGrip, ISave, ITable, ITune, IWarn, IX } from './Icon';
 import { columnsToCsv, downloadTextFile, exportSvgElementToPng, safeFilename } from '../lib/exportFiles';
 
 const W = 460;
@@ -17,8 +17,8 @@ const PAD_T = 10;
 const PAD_B = 30;
 const N_PTS = 240;
 const MAX_BARS = 48;
-/** Высота шапки (контролы + подписи) — вычитается из ручной высоты блока */
-const HEAD = 200;
+/** Стартовая оценка высоты шапки — точное значение замеряем (см. chromeH ниже) */
+const HEAD = 112;
 
 /** "Красивые" тики для оси */
 function niceTicks(lo: number, hi: number, count = 5): number[] {
@@ -73,8 +73,14 @@ interface RawRow {
 function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }) {
   const removeBlock = useCanvasStore((s) => s.removeBlock);
   const boxRef = useRef<HTMLDivElement>(null);
+  const headRef = useRef<HTMLDivElement>(null);
+  const footRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [optsOpen, setOptsOpen] = useState(false);
+  // Высота всего хрома (шапка + подпись под графиком) — измеряем, как в SimBlockView:
+  // магическая константа врала, и между графиком и низом блока оставался зазор.
+  // +12: offsetHeight не включает схлопнувшиеся наружу маргины.
+  const [chromeH, setChromeH] = useState(HEAD);
   const { onGripDown, onGripMove, onGripUp } = useRegionDrag(block.id, scale, false);
   const { onResizeDown, onResizeMove, onResizeUp } = useRegionResize(block.id, scale, boxRef, {
     height: true,
@@ -105,9 +111,9 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   const showGrid = block.plotGrid ?? true;
   const showLegend = block.plotLegend ?? true;
   const padT = title ? 26 : PAD_T;
-  // Ручной размер: ширина/высота области графика (шапка +HEAD)
+  // Ручной размер: ширина/высота области графика (шапка +chromeH)
   const pw = block.w ?? W;
-  const ph = Math.max(180, (block.h ?? H + HEAD) - HEAD);
+  const ph = Math.max(180, (block.h ?? H + chromeH) - chromeH);
   // Scope последнего пересчёта стора (#2): без повторного recalculateAll.
   const base = useDocScope(blocks);
 
@@ -336,6 +342,17 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
 
   const X = (x: number) => PAD_L + ((x - xmin) / (xmax - xmin)) * (pw - PAD_L - PAD_R);
   const Y = (y: number) => ph - PAD_B - ((y - ymin) / (ymax - ymin)) * (ph - padT - PAD_B);
+
+  useEffect(() => {
+    const measure = () => {
+      setChromeH((headRef.current?.offsetHeight ?? 0) + (footRef.current?.offsetHeight ?? 0) + 12);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (headRef.current) ro.observe(headRef.current);
+    if (footRef.current) ro.observe(footRef.current);
+    return () => ro.disconnect();
+  }, [optsOpen, theme, title, err]);
   const selected = selectedIds.includes(block.id);
   const baseName = safeFilename(title || fnText, 'plot');
 
@@ -382,7 +399,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   };
 
   return (
-    <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: ph + HEAD }}>
+    <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: err ? 'auto' : ph + chromeH }}>
       <div
         data-block-id={block.id}
         className={`nya-block relative w-full h-full rounded-xl px-3 py-2 flex flex-col bg-[var(--sheet)] shadow-[0_1px_2px_rgba(0,0,0,0.18),0_8px_24px_rgba(0,0,0,0.16)] group ${
@@ -394,6 +411,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           else select(block.id);
         }}
       >
+        <div ref={headRef}>
         <div
           className="flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing select-none print:hidden"
           onPointerDown={onGripDown}
@@ -617,6 +635,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
         <div className="hidden print:block text-[13px] font-medium text-[var(--ink)] mb-1">
           {title || fnText}
         </div>
+        </div>
         {err ? (
           <div className="flex items-center gap-1.5 text-[var(--danger)] text-[12px]" role="alert">
             <IWarn /> {err}
@@ -760,13 +779,12 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
               ))}
           </svg>
         )}
-        <div className="text-[11px] text-[var(--faint)] mt-1 truncate">
+        <div ref={footRef} className="text-[11px] text-[var(--faint)] mt-1 truncate">
           {t('p2.footer', { fn: fnText, x0: xmin, x1: xmax })}
         </div>
         {/* ручка размера */}
         <span
-          className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize opacity-0 group-hover:opacity-100 text-[var(--faint)] hover:text-[var(--accent-line)] select-none"
-          style={{ opacity: selected ? 1 : undefined }}
+          className="absolute -right-3 -bottom-3 w-7 h-7 cursor-nwse-resize touch-none select-none"
           title={t('p2.resize')}
           onPointerDown={onResizeDown}
           onPointerMove={onResizeMove}
@@ -774,9 +792,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           onPointerCancel={onResizeUp}
           onDoubleClick={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
-        >
-          <IResize />
-        </span>
+        />
       </div>
     </div>
   );

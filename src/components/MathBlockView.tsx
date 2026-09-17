@@ -4,7 +4,7 @@ import type { MathBlockData } from '../engine/dependencies';
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IGrip, ICopy, IResize, IWarn, IX } from './Icon';
+import { IGrip, ICopy, IWarn, IX } from './Icon';
 import MiniPlot from './MiniPlot';
 import { copyTextToClipboard } from '../lib/exportFiles';
 
@@ -36,6 +36,21 @@ function MathBlockView({ block, scale }: Props) {
 
   const { onGripDown, onGripMove, onGripUp } = useRegionDrag(block.id, scale, editing);
   const { onResizeDown, onResizeMove, onResizeUp } = useRegionResize(block.id, scale, regionRef);
+
+  // Реальная высота блока: кнопка копирования встаёт к низу, только если обе
+  // боковые кнопки (~34px с тач-паддингами) помещаются без наложения.
+  const [boxH, setBoxH] = useState<number | null>(null);
+  useEffect(() => {
+    const el = regionRef.current;
+    if (!el) return;
+    const measure = () => setBoxH(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const estShort = !block.error && !block.plotPreview && !block.rawInput.includes('\n');
+  const copyAtBottom = (boxH ?? (estShort ? 0 : 200)) >= 76;
 
   useEffect(() => {
     if (!editing) setDraft(block.rawInput);
@@ -150,6 +165,7 @@ function MathBlockView({ block, scale }: Props) {
         }
       >
         {/* ручка перетаскивания */}
+        {!editing && (
         <span
           className="absolute -left-6 top-1/2 -translate-y-1/2 p-1.5 text-[var(--faint)] cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 select-none"
           style={{ opacity: selected ? 1 : undefined }}
@@ -162,7 +178,9 @@ function MathBlockView({ block, scale }: Props) {
         >
           <IGrip />
         </span>
+        )}
         {/* удаление */}
+        {!editing && (
         <button
           type="button"
           className="absolute -right-7 top-0 p-1.5 text-[var(--faint)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 cursor-pointer"
@@ -177,11 +195,12 @@ function MathBlockView({ block, scale }: Props) {
         >
           <IX />
         </button>
+        )}
         {/* копировать LaTeX */}
         {!editing && (
           <button
             type="button"
-            className="absolute -right-7 top-8 p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] opacity-0 group-hover:opacity-100 cursor-pointer"
+            className={`absolute -right-7 ${copyAtBottom ? 'bottom-0' : 'top-10'} z-10 p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] opacity-0 group-hover:opacity-100 cursor-pointer`}
             style={{ opacity: selected || copied ? 1 : undefined }}
             title={copied ? t('m.copied') : t('m.copyTex')}
             aria-label={t('m.copyTex')}
@@ -195,9 +214,9 @@ function MathBlockView({ block, scale }: Props) {
           </button>
         )}
         {/* ручка ширины */}
+        {!editing && (
         <span
-          className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize opacity-0 group-hover:opacity-100 text-[var(--faint)] hover:text-[var(--accent-line)] select-none"
-          style={{ opacity: selected ? 1 : undefined }}
+          className="absolute -right-3 -bottom-3 w-7 h-7 cursor-nwse-resize touch-none select-none"
           title={t('ui.resizeW')}
           onPointerDown={onResizeDown}
           onPointerMove={onResizeMove}
@@ -205,15 +224,14 @@ function MathBlockView({ block, scale }: Props) {
           onPointerCancel={onResizeUp}
           onDoubleClick={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
-        >
-          <IResize />
-        </span>
+        />
+        )}
 
         {editing ? (
           isText ? (
             <input
               ref={inputRef}
-              className="math-input w-[440px] max-w-[60vw] bg-[var(--input-bg)] border border-[var(--accent-line)] rounded-lg px-1 py-0.5 text-[14px] text-[var(--ink)] outline-none select-text"
+              className="math-input nya-editor select-text"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onBlur={() => finishEdit(draft)}
@@ -234,8 +252,8 @@ function MathBlockView({ block, scale }: Props) {
           ) : (
             <textarea
               ref={taRef}
-              rows={Math.min(4, Math.max(1, draft.split('\n').length))}
-              className="math-input w-[440px] max-w-[60vw] bg-[var(--input-bg)] border border-[var(--accent-line)] rounded-lg px-1 py-0.5 text-[14px] text-[var(--ink)] outline-none resize-none select-text"
+              rows={Math.min(8, Math.max(1, draft.split('\n').length))}
+              className="math-input nya-editor select-text"
               value={draft}
               onChange={(e) => {
                 setDraft(e.target.value);

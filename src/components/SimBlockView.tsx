@@ -4,7 +4,7 @@ import { plotPalettes } from '../theme';
 import { SIM_DOMAINS, SIM_MODELS, SIM_SOLVERS, getSimModel, simModelPatch, type SimMode, type SimResult, type SimSolver } from '../engine/simEngine';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IGrip, IResize, IWarn, IX } from './Icon';
+import { IGrip, IWarn, IX } from './Icon';
 import { lx, simDomainName, simSolverName, t } from '../i18n';
 
 const W = 560;
@@ -432,8 +432,7 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
 
         {/* ручка размера */}
         <span
-          className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize opacity-0 group-hover:opacity-100 text-[var(--faint)] hover:text-[var(--accent-line)] select-none"
-          style={{ opacity: selected ? 1 : undefined }}
+          className="absolute -right-3 -bottom-3 w-7 h-7 cursor-nwse-resize touch-none select-none"
           title={t('sim.resize')}
           onPointerDown={onResizeDown}
           onPointerMove={onResizeMove}
@@ -441,9 +440,7 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
           onPointerCancel={onResizeUp}
           onDoubleClick={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
-        >
-          <IResize />
-        </span>
+        />
       </div>
     </div>
   );
