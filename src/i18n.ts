@@ -702,11 +702,12 @@ export function themeLabel(id: ThemeName): string {
   return themeNames[id][current];
 }
 
-export type PackId = 'matrices' | 'stats' | 'physics' | 'telecom' | 'programs' | 'plots' | 'sim' | 'units' | 'calc' | 'computing' | 'em';
+export type PackId = 'matrices' | 'stats' | 'uncertainty' | 'physics' | 'telecom' | 'programs' | 'plots' | 'sim' | 'units' | 'calc' | 'computing' | 'em';
 
 const packNames: Record<PackId, { ru: string; en: string }> = {
   matrices: { ru: 'Матрицы', en: 'Matrices' },
   stats: { ru: 'Статистика', en: 'Statistics' },
+  uncertainty: { ru: 'Неопределённость', en: 'Uncertainty' },
   physics: { ru: 'Физика', en: 'Physics' },
   telecom: { ru: 'Телеком', en: 'Telecom' },
   programs: { ru: 'Программы', en: 'Programs' },

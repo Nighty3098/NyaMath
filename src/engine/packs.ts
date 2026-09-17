@@ -699,6 +699,72 @@ export function buildPackScope(math: MathJsInstance): Scope {
     return h >>> 0;
   };
 
+  /* ----- неопределённость измерений: квантили (Acklam + A&S 26.7.5) ----- */
+  /** Обратная стандартная нормальная CDF, q∈(0,1). Алгоритм Acklam. */
+  const normInvCdf = (q: number): number => {
+    if (!(q > 0 && q < 1)) throw new Error(t('e.calcArgs'));
+    const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269, -30.66479806614716, 2.506628277459239];
+    const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
+    const c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+    const d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+    const plow = 0.02425;
+    const phigh = 1 - plow;
+    let x: number;
+    if (q < plow) {
+      x = Math.sqrt(-2 * Math.log(q));
+      return (((((c[0] * x + c[1]) * x + c[2]) * x + c[3]) * x + c[4]) * x + c[5]) / ((((d[0] * x + d[1]) * x + d[2]) * x + d[3]) * x + 1);
+    }
+    if (q <= phigh) {
+      x = q - 0.5;
+      const r = x * x;
+      return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * x / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+    }
+    x = Math.sqrt(-2 * Math.log(1 - q));
+    return -(((((c[0] * x + c[1]) * x + c[2]) * x + c[3]) * x + c[4]) * x + c[5]) / ((((d[0] * x + d[1]) * x + d[2]) * x + d[3]) * x + 1);
+  };
+  /**
+   * Односторонняя обратная CDF Стьюдента F⁻¹(q; ν).
+   * ν=1 — точное Коши tan(π(q−½)); ν=∞ — нормальная; иначе Корниш–Фишер
+   * (Abramowitz & Stegun 26.7.5, 4 члена; погрешность <1% при ν≥2).
+   * GUM-нотация t_p(ν) двусторонняя: t_p = tStud((1+p)/2, ν).
+   */
+  const tStudCdf = (q: number, nu: number): number => {
+    if (!(q > 0 && q < 1)) throw new Error(t('e.calcArgs'));
+    if (!isFinite(nu)) {
+      if (!(nu > 0)) throw new Error(t('e.calcArgs'));
+      return normInvCdf(q);
+    }
+    const N = Number(nu);
+    if (!(N > 0)) throw new Error(t('e.calcArgs'));
+    if (N === 1) return Math.tan(Math.PI * (q - 0.5));
+    const z = normInvCdf(q);
+    const z2 = z * z;
+    const z3 = z2 * z;
+    const z5 = z3 * z2;
+    const z7 = z5 * z2;
+    const z9 = z7 * z2;
+    const n2 = N * N;
+    const n3 = n2 * N;
+    const n4 = n3 * N;
+    return z + (z3 + z) / (4 * N)
+      + (5 * z5 + 16 * z3 + 3 * z) / (96 * n2)
+      + (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * n3)
+      + (79 * z9 + 779 * z7 + 1482 * z5 - 1920 * z3 - 945 * z) / (92160 * n4);
+  };
+  /** Округление неопределённости ВВЕРХ до 2 значащих цифр (консервативно, GUM 7.2.6). */
+  const uncUp2 = (U: number): number => {
+    if (!(U > 0)) throw new Error(t('e.calcArgs'));
+    const e = Math.floor(Math.log10(U));
+    const f = U / 10 ** e;
+    let r = Math.ceil(f * 10 - 1e-9) / 10;
+    let ee = e;
+    if (r >= 10) {
+      r = 1;
+      ee += 1;
+    }
+    return Number((r * 10 ** ee).toPrecision(12));
+  };
+
   const S: Scope = {
     // ---------- математика ----------
     seq,
@@ -1729,6 +1795,165 @@ export function buildPackScope(math: MathJsInstance): Scope {
     },
     db2mag: (db: unknown) => 10 ** (needNum(db) / 20),
 
+    // ---------- неопределённость измерений ----------
+    // GUM: JCGM 100:2008 (текст: bipm.org), ГОСТ 34100.3-2017 ≡ ISO/IEC Guide 98-3.
+    // МИ-школа: МИ 1317, ГОСТ Р 8.736-2011 (многократные прямые измерения).
+    // ПМГ 96-2009, приложение Б (суммирование составляющих, переход к интервалу).
+    // prec5725 / repLim / uTopDown — упрощённые схемы по мотивам
+    // ГОСТ Р ИСО 5725-2/-6 и ГОСТ Р ИСО 21748; точные формулы — по полному тексту.
+    uMean: (v: unknown) => {
+      const a = needNumVec(v);
+      if (a.length < 2) throw new Error(t('e.calcArgs'));
+      const m = a.reduce((s, z) => s + z, 0) / a.length;
+      const s2 = a.reduce((s, z) => s + (z - m) ** 2, 0) / (a.length - 1);
+      return Math.sqrt(s2 / a.length); // GUM (5): s(x̄) = s/√n, тип A
+    },
+    nuMean: (v: unknown) => {
+      const a = needNumVec(v);
+      if (a.length < 2) throw new Error(t('e.calcArgs'));
+      return a.length - 1; // GUM 4.2.6
+    },
+    uRect: (a: unknown) => {
+      const A = needNum(a);
+      if (!(A >= 0)) throw new Error(t('e.calcArgs'));
+      return A / Math.sqrt(3); // GUM (7): прямоугольное, a — полуширина
+    },
+    uTri: (a: unknown) => {
+      const A = needNum(a);
+      if (!(A >= 0)) throw new Error(t('e.calcArgs'));
+      return A / Math.sqrt(6); // GUM (9b): треугольное
+    },
+    uNorm: (U: unknown, k?: unknown) => {
+      const UU = needNum(U);
+      const K = k === undefined ? 2 : needNum(k);
+      if (!(UU >= 0) || !(K > 0)) throw new Error(t('e.calcArgs'));
+      return UU / K; // GUM 4.3.3–4.3.4: u = U/k
+    },
+    uUshape: (a: unknown) => {
+      const A = needNum(a);
+      if (!(A >= 0)) throw new Error(t('e.calcArgs'));
+      return A / Math.sqrt(2); // GUM H.1.3.4: арксинусное, a — амплитуда цикла
+    },
+    uComb: (v: unknown) => {
+      const a = needNumVec(v);
+      return Math.sqrt(a.reduce((s, z) => s + z * z, 0)); // GUM (10): √(Σu²)
+    },
+    nuEff: (us: unknown, nus?: unknown) => {
+      const u = needNumVec(us);
+      const n = nus === undefined ? u.map(() => Infinity) : asArr(nus).map(Number);
+      if (n.length !== u.length || n.some((z) => !(z > 0))) throw new Error(t('e.calcArgs'));
+      const uc2 = u.reduce((s, z) => s + z * z, 0);
+      if (!(uc2 > 0)) return Infinity;
+      let den = 0;
+      for (let i = 0; i < u.length; i++) {
+        if (isFinite(n[i])) den += u[i] ** 4 / n[i]; // ν=∞: вклад 0 (GUM G.4.2)
+      }
+      if (!(den > 0)) return Infinity;
+      return (uc2 * uc2) / den; // GUM (G.2b): Уэлч–Саттертуэйт
+    },
+    normQuant: (q: unknown) => normInvCdf(needNum(q)), // односторонняя обратная нормальная
+    tStud: (q: unknown, nu: unknown) => {
+      const N = Number(nu);
+      if (typeof nu === 'boolean' || !(N > 0)) throw new Error(t('e.calcArgs'));
+      return tStudCdf(needNum(q), N); // односторонняя обратная Стьюдента (ν=∞ → нормальная)
+    },
+    kCov: (nu: unknown, P?: unknown) => {
+      const N = Number(nu);
+      const PP = P === undefined ? 0.95 : needNum(P);
+      if (typeof nu === 'boolean' || !(N > 0) || !(PP > 0 && PP < 1)) throw new Error(t('e.calcArgs'));
+      return tStudCdf((1 + PP) / 2, N); // GUM G.6.4: k = t_p(νeff)
+    },
+    uExpand: (uc: unknown, k: unknown) => {
+      const U = needNum(uc);
+      const K = needNum(k);
+      if (!(U >= 0) || !(K > 0)) throw new Error(t('e.calcArgs'));
+      return U * K; // GUM (18): U = k·u_c
+    },
+    uncRound: (u: unknown) => uncUp2(needNum(u)), // вверх до 2 зн. цифр (GUM 7.2.6)
+    resRound: (y: unknown, u: unknown) => {
+      const Y = needNum(y);
+      const ru = uncUp2(needNum(u));
+      const place = Math.floor(Math.log10(ru)) - 1; // декада 2-й значащей цифры
+      return Number((Math.round(Y / 10 ** place) * 10 ** place).toPrecision(12));
+    },
+    confEps: (S: unknown, n: unknown, P?: unknown) => {
+      const SS = needNum(S);
+      const N = needNum(n);
+      const PP = P === undefined ? 0.95 : needNum(P);
+      if (!(SS >= 0) || !Number.isInteger(N) || N < 2 || !(PP > 0 && PP < 1)) throw new Error(t('e.calcArgs'));
+      return tStudCdf((1 + PP) / 2, N - 1) * (SS / Math.sqrt(N)); // ГОСТ 8.736: ε = t·S(x̄)
+    },
+    thetaComb: (v: unknown) => {
+      const a = needNumVec(v);
+      return Math.sqrt(a.reduce((s, z) => s + z * z, 0) / 3); // S_θ = √(Σθᵢ²/3)
+    },
+    deltaComb: (eps: unknown, theta: unknown, S: unknown, Stheta: unknown) => {
+      const E = needNum(eps);
+      const T = needNum(theta);
+      const SS = needNum(S);
+      const ST = needNum(Stheta);
+      if (!(E >= 0 && T >= 0 && SS >= 0 && ST >= 0)) throw new Error(t('e.calcArgs'));
+      if (!(SS > 0)) return T;
+      const r = T / SS; // ГОСТ 8.736, разд. 8–9: пороги θ/S
+      if (r < 0.8) return E;
+      if (r > 8) return T;
+      if (!(SS + ST > 0)) return E + T;
+      const K = (E + T) / (SS + ST);
+      return K * Math.sqrt(SS * SS + ST * ST); // Δ = K·S_Σ
+    },
+    pmgSumAbs: (v: unknown) => {
+      const a = needNumVec(v);
+      return a.reduce((s, z) => s + Math.abs(z), 0); // ПМГ 96-2009, Б.3.1: Σ|Δᵢ|
+    },
+    pmgRSS: (Ss: unknown, Ds: unknown) => {
+      const s = needNumVec(Ss);
+      const d = needNumVec(Ds);
+      const rss = s.reduce((t, z) => t + z * z, 0) + d.reduce((t, z) => t + (z * z) / 3, 0);
+      return Math.sqrt(rss); // ПМГ 96-2009, Б.3.2: √(ΣS² + ΣΔ²/3)
+    },
+    pmgExpand: (Sc: unknown, Kp?: unknown) => {
+      const C = needNum(Sc);
+      const K = Kp === undefined ? 2 : needNum(Kp);
+      if (!(C >= 0) || !(K > 0)) throw new Error(t('e.calcArgs'));
+      return K * C; // ПМГ 96-2009, Б.5: Δ_P = K_P·S_Σ (K_P — по рис. Б.1)
+    },
+    repLim: (s: unknown) => {
+      const S = needNum(s);
+      if (!(S >= 0)) throw new Error(t('e.calcArgs'));
+      return 2.8 * S; // пределы r/R по схеме ГОСТ Р ИСО 5725-6
+    },
+    uTopDown: (sR: unknown, uBias: unknown, uAdd?: unknown) => {
+      const a = needNum(sR);
+      const b = needNum(uBias);
+      const c = uAdd === undefined ? 0 : needNum(uAdd);
+      if (!(a >= 0 && b >= 0 && c >= 0)) throw new Error(t('e.calcArgs'));
+      return Math.sqrt(a * a + b * b + c * c); // упрощённый top-down в духе ИСО 21748
+    },
+    prec5725: (M: unknown) => {
+      // p лабораторий × n параллелей (строки — лаборатории). Схема 5725-2.
+      let a: unknown;
+      if (M !== null && typeof M === 'object' && 'toArray' in (M as object)) {
+        a = ((M as { toArray: () => unknown }).toArray() as unknown[]).map((r) => (Array.isArray(r) ? [...r] : [r]));
+      } else if (Array.isArray(M)) {
+        a = (M as unknown[]).map((r) => (Array.isArray(r) ? [...r] : [r]));
+      } else {
+        throw new Error(t('e.calcArgs'));
+      }
+      const rows = (a as unknown[][]).map((r) => r.map(Number));
+      const p = rows.length;
+      const n = rows[0]?.length ?? 0;
+      if (p < 2 || n < 2 || !rows.every((r) => r.length === n && r.every((z) => isFinite(z)))) {
+        throw new Error(t('e.calcArgs'));
+      }
+      const means = rows.map((r) => r.reduce((s, z) => s + z, 0) / n);
+      const grand = means.reduce((s, z) => s + z, 0) / p;
+      const MSe = rows.reduce((s, r, i) => s + r.reduce((t, z) => t + (z - means[i]) ** 2, 0), 0) / (p * (n - 1));
+      const MSb = (n * means.reduce((s, m) => s + (m - grand) ** 2, 0)) / (p - 1);
+      const sr = Math.sqrt(MSe);
+      const sL = Math.sqrt(Math.max(0, (MSb - MSe) / n));
+      return math.matrix([sr, sL, Math.sqrt(sr * sr + sL * sL)]); // [s_r, s_L, s_R]
+    },
+
     // ---------- программирование: строки / массивы / контрольные суммы ----------
     chrU: (c: unknown) => {
       const v = truncI(c);
@@ -1851,6 +2076,11 @@ export const PACK_NAMES = [
   // программирование: строки/массивы
   'chrU', 'ordU', 'strlenU', 'strUpper', 'strLower', 'substrU',
   'splitStr', 'joinStr', 'parseNum', 'uniqueVals', 'histC',
+  // неопределённость измерений (GUM / МИ / ПМГ / 5725 / 21748)
+  'uMean', 'nuMean', 'uRect', 'uTri', 'uNorm', 'uUshape', 'uComb', 'nuEff',
+  'normQuant', 'tStud', 'kCov', 'uExpand', 'uncRound', 'resRound',
+  'confEps', 'thetaComb', 'deltaComb', 'pmgSumAbs', 'pmgRSS', 'pmgExpand',
+  'repLim', 'uTopDown', 'prec5725',
 ];
 
 /* ---------------- Палитра вставки ---------------- */
@@ -1862,6 +2092,8 @@ export interface Snippet {
   code: string;
   kind: 'math' | 'plot' | 'program' | 'sim' | 'contour';
   exportName?: string;
+  /** Нормативная подпись: ГОСТ/методика, откуда формула (показывается в палитре) */
+  doc?: string;
   /** Преднастройки plot-блока (проекция, стиль, оформление) */
   plot?: {
     plotProj?: 'xy' | 'polar';
@@ -1892,6 +2124,17 @@ export const SNIPPETS: Snippet[] = [
   { pack: 'stats', label: { ru: 'СКО', en: 'Std dev' }, hint: { ru: 'std(v)', en: 'std(v)' }, code: 'std(data) =', kind: 'math' },
   { pack: 'stats', label: { ru: 'RMS', en: 'RMS' }, hint: { ru: 'среднеквадратичное', en: 'root mean square' }, code: 'rms(data) =', kind: 'math' },
   { pack: 'stats', label: { ru: 'Медиана/квантиль', en: 'Median/quantile' }, hint: { ru: 'median, quantileSeq', en: 'median, quantileSeq' }, code: 'median(data) =', kind: 'math' },
+  // неопределённость измерений (GUM / МИ / ПМГ / 5725 / 21748)
+  { pack: 'uncertainty', label: { ru: 'Бюджет GUM', en: 'GUM budget' }, hint: { ru: 'A + B → суммарная → расширенная', en: 'A + B → combined → expanded' }, doc: 'GUM · ГОСТ 34100.3-2017, разд. 4–6', code: 'x := [10.1, 10.3, 9.9, 10.2, 10.0]\nuA := uMean(x)\nuB := uRect(0.15)\nuC := uComb([uA, uB])\nU := uExpand(uC, 2)\nU =', kind: 'math' },
+  { pack: 'uncertainty', label: { ru: 'Тип A (выборка)', en: 'Type A (sample)' }, hint: { ru: 'uMean — СКО среднего', en: 'uMean — std of the mean' }, doc: 'GUM 4.2 · ГОСТ 34100.3-2017', code: 'uMean([2.31, 2.29, 2.33, 2.30]) =', kind: 'math' },
+  { pack: 'uncertainty', label: { ru: 'Тип B (распределения)', en: 'Type B (distributions)' }, hint: { ru: 'rect/tri/norm/ushape', en: 'rect/tri/norm/ushape' }, doc: 'GUM 4.3 · ГОСТ 34100.3-2017', code: 'uRect(0.5) =\nuTri(0.5) =\nuNorm(0.3, 2) =', kind: 'math' },
+  { pack: 'uncertainty', label: { ru: 'Степени свободы + k', en: 'DoF + coverage k' }, hint: { ru: 'Уэлч–Саттертуэйт, Стьюдент', en: 'Welch–Satterthwaite, Student' }, doc: 'GUM G.4, 6.3 · ГОСТ 34100.3-2017', code: 'us := [0.12, 0.23]\nne := nuEff(us, [9, Infinity])\nkCov(ne) =', kind: 'math' },
+  { pack: 'uncertainty', label: { ru: 'Округление результата', en: 'Result rounding' }, hint: { ru: '2 значащие цифры (GUM 7)', en: '2 significant digits (GUM 7)' }, doc: 'GUM 7.2 · ГОСТ 34100.3-2017', code: 'u := uncRound(0.02341)\nresRound(10.0613, u) =', kind: 'math' },
+  { pack: 'uncertainty', label: { ru: 'МИ: прямые многократные', en: 'MI: repeated direct' }, hint: { ru: 'ε, θ, Δ по ГОСТ 8.736', en: 'ε, θ, Δ per GOST 8.736' }, doc: 'МИ 1317 · ГОСТ Р 8.736-2011', code: 'e := confEps(0.12, 10)\nt := thetaComb([0.04, 0.03])\ndeltaComb(e, 0.07, 0.038, t) =', kind: 'math' },
+  { pack: 'uncertainty', label: { ru: 'ПМГ: суммирование', en: 'PMG: combination' }, hint: { ru: 'Б.3–Б.5: |Δ|, RSS, K_P', en: 'B.3–B.5: |Δ|, RSS, K_P' }, code: 'Sc := pmgRSS([0.1, 0.05], [0.2, 0.1])\npmgExpand(Sc, 2) =', kind: 'math', doc: 'ПМГ 96-2009, прил. Б' },
+  { pack: 'uncertainty', label: { ru: 'Прецизионность p×n', en: 'Precision p×n' }, hint: { ru: 's_r, s_L, s_R (схема 5725-2)', en: 's_r, s_L, s_R (5725-2 scheme)' }, doc: 'схема ГОСТ Р ИСО 5725-2', code: 'M := [10.1, 10.3; 9.9, 10.0; 10.2, 10.1]\nprec5725(M) =', kind: 'math' },
+  { pack: 'uncertainty', label: { ru: 'Top-down оценка', en: 'Top-down estimate' }, hint: { ru: 'упрощённо по 21748', en: 'simplified per 21748' }, doc: 'подход ГОСТ Р ИСО 21748', code: 'uTopDown(0.15, 0.08) =', kind: 'math' },
+  { pack: 'uncertainty', label: { ru: 'Пределы r, R', en: 'Limits r, R' }, hint: { ru: '2.8·s (5725-6)', en: '2.8·s (5725-6)' }, doc: 'ГОСТ Р ИСО 5725-6', code: 'repLim(0.12) =', kind: 'math' },
   // физика
   { pack: 'physics', label: { ru: 'Фотон 650 нм', en: '650 nm photon' }, hint: { ru: 'E = h·c/λ', en: 'E = h·c/λ' }, code: 'E_ph := h_planck*c_light/(650*10^-9)', kind: 'math' },
   { pack: 'physics', label: { ru: 'Энергия в эВ', en: 'Energy in eV' }, hint: { ru: '/q_e', en: '/q_e' }, code: 'E_eV := E_ph/q_e', kind: 'math' },

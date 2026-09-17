@@ -4,14 +4,15 @@ import { savePaletteUi, useCanvasStore } from '../store/canvasStore';
 import { lx, packName, t, type PackId } from '../i18n';
 import {
   ICalc, IChart, IChip, IContour, IFx, IField, IFormula, IGrid,
-  IPlot, IProgram, IResize, ISignal, ISim, IUnits, IX, IZap,
+  IPlot, IProgram, IResize, IScale, ISignal, ISim, IUnits, IX, IZap,
 } from './Icon';
 
-const PACKS: PackId[] = ['matrices', 'stats', 'physics', 'em', 'units', 'calc', 'computing', 'telecom', 'programs', 'plots', 'sim'];
+const PACKS: PackId[] = ['matrices', 'stats', 'uncertainty', 'physics', 'em', 'units', 'calc', 'computing', 'telecom', 'programs', 'plots', 'sim'];
 
 const PACK_ICONS: Record<PackId, () => React.JSX.Element> = {
   matrices: IGrid,
   stats: IChart,
+  uncertainty: IScale,
   physics: IZap,
   em: IField,
   units: IUnits,
@@ -258,6 +259,11 @@ export default function FunctionPalette() {
                     {s.code.split('\n')[0]}
                     {s.code.includes('\n') ? ' …' : ''}
                   </div>
+                  {s.doc && (
+                    <div className="math-input text-[10.5px] leading-4 text-[var(--faint)] truncate pl-6 mt-0.5">
+                      {s.doc}
+                    </div>
+                  )}
                 </button>
               );
             })}

@@ -29,6 +29,7 @@ import {
   faPrint,
   faRotateRight,
   faRuler,
+  faScaleBalanced,
   faSignal,
   faSliders,
   faSquareRootVariable,
@@ -77,6 +78,8 @@ export const IResize = () => <Fa icon={faUpRightAndDownLeftFromCenter} />;
 export const IBug = () => <Fa icon={faBug} />;
 /** Предупреждение (треугольник) */
 export const IWarn = () => <Fa icon={faTriangleExclamation} />;
+/** Неопределённость/метрология: весы */
+export const IScale = () => <Fa icon={faScaleBalanced} />;
 /** Статистика: столбчатая диаграмма */
 export const IChart = () => <Fa icon={faChartColumn} />;
 /** Исчисление: калькулятор */
