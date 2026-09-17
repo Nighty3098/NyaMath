@@ -26,6 +26,8 @@ export default function ToolRail() {
   const addSliderBlock = useCanvasStore((s) => s.addSliderBlock);
   const paletteOpen = useCanvasStore((s) => s.paletteOpen);
   const togglePalette = useCanvasStore((s) => s.togglePalette);
+  const formulaPaletteOpen = useCanvasStore((s) => s.formulaPaletteOpen);
+  const toggleFormulaPalette = useCanvasStore((s) => s.toggleFormulaPalette);
   const showGrid = useCanvasStore((s) => s.showGrid);
   const toggleGrid = useCanvasStore((s) => s.toggleGrid);
   const recalc = useCanvasStore((s) => s.recalc);
@@ -74,6 +76,16 @@ export default function ToolRail() {
         aria-pressed={paletteOpen}
       >
         <IFx />
+      </button>
+      <button
+        type="button"
+        className={`nya-tbtn w-9 h-9 ${formulaPaletteOpen ? 'is-on' : ''}`}
+        onClick={toggleFormulaPalette}
+        title={t('menu.formulaPalette')}
+        aria-label={t('menu.formulaPalette')}
+        aria-pressed={formulaPaletteOpen}
+      >
+        <IFormula />
       </button>
       <button
         type="button"

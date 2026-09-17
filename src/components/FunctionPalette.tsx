@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SNIPPETS, type Snippet } from '../engine/packs';
+import { FORMULA_SECTIONS, FORMULAS } from '../data/formulas';
 import { savePaletteUi, useCanvasStore } from '../store/canvasStore';
 import { lx, packName, t, type PackId } from '../i18n';
 import {
@@ -34,15 +35,19 @@ const KIND_ICONS: Record<Snippet['kind'], () => React.JSX.Element> = {
 
 const POS_KEY = 'nyamath-palette-pos';
 const POS_KEY_LEGACY = 'wengineering-palette-pos';
+const FORMULA_POS_KEY = 'nyamath-formula-palette-pos';
+type PaletteVariant = 'functions' | 'formulas';
 /** Зона прилипания к краям экрана, px */
 const SNAP_ZONE = 28;
 /** Сдвиг, после которого тяга док-панели превращается в открепление */
 const UNDOCK_DIST = 14;
 
-function loadPos(): { x: number; y: number } {
-  const fallback = { x: 8, y: 48 };
+function loadPos(variant: PaletteVariant): { x: number; y: number } {
+  const fallback = variant === 'formulas' ? { x: 48, y: 88 } : { x: 8, y: 48 };
   try {
-    const raw = localStorage.getItem(POS_KEY) ?? localStorage.getItem(POS_KEY_LEGACY);
+    const raw = variant === 'formulas'
+      ? localStorage.getItem(FORMULA_POS_KEY)
+      : localStorage.getItem(POS_KEY) ?? localStorage.getItem(POS_KEY_LEGACY);
     if (!raw) return fallback;
     const p = JSON.parse(raw) as { x?: unknown; y?: unknown };
     if (typeof p.x !== 'number' || typeof p.y !== 'number') return fallback;
@@ -61,24 +66,28 @@ function loadPos(): { x: number; y: number } {
  * Прилипание — перетаскиванием к левому/правому краю экрана, открепление —
  * тягой за шапку док-панели. Вкл/выкл — через меню «Вид». Не часть canvas.
  */
-export default function FunctionPalette() {
+export default function FunctionPalette({ variant = 'functions' }: { variant?: PaletteVariant }) {
+  const formulas = variant === 'formulas';
+  const posKey = formulas ? FORMULA_POS_KEY : POS_KEY;
+  const searchId = formulas ? 'formula-search' : 'fx-search';
   const addBlock = useCanvasStore((s) => s.addBlock);
+  const addBlocks = useCanvasStore((s) => s.addBlocks);
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
   const addContourBlock = useCanvasStore((s) => s.addContourBlock);
   const addProgramBlock = useCanvasStore((s) => s.addProgramBlock);
   const addSimBlock = useCanvasStore((s) => s.addSimBlock);
-  const setPaletteOpen = useCanvasStore((s) => s.setPaletteOpen);
-  const mode = useCanvasStore((s) => s.paletteMode);
-  const setPaletteMode = useCanvasStore((s) => s.setPaletteMode);
-  const palW = useCanvasStore((s) => s.paletteW);
-  const palH = useCanvasStore((s) => s.paletteH);
-  const setPaletteSize = useCanvasStore((s) => s.setPaletteSize);
-  const dockW = useCanvasStore((s) => s.paletteDockW);
-  const setPaletteDockW = useCanvasStore((s) => s.setPaletteDockW);
+  const setPaletteOpen = useCanvasStore((s) => (formulas ? s.setFormulaPaletteOpen : s.setPaletteOpen));
+  const mode = useCanvasStore((s) => (formulas ? s.formulaPaletteMode : s.paletteMode));
+  const setPaletteMode = useCanvasStore((s) => (formulas ? s.setFormulaPaletteMode : s.setPaletteMode));
+  const palW = useCanvasStore((s) => (formulas ? s.formulaPaletteW : s.paletteW));
+  const palH = useCanvasStore((s) => (formulas ? s.formulaPaletteH : s.paletteH));
+  const setPaletteSize = useCanvasStore((s) => (formulas ? s.setFormulaPaletteSize : s.setPaletteSize));
+  const dockW = useCanvasStore((s) => (formulas ? s.formulaPaletteDockW : s.paletteDockW));
+  const setPaletteDockW = useCanvasStore((s) => (formulas ? s.setFormulaPaletteDockW : s.setPaletteDockW));
   // подписка ради перерендера при смене языка
-  useCanvasStore((s) => s.lang);
+  const lang = useCanvasStore((s) => s.lang);
   const [q, setQ] = useState('');
-  const [pos, setPos] = useState(loadPos);
+  const [pos, setPos] = useState(() => loadPos(variant));
   const [snap, setSnap] = useState<'left' | 'right' | null>(null);
   // жесты: живут в ref'ах, движение/отпускание — на window (переживают смену режима)
   const floatDrag = useRef<{ dx: number; dy: number } | null>(null);
@@ -88,16 +97,94 @@ export default function FunctionPalette() {
 
   const docked = mode !== 'float';
 
-  const items = useMemo(() => {
+  interface FormulaRow {
+    id: string;
+    section: string;
+    label: { ru: string; en: string };
+    hint: { ru: string; en: string };
+    code: string;
+    sources: { title: string; url: string }[];
+  }
+
+  interface PalItem {
+    key: string;
+    section: string;
+    label: string;
+    hint: string;
+    code: string;
+    doc?: string;
+    sources?: { title: string; url: string }[];
+    kind: Snippet['kind'];
+    snippet?: Snippet;
+  }
+
+  const sections = formulas
+    ? FORMULA_SECTIONS.map((sec) => ({ id: sec.id, label: lx(sec.label) }))
+    : PACKS.map((pack) => ({ id: pack, label: packName(pack) }));
+
+  const items = useMemo<PalItem[]>(() => {
+    const sectionLabel = (id: string): string =>
+      formulas
+        ? lx(FORMULA_SECTIONS.find((sec) => sec.id === id)?.label ?? { ru: id, en: id })
+        : packName(id as PackId);
+    const all: PalItem[] = formulas
+      ? (FORMULAS as FormulaRow[]).map((f) => ({
+          key: f.id,
+          section: f.section,
+          label: f.label[lang],
+          hint: f.hint[lang],
+          code: f.code,
+          sources: f.sources,
+          kind: 'math' as const,
+        }))
+      : SNIPPETS.map((s, i) => ({
+          key: `${s.pack}-${i}`,
+          section: s.pack,
+          label: s.label[lang],
+          hint: s.hint[lang],
+          code: s.code,
+          doc: s.doc,
+          kind: s.kind,
+          snippet: s,
+        }));
     const needle = q.trim().toLowerCase();
-    if (!needle) return SNIPPETS;
-    return SNIPPETS.filter(
-      (s) =>
-        lx(s.label).toLowerCase().includes(needle) ||
-        s.code.toLowerCase().includes(needle) ||
-        lx(s.hint).toLowerCase().includes(needle),
+    if (!needle) return all;
+    return all.filter(
+      (it) =>
+        it.label.toLowerCase().includes(needle) ||
+        it.code.toLowerCase().includes(needle) ||
+        it.hint.toLowerCase().includes(needle) ||
+        (it.doc ?? '').toLowerCase().includes(needle) ||
+        sectionLabel(it.section).toLowerCase().includes(needle) ||
+        it.sources?.some((src) => src.title.toLowerCase().includes(needle)),
     );
-  }, [q]);
+  }, [q, lang, formulas]);
+
+  const insert = (s: Snippet) => {
+    const p = place();
+    if (s.kind === 'plot') addPlotBlock(p.x, p.y, s.code, s.plot);
+    else if (s.kind === 'contour') addContourBlock(p.x, p.y, s.code);
+    else if (s.kind === 'program') addProgramBlock(p.x, p.y, s.code, s.exportName ?? '');
+    else if (s.kind === 'sim') addSimBlock(p.x, p.y, s.code);
+    else addBlock(p.x, p.y, s.code);
+  };
+
+  const insertFormula = (code: string) => {
+    // каждую строку — отдельным блоком: так любую строку можно править точечно,
+    // а порядок сверху-вниз сохраняет зависимости между строками
+    const lines = code.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+    if (lines.length <= 1) {
+      const p = place();
+      addBlock(p.x, p.y, code);
+      return;
+    }
+    const p = place();
+    addBlocks(lines, p.x, p.y);
+    // place() уже увёл прицел на один шаг — дошагнуть под всю лесенку
+    useCanvasStore.getState().nudgeCross(0, 140 * (lines.length - 1));
+  };
+
+  const close = () => setPaletteOpen(false);
 
   // Единый цикл перетаскивания на window: переживает undock (смену дерева)
   useEffect(() => {
@@ -112,7 +199,7 @@ export default function FunctionPalette() {
           const np = { x: e.clientX - 200, y: Math.max(0, e.clientY - 16) };
           setPos(np);
           try {
-            localStorage.setItem(POS_KEY, JSON.stringify(np));
+            localStorage.setItem(posKey, JSON.stringify(np));
           } catch { /* ignore */ }
           floatDrag.current = { dx: 200, dy: 16 };
           setSnap(null);
@@ -138,11 +225,11 @@ export default function FunctionPalette() {
         setSnap((s) => {
           if (s) {
             setPaletteMode(s);
-            savePaletteUi();
+            savePaletteUi(variant);
           } else {
             setPos((p) => {
               try {
-                localStorage.setItem(POS_KEY, JSON.stringify(p));
+                localStorage.setItem(posKey, JSON.stringify(p));
               } catch { /* ignore */ }
               return p;
             });
@@ -159,7 +246,7 @@ export default function FunctionPalette() {
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
     };
-  }, [setPaletteMode]);
+  }, [setPaletteMode, posKey, variant]);
 
   const place = () => {
     // вставка — в точку прицела, прицел каскадом уходит вниз
@@ -168,17 +255,6 @@ export default function FunctionPalette() {
     st.nudgeCross(0, 140);
     return p;
   };
-
-  const insert = (s: Snippet) => {
-    const p = place();
-    if (s.kind === 'plot') addPlotBlock(p.x, p.y, s.code, s.plot);
-    else if (s.kind === 'contour') addContourBlock(p.x, p.y, s.code);
-    else if (s.kind === 'program') addProgramBlock(p.x, p.y, s.code, s.exportName ?? '');
-    else if (s.kind === 'sim') addSimBlock(p.x, p.y, s.code);
-    else addBlock(p.x, p.y, s.code);
-  };
-
-  const close = () => setPaletteOpen(false);
 
   const header = (
     <div
@@ -192,18 +268,18 @@ export default function FunctionPalette() {
           floatDrag.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y };
         }
       }}
-      title={t('pal.aria')}
+      title={t(formulas ? 'formulaPal.aria' : 'pal.aria')}
     >
       <span className="text-[var(--accent)] shrink-0" aria-hidden="true">
-        <IFx />
+        {formulas ? <IFormula /> : <IFx />}
       </span>
-      <label htmlFor="fx-search" className="sr-only">
-        {t('pal.searchLabel')}
+      <label htmlFor={searchId} className="sr-only">
+        {t(formulas ? 'formulaPal.searchLabel' : 'pal.searchLabel')}
       </label>
       <input
-        id="fx-search"
+        id={searchId}
         className="nya-input flex-1 min-w-0 min-h-[34px] px-2.5 py-1 text-[13px]"
-        placeholder={t('pal.searchPh')}
+        placeholder={t(formulas ? 'formulaPal.searchPh' : 'pal.searchPh')}
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onPointerDown={(e) => e.stopPropagation()}
@@ -214,7 +290,7 @@ export default function FunctionPalette() {
         type="button"
         className="nya-tbtn w-8 h-8 shrink-0"
         onClick={close}
-        aria-label={t('pal.close')}
+        aria-label={t(formulas ? 'formulaPal.close' : 'pal.close')}
       >
         <IX />
       </button>
@@ -223,54 +299,73 @@ export default function FunctionPalette() {
 
   const list = (
     <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2">
-      {PACKS.map((pack) => {
-        const rows = items.filter((s) => s.pack === pack);
+      {sections.map((sec) => {
+        const rows = items.filter((s) => s.section === sec.id);
         if (!rows.length) return null;
-        const PackIcon = PACK_ICONS[pack];
+        const SecIcon = formulas ? IFormula : PACK_ICONS[sec.id as PackId];
         return (
-          <div key={pack} className="mt-1.5">
+          <div key={sec.id} className="mt-1.5">
             <div className="pal-pack flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--faint)] px-2 py-1.5 rounded-lg">
               <span aria-hidden="true">
-                <PackIcon />
+                <SecIcon />
               </span>
-              {packName(pack)}
+              {sec.label}
               <span className="math-input normal-case font-normal tracking-normal opacity-70">{rows.length}</span>
             </div>
             {rows.map((s) => {
               const KindIcon = KIND_ICONS[s.kind];
               return (
-                <button
-                  key={pack + lx(s.label)}
-                  type="button"
-                  className="w-full text-left px-2 py-1.5 rounded-lg border border-transparent hover:border-[var(--chrome-line)] hover:bg-[var(--accent-soft)]/50 group cursor-pointer transition-colors duration-120 ease-out"
-                  onClick={() => insert(s)}
-                  title={lx(s.hint)}
+                <div
+                  key={s.key}
+                  className="w-full text-left px-2 py-1.5 rounded-lg border border-transparent hover:border-[var(--chrome-line)] hover:bg-[var(--accent-soft)]/50 group transition-colors duration-120 ease-out"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[var(--accent)] shrink-0" aria-hidden="true">
-                      <KindIcon />
-                    </span>
-                    <span className="text-[13px] leading-4 truncate">{lx(s.label)}</span>
-                    <span className="ml-auto text-[var(--faint)] group-hover:text-[var(--accent)] group-hover:opacity-100 opacity-0 text-[15px] leading-4 shrink-0 transition-opacity" aria-hidden="true">
-                      +
-                    </span>
-                  </div>
-                  <div className="math-input text-[11.5px] leading-4 text-[var(--chrome-soft)] truncate pl-6 mt-0.5">
-                    {s.code.split('\n')[0]}
-                    {s.code.includes('\n') ? ' …' : ''}
-                  </div>
-                  {s.doc && (
-                    <div className="math-input text-[10.5px] leading-4 text-[var(--faint)] truncate pl-6 mt-0.5">
-                      {s.doc}
+                  <button
+                    type="button"
+                    className="w-full text-left cursor-pointer"
+                    onClick={() => (s.snippet ? insert(s.snippet) : insertFormula(s.code))}
+                    title={s.hint}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[var(--accent)] shrink-0" aria-hidden="true">
+                        <KindIcon />
+                      </span>
+                      <span className="text-[13px] leading-4 truncate">{s.label}</span>
+                      <span className="ml-auto text-[var(--faint)] group-hover:text-[var(--accent)] group-hover:opacity-100 opacity-0 text-[15px] leading-4 shrink-0 transition-opacity" aria-hidden="true">
+                        +
+                      </span>
+                    </div>
+                    <div className="math-input text-[11.5px] leading-4 text-[var(--chrome-soft)] truncate pl-6 mt-0.5">
+                      {s.code.split('\n')[0]}
+                      {s.code.includes('\n') ? ' …' : ''}
+                    </div>
+                    {(s.doc ?? s.hint) && (
+                      <div className="math-input text-[10.5px] leading-4 text-[var(--faint)] truncate pl-6 mt-0.5">
+                        {s.doc ?? s.hint}
+                      </div>
+                    )}
+                  </button>
+                  {formulas && s.sources && s.sources.length > 0 && (
+                    <div className="flex flex-wrap gap-x-2 gap-y-0.5 pl-6 mt-1">
+                      {s.sources.map((src) => (
+                        <a
+                          key={src.url}
+                          href={src.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10.5px] leading-4 text-[var(--accent)] underline truncate max-w-full"
+                        >
+                          {src.title}
+                        </a>
+                      ))}
                     </div>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
         );
       })}
-      {items.length === 0 && <div className="text-[13px] text-[var(--chrome-soft)] p-3">{t('pal.empty')}</div>}
+      {items.length === 0 && <div className="text-[13px] text-[var(--chrome-soft)] p-3">{t(formulas ? 'formulaPal.empty' : 'pal.empty')}</div>}
     </div>
   );
 
@@ -294,7 +389,7 @@ export default function FunctionPalette() {
         }}
         onPointerUp={() => {
           dockResizeRef.current = null;
-          savePaletteUi();
+          savePaletteUi(variant);
         }}
         onPointerCancel={() => {
           dockResizeRef.current = null;
@@ -306,7 +401,7 @@ export default function FunctionPalette() {
         className="h-full shrink-0 flex items-stretch bg-[var(--chrome)] text-[var(--chrome-ink)]"
         style={{ width: dockW }}
         role="complementary"
-        aria-label={t('pal.aria')}
+        aria-label={t(formulas ? 'formulaPal.aria' : 'pal.aria')}
       >
         {mode === 'right' && gutter}
         <div className="flex-1 min-w-0 flex flex-col">
@@ -333,7 +428,7 @@ export default function FunctionPalette() {
         className="nya-palette-float fixed z-50 flex flex-col rounded-xl border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] shadow-2xl"
         style={{ left: pos.x, top: pos.y, width: palW, height: Math.min(palH, window.innerHeight - pos.y - 8) }}
         role="dialog"
-        aria-label={t('pal.aria')}
+        aria-label={t(formulas ? 'formulaPal.aria' : 'pal.aria')}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
             e.stopPropagation();
@@ -362,7 +457,7 @@ export default function FunctionPalette() {
           }}
           onPointerUp={() => {
             resizeRef.current = null;
-            savePaletteUi();
+            savePaletteUi(variant);
           }}
           onPointerCancel={() => {
             resizeRef.current = null;

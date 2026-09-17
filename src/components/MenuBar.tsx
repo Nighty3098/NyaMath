@@ -7,7 +7,7 @@ import { SHARE_WARN_CHARS, shareDocument } from '../lib/share';
 import { THEMES } from '../theme';
 import { t, themeLabel, type Lang } from '../i18n';
 import {
-  IFx, IFormula, IGrid, IMenu, IOpen, IPaw, IPlot, IPlot3d, IPrint, IProgram,
+  IFx, IFormula, IGrid, IOpen, IPaw, IPlot, IPlot3d, IPrint, IProgram,
   IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo,
 } from './Icon';
 
@@ -60,6 +60,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
   const showGrid = useCanvasStore((s) => s.showGrid);
   const paletteOpen = useCanvasStore((s) => s.paletteOpen);
   const togglePalette = useCanvasStore((s) => s.togglePalette);
+  const formulaPaletteOpen = useCanvasStore((s) => s.formulaPaletteOpen);
+  const toggleFormulaPalette = useCanvasStore((s) => s.toggleFormulaPalette);
   const theme = useCanvasStore((s) => s.theme);
   const setTheme = useCanvasStore((s) => s.setTheme);
   const toggleTheme = useCanvasStore((s) => s.toggleTheme);
@@ -71,22 +73,18 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
   const canRedo = useCanvasStore((s) => s.future.length > 0);
 
   const [open, setOpen] = useState<string | null>(null);
-  // Мобильный bottom-sheet со всеми разделами (десктопные меню скрыты через md:)
-  const [sheet, setSheet] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open && !sheet) return;
+    if (!open) return;
     const onDown = (e: PointerEvent) => {
       if (!barRef.current?.contains(e.target as Node)) {
         setOpen(null);
-        setSheet(false);
       }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setOpen(null);
-        setSheet(false);
       }
     };
     document.addEventListener('pointerdown', onDown);
@@ -95,7 +93,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
       document.removeEventListener('pointerdown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open, sheet]);
+  }, [open]);
 
   const run = (fn: () => void) => () => {
     setOpen(null);
@@ -161,6 +159,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
         { id: 'ins-sim', icon: <ISim />, label: t('menu.insSim'), action: run(insertAt((x, y) => addSimBlock(x, y))) },
         { sep: true },
         { id: 'ins-pal', icon: <IFx />, label: t('menu.insPal'), hint: 'ƒx', action: run(togglePalette) },
+        { id: 'ins-fpal', icon: <IFormula />, label: t('menu.insFormulaPal'), hint: '∑', action: run(toggleFormulaPalette) },
       ],
     },
     {
@@ -169,6 +168,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
       items: [
         { id: 'grid', icon: <IGrid />, label: t('menu.grid'), checked: showGrid, action: run(toggleGrid) },
         { id: 'palette', icon: <IFx />, label: t('menu.palette'), checked: paletteOpen, action: run(togglePalette) },
+        { id: 'fpalette', icon: <IFormula />, label: t('menu.formulaPalette'), checked: formulaPaletteOpen, action: run(toggleFormulaPalette) },
         { id: 'recalc', icon: <IRecalc />, label: t('menu.recalc'), hint: 'Ctrl+↵', action: run(recalc) },
         { sep: true },
         ...THEMES.map((th) => ({
@@ -245,15 +245,6 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
       role="menubar"
       aria-label={t('menu.main')}
     >
-      <button
-        type="button"
-        className="nya-tbtn md:hidden"
-        onClick={() => setSheet(true)}
-        aria-label={t('menu.main')}
-        aria-haspopup="dialog"
-      >
-        <IMenu />
-      </button>
       <div className="flex items-center gap-2 mr-1 select-none">
         <span className="text-[var(--accent)] inline-flex" aria-hidden="true"><IPaw /></span>
         <span className="font-semibold tracking-tight text-[14px] whitespace-nowrap">
@@ -304,55 +295,20 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
         >
           <IFx />
         </button>
+        <button
+          type="button"
+          className={`nya-tbtn ${formulaPaletteOpen ? 'is-on' : ''}`}
+          onClick={toggleFormulaPalette}
+          title={t('menu.formulaPalette')}
+          aria-label={t('menu.formulaPalette')}
+          aria-pressed={formulaPaletteOpen}
+        >
+          <IFormula />
+        </button>
         <button type="button" className="nya-tbtn" onClick={toggleTheme} title={theme} aria-label={theme}>
           {THEMES.find((x) => x.id === theme)?.kind === 'light' ? <IMoon /> : <ISun />}
         </button>
       </div>
-      {/* мобильный bottom-sheet: все разделы меню одним списком */}
-      {sheet && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/40 md:hidden"
-            onClick={() => setSheet(false)}
-            aria-hidden="true"
-          />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('menu.main')}
-            className="fixed md:hidden z-50 inset-x-2 bottom-2 max-h-[70dvh] flex flex-col rounded-2xl bg-[var(--chrome)] text-[var(--chrome-ink)] shadow-2xl"
-            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-          >
-            <div className="flex items-center gap-2 px-4 pt-3 pb-1 shrink-0">
-              <span className="text-[var(--accent)] inline-flex" aria-hidden="true"><IPaw /></span>
-              <span className="font-semibold tracking-tight text-[15px]">NyaMath</span>
-              <button
-                type="button"
-                className="nya-tbtn ml-auto"
-                onClick={() => setSheet(false)}
-                aria-label={t('w.close')}
-              >
-                <IX />
-              </button>
-            </div>
-            <div className="overflow-y-auto px-2 pb-3" role="menu">
-              {menus.map((m) => (
-                <div key={m.id}>
-                  <div className="menu-head">{m.label}</div>
-                  {m.items.map((it, i) => {
-                    if ('sep' in it || 'head' in it) return renderItem(it, i, () => {}, true);
-                    const act = it.action;
-                    return renderItem(it, i, () => {
-                      setSheet(false);
-                      act();
-                    }, true);
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }

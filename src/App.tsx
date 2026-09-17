@@ -17,6 +17,8 @@ export default function App() {
   const loadDocument = useCanvasStore((s) => s.loadDocument);
   const paletteOpen = useCanvasStore((s) => s.paletteOpen);
   const paletteMode = useCanvasStore((s) => s.paletteMode);
+  const formulaPaletteOpen = useCanvasStore((s) => s.formulaPaletteOpen);
+  const formulaPaletteMode = useCanvasStore((s) => s.formulaPaletteMode);
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const [welcomeForced, setWelcomeForced] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -181,13 +183,16 @@ export default function App() {
       <div className="nya-workspace flex-1 flex flex-row min-h-0 min-w-0">
         <ToolRail />
         {paletteOpen && paletteMode === 'left' && <FunctionPalette />}
+        {formulaPaletteOpen && formulaPaletteMode === 'left' && <FunctionPalette variant="formulas" />}
         <div className="flex-1 relative flex flex-col min-h-0 min-w-0">
           <Canvas />
         </div>
+        {formulaPaletteOpen && formulaPaletteMode === 'right' && <FunctionPalette variant="formulas" />}
         {paletteOpen && paletteMode === 'right' && <FunctionPalette />}
       </div>
-      {/* плавающая палитра — окно поверх всего, не часть canvas */}
+      {/* плавающие палитры — окна поверх всего, не часть canvas */}
       {paletteOpen && paletteMode === 'float' && <FunctionPalette />}
+      {formulaPaletteOpen && formulaPaletteMode === 'float' && <FunctionPalette variant="formulas" />}
       {showWelcome && <WelcomeModal onClose={closeWelcome} onOpenFile={() => fileRef.current?.click()} />}
     </div>
   );
