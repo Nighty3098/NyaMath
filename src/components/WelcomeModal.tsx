@@ -79,7 +79,7 @@ export default function WelcomeModal({ onClose, onOpenFile }: WelcomeModalProps)
         role="dialog"
         aria-modal="true"
         aria-label={t('w.aria')}
-        className={`welcome-card relative w-[560px] max-w-full rounded-[18px] border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] shadow-2xl px-7 py-6 ${closing ? 'welcome-exit' : ''}`}
+        className={`welcome-card relative w-[560px] max-w-full max-h-[92dvh] overflow-y-auto rounded-[18px] border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] shadow-2xl px-7 py-6 ${closing ? 'welcome-exit' : ''}`}
       >
         <button
           ref={closeBtn}
@@ -99,7 +99,7 @@ export default function WelcomeModal({ onClose, onOpenFile }: WelcomeModalProps)
           {t('w.tag')}
         </p>
 
-        <div className="welcome-chunk welcome-d1 grid grid-cols-2 sm:grid-cols-3 gap-2 mt-5">
+        <div className="welcome-chunk welcome-d1 grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 gap-2 mt-5">
           {quick.map((q) => (
             <button
               key={q.title}

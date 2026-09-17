@@ -327,14 +327,16 @@ body {
   flex-shrink: 0;
 }
 @media (max-width: 640px) {
-  /* бренд прячем — место только под пункты */
-  .nya-menubar > div:first-child {
-    display: none;
-  }
   .nya-menubar button[role="menuitem"] {
     padding: 6px 8px;
     font-size: 12px;
   }
+}
+
+/* Убираем iOS double-tap zoom на кнопках хрома */
+.nya-menubar button,
+.nya-zoombar button {
+  touch-action: manipulation;
 }
 .menu-drop {
   max-width: min(15rem, calc(100vw - 16px));

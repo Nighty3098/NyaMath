@@ -107,6 +107,15 @@ function blank(id: string, x: number, y: number): MathBlockData {
   };
 }
 
+/**
+ * Стартовая ширина блока: на узком экране ужимаем под вьюпорт,
+ * на десктопе — дефолт как раньше. В тестах (node) window нет → дефолт.
+ */
+function fitViewportWidth(def: number): number {
+  if (typeof window === 'undefined') return def;
+  return Math.max(280, Math.min(def, window.innerWidth - 24));
+}
+
 function withRecalc(blocks: Record<string, MathBlockData>): Record<string, MathBlockData> {
   const { blocks: out } = recalculateAll(Object.values(blocks));
   return out;
@@ -441,6 +450,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const id = uuid();
     const b: MathBlockData = {
       ...blank(id, x, y), rawInput: 'plot', kind: 'plot', plotFn: fn, plotXmin: -10, plotXmax: 10,
+      w: fitViewportWidth(460),
       ...patch,
     };
     const next = withRecalc({ ...get().blocks, [id]: b });
@@ -454,6 +464,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const b: MathBlockData = {
       ...blank(id, x, y), rawInput: 'contour', kind: 'contour', plotFn: fn,
       plotXmin: -5, plotXmax: 5, plotYmin: -5, plotYmax: 5, plotResolution: 48,
+      w: fitViewportWidth(460),
     };
     const next = withRecalc({ ...get().blocks, [id]: b });
     persist(next);
@@ -467,6 +478,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       ...blank(id, x, y), rawInput: 'plot3d', kind: 'plot3d', plotFn: fn,
       plotXmin: -5, plotXmax: 5, plotYmin: -5, plotYmax: 5,
       plotMode: 'auto', plotResolution: 48, plotWireframe: false,
+      w: fitViewportWidth(560),
     };
     const next = withRecalc({ ...get().blocks, [id]: b });
     persist(next);
@@ -490,6 +502,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const m = getSimModel(modelId) ?? getSimModel('pendulum') ?? SIM_MODELS[0];
     const b: MathBlockData = {
       ...blank(id, x, y), rawInput: 'sim', kind: 'sim', simExport: '', simSpeed: 1, simLoop: true,
+      w: fitViewportWidth(560),
       ...simModelPatch(m),
     };
     const next = withRecalc({ ...get().blocks, [id]: b });

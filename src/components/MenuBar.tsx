@@ -7,7 +7,7 @@ import { SHARE_WARN_CHARS, shareDocument } from '../lib/share';
 import { THEMES } from '../theme';
 import { t, themeLabel, type Lang } from '../i18n';
 import {
-  IFx, IFormula, IGrid, IOpen, IPaw, IPlot, IPlot3d, IPrint, IProgram,
+  IFx, IFormula, IGrid, IMenu, IOpen, IPaw, IPlot, IPlot3d, IPrint, IProgram,
   IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo,
 } from './Icon';
 
@@ -71,15 +71,23 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
   const canRedo = useCanvasStore((s) => s.future.length > 0);
 
   const [open, setOpen] = useState<string | null>(null);
+  // Мобильный bottom-sheet со всеми разделами (десктопные меню скрыты через md:)
+  const [sheet, setSheet] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open && !sheet) return;
     const onDown = (e: PointerEvent) => {
-      if (!barRef.current?.contains(e.target as Node)) setOpen(null);
+      if (!barRef.current?.contains(e.target as Node)) {
+        setOpen(null);
+        setSheet(false);
+      }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(null);
+      if (e.key === 'Escape') {
+        setOpen(null);
+        setSheet(false);
+      }
     };
     document.addEventListener('pointerdown', onDown);
     document.addEventListener('keydown', onKey);
@@ -87,7 +95,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
       document.removeEventListener('pointerdown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open ]);
+  }, [open, sheet]);
 
   const run = (fn: () => void) => () => {
     setOpen(null);
@@ -193,6 +201,28 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
     },
   ];
 
+  const renderItem = (it: Entry, i: number, onPick: () => void, tall = false) => {
+    if ('sep' in it) return <div key={`sep${i}`} className="menu-sep" role="separator" />;
+    if ('head' in it) return <div key={`h${i}`} className="menu-head">{it.head}</div>;
+    return (
+      <button
+        key={it.id}
+        type="button"
+        role="menuitemcheckbox"
+        aria-checked={it.checked ?? undefined}
+        disabled={it.disabled}
+        onClick={onPick}
+        className={`menu-item ${tall ? 'min-h-[44px]' : ''}`}
+      >
+        <span className="w-4 shrink-0 inline-flex justify-center" aria-hidden="true">
+          {it.checked ? <span className="text-[var(--accent)]">✓</span> : it.icon}
+        </span>
+        <span className={`flex-1 ${it.danger ? 'text-[var(--danger)]' : ''}`}>{it.label}</span>
+        {it.hint && <kbd>{it.hint}</kbd>}
+      </button>
+    );
+  };
+
   const drop = (m: (typeof menus)[number]) => (
     <div
       role="menu"
@@ -202,25 +232,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
       }`}
     >
       {m.items.map((it, i) => {
-        if ('sep' in it) return <div key={`sep${i}`} className="menu-sep" role="separator" />;
-        if ('head' in it) return <div key={`h${i}`} className="menu-head">{it.head}</div>;
-        return (
-          <button
-            key={it.id}
-            type="button"
-            role="menuitemcheckbox"
-            aria-checked={it.checked ?? undefined}
-            disabled={it.disabled}
-            onClick={it.action}
-            className="menu-item"
-          >
-            <span className="w-4 shrink-0 inline-flex justify-center" aria-hidden="true">
-              {it.checked ? <span className="text-[var(--accent)]">✓</span> : it.icon}
-            </span>
-            <span className={`flex-1 ${it.danger ? 'text-[var(--danger)]' : ''}`}>{it.label}</span>
-            {it.hint && <kbd>{it.hint}</kbd>}
-          </button>
-        );
+        if ('sep' in it || 'head' in it) return renderItem(it, i, () => {});
+        return renderItem(it, i, it.action);
       })}
     </div>
   );
@@ -232,6 +245,15 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
       role="menubar"
       aria-label={t('menu.main')}
     >
+      <button
+        type="button"
+        className="nya-tbtn md:hidden"
+        onClick={() => setSheet(true)}
+        aria-label={t('menu.main')}
+        aria-haspopup="dialog"
+      >
+        <IMenu />
+      </button>
       <div className="flex items-center gap-2 mr-1 select-none">
         <span className="text-[var(--accent)] inline-flex" aria-hidden="true"><IPaw /></span>
         <span className="font-semibold tracking-tight text-[14px] whitespace-nowrap">
@@ -240,7 +262,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
       </div>
 
       {menus.map((m) => (
-        <div key={m.id} className="relative">
+        <div key={m.id} className="relative hidden md:block">
           <button
             type="button"
             role="menuitem"
@@ -286,6 +308,51 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
           {THEMES.find((x) => x.id === theme)?.kind === 'light' ? <IMoon /> : <ISun />}
         </button>
       </div>
+      {/* мобильный bottom-sheet: все разделы меню одним списком */}
+      {sheet && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40 md:hidden"
+            onClick={() => setSheet(false)}
+            aria-hidden="true"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('menu.main')}
+            className="fixed md:hidden z-50 inset-x-2 bottom-2 max-h-[70dvh] flex flex-col rounded-2xl bg-[var(--chrome)] text-[var(--chrome-ink)] shadow-2xl"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          >
+            <div className="flex items-center gap-2 px-4 pt-3 pb-1 shrink-0">
+              <span className="text-[var(--accent)] inline-flex" aria-hidden="true"><IPaw /></span>
+              <span className="font-semibold tracking-tight text-[15px]">NyaMath</span>
+              <button
+                type="button"
+                className="nya-tbtn ml-auto"
+                onClick={() => setSheet(false)}
+                aria-label={t('w.close')}
+              >
+                <IX />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-2 pb-3" role="menu">
+              {menus.map((m) => (
+                <div key={m.id}>
+                  <div className="menu-head">{m.label}</div>
+                  {m.items.map((it, i) => {
+                    if ('sep' in it || 'head' in it) return renderItem(it, i, () => {}, true);
+                    const act = it.action;
+                    return renderItem(it, i, () => {
+                      setSheet(false);
+                      act();
+                    }, true);
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

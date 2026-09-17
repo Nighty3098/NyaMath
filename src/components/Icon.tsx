@@ -6,6 +6,7 @@ import {
   faArrowRotateRight,
   faArrowUpRightFromSquare,
   faAtom,
+  faBars,
   faBolt,
   faBug,
   faCalculator,
@@ -52,6 +53,7 @@ function Fa({ icon }: { icon: IconDefinition }) {
 }
 
 export const IPlus = () => <Fa icon={faPlus} />;
+export const IMenu = () => <Fa icon={faBars} />;
 export const IFormula = () => <Fa icon={faSquareRootVariable} />;
 export const IPlot = () => <Fa icon={faChartLine} />;
 export const IPlot3d = () => <Fa icon={faCube} />;
