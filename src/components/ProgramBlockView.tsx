@@ -1,8 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import katex from 'katex';
 import type { MathBlockData } from '../engine/dependencies';
-import { recalculateAll } from '../engine/dependencies';
-import { createBaseScope } from '../engine/mathEngine';
+import { useDocScope } from './useDocScope';
 import { debugProgram } from '../engine/program';
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
@@ -64,17 +63,15 @@ function ProgramBlockView({ block, scale }: Props) {
   const rows = Math.min(16, Math.max(5, draft.split('\n').length + 1));
 
   /** Данные отладчика: пошаговый прогон в контексте переменных документа. */
+  const base = useDocScope(blocks);
   const debug = useMemo(() => {
     if (!showDebug) return null;
     try {
-      const mathBlocks = Object.values(blocks).filter((b) => b.kind === 'math');
-      const { scope } = recalculateAll(mathBlocks);
-      const base = { ...createBaseScope(), ...scope };
-      return debugProgram(block.rawInput, base);
+      return debugProgram(block.rawInput, { ...base });
     } catch (e) {
       return { steps: [], truncated: false, error: e instanceof Error ? e.message : String(e), errorLine: null };
     }
-  }, [showDebug, block.rawInput, blocks]);
+  }, [showDebug, block.rawInput, base]);
   const selDebugStep = selStep == null ? debug?.steps[debug.steps.length - 1] ?? null : (debug?.steps.find((s) => s.n === selStep) ?? null);
 
   const finishEdit = (value: string) => {

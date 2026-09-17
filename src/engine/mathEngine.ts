@@ -70,6 +70,62 @@ math.import(
 
 export type Scope = Record<string, unknown>;
 
+/* ---------- LRU-кэши горячего пути (#4) ----------
+ * parse / compile / deps / LaTeX одной и той же строки повторяются на каждый
+ * пересчёт (печать, слайдер, ресемплинг). Кэшируем по строке с обрезкой размера.
+ * Значения немутабельны для вызывающего кода: массивы отдаём копией,
+ * EvalFunction делит только код (scope передаётся в evaluate).
+ */
+const CACHE_LIMIT = 2000;
+
+function lruSet<K, V>(m: Map<K, V>, k: K, v: V): void {
+  if (m.has(k)) m.delete(k);
+  else if (m.size >= CACHE_LIMIT) {
+    const oldest = m.keys().next();
+    if (!oldest.done) m.delete(oldest.value);
+  }
+  m.set(k, v);
+}
+
+const compiledPreCache = new Map<string, EvalFunction | null>();
+const plotExprCache = new Map<string, CompiledPlotExpr | null>();
+const depsCache = new Map<string, string[]>();
+const latexCache = new Map<string, string>();
+
+/**
+ * Скомпилировать ПРЕДОБРАБОТАННОЕ выражение с кэшем.
+ * null — не парсится или содержит присваивания (для таких вызывающий код
+ * использует медленный путь math.evaluate, семантика не меняется).
+ */
+export function getCompiledPre(pre: string): EvalFunction | null {
+  const hit = compiledPreCache.get(pre);
+  if (hit !== undefined) return hit;
+  let out: EvalFunction | null = null;
+  try {
+    const node = math.parse(pre);
+    let assign = false;
+    try {
+      node.traverse((n: unknown) => {
+        if ((n as { isAssignmentNode?: boolean }).isAssignmentNode) assign = true;
+      });
+    } catch {
+      out = null;
+      lruSet(compiledPreCache, pre, out);
+      return out;
+    }
+    out = assign ? null : node.compile();
+  } catch {
+    out = null;
+  }
+  lruSet(compiledPreCache, pre, out);
+  return out;
+}
+
+/** Сырое выражение → препроцессинг (j, диапазоны) + кэшированная компиляция. */
+export function compileRawExpr(raw: string): EvalFunction | null {
+  return getCompiledPre(preprocessRanges(preprocessJ(raw, false)));
+}
+
 /** Диапазоны Mathcad-стиля: `a..b` и `a,step..b` → seq(a,b,step). Только числовые литералы. */
 export function preprocessRanges(expr: string): string {
   return expr
@@ -94,11 +150,16 @@ export interface CompiledPlotExpr {
  * Предобработку (preprocessJ/preprocessRanges) делает вызывающий код.
  */
 export function compilePlotExpr(pre: string): CompiledPlotExpr | null {
+  const hit = plotExprCache.get(pre);
+  if (hit !== undefined) return hit;
+  let out: CompiledPlotExpr | null;
   let node;
   try {
     node = math.parse(pre);
   } catch {
-    return null;
+    out = null;
+    lruSet(plotExprCache, pre, out);
+    return out;
   }
   const free = new Set<string>();
   let assign = false;
@@ -108,11 +169,13 @@ export function compilePlotExpr(pre: string): CompiledPlotExpr | null {
       if (nn.isAssignmentNode) assign = true;
       else if (nn.isSymbolNode && nn.name) free.add(String(nn.name));
     });
-    if (assign) return null;
-    return { code: node.compile(), freeVars: [...free] };
+    if (assign) out = null;
+    else out = { code: node.compile(), freeVars: [...free] };
   } catch {
-    return null;
+    out = null;
   }
+  lruSet(plotExprCache, pre, out);
+  return out;
 }
 
 /** Базовый scope: j/i, константы физики и функции паков (статистика, телеком, ...). */
@@ -344,6 +407,15 @@ const BUILTINS = new Set([
 
 /** Извлечь зависимости (имена переменных) из выражения через AST mathjs. */
 export function extractDependencies(expr: string, fnParams: string[] = []): string[] {
+  const key = fnParams.length ? `${expr}\x00${fnParams.join(',')}` : expr;
+  const hit = depsCache.get(key);
+  if (hit !== undefined) return hit.slice();
+  const deps = extractDependenciesUncached(expr, fnParams);
+  lruSet(depsCache, key, deps);
+  return deps.slice();
+}
+
+function extractDependenciesUncached(expr: string, fnParams: string[] = []): string[] {
   const deps = new Set<string>();
   let node;
   try {
@@ -392,6 +464,14 @@ export function evaluateLine(rawInput: string, scope: Scope): EvalResult {
   return r;
 }
 
+/** Вычислить предобработанное выражение (#C): кэшированная компиляция,
+ * fallback — math.evaluate (присваивания внутри, новые юниты после defunit). */
+function evalPre(pre: string, scope: Scope): unknown {
+  const code = getCompiledPre(pre);
+  if (code) return code.evaluate(scope);
+  return math.evaluate(pre, scope);
+}
+
 /** Собственно вычисление строки без on-error (fallback — через evaluateLine). */
 function evaluateMain(input: string, scope: Scope): EvalResult {
   try {
@@ -424,10 +504,10 @@ function evaluateMain(input: string, scope: Scope): EvalResult {
       const convTarget = convUnit ? resolveUnit(convUnit, scope) : null;
       let value: unknown;
       if (convUnit && convTarget) {
-        const inner = math.evaluate(preprocessRanges(preprocessJ(convLhs, false)), scope);
+        const inner = evalPre(preprocessRanges(preprocessJ(convLhs, false)), scope);
         value = convertToUnit(inner, convUnit, rhsClean);
       } else {
-        value = math.evaluate(rhsPre, scope);
+        value = evalPre(rhsPre, scope);
       }
       // math.evaluate с присваиванием `x = ...` внутри уже кладёт в scope,
       // но у нас `:=` — делаем вручную для надёжности:
@@ -445,12 +525,12 @@ function evaluateMain(input: string, scope: Scope): EvalResult {
     const [outLhs, outUnit] = splitOffUnit(noShow);
     const outTarget = outUnit && !noShow.includes(':=') ? resolveUnit(outUnit, scope) : null;
     if (outUnit && outTarget) {
-      const inner = math.evaluate(preprocessRanges(preprocessJ(outLhs, false)), scope);
+      const inner = evalPre(preprocessRanges(preprocessJ(outLhs, false)), scope);
       return { value: convertToUnit(inner, outUnit, noShow), error: null };
     }
     const exprPre = preprocessRanges(preprocessJ(parsed.expr, false));
     if (exprPre === '') return { value: null, error: null };
-    const value = math.evaluate(exprPre, scope);
+    const value = evalPre(exprPre, scope);
     return { value, error: null };
   } catch (err) {
     return { value: null, error: humanizeMathError(err) };
@@ -535,8 +615,16 @@ function formatComplex(re: number, im: number): string {
 
 /** Сгенерировать LaTeX для отображения через KaTeX (mathjs toTex + инженерные замены). */
 export function toLatex(rawInput: string): string {
-  const input = rawInput.trim();
-  if (!input) return '';
+  const key = rawInput.trim();
+  if (!key) return '';
+  const hit = latexCache.get(key);
+  if (hit !== undefined) return hit;
+  const out = toLatexUncached(key);
+  lruSet(latexCache, key, out);
+  return out;
+}
+
+function toLatexUncached(input: string): string {
   // Комментарии и обычный текст (включая кириллицу) — НЕ математика:
   // оборачиваем в \text, иначе KaTeX ругается unicodeTextInMathMode.
   if (input.startsWith('//') || input.startsWith('#') || /[А-Яа-яЁё]/.test(input)) {

@@ -9,7 +9,8 @@
  * плюс `t` (независимая переменная) и имена состояний. Вспомогательные
  * выражения `aux` пересчитываются на каждом шаге (напр. r := sqrt(x^2+y^2)).
  */
-import { math, preprocessJ, preprocessRanges } from './mathEngine';
+import { math, compileRawExpr, preprocessJ, preprocessRanges } from './mathEngine';
+import type { EvalFunction } from 'mathjs';
 import type { Scope } from './packs';
 import { solveLinear } from './numeric';
 import { t, type LText } from '../i18n';
@@ -253,16 +254,43 @@ function toNum(v: unknown): number | null {
   return null;
 }
 
-function evalExpr(expr: string, scope: Scope): number {
+/**
+ * Однократная компиляция выражения симуляции (derivs/aux/params/init/события).
+ * Медленный путь math.evaluate остаётся только для экзотики (присваивания
+ * внутри выражений): семантика не меняется, быстрый путь — для всего остального.
+ */
+function reqCode(expr: string): EvalFunction | null {
+  return compileRawExpr(expr);
+}
+
+/** Вычислить скомпилированное выражение в scratch-scope; строго число. */
+function evalCodeNum(code: EvalFunction | null, expr: string, s: Scope): number {
   let v: unknown;
   try {
-    v = math.evaluate(preprocessRanges(preprocessJ(expr, false)), scope);
+    v = code
+      ? code.evaluate(s)
+      : math.evaluate(preprocessRanges(preprocessJ(expr, false)), { ...s });
   } catch {
     throw { msg: t('e.simEval', { expr: expr.slice(0, 60) }) };
   }
   const n = toNum(v);
   if (n === null) throw { msg: t('e.simNotNum', { expr: expr.slice(0, 60) }) };
   return n;
+}
+
+/** Вычислить скомпилированное выражение; произвольное значение (условия событий). */
+function evalCodeAny(code: EvalFunction | null, expr: string, s: Scope): unknown {
+  try {
+    return code
+      ? code.evaluate(s)
+      : math.evaluate(preprocessRanges(preprocessJ(expr, false)), { ...s });
+  } catch {
+    throw { msg: t('e.simEval', { expr: expr.slice(0, 60) }) };
+  }
+}
+
+function evalExpr(expr: string, scope: Scope): number {
+  return evalCodeNum(reqCode(expr), expr, scope);
 }
 
 /**
@@ -275,13 +303,8 @@ export function runSim(def: SimDef, docScope: Scope): SimResult {
 }
 
 /** Логика условия события: boolean/число/комплексное, иначе — ошибка. */
-function eventTruthy(expr: string, scope: Scope): boolean {
-  let v: unknown;
-  try {
-    v = math.evaluate(preprocessRanges(preprocessJ(expr, false)), scope);
-  } catch {
-    throw { msg: t('e.simEval', { expr: expr.slice(0, 60) }) };
-  }
+function eventTruthy(code: EvalFunction | null, expr: string, s: Scope): boolean {
+  const v: unknown = evalCodeAny(code, expr, s);
   if (typeof v === 'boolean') return v;
   if (typeof v === 'number' && isFinite(v)) return v !== 0;
   if (v !== null && typeof v === 'object' && 're' in v && 'im' in v) {
@@ -291,43 +314,193 @@ function eventTruthy(expr: string, scope: Scope): boolean {
   throw { msg: t('e.simEventCond', { expr: expr.slice(0, 60) }) };
 }
 
-function runOde(def: SimDef, docScope: Scope): SimResult {
-  const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+/* ---------- плоский аккумулятор траектории (#5) ----------
+ * Вместо `traj: number[][]` с push/slice на каждом шаге пишем строки в
+ * предвыделенный Float64Array (row-major). Для фиксированного шага ёмкость
+ * точная (total+1), для rk45 — рост ×2 с тем же лимитом MAX_PTS*4, что и раньше.
+ * Порядок арифметики не меняем — результаты бит-идентичны старым.
+ */
+const RK45_MAX_PTS = MAX_PTS * 4;
+
+class TrajBuf {
+  ts: Float64Array;
+  data: Float64Array;
+  readonly n: number;
+  len = 0;
+  constructor(n: number, capRows: number) {
+    const cap = Math.max(1, capRows);
+    this.n = Math.max(1, n);
+    this.ts = new Float64Array(cap);
+    this.data = new Float64Array(cap * this.n);
+  }
+  push(t: number, y: ArrayLike<number>): void {
+    if (this.len >= this.ts.length) this.grow();
+    this.ts[this.len] = t;
+    const off = this.len * this.n;
+    for (let i = 0; i < this.n; i++) this.data[off + i] = y[i] ?? NaN;
+    this.len++;
+  }
+  /** Перезаписать последнюю строку (событие мутировало y после записи). */
+  setLast(y: ArrayLike<number>): void {
+    const off = (this.len - 1) * this.n;
+    for (let i = 0; i < this.n; i++) this.data[off + i] = y[i] ?? NaN;
+  }  row(k: number, out: number[]): void {
+    const off = k * this.n;
+    for (let i = 0; i < this.n; i++) out[i] = this.data[off + i];
+  }
+  /** Точная ёмкость для фиксированного шага (total известен заранее). */
+  reserve(rows: number): void {
+    if (rows <= this.ts.length) return;
+    const nts = new Float64Array(rows);
+    nts.set(this.ts.subarray(0, this.len));
+    const ndata = new Float64Array(rows * this.n);
+    ndata.set(this.data.subarray(0, this.len * this.n));
+    this.ts = nts;
+    this.data = ndata;
+  }
+  private grow(): void {
+    // тот же лимит, что раньше: ts.length > MAX_PTS*4 → e.simPts
+    if (this.len > RK45_MAX_PTS) throw { msg: t('e.simPts', { max: MAX_PTS }) };
+    const ncap = Math.min(this.ts.length * 2, RK45_MAX_PTS + 1);
+    const nts = new Float64Array(ncap);
+    nts.set(this.ts.subarray(0, this.len));
+    const ndata = new Float64Array(ncap * this.n);
+    ndata.set(this.data.subarray(0, this.len * this.n));
+    this.ts = nts;
+    this.data = ndata;
+  }
+}
+
+/** Правая часть ОДУ с записью в переиспользуемый буфер (без аллокаций). */
+type RhsInto = (tt: number, y: ArrayLike<number>, out: number[]) => void;
+
+/* ---------- кооперативная асинхронность (#6) ----------
+ * Тяжёлая симуляция фризила главный поток на секунды. Вместо Worker
+ * (scope содержит несериализуемые замыкания функций + getLastScope живёт
+ * в main-потоке) — возобновляемые раннеры: тот же численный код работает
+ * чанками с yield между ними. Sync-путь (тесты/MCP/стор) — тот же код,
+ * чанком бесконечного размера, поведение бит-идентично.
+ */
+export interface SimHooks {
+  /** done шагов/итераций из total (null — total неизвестен, rk45) */
+  onProgress?: (done: number, total: number | null) => void;
+  shouldCancel?: () => boolean;
+}
+
+/** Маркер отмены кооперативного прогона. */
+export function isSimCancel(e: unknown): boolean {
+  return !!e && typeof e === 'object' && (e as { cancel?: unknown }).cancel === true;
+}
+
+function throwIfCancel(hooks?: SimHooks): void {
+  if (hooks?.shouldCancel?.()) throw { cancel: true };
+}
+
+/** Уступить event loop между чанками (#6): MessageChannel (~десятки мкс),
+ * fallback — setTimeout (мс). queueMicrotask не подходит: не даёт отрисовки. */
+export function yieldSlice(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    try {
+      const MC = globalThis.MessageChannel;
+      if (typeof MC === 'function') {
+        const ch = new MC();
+        ch.port1.onmessage = () => {
+          ch.port1.close();
+          resolve();
+        };
+        ch.port2.postMessage(0);
+        return;
+      }
+    } catch { /* ниже fallback */ }
+    setTimeout(resolve, 0);
+  });
+}
+
+interface CompiledExpr {
+  code: EvalFunction | null;
+  expr: string;
+}
+
+interface OdeRun {
+  def: SimDef;
+  n: number;
+  s: Scope;
+  cAux: { name: string; code: EvalFunction | null; expr: string }[];
+  cDerivs: CompiledExpr[];
+  cEvents: { cond: CompiledExpr; actions: (SimEventAction & { code: EvalFunction | null })[] }[];
+  traj: TrajBuf;
+  fired: { t: number }[];
+  prev: boolean[];
+  y0: number[];
+  pool: OdePool;
+  refresh: (tt: number, y: ArrayLike<number>) => void;
+  rhsInto: RhsInto;
+  fireEvents: (tt: number, y: number[]) => boolean;
+  checkFinite: (y: number[], t: number) => void;
+  halted: boolean;
+  // fixed-режим:
+  total: number;
+  h: number;
+  y: number[];
+  yNext: number[];
+  tt: number;
+  k: number;
+  // rk45-режим:
+  rkh: number;
+  rkIters: number;
+  ks: number[][];
+  yt: number[];
+  y5: number[];
+  y4: number[];
+}
+
+/** Подготовка прогона: компиляция, scratch-scope, начальные фронты событий. */
+function beginOde(def: SimDef, docScope: Scope): { fail: SimResult } | { run: OdeRun } {
+  const failOf = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
   try {
-    const base: Scope = { ...docScope };
-    for (const p of def.params) base[p.name] = evalExpr(p.expr, base);
-    const y0 = def.init.map((e) => evalExpr(e, base));
+    // Прекомпиляция всех выражений (#1): дальше только code.evaluate(scratch).
+    const cParams = def.params.map((p) => ({ name: p.name, code: reqCode(p.expr), expr: p.expr }));
+    const cInit = def.init.map((e) => ({ code: reqCode(e), expr: e }));
+    const cAux = def.aux.map((a) => ({ name: a.name, code: reqCode(a.expr), expr: a.expr }));
+    const cDerivs = def.derivs.map((d) => ({ code: reqCode(d), expr: d }));
+    const cEvents = def.events.map((ev) => ({
+      cond: { code: reqCode(ev.cond), expr: ev.cond },
+      actions: ev.actions.map((a): SimEventAction & { code: EvalFunction | null } =>
+        a.stop ? { ...a, code: null } : { ...a, code: reqCode(a.expr) },
+      ),
+    }));
+    // Один мутабельный scratch-scope на весь прогон (#3): вместо
+    // `{...base, t, ...states}` на каждый шаг пишем поля в тот же объект.
+    const s: Scope = { ...docScope };
+    for (const p of cParams) s[p.name] = evalCodeNum(p.code, p.expr, s);
+    const y0 = cInit.map((e) => evalCodeNum(e.code, e.expr, s));
     const n = def.states.length;
 
-    const rhs = (tt: number, y: number[]): number[] => {
-      const s: Scope = { ...base, t: tt };
+    /** Обновить t/состояния/aux в scratch-scope (общее для rhs и событий). */
+    const refresh = (tt: number, y: ArrayLike<number>): void => {
+      s.t = tt;
       for (let i = 0; i < n; i++) s[def.states[i]] = y[i];
-      for (const a of def.aux) s[a.name] = evalExpr(a.expr, s);
-      return def.derivs.map((d) => evalExpr(d, s));
+      for (const a of cAux) s[a.name] = evalCodeNum(a.code, a.expr, s);
     };
 
-    /** Скоп шага для условий/действий событий (состояния + aux + t). */
-    const stepScope = (tt: number, y: number[]): Scope => {
-      const s: Scope = { ...base, t: tt };
-      for (let i = 0; i < n; i++) s[def.states[i]] = y[i];
-      for (const a of def.aux) s[a.name] = evalExpr(a.expr, s);
-      return s;
+    const rhsInto: RhsInto = (tt, y, out) => {
+      refresh(tt, y);
+      for (let k = 0; k < n; k++) out[k] = evalCodeNum(cDerivs[k].code, cDerivs[k].expr, s);
     };
 
-    const ts: number[] = [def.t0];
-    const traj: number[][] = [y0.slice()];
+    const traj = new TrajBuf(n, def.solver === 'rk45' ? 1024 : 1);
+    traj.push(def.t0, y0);
     const fired: { t: number }[] = [];
-    let halted = false;
-    let steps = 0;
     // фронты: начальные значения условий (без срабатывания на старте)
-    const prev = def.events.map((ev) => eventTruthy(ev.cond, stepScope(def.t0, y0)));
+    refresh(def.t0, y0);
+    const prev = cEvents.map((ev) => eventTruthy(ev.cond.code, ev.cond.expr, s));
 
     /** Проверить события после шага; true = останов. Мутирует y на месте. */
     const fireEvents = (tt: number, y: number[]): boolean => {
-      const s = stepScope(tt, y);
-      for (let e = 0; e < def.events.length; e++) {
-        const ev = def.events[e];
-        const now = eventTruthy(ev.cond, s);
+      refresh(tt, y);
+      for (let e = 0; e < cEvents.length; e++) {
+        const ev = cEvents[e];
+        const now = eventTruthy(ev.cond.code, ev.cond.expr, s);
         if (now && !prev[e]) {
           fired.push({ t: tt });
           let stop = false;
@@ -337,7 +510,7 @@ function runOde(def: SimDef, docScope: Scope): SimResult {
               continue;
             }
             const idx = def.states.indexOf(a.name);
-            const v = evalExpr(a.expr, s);
+            const v = evalCodeNum(a.code, a.expr, s);
             y[idx] = v;
             s[a.name] = v;
           }
@@ -355,53 +528,133 @@ function runOde(def: SimDef, docScope: Scope): SimResult {
     };
     checkFinite(y0, def.t0);
 
+    // Пул переиспользуемых векторов (#5): стадии и временные — без аллокаций на шаг.
+    const mkVec = (): number[] => new Array<number>(n).fill(0);
+    const pool = { k1: mkVec(), k2: mkVec(), k3: mkVec(), k4: mkVec(), yt: mkVec(), fy: mkVec(), fz: mkVec() };
+
+    const run: OdeRun = {
+      def, n, s, cAux, cDerivs, cEvents, traj, fired, prev, y0, pool,
+      refresh, rhsInto, fireEvents, checkFinite,
+      halted: false,
+      total: 0, h: 0, y: y0.slice(), yNext: mkVec(), tt: def.t0, k: 0,
+      rkh: 0, rkIters: 0,
+      ks: Array.from({ length: 7 }, () => new Array<number>(n).fill(0)),
+      yt: mkVec(), y5: mkVec(), y4: mkVec(),
+    };
     if (def.solver === 'rk45') {
-      halted = integrateRK45(def, rhs, ts, traj, checkFinite, fireEvents);
-      steps = ts.length - 1;
+      run.rkh = Math.min(def.dt, (def.t1 - def.t0) / 1000);
     } else {
       const total = Math.ceil((def.t1 - def.t0) / def.dt);
       if (total > MAX_FIXED_STEPS) throw { msg: t('e.simSteps', { max: MAX_FIXED_STEPS }) };
-      const h = (def.t1 - def.t0) / total;
-      let y = y0.slice();
-      let tt = def.t0;
-      for (let k = 0; k < total; k++) {
-        if (def.solver === 'trbdf2') y = stepTRBDF2(rhs, tt, y, h);
-        else y = def.solver === 'euler' ? stepEuler(rhs, tt, y, h) : stepRK4(rhs, tt, y, h);
-        tt = k === total - 1 ? def.t1 : tt + h;
-        checkFinite(y, tt);
-        traj.push(y.slice());
-        ts.push(tt);
-        if (def.events.length && fireEvents(tt, y)) {
-          halted = true;
-          traj[traj.length - 1] = y.slice();
-          break;
-        }
-      }
-      steps = ts.length - 1;
+      run.total = total;
+      run.h = (def.t1 - def.t0) / total;
+      traj.reserve(total + 1);
     }
+    return { run };
+  } catch (e) {
+    const ce = e as { msg?: string };
+    return { fail: failOf(typeof ce?.msg === 'string' ? ce.msg : t('e.lineErrDefault')) };
+  }
+}
 
-    // Прореживание для отображения/анимации (интеграция уже точная)
-    const stride = Math.max(1, Math.ceil(ts.length / MAX_PTS));
-    const rts: number[] = [];
-    const rtraj: number[][] = [];
-    for (let k = 0; k < ts.length; k += stride) {
-      rts.push(ts[k]);
-      rtraj.push(traj[k]);
+/** Чанк fixed-режима (euler/rk4/trbdf2): до budget шагов или sliceMs — что раньше.
+ * Проверка часов раз в 256 шагов (~десятки нс амортизированно). true = готов/останов. */
+function odeFixedChunk(run: OdeRun, budget: number, sliceMs = Infinity, t0 = 0): boolean {
+  const { def, pool } = run;
+  let done = 0;
+  while (run.k < run.total) {
+    if (done >= budget) return false;
+    if (def.solver === 'trbdf2') stepTRBDF2(run.rhsInto, run.tt, run.y, run.h, run.yNext, pool);
+    else if (def.solver === 'euler') stepEuler(run.rhsInto, run.tt, run.y, run.h, run.yNext, pool.k1);
+    else stepRK4(run.rhsInto, run.tt, run.y, run.h, run.yNext, pool);
+    run.tt = run.k === run.total - 1 ? def.t1 : run.tt + run.h;
+    run.checkFinite(run.yNext, run.tt);
+    run.traj.push(run.tt, run.yNext);
+    if (def.events.length && run.fireEvents(run.tt, run.yNext)) {
+      run.halted = true;
+      run.traj.setLast(run.yNext);
+      return true;
     }
-    if (rts[rts.length - 1] !== ts[ts.length - 1]) {
-      rts.push(ts[ts.length - 1]);
-      rtraj.push(traj[traj.length - 1]);
+    const tmp = run.y;
+    run.y = run.yNext;
+    run.yNext = tmp;
+    run.k++;
+    done++;
+    if ((done & 255) === 0 && performance.now() - t0 > sliceMs) return false;
+  }
+  return true;
+}
+
+/** Финал ODE: прореживание + серии + SimResult (общее для sync/async). */
+function odeFinish(run: OdeRun): SimResult {
+  const { def, n, traj, fired } = run;
+  const steps = traj.len - 1;
+  // Прореживание для отображения/анимации (интеграция уже точная)
+  const stride = Math.max(1, Math.ceil(traj.len / MAX_PTS));
+  const rts: number[] = [];
+  const rtraj: number[][] = [];
+  const rowTmp = new Array<number>(n);
+  for (let k = 0; k < traj.len; k += stride) {
+    rts.push(traj.ts[k]);
+    traj.row(k, rowTmp);
+    rtraj.push(rowTmp.slice());
+  }
+  if (rts[rts.length - 1] !== traj.ts[traj.len - 1]) {
+    rts.push(traj.ts[traj.len - 1]);
+    traj.row(traj.len - 1, rowTmp);
+    rtraj.push(rowTmp.slice());
+  }
+  const series: SimSeries[] = def.states.map((name, i) => ({
+    name,
+    ys: rtraj.map((row) => row[i]),
+  }));
+  traj.row(traj.len - 1, rowTmp);
+  const last = rowTmp.slice();
+  return { ts: rts, series, final: last, steps, error: null, events: fired, halted: run.halted, field: null, tEst: null };
+}
+
+function runOde(def: SimDef, docScope: Scope): SimResult {
+  const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+  const started = beginOde(def, docScope);
+  if ('fail' in started) return started.fail;
+  const run = started.run;
+  try {
+    if (def.solver === 'rk45') {
+      while (!odeRk45Chunk(run, Infinity));
+    } else {
+      while (!odeFixedChunk(run, Infinity));
     }
-    const series: SimSeries[] = def.states.map((name, i) => ({
-      name,
-      ys: rtraj.map((row) => row[i]),
-    }));
-    const last = traj[traj.length - 1];
-    return { ts: rts, series, final: last.slice(), steps, error: null, events: fired, halted, field: null, tEst: null };
   } catch (e) {
     const ce = e as { msg?: string };
     return fail(typeof ce?.msg === 'string' ? ce.msg : t('e.lineErrDefault'));
   }
+  return odeFinish(run);
+}
+
+/** Асинхронный прогон ODE чанками с прогрессом/отменой (#6). */
+export async function runOdeAsync(def: SimDef, docScope: Scope, hooks: SimHooks = {}): Promise<SimResult> {
+  const started = beginOde(def, docScope);
+  if ('fail' in started) return started.fail;
+  const run = started.run;
+  const adaptive = def.solver === 'rk45';
+  try {
+    for (;;) {
+      throwIfCancel(hooks);
+      // time-бокс ~8мс: чанки сами останавливаются, прогресс — после каждого
+      const t0 = performance.now();
+      const done = adaptive ? odeRk45Chunk(run, Infinity, 8, t0) : odeFixedChunk(run, Infinity, 8, t0);
+      if (adaptive) hooks.onProgress?.(run.traj.len, null);
+      else hooks.onProgress?.(run.k, run.total);
+      if (done) break;
+      await yieldSlice();
+    }
+  } catch (e) {
+    if (isSimCancel(e)) throw e;
+    const ce = e as { msg?: string };
+    const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+    return fail(typeof ce?.msg === 'string' ? ce.msg : t('e.lineErrDefault'));
+  }
+  return odeFinish(run);
 }
 
 /**
@@ -409,8 +662,37 @@ function runOde(def: SimDef, docScope: Scope): SimResult {
  * Слоистая среда eps(x), источник (гауссов импульс / синус), Mur-ABC по краям.
  * Возвращает кадры поля E(x) + оценку прохождения T по детектору.
  */
-function runFdtd(f: SimFdtd, docScope: Scope): SimResult {
-  const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+interface FdtdRun {
+  f: SimFdtd;
+  N: number;
+  dx: number;
+  dt: number;
+  steps: number;
+  eps: number[];
+  E: number[];
+  H: number[];
+  Eprev: number[];
+  mur: number;
+  is: number;
+  id: number;
+  iInc: number;
+  iIncH: number;
+  idH: number;
+  tRefl: number;
+  tArr: number;
+  srcAt: (tt: number) => number;
+  stride: number;
+  snaps: number[][];
+  sts: number[];
+  incFlux: number;
+  detFlux: number;
+  tt: number;
+  k: number;
+}
+
+/** Подготовка FDTD: сетка, слои, источник (ошибки слоёв — сразу fail). */
+function beginFdtd(f: SimFdtd, docScope: Scope): { fail: SimResult } | { run: FdtdRun } {
+  const failOf = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
   try {
     const N = f.n;
     const L = f.length;
@@ -462,47 +744,110 @@ function runFdtd(f: SimFdtd, docScope: Scope): SimResult {
       return f.amp * Math.exp(-(((tt - tc) / w) ** 2));
     };
     const stride = Math.max(1, Math.ceil(steps / MAX_FDTD_SNAPS));
-    const snaps: number[][] = [];
-    const sts: number[] = [];
-    // T энергетическое: поток Пойнтинга S=E·H у источника (до возврата
-    // отражений) vs у детектора (после прихода фронта).
-    let incFlux = 0;
-    let detFlux = 0;
-    let tt = 0;
-    for (let k = 0; k < steps; k++) {
-      tt = (k + 1) * dt;
-      for (let i = 0; i < N; i++) H[i] -= (dt / dx) * (E[i + 1] - E[i]);
-      Eprev[0] = E[0];
-      Eprev[N] = E[N];
-      const E1old = E[1];
-      const EN1old = E[N - 1];
-      for (let i = 1; i < N; i++) E[i] -= (dt / (eps[i] * dx)) * (H[i] - H[i - 1]);
-      E[0] = E1old + mur * (E[1] - Eprev[0]);
-      E[N] = EN1old + mur * (E[N - 1] - Eprev[N]);
-      E[is] += srcAt(tt);
-      if (tRefl <= 0 || tt < tRefl) incFlux += E[iInc] * H[Math.min(iInc, N - 1)] * dt;
-      if (tt > tArr) detFlux += E[id] * H[Math.min(id, N - 1)] * dt;
-      for (let i = 0; i <= N; i++) {
-        if (!isFinite(E[i]) || !isFinite(H[Math.min(i, N - 1)])) {
-          throw { msg: t('e.simNan', { state: 'E', t: fmtT(tt) }) };
-        }
-      }
-      if (k % stride === 0 || k === steps - 1) {
-        snaps.push(E.slice());
-        sts.push(tt);
-      }
-    }
-    // Оценка прохождения T = поток у детектора / падающий поток
-    const tEst = incFlux > 0 ? Number(Math.min(1.5, detFlux / incFlux).toPrecision(4)) : null;
-    const xs = Array.from({ length: N + 1 }, (_, i) => Number((i * dx).toPrecision(6)));
     return {
-      ts: sts, series: [], final: [], steps, error: null, events: [], halted: false,
-      field: { xs, snaps, ts: sts }, tEst,
+      run: {
+        f, N, dx, dt, steps, eps, E, H, Eprev, mur, is, id, iInc,
+        iIncH: Math.min(iInc, N - 1), idH: Math.min(id, N - 1),
+        tRefl, tArr, srcAt, stride,
+        snaps: [], sts: [], incFlux: 0, detFlux: 0, tt: 0, k: 0,
+      },
     };
+  } catch (e) {
+    const ce = e as { msg?: string };
+    return { fail: failOf(typeof ce?.msg === 'string' ? ce.msg : t('e.lineErrDefault')) };
+  }
+}
+
+/** Чанк FDTD: до budget шагов или sliceMs. true = готов. Тело шага — как раньше. */
+function fdtdChunk(run: FdtdRun, budget: number, sliceMs = Infinity, t0 = 0): boolean {
+  const { N, dx, dt, steps, eps, E, H, Eprev, mur, is, id, iInc, iIncH, idH, tRefl, tArr, srcAt, stride } = run;
+  let done = 0;
+  for (; run.k < steps; run.k++) {
+    if (done >= budget) return false;
+    const k = run.k;
+    const tt = (k + 1) * dt;
+    run.tt = tt;
+    for (let i = 0; i < N; i++) {
+      H[i] -= (dt / dx) * (E[i + 1] - E[i]);
+      if (!isFinite(H[i])) throw { msg: t('e.simNan', { state: 'E', t: fmtT(tt) }) };
+    }
+    Eprev[0] = E[0];
+    Eprev[N] = E[N];
+    const E1old = E[1];
+    const EN1old = E[N - 1];
+    for (let i = 1; i < N; i++) {
+      E[i] -= (dt / (eps[i] * dx)) * (H[i] - H[i - 1]);
+      if (!isFinite(E[i])) throw { msg: t('e.simNan', { state: 'E', t: fmtT(tt) }) };
+    }
+    E[0] = E1old + mur * (E[1] - Eprev[0]);
+    E[N] = EN1old + mur * (E[N - 1] - Eprev[N]);
+    if (!isFinite(E[0]) || !isFinite(E[N])) throw { msg: t('e.simNan', { state: 'E', t: fmtT(tt) }) };
+    E[is] += srcAt(tt);
+    if (!isFinite(E[is])) throw { msg: t('e.simNan', { state: 'E', t: fmtT(tt) }) };
+    if (tRefl <= 0 || tt < tRefl) run.incFlux += E[iInc] * H[iIncH] * dt;
+    if (tt > tArr) run.detFlux += E[id] * H[idH] * dt;
+    if (k % stride === 0 || k === steps - 1) {
+      run.snaps.push(E.slice());
+      run.sts.push(tt);
+    }
+    done++;
+    if ((done & 127) === 0 && performance.now() - t0 > sliceMs) return false;
+  }
+  return true;
+}
+
+/** Финал FDTD: оценка прохождения + поле (общее для sync/async). */
+function fdtdFinish(run: FdtdRun): SimResult {
+  const { N, dx, steps, snaps, sts } = run;
+  // Оценка прохождения T = поток у детектора / падающий поток
+  const tEst = run.incFlux > 0 ? Number(Math.min(1.5, run.detFlux / run.incFlux).toPrecision(4)) : null;
+  const xs = Array.from({ length: N + 1 }, (_, i) => Number((i * dx).toPrecision(6)));
+  return {
+    ts: sts, series: [], final: [], steps, error: null, events: [], halted: false,
+    field: { xs, snaps, ts: sts }, tEst,
+  };
+}
+
+function runFdtd(f: SimFdtd, docScope: Scope): SimResult {
+  const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+  const started = beginFdtd(f, docScope);
+  if ('fail' in started) return started.fail;
+  try {
+    while (!fdtdChunk(started.run, Infinity));
   } catch (e) {
     const ce = e as { msg?: string };
     return fail(typeof ce?.msg === 'string' ? ce.msg : t('e.lineErrDefault'));
   }
+  return fdtdFinish(started.run);
+}
+
+/** Асинхронный прогон FDTD чанками с прогрессом/отменой (#6). */
+export async function runFdtdAsync(f: SimFdtd, docScope: Scope, hooks: SimHooks = {}): Promise<SimResult> {
+  const started = beginFdtd(f, docScope);
+  if ('fail' in started) return started.fail;
+  const run = started.run;
+  try {
+    for (;;) {
+      throwIfCancel(hooks);
+      const t0 = performance.now();
+      const done = fdtdChunk(run, Infinity, 8, t0);
+      hooks.onProgress?.(run.k, run.steps);
+      if (done) break;
+      await yieldSlice();
+    }
+  } catch (e) {
+    if (isSimCancel(e)) throw e;
+    const ce = e as { msg?: string };
+    const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+    return fail(typeof ce?.msg === 'string' ? ce.msg : t('e.lineErrDefault'));
+  }
+  return fdtdFinish(run);
+}
+
+/** Асинхронный runSim: чанки + прогресс + отмена (#6). */
+export async function runSimAsync(def: SimDef, docScope: Scope, hooks: SimHooks = {}): Promise<SimResult> {
+  if (def.mode === 'fdtd' && def.fdtd) return runFdtdAsync(def.fdtd, docScope, hooks);
+  return runOdeAsync(def, docScope, hooks);
 }
 
 function fmtT(v: number): string {
@@ -512,9 +857,20 @@ function fmtT(v: number): string {
   return String(Number(v.toPrecision(6)));
 }
 
-function stepEuler(rhs: (t: number, y: number[]) => number[], tt: number, y: number[], h: number): number[] {
-  const f = rhs(tt, y);
-  return y.map((v, i) => v + h * f[i]);
+function stepEuler(rhs: RhsInto, tt: number, y: ArrayLike<number>, h: number, out: number[], f: number[]): void {
+  rhs(tt, y, f);
+  for (let i = 0; i < out.length; i++) out[i] = y[i] + h * f[i];
+}
+
+/** Пул векторов одного прогона (стадии + временные), чтобы не аллоцировать на шаг. */
+interface OdePool {
+  k1: number[];
+  k2: number[];
+  k3: number[];
+  k4: number[];
+  yt: number[];
+  fy: number[];
+  fz: number[];
 }
 
 /**
@@ -522,9 +878,11 @@ function stepEuler(rhs: (t: number, y: number[]) => number[], tt: number, y: num
  * Стадия 1 — трапеции на γh, стадия 2 — BDF2; γ = 2−√2.
  * Нелинейности — Ньютоном с численной якобианой.
  */
-function stepTRBDF2(rhs: (t: number, y: number[]) => number[], tt: number, y: number[], h: number): number[] {
+function stepTRBDF2(rhs: RhsInto, tt: number, y: number[], h: number, out: number[], pool: OdePool): void {
   const n = y.length;
   const gamma = 2 - Math.sqrt(2);
+  // Ньютон внутри — как раньше на свежих массивах (итераций мало, доминируют
+  // вычисления rhs); пул используем только для снапшотов fy/fz.
   const newton = (G: (z: number[]) => number[], z0: number[]): number[] => {
     let z = z0.slice();
     for (let k = 0; k < 200; k++) {
@@ -565,12 +923,14 @@ function stepTRBDF2(rhs: (t: number, y: number[]) => number[], tt: number, y: nu
     throw { msg: t('e.simStiffFail') };
   };
   // стадия 1: трапеции z = y + (γh/2)(f(y) + f(z))
-  const fy = rhs(tt, y);
+  // fy/fz — выделенные буферы пула: снапшоты живут через итерации Ньютона.
+  const { fy, fz } = pool;
+  rhs(tt, y, fy);
   const c1 = (gamma * h) / 2;
   const t1 = tt + gamma * h;
   const z = newton(
     (zz) => {
-      const fz = rhs(t1, zz);
+      rhs(t1, zz, fz);
       return zz.map((v, i) => v - y[i] - c1 * (fy[i] + fz[i]));
     },
     y.map((v, i) => v + gamma * h * fy[i]),
@@ -583,45 +943,42 @@ function stepTRBDF2(rhs: (t: number, y: number[]) => number[], tt: number, y: nu
   const cB = -(r ** 2) / (1 + 2 * r);
   const cC = ((1 + r) / (1 + 2 * r)) * h2;
   const t2 = tt + h;
-  return newton(
-    (w) => {
-      const fw = rhs(t2, w);
-      return w.map((v, i) => v - cA * z[i] - cB * y[i] - cC * fw[i]);
+  const w = newton(
+    (ww) => {
+      rhs(t2, ww, fz);
+      return ww.map((v, i) => v - cA * z[i] - cB * y[i] - cC * fz[i]);
     },
     z.map((v, i) => v + h2 * (v - y[i]) / h1),
   );
+  for (let i = 0; i < n; i++) out[i] = w[i];
 }
 
-function stepRK4(rhs: (t: number, y: number[]) => number[], tt: number, y: number[], h: number): number[] {
-  const k1 = rhs(tt, y);
-  const y2 = y.map((v, i) => v + (h / 2) * k1[i]);
-  const k2 = rhs(tt + h / 2, y2);
-  const y3 = y.map((v, i) => v + (h / 2) * k2[i]);
-  const k3 = rhs(tt + h / 2, y3);
-  const y4 = y.map((v, i) => v + h * k3[i]);
-  const k4 = rhs(tt + h, y4);
-  return y.map((v, i) => v + (h / 6) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+function stepRK4(rhs: RhsInto, tt: number, y: ArrayLike<number>, h: number, out: number[], pool: OdePool): void {
+  const n = out.length;
+  const { k1, k2, k3, k4, yt } = pool;
+  rhs(tt, y, k1);
+  for (let i = 0; i < n; i++) yt[i] = y[i] + (h / 2) * k1[i];
+  rhs(tt + h / 2, yt, k2);
+  for (let i = 0; i < n; i++) yt[i] = y[i] + (h / 2) * k2[i];
+  rhs(tt + h / 2, yt, k3);
+  for (let i = 0; i < n; i++) yt[i] = y[i] + h * k3[i];
+  rhs(tt + h, yt, k4);
+  for (let i = 0; i < n; i++) out[i] = y[i] + (h / 6) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]);
 }
 
-/** Адаптивный Дорман–Принс RK45 (rtol 1e-6). Возвращает halted. Бросает {msg} при превышении лимитов. */
-function integrateRK45(
-  def: SimDef,
-  rhs: (t: number, y: number[]) => number[],
-  ts: number[],
-  traj: number[][],
-  checkFinite: (y: number[], t: number) => void,
-  fireEvents: (t: number, y: number[]) => boolean,
-): boolean {
-  const n = def.states.length;
+/**
+ * Чанк адаптивного Дормана–Принса RK45 (rtol 1e-6): до budget итераций или sliceMs.
+ * true = дошли до t1/останов. Тело итерации — как раньше, бит-идентично.
+ * Бросает {msg} при превышении лимитов (как раньше).
+ */
+function odeRk45Chunk(run: OdeRun, budget: number, sliceMs = Infinity, t0 = 0): boolean {
+  const { def, n } = run;
   const RTOL = 1e-6;
   const ATOL = 1e-9;
   // Макс. шаг ограничен span/1000: адаптивность сохраняется вниз,
   // а recorded-точек всегда достаточно для плавной анимации.
   const hMax = (def.t1 - def.t0) / 1000;
-  let h = Math.min(def.dt, hMax);
-  let tt = def.t0;
-  let y = traj[0].slice();
-  let iters = 0;
+  const { ks, yt, y5, y4, y } = run;
   const C = [0, 1 / 5, 3 / 10, 4 / 5, 8 / 9, 1, 1];
   const A: number[][] = [
     [],
@@ -634,27 +991,36 @@ function integrateRK45(
   ];
   const B5 = [35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0];
   const B4 = [5179 / 57600, 0, 7571 / 16695, 393 / 640, -92097 / 339200, 187 / 2100, 1 / 40];
-  const addScaled = (yi: number[], kk: number[][], a: number[], hh: number): number[] => {
-    const out = yi.slice();
+  // Тот же порядок операций, что раньше (yi.slice + накопление): бит-идентично.
+  const addScaled = (a: number[], hh: number): void => {
+    for (let i = 0; i < n; i++) yt[i] = y[i];
     for (let j = 0; j < a.length; j++) {
       const c = a[j] * hh;
-      const kj = kk[j];
-      for (let i = 0; i < n; i++) out[i] += c * kj[i];
+      const kj = ks[j];
+      for (let i = 0; i < n; i++) yt[i] += c * kj[i];
     }
-    return out;
   };
-  while (tt < def.t1) {
-    if (++iters > MAX_ITERS) throw { msg: t('e.simStuck') };
-    if (ts.length > MAX_PTS * 4) throw { msg: t('e.simPts', { max: MAX_PTS }) };
-    h = Math.min(h, def.t1 - tt);
-    const ks: number[][] = [];
+  let done = 0;
+  while (run.tt < def.t1) {
+    if (done >= budget) return false;
+    if (++run.rkIters > MAX_ITERS) throw { msg: t('e.simStuck') };
+    if (run.traj.len > RK45_MAX_PTS) throw { msg: t('e.simPts', { max: MAX_PTS }) };
+    run.rkh = Math.min(run.rkh, def.t1 - run.tt);
+    const h = run.rkh;
     for (let s = 0; s < 7; s++) {
-      const yt = s === 0 ? y : addScaled(y, ks, A[s], h);
-      const k = rhs(tt + C[s] * h, yt);
-      ks.push(k);
+      if (s > 0) addScaled(A[s], h);
+      run.rhsInto(run.tt + C[s] * h, s === 0 ? y : yt, ks[s]);
     }
-    const y5 = y.map((v, i) => v + h * B5.reduce((s2, b, j) => s2 + b * ks[j][i], 0));
-    const y4 = y.map((v, i) => v + h * B4.reduce((s2, b, j) => s2 + b * ks[j][i], 0));
+    for (let i = 0; i < n; i++) {
+      let s5 = 0;
+      let s4 = 0;
+      for (let j = 0; j < 7; j++) {
+        s5 += B5[j] * ks[j][i];
+        s4 += B4[j] * ks[j][i];
+      }
+      y5[i] = y[i] + h * s5;
+      y4[i] = y[i] + h * s4;
+    }
     let err = 0;
     for (let i = 0; i < n; i++) {
       const sc = ATOL + RTOL * Math.max(Math.abs(y[i]), Math.abs(y5[i]));
@@ -664,20 +1030,22 @@ function integrateRK45(
     err = Math.sqrt(err / n);
     const hNew = err === 0 ? h * 4 : h * Math.min(4, Math.max(0.2, 0.9 * Math.pow(1 / err, 0.2)));
     if (err <= 1) {
-      tt += h;
-      if (tt > def.t1) tt = def.t1;
-      y = y5;
-      checkFinite(y, tt);
-      ts.push(tt);
-      traj.push(y.slice());
-      if (def.events.length && fireEvents(tt, y)) {
-        traj[traj.length - 1] = y.slice();
+      run.tt += h;
+      if (run.tt > def.t1) run.tt = def.t1;
+      for (let i = 0; i < n; i++) y[i] = y5[i];
+      run.checkFinite(y, run.tt);
+      run.traj.push(run.tt, y);
+      if (def.events.length && run.fireEvents(run.tt, y)) {
+        run.traj.setLast(y);
+        run.halted = true;
         return true;
       }
     }
-    h = Math.max(1e-12, Math.min(hNew, hMax));
+    run.rkh = Math.max(1e-12, Math.min(hNew, hMax));
+    done++;
+    if ((done & 255) === 0 && performance.now() - t0 > sliceMs) return false;
   }
-  return false;
+  return true;
 }
 
 /* ---------------- Реестр готовых моделей ---------------- */

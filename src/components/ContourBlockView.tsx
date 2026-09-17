@@ -1,6 +1,6 @@
 import { memo, useMemo, useRef } from 'react';
-import { createBaseScope } from '../engine/mathEngine';
-import { recalculateAll } from '../engine/dependencies';
+import { useDocScope } from './useDocScope';
+import { useDebouncedValue } from './useDebouncedValue';
 import { samplePlot3d } from '../engine/plot3dSample';
 import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
@@ -17,6 +17,8 @@ const PAD_R = 12;
 const PAD_T = 10;
 const PAD_B = 30;
 const LEVELS = 10;
+/** Дебаунс ресемплинга: слайдер/ресайз шлют изменения на каждый кадр */
+const RESAMPLE_DEBOUNCE_MS = 150;
 
 const fmtTick = (v: number) => {
   if (v === 0) return '0';
@@ -119,14 +121,17 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
   const ph = Math.max(180, (block.h ?? H + 132) - 132);
   const showGrid = block.plotGrid ?? true;
   const title = (block.plotTitle ?? '').trim();
+  // Scope последнего пересчёта стора (#2): без повторного recalculateAll.
+  const base = useDocScope(blocks);
+  // Дебаунс + превью (#8): пока документ «живой» — половинная сетка,
+  // по окончании жеста — полный кадр.
+  const { value: dbBase, live } = useDebouncedValue(base, RESAMPLE_DEBOUNCE_MS);
+  const effRes = live ? Math.max(8, Math.floor(res / 2)) : res;
 
   const data = useMemo(() => {
     if (!(xmin < xmax) || !(ymin < ymax)) return { err: t('p2.needRange'), levels: [] as { v: number; d: string; color: string }[], zmin: 0, zmax: 0 };
     try {
-      const mathBlocks = Object.values(blocks).filter((b) => b.kind === 'math');
-      const { scope } = recalculateAll(mathBlocks);
-      const base = { ...createBaseScope(), ...scope };
-      const s = samplePlot3d(fnText, base, { xmin, xmax, ymin, ymax, res, mode: 'surface' });
+      const s = samplePlot3d(fnText, dbBase, { xmin, xmax, ymin, ymax, res: effRes, mode: 'surface' });
       if (!s || s.mode !== 'surface') return { err: t('p3.noDataHint'), levels: [] as { v: number; d: string; color: string }[], zmin: 0, zmax: 0 };
       let zmin = Infinity;
       let zmax = -Infinity;
@@ -150,7 +155,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
     } catch (e) {
       return { err: e instanceof Error ? e.message : String(e), levels: [] as { v: number; d: string; color: string }[], zmin: 0, zmax: 0 };
     }
-  }, [fnText, xmin, xmax, ymin, ymax, res, blocks, pw, ph, pal]);
+  }, [fnText, xmin, xmax, ymin, ymax, effRes, dbBase, pw, ph, pal]);
 
   const selected = selectedIds.includes(block.id);
 

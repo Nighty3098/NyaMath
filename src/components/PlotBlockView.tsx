@@ -1,8 +1,7 @@
 import { memo, useMemo, useRef, useState } from 'react';
-import { compilePlotExpr, evaluateLine, createBaseScope, preprocessJ, preprocessRanges } from '../engine/mathEngine';
+import { compilePlotExpr, evaluateLine, preprocessJ, preprocessRanges } from '../engine/mathEngine';
 import type { EvalFunction } from 'mathjs';
-import { recalculateAll } from '../engine/dependencies';
-import { useCanvasStore } from '../store/canvasStore';
+import { useDocScope } from './useDocScope';import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
 import { t } from '../i18n';
 import type { MathBlockData } from '../engine/dependencies';
@@ -109,6 +108,8 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   // Ручной размер: ширина/высота области графика (шапка +HEAD)
   const pw = block.w ?? W;
   const ph = Math.max(180, (block.h ?? H + HEAD) - HEAD);
+  // Scope последнего пересчёта стора (#2): без повторного recalculateAll.
+  const base = useDocScope(blocks);
 
   const { series, ymin, ymax, err, xticks, yticks, polar, raw: table } = useMemo(() => {
     const fail = (e: string) => ({ series: [] as Series[], ymin: -1, ymax: 1, err: e, xticks: [] as number[], yticks: [] as number[], polar: null as PolarGrid | null, raw: [] as RawRow[] });
@@ -120,10 +121,6 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
         .slice(0, 5);
       if (!exprs.length) return fail(t('p2.empty'));
       if (!(xmin < xmax)) return fail(t('p2.needRange'));
-
-      const mathBlocks = Object.values(blocks).filter((b) => b.kind === 'math');
-      const { scope } = recalculateAll(mathBlocks);
-      const base = { ...createBaseScope(), ...scope };
 
       // Выражения компилируем один раз (а не parse на каждую из 240 точек);
       // точки гоняем через общий scope-объект. Некомпилируемое → null-точки.
@@ -335,7 +332,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
     } catch (e) {
       return fail(e instanceof Error ? e.message : String(e));
     }
-  }, [fnText, xmin, xmax, proj, trace, errText, blocks, pw, ph, padT, pal]);
+  }, [fnText, xmin, xmax, proj, trace, errText, base, pw, ph, padT, pal]);
 
   const X = (x: number) => PAD_L + ((x - xmin) / (xmax - xmin)) * (pw - PAD_L - PAD_R);
   const Y = (y: number) => ph - PAD_B - ((y - ymin) / (ymax - ymin)) * (ph - padT - PAD_B);

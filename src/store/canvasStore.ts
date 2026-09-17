@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { v4 as uuid } from 'uuid';
-import { recalculateAll, type MathBlockData } from '../engine/dependencies';
+import { recalculateAll, recalculateAllAsync, type MathBlockData } from '../engine/dependencies';
 import { TEST_SCENARIO_LINES } from '../data/testScenario';
 import { ADVANCED_DEMO } from '../data/demoAdvanced';
 import { loadTheme, saveTheme, THEMES, type ThemeName } from '../theme';
@@ -51,6 +51,11 @@ export interface CanvasState {
   paletteDockW: number;
   setPaletteDockW: (w: number) => void;
   recalcCounter: number;
+  /** Асинхронный пересчёт (#6): идёт ли джоба, прогресс симуляции, её блок */
+  computeActive: boolean;
+  /** 0..1 — детерминированный прогресс, null — идёт, но total неизвестен (rk45) */
+  computeProgress: number | null;
+  computeSimId: string | null;
   addBlock: (x: number, y: number, raw?: string, edit?: boolean) => void;
   addPlotBlock: (x: number, y: number, fn?: string, patch?: Partial<MathBlockData>) => void;
   addContourBlock: (x: number, y: number, fn?: string) => void;
@@ -219,8 +224,6 @@ function restore(): Record<string, MathBlockData> {
   }
 }
 
-let debounceT: ReturnType<typeof setTimeout> | null = null;
-
 /** Режим и размеры палитры (персист отдельно от документа). */
 export type PaletteMode = 'float' | 'left' | 'right';
 
@@ -316,15 +319,67 @@ function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathB
   return true;
 }
 
-function scheduleRecalc(get: () => CanvasState, set: SetFn, ms: number) {
-  if (debounceT) clearTimeout(debounceT);
-  debounceT = setTimeout(() => {
-    const r = recalculateAll(Object.values(get().blocks));
-    // инкрементальный пересчёт ничего не поменял — ни записи, ни ре-рендера
-    if (!r.changed) return;
-    persist(r.blocks);
-    set((s) => ({ blocks: r.blocks, recalcCounter: s.recalcCounter + 1 }));
+/* ---------- асинхронный конвейер пересчёта (#6) ----------
+ * Дебаунснутые пути (печать, слайдер, правка sim) считают через
+ * recalculateAllAsync чанками: UI не фризит, длинные симуляции отменяются
+ * следующим изменением (rev/rerun), прогресс виден в SimBlockView.
+ * Джобы сериализованы (jobRunning/rerunRequested): перекрытия нет, stale-
+ * результаты не применяются и не портят lastScope внутри движка.
+ */
+let recalcTimer: ReturnType<typeof setTimeout> | null = null;
+let jobRunning = false;
+let rerunRequested = false;
+let recalcRev = 0;
+
+function scheduleRecalcAsync(ms: number) {
+  if (recalcTimer) clearTimeout(recalcTimer);
+  recalcTimer = setTimeout(() => {
+    recalcTimer = null;
+    void runRecalcJob();
   }, ms);
+}
+
+async function runRecalcJob(): Promise<void> {
+  if (jobRunning) {
+    rerunRequested = true;
+    return;
+  }
+  jobRunning = true;
+  try {
+    for (;;) {
+      rerunRequested = false;
+      const rev = ++recalcRev;
+      const list = Object.values(useCanvasStore.getState().blocks);
+      useCanvasStore.setState({ computeActive: true });
+      const outcome = await recalculateAllAsync(list, {
+        shouldCancel: () => rev !== recalcRev || rerunRequested,
+        onSimProgress: (id, done, total) => {
+          if (rev !== recalcRev) return;
+          useCanvasStore.setState({
+            computeSimId: id,
+            computeProgress: total === null || total <= 0 ? null : Math.min(1, done / total),
+          });
+        },
+      });
+      if (outcome.cancelled) {
+        if (!rerunRequested && rev === recalcRev) break;
+        continue;
+      }
+      if (rev !== recalcRev) continue;
+      if (outcome.result.changed) {
+        persist(outcome.result.blocks);
+        const s = useCanvasStore.getState();
+        useCanvasStore.setState({ blocks: outcome.result.blocks, recalcCounter: s.recalcCounter + 1 });
+      }
+      if (!rerunRequested) break;
+    }
+  } finally {
+    jobRunning = false;
+    const st = useCanvasStore.getState();
+    if (st.computeActive) {
+      useCanvasStore.setState({ computeActive: false, computeProgress: null, computeSimId: null });
+    }
+  }
 }
 
 export const useCanvasStore = create<CanvasState>((set, get) => ({
@@ -379,6 +434,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       return { lang: l, blocks: next, recalcCounter: s.recalcCounter + 1 };
     }),
   recalcCounter: 0,
+  computeActive: false,
+  computeProgress: null,
+  computeSimId: null,
   past: [],
   future: [],
 
@@ -516,7 +574,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn);
     // если сменили модель на custom вручную — сбросить привязку (чтобы селект показал Custom)
     set({ blocks: { ...get().blocks, [id]: { ...cur, ...patch } } });
-    scheduleRecalc(get, set as SetFn, 200);
+  scheduleRecalcAsync(200);
   },
 
   addSliderBlock: (x, y) => {
@@ -536,16 +594,16 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const cur = get().blocks[id];
     if (!cur || cur.kind !== 'slider') return;
     set({ blocks: { ...get().blocks, [id]: { ...cur, sliderVal: val } } });
-    scheduleRecalc(get, set as SetFn, 120);
+  scheduleRecalcAsync(120);
   },
 
   updateSlider: (id, patch) => {
     const cur = get().blocks[id];
     if (!cur || cur.kind !== 'slider') return;
     pushHistory(get, set as SetFn);
-    const next = withRecalc({ ...get().blocks, [id]: { ...cur, ...patch } });
-    persist(next);
-    set((s) => ({ blocks: next, recalcCounter: s.recalcCounter + 1 }));
+    // оптимистично показываем правку сразу, тяжёлый пересчёт — асинхронно (#6)
+    set({ blocks: { ...get().blocks, [id]: { ...cur, ...patch } } });
+    scheduleRecalcAsync(150);
   },
 
   updateInput: (id, raw) => {
@@ -553,16 +611,16 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     if (!cur) return;
     pushHistory(get, set as SetFn);
     set({ blocks: { ...get().blocks, [id]: { ...cur, rawInput: raw } } });
-    scheduleRecalc(get, set as SetFn, 150);
+  scheduleRecalcAsync(150);
   },
 
   setExportName: (id, name) => {
     const cur = get().blocks[id];
     if (!cur) return;
     pushHistory(get, set as SetFn);
-    const next = withRecalc({ ...get().blocks, [id]: { ...cur, exportName: name } });
-    persist(next);
-    set((s) => ({ blocks: next, recalcCounter: s.recalcCounter + 1 }));
+    // оптимистично показываем правку сразу, тяжёлый пересчёт — асинхронно (#6)
+    set({ blocks: { ...get().blocks, [id]: { ...cur, exportName: name } } });
+    scheduleRecalcAsync(150);
   },
 
   moveBlock: (id, x, y) => {
@@ -571,7 +629,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn, true);
     set({ blocks: { ...get().blocks, [id]: { ...cur, x, y } } });
     // порядок сверху-вниз зависит от Y → пересчёт после перемещения
-    scheduleRecalc(get, set as SetFn, 250);
+  scheduleRecalcAsync(250);
   },
 
   /** Финал перетаскивания тени: разом ставим координаты, один пересчёт + persist.
@@ -596,7 +654,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   commitDrag: () => {
     // координаты/размеры могли измениться → финальный пересчёт + сохранение
-    scheduleRecalc(get, set as SetFn, 60);
+  scheduleRecalcAsync(60);
   },
 
   sizeTo: (id, w, h) => {
@@ -640,9 +698,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     }),
 
   recalc: () => {
-    const next = withRecalc(get().blocks);
-    persist(next);
-    set((s) => ({ blocks: next, recalcCounter: s.recalcCounter + 1 }));
+    // явный пересчёт по кнопке — тоже неблокирующий (#6)
+    void runRecalcJob();
   },
 
   clear: () => {

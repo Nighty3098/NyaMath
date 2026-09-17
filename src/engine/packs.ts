@@ -4,7 +4,7 @@
  */
 import type { MathJsInstance, MathNode } from 'mathjs';
 import { t, type LText, type PackId } from '../i18n';
-import { preprocessJ, preprocessRanges } from './mathEngine';
+import { getCompiledPre, preprocessJ, preprocessRanges } from './mathEngine';
 import { adaptiveSimpson, brent, nelderMead, newtonSystem, rk4Step } from './numeric';
 
 export type Scope = Record<string, unknown>;
@@ -48,6 +48,15 @@ export function buildPackScope(math: MathJsInstance): Scope {
     const n = Math.floor((B - A) / S + 1e-9) + 1;
     if (n < 0) return math.matrix([]);
     if (n > 100000) throw new Error(t('e.seqRange'));
+    // Fast-path (#D): целочисленная монотонная последовательность — концы
+    // ограничивают все значения; при |v| < 1e12 (≤12 цифр) toPrecision(12)
+    // тождественен, поэтому результат бит-идентичен медленному пути.
+    if (Number.isInteger(A) && Number.isInteger(B) && Number.isInteger(S)
+        && Math.abs(A) < 1e12 && Math.abs(B) < 1e12) {
+      const out = new Array<number>(n);
+      for (let k = 0; k < n; k++) out[k] = A + k * S;
+      return math.matrix(out);
+    }
     const out: number[] = [];
     for (let k = 0; k < n; k++) out.push(Number((A + k * S).toPrecision(12)));
     return math.matrix(out);
@@ -110,27 +119,37 @@ export function buildPackScope(math: MathJsInstance): Scope {
     if (!a.length || a.some((z) => typeof z !== 'string' || !z)) throw new Error(t('e.calcArgs'));
     return a as string[];
   };
-  /** Вычислить выражение-строку в scope с подстановками; строго число. */
-  const evExpr = (expr: string, scope: Scope, bind: Record<string, number>): number => {
-    let v: unknown;
-    try {
-      v = math.evaluate(preprocessRanges(preprocessJ(expr, false)), { ...plainScope(scope), ...bind });
-    } catch {
-      throw new Error(t('e.simEval', { expr: expr.slice(0, 60) }));
-    }
-    if (typeof v !== 'number' || !isFinite(v)) throw new Error(t('e.simNotNum', { expr: expr.slice(0, 60) }));
-    return v;
+  /** Вычислитель числового выражения (#A): компиляция один раз + переиспользуемый scope.
+   * Заменяет parse+spread на каждый вызов в циклах (nsum/nint/Ньютон/Нелдер–Мид).
+   * Экзотика (присваивания внутри) идёт медленным путём в копии scope — как раньше. */
+  const numEvaluator = (expr: string, scope: Scope): ((bind: Record<string, number>) => number) => {
+    const pre = preprocessRanges(preprocessJ(expr, false));
+    const code = getCompiledPre(pre);
+    const flat: Scope = { ...plainScope(scope) };
+    return (bind) => {
+      for (const k of Object.keys(bind)) flat[k] = bind[k];
+      let v: unknown;
+      try {
+        v = code ? code.evaluate(flat) : math.evaluate(pre, { ...flat });
+      } catch {
+        throw new Error(t('e.simEval', { expr: expr.slice(0, 60) }));
+      }
+      if (typeof v !== 'number' || !isFinite(v)) throw new Error(t('e.simNotNum', { expr: expr.slice(0, 60) }));
+      return v;
+    };
   };
+  // (разовые вычисления — напрямую через numEvaluator в местах вызова)
   /** Ньютон для системы строк; strict=false → minerr (вернуть последнее). */
   const solveEqs = (eqs: string[], vars: string[], guess: number[], scope: Scope, strict: boolean): number[] => {
     if (!eqs.length || eqs.length !== vars.length || guess.length !== vars.length) throw new Error(t('e.calcArgs'));
     if (vars.some((v) => !/^[A-Za-z_]\w*$/.test(v))) throw new Error(t('e.calcArgs'));
+    const evs = eqs.map((e) => numEvaluator(e, scope));
     const F = (x: number[]): number[] => {
       const bind: Record<string, number> = {};
       vars.forEach((v, i) => {
         bind[v] = x[i];
       });
-      return eqs.map((e) => evExpr(e, scope, bind));
+      return evs.map((ev) => ev(bind));
     };
     try {
       return newtonSystem(F, guess).x;
@@ -152,8 +171,9 @@ export function buildPackScope(math: MathJsInstance): Scope {
     if (!/^[A-Za-z_]\w*$/.test(v)) throw new Error(t('e.calcArgs'));
     const node = math.parse(expr);
     // коэффициенты по возрастанию степени через значения в 0..n (n ≤ 6)
+    const compiled = node.compile();
     const f = (x: number): number => {
-      const r = node.compile().evaluate({ [v]: x });
+      const r = compiled.evaluate({ [v]: x });
       if (typeof r !== 'number' || !isFinite(r)) throw new Error('no-roots');
       return r;
     };
@@ -932,12 +952,13 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const vars = needStrVec(evNode(args[1], scope));
       const guess = needNumVec(evNode(args[2], scope));
       if (guess.length !== vars.length) throw new Error(t('e.calcArgs'));
+      const ev = numEvaluator(expr, scope);
       const f = (x: number[]): number => {
         const bind: Record<string, number> = {};
         vars.forEach((v, i) => {
           bind[v] = x[i];
         });
-        return evExpr(expr, scope, bind);
+        return ev(bind);
       };
       try {
         return math.matrix(nelderMead(f, guess).x);
@@ -950,12 +971,13 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const vars = needStrVec(evNode(args[1], scope));
       const guess = needNumVec(evNode(args[2], scope));
       if (guess.length !== vars.length) throw new Error(t('e.calcArgs'));
+      const ev = numEvaluator(expr, scope);
       const f = (x: number[]): number => {
         const bind: Record<string, number> = {};
         vars.forEach((v, i) => {
           bind[v] = x[i];
         });
-        return -evExpr(expr, scope, bind);
+        return -ev(bind);
       };
       try {
         return math.matrix(nelderMead(f, guess).x);
@@ -968,7 +990,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const expr = needStr(evNode(args[0], scope));
       const v = needStr(evNode(args[1], scope));
       if (!/^[A-Za-z_]\w*$/.test(v)) throw new Error(t('e.calcArgs'));
-      const f = (x: number): number => evExpr(expr, scope, { [v]: x });
+      const ev = numEvaluator(expr, scope);
+      const f = (x: number): number => ev({ [v]: x });
       try {
         if (args.length >= 4) {
           const a = needNum(evNode(args[2], scope));
@@ -1006,8 +1029,9 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const s0 = args.length > 6 ? needNum(evNode(args[6], scope)) : (yb - ya) / (b - a);
       if (!/^[A-Za-z_]\w*$/.test(vx) || !(b > a)) throw new Error(t('e.calcArgs'));
       const NPTS = 101;
+      const ev = numEvaluator(expr, scope);
       const rhs = (tt: number, y: number[]): number[] => {
-        const yp = evExpr(expr, scope, { [vx]: tt, y: y[0], yp: y[1] });
+        const yp = ev({ [vx]: tt, y: y[0], yp: y[1] });
         return [y[1], yp];
       };
       const shoot = (s: number): number => {
@@ -1066,7 +1090,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const hArg = args.length > 3 ? evNode(args[3], scope) : null;
       const h = hArg === null ? Math.cbrt(Number.EPSILON) * Math.max(1, Math.abs(at)) : needNum(hArg);
       if (!/^[A-Za-z_]\w*$/.test(v) || !(h > 0)) throw new Error(t('e.calcArgs'));
-      const f = (x: number): number => evExpr(expr, scope, { [v]: x });
+      const ev = numEvaluator(expr, scope);
+      const f = (x: number): number => ev({ [v]: x });
       try {
         return (-f(at + 2 * h) + 8 * f(at + h) - 8 * f(at - h) + f(at - 2 * h)) / (12 * h);
       } catch (e) {
@@ -1081,7 +1106,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const a = needNum(evNode(args[2], scope));
       const b = needNum(evNode(args[3], scope));
       if (!/^[A-Za-z_]\w*$/.test(v) || !(b > a)) throw new Error(t('e.calcArgs'));
-      const f = (x: number): number => evExpr(expr, scope, { [v]: x });
+      const ev = numEvaluator(expr, scope);
+      const f = (x: number): number => ev({ [v]: x });
       try {
         return adaptiveSimpson(f, a, b);
       } catch {
@@ -1091,14 +1117,16 @@ export function buildPackScope(math: MathJsInstance): Scope {
     // nsum("k^2", "k", 1, 100), nprod — целочисленные суммы/произведения
     nsum: raw((args, _m, scope) => {
       const [expr, v, a, b] = sumProdArgs(args, scope);
+      const ev = numEvaluator(expr, scope);
       let s = 0;
-      for (let k = a; k <= b; k++) s += evExpr(expr, scope, { [v]: k });
+      for (let k = a; k <= b; k++) s += ev({ [v]: k });
       return s;
     }),
     nprod: raw((args, _m, scope) => {
       const [expr, v, a, b] = sumProdArgs(args, scope);
+      const ev = numEvaluator(expr, scope);
       let p = 1;
-      for (let k = a; k <= b; k++) p *= evExpr(expr, scope, { [v]: k });
+      for (let k = a; k <= b; k++) p *= ev({ [v]: k });
       return p;
     }),
 
@@ -1327,8 +1355,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
       for (let k = 0; k <= N; k++) {
         let c: number;
         try {
-          const val = math.evaluate(preprocessRanges(preprocessJ(dk, false)), { ...plainScope(scope), [v]: a });
-          c = Number(val);
+          c = numEvaluator(dk, scope)({ [v]: a });
         } catch {
           throw new Error(t('e.calcNoConv'));
         }
@@ -1360,7 +1387,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const a = needNum(evNode(args[2], scope));
       const dir = args.length > 3 ? truncI(evNode(args[3], scope)) : 0;
       if (!/^[A-Za-z_]\w*$/.test(v) || ![-1, 0, 1].includes(dir)) throw new Error(t('e.calcArgs'));
-      const f = (x: number): number => evExpr(expr, scope, { [v]: x });
+      const ev = numEvaluator(expr, scope);
+      const f = (x: number): number => ev({ [v]: x });
       const sc = Math.max(1, Math.abs(a));
       const probe = (h: number, side: number): number => f(a + side * h * sc);
       const sides = dir === 0 ? [-1, 1] : [dir];
@@ -1394,7 +1422,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
       if (!vars.length || vars.length !== pt.length || vars.some((x) => !/^[A-Za-z_]\w*$/.test(x))) {
         throw new Error(t('e.calcArgs'));
       }
-      const at = (bind: Record<string, number>): number => evExpr(expr, scope, bind);
+      const at = numEvaluator(expr, scope);
       const base: Record<string, number> = {};
       vars.forEach((x, i) => {
         base[x] = pt[i];

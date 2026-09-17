@@ -1,8 +1,8 @@
 import { memo, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { createBaseScope } from '../engine/mathEngine';
-import { recalculateAll } from '../engine/dependencies';
+import { useDocScope } from './useDocScope';
+import { useDebouncedValue } from './useDebouncedValue';
 import type { MathBlockData } from '../engine/dependencies';
 import { samplePlot3d } from '../engine/plot3dSample';
 import type { Plot3dMode, Plot3dSample } from '../engine/plot3dSample';
@@ -16,6 +16,8 @@ const W = 560;
 const HEADER = 170;
 const N_MIN = 8;
 const N_MAX = 100;
+/** Дебаунс ресемплинга: слайдер/ресайз шлют изменения на каждый кадр */
+const RESAMPLE_DEBOUNCE_MS = 150;
 
 const fmt = (v: number) => {
   if (!isFinite(v)) return '—';
@@ -66,14 +68,17 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
   const wire = block.plotWireframe ?? false;
   const pw = block.w ?? W;
   const ph = Math.max(240, (block.h ?? W) - HEADER);
+  // Scope последнего пересчёта стора (#2): без повторного recalculateAll.
+  const base = useDocScope(blocks);
+  // Дебаунс + превью (#8): пока документ «живой» — половинная сетка,
+  // по окончании жеста — полный кадр. Перестройка Three-сцены тоже редеет.
+  const { value: dbBase, live } = useDebouncedValue(base, RESAMPLE_DEBOUNCE_MS);
+  const effRes = live ? Math.max(N_MIN, Math.floor(res / 2)) : res;
 
   const { sample, err } = useMemo<{ sample: Plot3dSample | null; err: string | null }>(() => {
     try {
       if (!(xmin < xmax) || !(ymin < ymax)) return { sample: null, err: t('p3.needRange') };
-      const mathBlocks = Object.values(blocks).filter((b) => b.kind === 'math');
-      const { scope } = recalculateAll(mathBlocks);
-      const base = { ...createBaseScope(), ...scope };
-      const s = samplePlot3d(fnText, base, { xmin, xmax, ymin, ymax, res, mode });
+      const s = samplePlot3d(fnText, dbBase, { xmin, xmax, ymin, ymax, res: effRes, mode });
       if (!s) {
         return {
           sample: null,
@@ -84,7 +89,7 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
     } catch (e) {
       return { sample: null, err: e instanceof Error ? e.message : String(e) };
     }
-  }, [fnText, xmin, xmax, ymin, ymax, res, mode, blocks]);
+  }, [fnText, xmin, xmax, ymin, ymax, effRes, mode, dbBase]);
 
   // ---- three.js сцена: пересоздаётся при смене данных/темы/каркаса ----
   useEffect(() => {

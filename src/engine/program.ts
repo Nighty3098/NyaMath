@@ -17,6 +17,7 @@
  */
 import {
   math,
+  getCompiledPre,
   convertToUnit,
   extractDependencies,
   formatResult,
@@ -29,6 +30,7 @@ import {
   stripOnError,
   type Scope,
 } from './mathEngine';
+import type { EvalFunction } from 'mathjs';
 import { t } from '../i18n';
 
 const MAX_WHILE = 100000;
@@ -65,8 +67,32 @@ export interface ProgramAnalysis {
   assigned: string[];
 }
 
+/* ---------- кэш разбора программ (#7) ----------
+ * analyzeProgram дёргается на каждый пересчёт для каждого program-блока
+ * (fingerprint + выполнение). Ключ — исходник целиком; наружу отдаём копии.
+ */
+const ANALYSIS_CACHE_LIMIT = 500;
+const analysisCache = new Map<string, ProgramAnalysis>();
+
+function analysisPut(key: string, v: ProgramAnalysis): void {
+  if (analysisCache.has(key)) analysisCache.delete(key);
+  else if (analysisCache.size >= ANALYSIS_CACHE_LIMIT) {
+    const oldest = analysisCache.keys().next();
+    if (!oldest.done) analysisCache.delete(oldest.value);
+  }
+  analysisCache.set(key, v);
+}
+
 /** Только разбор: зависимости от глобалей (имена, не покрытые локальными присваиваниями). */
 export function analyzeProgram(src: string): ProgramAnalysis {
+  const hit = analysisCache.get(src);
+  if (hit) return { dependencies: hit.dependencies.slice(), assigned: hit.assigned.slice() };
+  const out = analyzeProgramUncached(src);
+  analysisPut(src, out);
+  return { dependencies: out.dependencies.slice(), assigned: out.assigned.slice() };
+}
+
+function analyzeProgramUncached(src: string): ProgramAnalysis {
   const lines = toLines(src).slice(0, MAX_LINES);
   const assigned = new Set<string>();
   for (const l of lines) {
@@ -155,24 +181,87 @@ export function runProgram(
   if (lines.length > MAX_LINES) {
     return { value: null, error: t('e.progTooLong', { n: MAX_LINES }), errorLine: null };
   }
+  // Единый мутабельный scope на весь прогон (#3): копия глобалей + локалы.
+  // Раньше scopeOf() делал {...globals, ...local} на КАЖДОЕ вычисление —
+  // в цикле на 100k итераций это 100k спредов + 100k parse внутри evaluate.
   const local: Scope = {};
-  const scopeOf = (): Scope => ({ ...globals, ...local });
+  const scope: Scope = { ...globals };
 
-  const evalExpr = (expr: string, lineNo: number): unknown => {
+  /** Предобработка без on-error/unit-разбора (для trace: часть считается целиком, как раньше). */
+  interface PlainPrep {
+    pre: string;
+    code: EvalFunction | null;
+  }
+  const plainCache = new Map<string, PlainPrep>();
+  const getPlain = (raw: string): PlainPrep => {
+    const hit = plainCache.get(raw);
+    if (hit) return hit;
+    const pre = preprocessRanges(preprocessJ(raw, false));
+    const p: PlainPrep = { pre, code: getCompiledPre(pre) };
+    plainCache.set(raw, p);
+    return p;
+  };
+  /** Предразбор выражения (#B): on-error/unit-границы + pre + код — один раз на текст. */
+  interface ExprPrep {
+    main: string;
+    fallback: string | null;
+    convLhs: string;
+    convUnit: string | null;
+    /** pre/код полной main-строки и отдельно convLhs (выбор — по факту резолва юнита, как раньше) */
+    preMain: string;
+    codeMain: EvalFunction | null;
+    preConv: string;
+    codeConv: EvalFunction | null;
+    fbPre: string;
+    fbCode: EvalFunction | null;
+  }
+  const prepCache = new Map<string, ExprPrep>();
+  const getPrep = (expr: string): ExprPrep => {
+    const hit = prepCache.get(expr);
+    if (hit) return hit;
     // `expr on error fallback`: при ошибке main считаем fallback
     const [main, fallback] = splitOnError(expr);
     // перевод единиц `x := 10cm = m`
     const [convLhs, convUnit] = splitOffUnit(main.replace(/=+\s*$/, '').trim());
-    const convTarget = convUnit ? resolveUnit(convUnit, scopeOf()) : null;
-    const pre = preprocessRanges(preprocessJ(convTarget ? convLhs : main, false));
+    const preMain = preprocessRanges(preprocessJ(main, false));
+    const preConv = convUnit ? preprocessRanges(preprocessJ(convLhs, false)) : '';
+    const fbPre = fallback ? preprocessRanges(preprocessJ(fallback, false)) : '';
+    const p: ExprPrep = {
+      main, fallback, convLhs, convUnit,
+      preMain, codeMain: getCompiledPre(preMain),
+      preConv, codeConv: convUnit ? getCompiledPre(preConv) : null,
+      fbPre, fbCode: fallback ? getCompiledPre(fbPre) : null,
+    };
+    prepCache.set(expr, p);
+    return p;
+  };
+
+  /**
+   * Быстрое вычисление с кэшированной компиляцией (#1 + #4).
+   * Экзотика (присваивания `=` внутри выражений) идёт медленным путём
+   * math.evaluate в КОПИИ scope — как раньше (присваивание теряется).
+   */
+  const evalFast = (pre: string, code: EvalFunction | null): unknown => {
+    if (code) return code.evaluate(scope);
+    return math.evaluate(pre, { ...scope });
+  };
+
+  const evalExpr = (expr: string, lineNo: number): unknown => {
+    const p = getPrep(expr);
+    // цель перевода зависит от scope (переменная может держать Unit) — не кэшируем;
+    // pre выбираем по факту резолва, как раньше (неизвестный юнит → вычисляем main целиком).
+    const convTarget = p.convUnit ? resolveUnit(p.convUnit, scope) : null;
+    const useConv = p.convUnit !== null && convTarget !== null;
+    const pre = useConv ? p.preConv : p.preMain;
+    const code = useConv ? p.codeConv : p.codeMain;
     try {
-      const v = math.evaluate(pre, scopeOf());
-      if (convUnit && convTarget) return convertToUnit(v, convUnit, main);
+      const v = evalFast(pre, code);
+      if (useConv) return convertToUnit(v, p.convUnit as string, p.main);
       return v;
     } catch (err) {
-      if (fallback) {
+      if (p.fallback) {
         try {
-          return math.evaluate(preprocessRanges(preprocessJ(fallback, false)), scopeOf());
+          return evalFast(p.fbPre, p.fbCode);
         } catch (err2) {
           throw { line: lineNo, msg: humanizeMathError(err2) };
         }
@@ -210,7 +299,8 @@ export function runProgram(
     for (const p of parts) {
       let v: unknown = null;
       try {
-        v = math.evaluate(preprocessRanges(preprocessJ(p, false)), scopeOf());
+        const gp = getPlain(p);
+        v = gp.code ? gp.code.evaluate(scope) : math.evaluate(gp.pre, { ...scope });
       } catch {
         v = '<?>'; // hmm — локализация не нужна, технический маркер
       }
@@ -251,6 +341,7 @@ export function runProgram(
       if (a) {
         last = evalExpr(a[3], no);
         local[a[1]] = last;
+        scope[a[1]] = last;
         step('assign', no, text, last);
         i++;
         continue;
@@ -329,6 +420,7 @@ export function runProgram(
         if (arr.length > MAX_FOR) throw { line: no, msg: t('e.forIters', { max: MAX_FOR }) };
         for (const item of arr) {
           local[f[1]] = item;
+          scope[f[1]] = item;
           const res = exec(i + 1, endIdx);
           if (res.sig === 'break') break;
           if (res.sig === 'continue') continue;

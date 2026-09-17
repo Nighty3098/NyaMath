@@ -29,6 +29,9 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
   const select = useCanvasStore((s) => s.select);
   const toggleSelect = useCanvasStore((s) => s.toggleSelect);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
+  const computeActive = useCanvasStore((s) => s.computeActive);
+  const computeSimId = useCanvasStore((s) => s.computeSimId);
+  const computeProgress = useCanvasStore((s) => s.computeProgress);
   const theme = useCanvasStore((s) => s.theme);
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
@@ -54,6 +57,8 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
   const pw = block.w ?? W;
   const ph = Math.max(220, (block.h ?? PH + headH) - headH);
   const selected = selectedIds.includes(block.id);
+  // Прогресс фонового пересчёта (#6): determinate — доля, иначе пульсация
+  const showProgress = computeActive && computeSimId === block.id;
 
   /** Правка полей = своя система (привязка к пресету сбрасывается). */
   const edit = (patch: Partial<MathBlockData>) => updateSim(block.id, { simModel: 'custom', ...patch });
@@ -199,6 +204,21 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
               <IX />
             </button>
           </div>
+          {/* прогресс фонового пересчёта (#6) */}
+          {showProgress && (
+            <div
+              className="h-[3px] mb-1 rounded-full bg-[var(--line)] overflow-hidden"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={computeProgress === null ? undefined : Math.round(computeProgress * 100)}
+            >
+              <div
+                className={`h-full rounded-full bg-[var(--accent-line)] ${computeProgress === null ? 'animate-pulse w-full' : ''}`}
+                style={computeProgress === null ? undefined : { width: `${Math.round(computeProgress * 100)}%` }}
+              />
+            </div>
+          )}
 
           {/* редактор */}
           {open && (

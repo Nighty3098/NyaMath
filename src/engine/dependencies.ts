@@ -1,7 +1,7 @@
 import { createBaseScope, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, splitOffUnit, stripOnError, toLatex, valueToLatex, type Scope } from './mathEngine';
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
-import { parseSimDef, runSim, type SimResult, type SimSolver, type SimMode } from './simEngine';
+import { parseSimDef, runSim, runSimAsync, isSimCancel, yieldSlice, type SimResult, type SimSolver, type SimMode } from './simEngine';
 import { getLang, t } from '../i18n';
 
 export interface MathBlockData {
@@ -115,11 +115,80 @@ const recalcCache = new Map<string, CachedBlock>();
 let lastRecord: Record<string, MathBlockData> = {};
 let lastIdsKey = '';
 
+/* ---------- последний посчитанный scope (#2) ----------
+ * recalculateAll считает scope для всего документа, но стор хранил только
+ * blocks и выкидывал scope — поэтому каждый plot/3d/contour/debug делал
+ * recalculateAll заново внутри useMemo (P графиков = P полных пересчётов
+ * на каждое нажатие клавиши). Теперь scope доступен через getLastScope()
+ * без повторного счёта. Включает base scope (константы/паки) и все виды
+ * блоков — графики и отладчик видят и program/sim/slider-переменные.
+ */
+let lastScope: Scope = createBaseScope();
+
+/** Scope последнего recalculateAll (копия не делается — вызывающий код копирует при мутации). */
+export function getLastScope(): Scope {
+  return lastScope;
+}
+
 export function sortBlocksTopDown(blocks: MathBlockData[]): MathBlockData[] {
   return [...blocks].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
 }
 
+/* ---------- кэши зависимостей/определений блоков (#7) ----------
+ * blockDeps/blockDefs вызываются на КАЖДЫЙ пересчёт для КАЖДОГО блока
+ * (detectCycles + fingerprint-фаза), хотя зависят только от контента блока.
+ * Ключ — контент релевантных полей; наружу отдаём копии массивов.
+ */
+const BLOCK_CACHE_LIMIT = 1000;
+const blockDepsCache = new Map<string, string[]>();
+const blockDefsCache = new Map<string, string[]>();
+
+function blockCachePut(m: Map<string, string[]>, k: string, v: string[]): void {
+  if (m.has(k)) m.delete(k);
+  else if (m.size >= BLOCK_CACHE_LIMIT) {
+    const oldest = m.keys().next();
+    if (!oldest.done) m.delete(oldest.value);
+  }
+  m.set(k, v);
+}
+
+/** Контентный ключ sim-блока для зависимостей (только dep-релевантные поля). */
+function simDepsKey(b: MathBlockData): string {
+  return `sim:${b.simMode ?? ''}|${b.simStates ?? ''}|${b.simDerivs ?? ''}|${b.simAux ?? ''}|${b.simParams ?? ''}|${b.simInit ?? ''}|${b.simEvents ?? ''}|${b.simFdtdLayers ?? ''}`;
+}
+
 function blockDeps(b: MathBlockData): string[] {
+  let key: string | null;
+  switch (b.kind) {
+    case 'math': key = `m:${b.rawInput}`; break;
+    case 'program': key = `p:${b.rawInput}`; break;
+    case 'sim': key = simDepsKey(b); break;
+    default: return []; // slider/plot/plot3d/contour/text: зависимостей нет
+  }
+  const hit = blockDepsCache.get(key);
+  if (hit) return hit.slice();
+  const v = computeBlockDeps(b);
+  blockCachePut(blockDepsCache, key, v);
+  return v.slice();
+}
+
+function blockDefs(b: MathBlockData): string[] {
+  let key: string | null;
+  switch (b.kind) {
+    case 'math': key = `m:${b.rawInput}`; break;
+    case 'program': key = `pe:${b.exportName ?? ''}`; break;
+    case 'sim': key = `se:${b.simExport ?? ''}`; break;
+    case 'slider': key = `sl:${b.sliderVar ?? ''}`; break;
+    default: return [];
+  }
+  const hit = blockDefsCache.get(key);
+  if (hit) return hit.slice();
+  const v = computeBlockDefs(b);
+  blockCachePut(blockDefsCache, key, v);
+  return v.slice();
+}
+
+function computeBlockDeps(b: MathBlockData): string[] {
   if (b.kind === 'program') {
     try {
       return analyzeProgram(b.rawInput).dependencies;
@@ -145,7 +214,7 @@ function blockDeps(b: MathBlockData): string[] {
   return [...deps];
 }
 
-function blockDefs(b: MathBlockData): string[] {
+function computeBlockDefs(b: MathBlockData): string[] {
   if (b.kind === 'program') {
     return b.exportName && isValidVarName(b.exportName) ? [b.exportName] : [];
   }
@@ -272,7 +341,31 @@ function simDeps(b: MathBlockData): string[] {
   return [...deps];
 }
 
-export function recalculateAll(list: MathBlockData[]): RecalcResult {
+export interface RecalcHooks {
+  shouldCancel?: () => boolean;
+  onBlock?: (done: number, total: number) => void;
+  onSimProgress?: (blockId: string, done: number, total: number | null) => void;
+}
+
+export type RecalcAsyncOutcome =
+  | { cancelled: true }
+  | { cancelled: false; result: RecalcResult };
+
+interface RecalcCtx {
+  ordered: MathBlockData[];
+  cyclic: Set<string>;
+  langTag: string;
+  scope: Scope;
+  out: Record<string, MathBlockData>;
+  allHit: { v: boolean };
+  fpOf: (id: string) => string;
+  simConfigFp: (b: MathBlockData) => string;
+  reuseHit: (b: MathBlockData, prev: CachedBlock) => MathBlockData;
+  snapBlock: (c: MathBlockData, key: string) => void;
+}
+
+/** Общая преамбула пересчёта: порядок, циклы, fingerprint-механика, scope. */
+function createRecalcCtx(list: MathBlockData[]): RecalcCtx {
   const ordered = sortBlocksTopDown(list);
   const cyclic = detectCycles(ordered);
   const langTag = getLang();
@@ -289,6 +382,9 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
   const hasShadow = [...defLists.values()].some((l) => l.length > 1);
   const fpMemo = new Map<string, string>();
   const visiting = new Set<string>();
+  // порядок блоков для shadowing: Map вместо findIndex в рекурсии (было O(n²))
+  const orderOf = new Map<string, number>();
+  ordered.forEach((b, i) => orderOf.set(b.id, i));
   // fingerprint определителя, видимого из позиции order (последний выше по листу)
   const upstreamFp = (name: string, order: number): string => {
     const l = defLists.get(name);
@@ -317,7 +413,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
     if (cyclic.has(id)) return `cyc:${id}:${b.rawInput}`;
     if (visiting.has(id)) return `loop:${id}:${b.rawInput}`;
     visiting.add(id);
-    const order = ordered.findIndex((x) => x.id === id);
+    const order = orderOf.get(id) ?? -1;
     const ordTag = hasShadow ? `#${order}` : '';
     const deps = blockDeps(b).map((d) => upstreamFp(d, order));
     deps.sort();
@@ -349,7 +445,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
   const scope: Scope = createBaseScope();
   const out: Record<string, MathBlockData> = {};
   for (const b of list) out[b.id] = { ...b };
-  let allHit = true;
+  const allHit = { v: true };
   /**
    * Переиспользование кэша: геометрия (x/y/w/h) в fingerprint не входит,
    * поэтому при hit переносим её с входного блока. Сдвиг/ресайз дают новый
@@ -361,7 +457,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
       c.x !== b.x || c.y !== b.y ||
       (c.w ?? null) !== (b.w ?? null) || (c.h ?? null) !== (b.h ?? null)
     ) {
-      allHit = false;
+      allHit.v = false;
       const patched = { ...c, x: b.x, y: b.y, w: b.w, h: b.h };
       // кэш тоже двигаем, иначе следующий прогон снова увидит «сдвиг»
       recalcCache.set(b.id, { ...prev, block: patched });
@@ -377,24 +473,55 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
     }
     recalcCache.set(c.id, { fp: key, block: c, writes });
   };
+  return { ordered, cyclic, langTag, scope, out, allHit, fpOf, simConfigFp, reuseHit, snapBlock };
+}
 
-  for (const b of ordered) {
-    const cur = out[b.id];
+/** Финал пересчёта: чистка кэша, ссылка на прошлый прогон при полном hit, lastScope. */
+function finishRecalc(ctx: RecalcCtx): RecalcResult {
+  const { ordered, out } = ctx;
+  // Чистим кэш от удалённых блоков; при полном hit отдаём прошлую ссылку —
+  // стор и memo-компоненты пропускают работу.
+  for (const id of [...recalcCache.keys()]) {
+    if (!out[id]) recalcCache.delete(id);
+  }
+  const idsKey = ordered.map((b) => b.id).sort().join(',');
+  let record = out;
+  let changed = true;
+  if (ctx.allHit.v && idsKey === lastIdsKey) {
+    record = lastRecord;
+    changed = false;
+  }
+  lastRecord = record;
+  lastIdsKey = idsKey;
+  lastScope = ctx.scope;
+  return { blocks: record, scope: ctx.scope, changed };
+}
+
+export function recalculateAll(list: MathBlockData[]): RecalcResult {
+  const ctx = createRecalcCtx(list);
+  for (const b of ctx.ordered) computeBlockSync(b, ctx);
+  return finishRecalc(ctx);
+}
+
+/** Один блок синхронно: все виды, sim — через runSim (#6: async-близнец computeSimAsync). */
+function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
+  const { scope, out, cyclic, langTag, fpOf, reuseHit, snapBlock } = ctx;
+  const cur = out[b.id];
     if (b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'text' || b.kind === 'contour') {
       const pkey = `${langTag}|${fpOf(b.id)}`;
       const pprev = recalcCache.get(b.id);
       if (pprev && pprev.fp === pkey) {
         out[b.id] = reuseHit(b, pprev);
-        continue;
+        return;
       }
-      allHit = false;
+      ctx.allHit.v = false;
       cur.error = null;
       cur.dependencies = [];
       cur.definedVar = null;
       cur.isOutput = false;
       cur.displayLatex = b.rawInput;
       snapBlock(cur, pkey);
-      continue;
+      return;
     }
     if (cyclic.has(b.id)) {
       cur.error = t('e.cyclicDep');
@@ -405,16 +532,16 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
       cur.dependencies = [];
       cur.definedVar = null;
       cur.isOutput = false;
-      continue;
+      return;
     }
     const key = `${langTag}|${fpOf(b.id)}`;
     const prev = recalcCache.get(b.id);
     if (prev && prev.fp === key) {
       out[b.id] = reuseHit(b, prev);
       for (const [k, v] of Object.entries(prev.writes)) scope[k] = v;
-      continue;
+      return;
     }
-    allHit = false;
+    ctx.allHit.v = false;
 
     // ---------- слайдер: значение ползунка уходит в scope как переменная ----------
     if (b.kind === 'slider') {
@@ -438,7 +565,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
         cur.resultValue = null;
         cur.definedVar = null;
         snapBlock(cur, key);
-        continue;
+        return;
       }
       const val = typeof b.sliderVal === 'number' && isFinite(b.sliderVal)
         ? Math.min(hi as number, Math.max(lo as number, b.sliderVal))
@@ -449,7 +576,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
       cur.resultLatex = valueToLatex(val);
       scope[v] = val;
       snapBlock(cur, key);
-      continue;
+      return;
     }
 
     // ---------- программный блок ----------
@@ -475,65 +602,21 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
       }
       cur.displayLatex = '';
       snapBlock(cur, key);
-      continue;
+      return;
     }
 
-    // ---------- симуляция ----------
+    // ---------- симуляция (sync: через runSim) ----------
     if (b.kind === 'sim') {
-      const parsed = parseSimDef({
-        mode: b.simMode ?? 'ode',
-        states: b.simStates ?? '',
-        derivs: b.simDerivs ?? '',
-        aux: b.simAux ?? '',
-        params: b.simParams ?? '',
-        init: b.simInit ?? '',
-        t0: b.simT0 ?? 0,
-        t1: b.simT1 ?? 10,
-        dt: b.simDt ?? 0.01,
-        solver: b.simSolver ?? 'rk4',
-        events: b.simEvents ?? '',
-        fdtd: {
-          n: b.simFdtdN ?? 400,
-          length: b.simFdtdL ?? 20,
-          steps: b.simFdtdSteps ?? 1500,
-          src: b.simFdtdSrc ?? 'gauss',
-          freq: b.simFdtdFreq ?? 1,
-          amp: b.simFdtdAmp ?? 1,
-          srcX: b.simFdtdSrcX ?? 4,
-          det: b.simFdtdDet ?? null,
-          layers: b.simFdtdLayers ?? '',
-        },
-      });
-      cur.dependencies = blockDeps(b);
-      cur.isOutput = true;
-      const exp = (b.simExport ?? '').trim();
-      // в FDTD-режиме экспортировать нечего — финального вектора нет
-      cur.definedVar = (b.simMode === 'fdtd' || !exp || !isValidVarName(exp)) ? null : exp;
+      const parsed = parseSimInput(b);
+      simHead(b, cur);
       if (parsed.error || !parsed.def) {
-        cur.error = parsed.error;
-        cur.simResult = null;
-        cur.resultStr = '';
-        cur.resultLatex = '';
-        cur.resultValue = null;
+        simFail(cur, parsed.error);
       } else {
-        const r = runSim(parsed.def, scope);
-        cur.simResult = r;
-        if (r.error) {
-          cur.error = r.error;
-          cur.resultStr = '';
-          cur.resultLatex = '';
-          cur.resultValue = null;
-        } else {
-          cur.error = null;
-          cur.resultValue = r.final;
-          cur.resultStr = formatResult(r.final);
-          cur.resultLatex = valueToLatex(r.final);
-          if (cur.definedVar) scope[cur.definedVar] = r.final;
-        }
+        simApply(cur, ctx, runSim(parsed.def, scope));
       }
       cur.displayLatex = '';
       snapBlock(cur, key);
-      continue;
+      return;
     }
 
     // ---------- обычный мат-блок ----------
@@ -616,20 +699,126 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
       cur.resultLatex = valueToLatex(lastValue);
     }
     snapBlock(cur, key);
+}
+
+/** Разобрать поля sim-блока в SimDef (общее для sync/async, #6). */
+function parseSimInput(b: MathBlockData) {
+  return parseSimDef({
+    mode: b.simMode ?? 'ode',
+    states: b.simStates ?? '',
+    derivs: b.simDerivs ?? '',
+    aux: b.simAux ?? '',
+    params: b.simParams ?? '',
+    init: b.simInit ?? '',
+    t0: b.simT0 ?? 0,
+    t1: b.simT1 ?? 10,
+    dt: b.simDt ?? 0.01,
+    solver: b.simSolver ?? 'rk4',
+    events: b.simEvents ?? '',
+    fdtd: {
+      n: b.simFdtdN ?? 400,
+      length: b.simFdtdL ?? 20,
+      steps: b.simFdtdSteps ?? 1500,
+      src: b.simFdtdSrc ?? 'gauss',
+      freq: b.simFdtdFreq ?? 1,
+      amp: b.simFdtdAmp ?? 1,
+      srcX: b.simFdtdSrcX ?? 4,
+      det: b.simFdtdDet ?? null,
+      layers: b.simFdtdLayers ?? '',
+    },
+  });
+}
+
+/** Шапка sim-блока: зависимости, вывод, экспортируемое имя (общее, #6). */
+function simHead(b: MathBlockData, cur: MathBlockData): void {
+  cur.dependencies = blockDeps(b);
+  cur.isOutput = true;
+  const exp = (b.simExport ?? '').trim();
+  // в FDTD-режиме экспортировать нечего — финального вектора нет
+  cur.definedVar = (b.simMode === 'fdtd' || !exp || !isValidVarName(exp)) ? null : exp;
+}
+
+/** Ошибка разбора sim-конфига (общее, #6). */
+function simFail(cur: MathBlockData, error: string | null): void {
+  cur.error = error;
+  cur.simResult = null;
+  cur.resultStr = '';
+  cur.resultLatex = '';
+  cur.resultValue = null;
+}
+
+/** Применить результат симуляции к блоку и scope (общее, #6). */
+function simApply(cur: MathBlockData, ctx: RecalcCtx, r: SimResult): void {
+  cur.simResult = r;
+  if (r.error) {
+    cur.error = r.error;
+    cur.resultStr = '';
+    cur.resultLatex = '';
+    cur.resultValue = null;
+  } else {
+    cur.error = null;
+    cur.resultValue = r.final;
+    cur.resultStr = formatResult(r.final);
+    cur.resultLatex = valueToLatex(r.final);
+    if (cur.definedVar) ctx.scope[cur.definedVar] = r.final;
   }
-  // Чистим кэш от удалённых блоков; при полном hit отдаём прошлую ссылку —
-  // стор и memo-компоненты пропускают работу.
-  for (const id of [...recalcCache.keys()]) {
-    if (!out[id]) recalcCache.delete(id);
+}
+
+/** Один sim-блок асинхронно: чанки runSimAsync + прогресс (#6). */
+async function computeSimAsync(b: MathBlockData, ctx: RecalcCtx, key: string, hooks: RecalcHooks): Promise<void> {
+  const cur = ctx.out[b.id];
+  const parsed = parseSimInput(b);
+  simHead(b, cur);
+  if (parsed.error || !parsed.def) {
+    simFail(cur, parsed.error);
+  } else {
+    const r = await runSimAsync(parsed.def, ctx.scope, {
+      shouldCancel: hooks.shouldCancel,
+      onProgress: (done, total) => hooks.onSimProgress?.(b.id, done, total),
+    });
+    simApply(cur, ctx, r);
   }
-  const idsKey = ordered.map((b) => b.id).sort().join(',');
-  let record = out;
-  let changed = true;
-  if (allHit && idsKey === lastIdsKey) {
-    record = lastRecord;
-    changed = false;
+  cur.displayLatex = '';
+  ctx.snapBlock(cur, key);
+}
+
+/** Sim-блок с промахом кэша? Ключ для async-прогона, null — sync-путь (#6). */
+function simMissOf(b: MathBlockData, ctx: RecalcCtx): string | null {
+  if (b.kind !== 'sim' || ctx.cyclic.has(b.id)) return null;
+  const key = `${ctx.langTag}|${ctx.fpOf(b.id)}`;
+  const prev = recalcCache.get(b.id);
+  if (prev && prev.fp === key) return null;
+  return key;
+}
+
+/**
+ * Асинхронный пересчёт (#6): тот же результат, что recalculateAll, но чанками
+ * с yield между блоками + чанкированный runSimAsync с прогрессом/отменой.
+ * Отмена — через hooks.shouldCancel или отмену внутри sim (isSimCancel).
+ */
+export async function recalculateAllAsync(
+  list: MathBlockData[],
+  hooks: RecalcHooks = {},
+): Promise<RecalcAsyncOutcome> {
+  const ctx = createRecalcCtx(list);
+  const total = ctx.ordered.length;
+  try {
+    let i = 0;
+    let sliceStart = performance.now();
+    for (const b of ctx.ordered) {
+      if (hooks.shouldCancel?.()) return { cancelled: true };
+      const simKey = simMissOf(b, ctx);
+      if (simKey !== null) await computeSimAsync(b, ctx, simKey, hooks);
+      else computeBlockSync(b, ctx);
+      hooks.onBlock?.(++i, total);
+      if (performance.now() - sliceStart > 8) {
+        await yieldSlice();
+        sliceStart = performance.now();
+      }
+    }
+  } catch (e) {
+    if (isSimCancel(e)) return { cancelled: true };
+    throw e;
   }
-  lastRecord = record;
-  lastIdsKey = idsKey;
-  return { blocks: record, scope, changed };
+  return { cancelled: false, result: finishRecalc(ctx) };
 }
