@@ -8,7 +8,7 @@
  *  - константы pi, e; функции sqrt/sin/cos/atan/Re/Im/abs/log/ln
  *  - порядок вычислений строго сверху-вниз по Y (см. dependencies.ts)
  */
-import { create, all, type MathJsInstance, type Unit } from 'mathjs';
+import { create, all, type EvalFunction, type MathJsInstance, type Unit } from 'mathjs';
 import { buildPackScope, PACK_NAMES } from './packs';
 
 import { t } from '../i18n';
@@ -78,6 +78,41 @@ export function preprocessRanges(expr: string): string {
       'seq($1,$3,$2)',
     )
     .replace(/(-?\d+(?:\.\d+)?)\s*\.\.\s*(-?\d+(?:\.\d+)?)/g, 'seq($1,$2)');
+}
+
+export interface CompiledPlotExpr {
+  code: EvalFunction;
+  /** свободные переменные выражения */
+  freeVars: string[];
+}
+
+/**
+ * Однократная компиляция выражения для сэмплинга графиков.
+ * Старый путь (parse+compile на каждую точку) в ~68 раз медленнее замера;
+ * точки гоняем через один scope-объект. null — не парсится или содержит
+ * присваивания (для них точечная подстановка неприменима).
+ * Предобработку (preprocessJ/preprocessRanges) делает вызывающий код.
+ */
+export function compilePlotExpr(pre: string): CompiledPlotExpr | null {
+  let node;
+  try {
+    node = math.parse(pre);
+  } catch {
+    return null;
+  }
+  const free = new Set<string>();
+  let assign = false;
+  try {
+    node.traverse((n: unknown) => {
+      const nn = n as { isSymbolNode?: boolean; isAssignmentNode?: boolean; name?: string };
+      if (nn.isAssignmentNode) assign = true;
+      else if (nn.isSymbolNode && nn.name) free.add(String(nn.name));
+    });
+    if (assign) return null;
+    return { code: node.compile(), freeVars: [...free] };
+  } catch {
+    return null;
+  }
 }
 
 /** Базовый scope: j/i, константы физики и функции паков (статистика, телеком, ...). */

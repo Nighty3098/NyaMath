@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { sortBlocksTopDown } from '../engine/dependencies';
 import MathBlockView from './MathBlockView';
 import PlotBlockView from './PlotBlockView';
 import ContourBlockView from './ContourBlockView';
-import Plot3dBlockView from './Plot3dBlockView';
+// three.js едет отдельным чанком — грузится только при первом 3D-блоке
+const Plot3dBlockView = lazy(() => import('./Plot3dBlockView'));
 import ProgramBlockView from './ProgramBlockView';
 import SimBlockView from './SimBlockView';
 import SliderBlockView from './SliderBlockView';
@@ -609,7 +610,18 @@ export default function Canvas() {
           ) : b.kind === 'contour' ? (
             <ContourBlockView key={b.id} block={b} scale={view.k} />
           ) : b.kind === 'plot3d' ? (
-            <Plot3dBlockView key={b.id} block={b} scale={view.k} />
+            <Suspense
+              key={b.id}
+              fallback={
+                <div
+                  className="absolute rounded-xl bg-[var(--sheet)] shadow-[0_1px_2px_rgba(0,0,0,0.18),0_8px_24px_rgba(0,0,0,0.16)] animate-pulse"
+                  style={{ left: b.x, top: b.y, width: 560, height: 470 }}
+                  aria-label="3D"
+                />
+              }
+            >
+              <Plot3dBlockView block={b} scale={view.k} />
+            </Suspense>
           ) : b.kind === 'program' ? (
             <ProgramBlockView key={b.id} block={b} scale={view.k} />
           ) : b.kind === 'sim' ? (

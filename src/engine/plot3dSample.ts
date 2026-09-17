@@ -13,7 +13,7 @@
  * Область: x ∈ [xmin, xmax], y ∈ [ymin, ymax]. Разрешение сетки res×res.
  * Все переменные документа видны (scope), x/y подставляются поверх scope.
  */
-import { math, preprocessJ, preprocessRanges, type Scope } from './mathEngine';
+import { compilePlotExpr, math, preprocessJ, preprocessRanges, type Scope } from './mathEngine';
 
 export type Plot3dMode = 'auto' | 'surface' | 'points' | 'matrix';
 
@@ -207,24 +207,25 @@ function sampleSurface(
   expr: string, scope: Scope, xmin: number, xmax: number, ymin: number, ymax: number, res: number,
 ): Plot3dSurface | null {
   const pre = preprocessRanges(preprocessJ(expr, false));
-  try {
-    math.parse(pre);
-  } catch {
-    return null;
-  }
+  // Однократная компиляция вместо parse+compile на каждую точку сетки
+  const c = compilePlotExpr(pre);
+  if (!c) return null;
   const gx: number[] = [];
   const gy: number[] = [];
   for (let k = 0; k < res; k++) gx.push(xmin + ((xmax - xmin) * k) / (res - 1));
   for (let k = 0; k < res; k++) gy.push(ymin + ((ymax - ymin) * k) / (res - 1));
   const zs: (number | null)[][] = [];
   const finite: number[] = [];
+  // scope-копия: x/y подставляются как переменные (надёжнее строковой замены)
+  const base: Scope = { ...scope };
   for (const yv of gy) {
     const row: (number | null)[] = [];
+    base.y = yv;
     for (const xv of gx) {
       let z: number | null = null;
       try {
-        // scope-копия: x/y подставляются как переменные (надёжнее строковой замены)
-        const v: unknown = math.evaluate(pre, { ...scope, x: xv, y: yv });
+        base.x = xv;
+        const v: unknown = c.code.evaluate(base);
         z = numOf(v);
       } catch {
         z = null;

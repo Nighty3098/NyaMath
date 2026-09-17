@@ -2,7 +2,7 @@ import { createBaseScope, evaluateLine, extractDependencies, formatResult, isVal
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
 import { parseSimDef, runSim, type SimResult, type SimSolver, type SimMode } from './simEngine';
-import { t } from '../i18n';
+import { getLang, t } from '../i18n';
 
 export interface MathBlockData {
   id: string;
@@ -90,7 +90,30 @@ export interface MathBlockData {
 export interface RecalcResult {
   blocks: Record<string, MathBlockData>;
   scope: Scope;
+  /** false — ни один блок не пересчитывался; blocks — та же ссылка, что в прошлом прогоне */
+  changed: boolean;
 }
+
+/* ---------- инкрементальный пересчёт: fingerprint-кэш ----------
+ * Идея: fingerprint блока = его содержимое + fingerprint'ы блоков-определителей
+ * его зависимостей (транзитивно). Изменилась правка ниже по листу — fingerprint'ы
+ * выше не меняются, их результаты (включая тяжёлые sim/plotPreview) берём из кэша,
+ * а записи в scope переигрываем. Ссылки на объекты при hit сохраняем, поэтому
+ * memo-компоненты пропускают ре-рендер. Порядок в fingerprint входит только при
+ * дублирующихся определениях (shadowing); иначе перемещения без смены порядка
+ * вычислений тоже остаются кэшированными. Циклы и смена языка кэширование сбрасывают
+ * (язык — часть ключа: тексты ошибок локализованы).
+ */
+interface CachedBlock {
+  fp: string;
+  block: MathBlockData;
+  /** записи в scope, сделанные блоком (defined-переменные после вычисления) */
+  writes: Record<string, unknown>;
+}
+
+const recalcCache = new Map<string, CachedBlock>();
+let lastRecord: Record<string, MathBlockData> = {};
+let lastIdsKey = '';
 
 export function sortBlocksTopDown(blocks: MathBlockData[]): MathBlockData[] {
   return [...blocks].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
@@ -252,18 +275,125 @@ function simDeps(b: MathBlockData): string[] {
 export function recalculateAll(list: MathBlockData[]): RecalcResult {
   const ordered = sortBlocksTopDown(list);
   const cyclic = detectCycles(ordered);
+  const langTag = getLang();
+  const byId = new Map(ordered.map((b) => [b.id, b]));
+  // определители имён сверху вниз — точное соответствие threading scope
+  const defLists = new Map<string, number[]>();
+  ordered.forEach((b, i) => {
+    for (const d of blockDefs(b)) {
+      const l = defLists.get(d);
+      if (l) l.push(i);
+      else defLists.set(d, [i]);
+    }
+  });
+  const hasShadow = [...defLists.values()].some((l) => l.length > 1);
+  const fpMemo = new Map<string, string>();
+  const visiting = new Set<string>();
+  // fingerprint определителя, видимого из позиции order (последний выше по листу)
+  const upstreamFp = (name: string, order: number): string => {
+    const l = defLists.get(name);
+    if (!l) return `${name}:=`;
+    let idx = -1;
+    for (const k of l) {
+      if (k < order) idx = k;
+      else break;
+    }
+    if (idx < 0) return `${name}:=`;
+    return `${name}=>${fpOf(ordered[idx].id)}`;
+  };
+  const simConfigFp = (b: MathBlockData): string => JSON.stringify([
+    b.simMode, b.simStates, b.simDerivs, b.simAux, b.simParams, b.simInit,
+    b.simT0, b.simT1, b.simDt, b.simSolver, b.simEvents, b.simX, b.simY,
+    b.simFdtdN, b.simFdtdL, b.simFdtdSteps, b.simFdtdSrc, b.simFdtdFreq,
+    b.simFdtdAmp, b.simFdtdSrcX, b.simFdtdDet, b.simFdtdLayers,
+    b.simExport, b.simSpeed, b.simLoop, b.exportName,
+  ]);
+  const fpOf = (id: string): string => {
+    const hit = fpMemo.get(id);
+    if (hit !== undefined) return hit;
+    const b = byId.get(id);
+    if (!b) return `missing:${id}`;
+    // циклы всегда пересчитываем свежо, но fingerprint стабилен (rawInput)
+    if (cyclic.has(id)) return `cyc:${id}:${b.rawInput}`;
+    if (visiting.has(id)) return `loop:${id}:${b.rawInput}`;
+    visiting.add(id);
+    const order = ordered.findIndex((x) => x.id === id);
+    const ordTag = hasShadow ? `#${order}` : '';
+    const deps = blockDeps(b).map((d) => upstreamFp(d, order));
+    deps.sort();
+    const depTag = deps.join(';');
+    let fp: string;
+    switch (b.kind) {
+      case 'slider':
+        fp = `sl:${b.sliderVar}|${b.sliderMin}|${b.sliderMax}|${b.sliderStep}|${b.sliderVal}${ordTag}`;
+        break;
+      case 'program':
+        fp = `pr:${b.rawInput}|${b.exportName ?? ''}${ordTag}|${depTag}`;
+        break;
+      case 'sim':
+        fp = `sm:${simConfigFp(b)}${ordTag}|${depTag}`;
+        break;
+      case 'plot':
+      case 'plot3d':
+      case 'contour':
+      case 'text':
+        fp = `pass:${b.kind}${ordTag}`;
+        break;
+      default:
+        fp = `m:${b.rawInput}${ordTag}|${depTag}`;
+    }
+    visiting.delete(id);
+    fpMemo.set(id, fp);
+    return fp;
+  };
   const scope: Scope = createBaseScope();
   const out: Record<string, MathBlockData> = {};
   for (const b of list) out[b.id] = { ...b };
+  let allHit = true;
+  /**
+   * Переиспользование кэша: геометрия (x/y/w/h) в fingerprint не входит,
+   * поэтому при hit переносим её с входного блока. Сдвиг/ресайз дают новый
+   * объект (и changed), остальные блоки остаются теми же ссылками.
+   */
+  const reuseHit = (b: MathBlockData, prev: CachedBlock): MathBlockData => {
+    const c = prev.block;
+    if (
+      c.x !== b.x || c.y !== b.y ||
+      (c.w ?? null) !== (b.w ?? null) || (c.h ?? null) !== (b.h ?? null)
+    ) {
+      allHit = false;
+      const patched = { ...c, x: b.x, y: b.y, w: b.w, h: b.h };
+      // кэш тоже двигаем, иначе следующий прогон снова увидит «сдвиг»
+      recalcCache.set(b.id, { ...prev, block: patched });
+      return patched;
+    }
+    return c;
+  };
+  /** Запомнить результат блока в кэше (вызывать после вычисления). */
+  const snapBlock = (c: MathBlockData, key: string) => {
+    const writes: Record<string, unknown> = {};
+    for (const d of blockDefs(c)) {
+      if (d in scope) writes[d] = scope[d];
+    }
+    recalcCache.set(c.id, { fp: key, block: c, writes });
+  };
 
   for (const b of ordered) {
     const cur = out[b.id];
     if (b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'text' || b.kind === 'contour') {
+      const pkey = `${langTag}|${fpOf(b.id)}`;
+      const pprev = recalcCache.get(b.id);
+      if (pprev && pprev.fp === pkey) {
+        out[b.id] = reuseHit(b, pprev);
+        continue;
+      }
+      allHit = false;
       cur.error = null;
       cur.dependencies = [];
       cur.definedVar = null;
       cur.isOutput = false;
       cur.displayLatex = b.rawInput;
+      snapBlock(cur, pkey);
       continue;
     }
     if (cyclic.has(b.id)) {
@@ -277,6 +407,14 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
       cur.isOutput = false;
       continue;
     }
+    const key = `${langTag}|${fpOf(b.id)}`;
+    const prev = recalcCache.get(b.id);
+    if (prev && prev.fp === key) {
+      out[b.id] = reuseHit(b, prev);
+      for (const [k, v] of Object.entries(prev.writes)) scope[k] = v;
+      continue;
+    }
+    allHit = false;
 
     // ---------- слайдер: значение ползунка уходит в scope как переменная ----------
     if (b.kind === 'slider') {
@@ -299,6 +437,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
         cur.resultLatex = '';
         cur.resultValue = null;
         cur.definedVar = null;
+        snapBlock(cur, key);
         continue;
       }
       const val = typeof b.sliderVal === 'number' && isFinite(b.sliderVal)
@@ -309,6 +448,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
       cur.resultStr = formatResult(val);
       cur.resultLatex = valueToLatex(val);
       scope[v] = val;
+      snapBlock(cur, key);
       continue;
     }
 
@@ -334,6 +474,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
         if (cur.definedVar) scope[cur.definedVar] = r.value;
       }
       cur.displayLatex = '';
+      snapBlock(cur, key);
       continue;
     }
 
@@ -391,6 +532,7 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
         }
       }
       cur.displayLatex = '';
+      snapBlock(cur, key);
       continue;
     }
 
@@ -473,6 +615,21 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
       cur.resultStr = formatResult(lastValue);
       cur.resultLatex = valueToLatex(lastValue);
     }
+    snapBlock(cur, key);
   }
-  return { blocks: out, scope };
+  // Чистим кэш от удалённых блоков; при полном hit отдаём прошлую ссылку —
+  // стор и memo-компоненты пропускают работу.
+  for (const id of [...recalcCache.keys()]) {
+    if (!out[id]) recalcCache.delete(id);
+  }
+  const idsKey = ordered.map((b) => b.id).sort().join(',');
+  let record = out;
+  let changed = true;
+  if (allHit && idsKey === lastIdsKey) {
+    record = lastRecord;
+    changed = false;
+  }
+  lastRecord = record;
+  lastIdsKey = idsKey;
+  return { blocks: record, scope, changed };
 }

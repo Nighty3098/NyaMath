@@ -310,9 +310,11 @@ function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathB
 function scheduleRecalc(get: () => CanvasState, set: SetFn, ms: number) {
   if (debounceT) clearTimeout(debounceT);
   debounceT = setTimeout(() => {
-    const next = withRecalc(get().blocks);
-    persist(next);
-    set((s) => ({ blocks: next, recalcCounter: s.recalcCounter + 1 }));
+    const r = recalculateAll(Object.values(get().blocks));
+    // инкрементальный пересчёт ничего не поменял — ни записи, ни ре-рендера
+    if (!r.changed) return;
+    persist(r.blocks);
+    set((s) => ({ blocks: r.blocks, recalcCounter: s.recalcCounter + 1 }));
   }, ms);
 }
 

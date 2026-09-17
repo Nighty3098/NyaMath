@@ -1,5 +1,6 @@
 import { memo, useMemo, useRef, useState } from 'react';
-import { evaluateLine, createBaseScope, preprocessJ } from '../engine/mathEngine';
+import { compilePlotExpr, evaluateLine, createBaseScope, preprocessJ, preprocessRanges } from '../engine/mathEngine';
+import type { EvalFunction } from 'mathjs';
 import { recalculateAll } from '../engine/dependencies';
 import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
@@ -124,9 +125,20 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
       const { scope } = recalculateAll(mathBlocks);
       const base = { ...createBaseScope(), ...scope };
 
+      // Выражения компилируем один раз (а не parse на каждую из 240 точек);
+      // точки гоняем через общий scope-объект. Некомпилируемое → null-точки.
+      const compiledCache = new Map<string, EvalFunction | null>();
+      const evalScope = { ...base };
       const evalAt = (expr: string, x: number): unknown => {
-        const withX = `(${preprocessJ(expr, false)})`.replace(/\bx\b/g, `(${x})`);
-        return evaluateLine(withX, base).value;
+        let code = compiledCache.get(expr);
+        if (code === undefined) {
+          const cc = compilePlotExpr(preprocessRanges(`(${preprocessJ(expr, false)})`));
+          code = cc ? cc.code : null;
+          compiledCache.set(expr, code);
+        }
+        if (!code) throw new Error('no-data');
+        evalScope.x = x;
+        return code.evaluate(evalScope);
       };
       const numOf = (v: unknown): number | null => {
         if (typeof v === 'number' && isFinite(v)) return v;
