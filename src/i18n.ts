@@ -140,6 +140,7 @@ const ru = {
   'formulaPal.searchPh': 'поиск: интеграл, Фурье, …',
   'formulaPal.close': 'Закрыть палитру формул',
   'formulaPal.empty': 'Ничего не найдено',
+  'formulaPal.vars': 'Переменные',
 
   'c.aria': 'Бесконечный рабочий лист: двойной клик создаёт блок, перетаскивание с зажатой кнопкой выделяет',
   'c.title': 'ЛКМ-drag — выделение • Space/MMB/RMB — панорама • колесо — панорама • Ctrl+колесо — зум • двойной клик — новый блок',
@@ -462,6 +463,7 @@ const en: Record<StrKey, string> = {
   'formulaPal.searchPh': 'search: integral, Fourier, …',
   'formulaPal.close': 'Close formula palette',
   'formulaPal.empty': 'Nothing found',
+  'formulaPal.vars': 'Variables',
 
   'c.aria': 'Infinite worksheet: double-click creates a block, dragging with a pressed button selects',
   'c.title': 'LMB-drag — select • Space/MMB/RMB — pan • wheel — pan • Ctrl+wheel — zoom • double-click — new block',

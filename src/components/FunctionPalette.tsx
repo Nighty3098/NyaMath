@@ -104,6 +104,7 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
     hint: { ru: string; en: string };
     code: string;
     sources: { title: string; url: string }[];
+    vars?: { name: string; label: { ru: string; en: string } }[];
   }
 
   interface PalItem {
@@ -114,6 +115,7 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
     code: string;
     doc?: string;
     sources?: { title: string; url: string }[];
+    vars?: { name: string; label: { ru: string; en: string } }[];
     kind: Snippet['kind'];
     snippet?: Snippet;
   }
@@ -135,6 +137,7 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
           hint: f.hint[lang],
           code: f.code,
           sources: f.sources,
+          vars: f.vars,
           kind: 'math' as const,
         }))
       : SNIPPETS.map((s, i) => ({
@@ -156,7 +159,12 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
         it.hint.toLowerCase().includes(needle) ||
         (it.doc ?? '').toLowerCase().includes(needle) ||
         sectionLabel(it.section).toLowerCase().includes(needle) ||
-        it.sources?.some((src) => src.title.toLowerCase().includes(needle)),
+        it.sources?.some((src) => src.title.toLowerCase().includes(needle)) ||
+        it.vars?.some(
+          (v) =>
+            v.name.toLowerCase().includes(needle) ||
+            v.label[lang].toLowerCase().includes(needle),
+        ),
     );
   }, [q, lang, formulas]);
 
@@ -314,36 +322,55 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
             </div>
             {rows.map((s) => {
               const KindIcon = KIND_ICONS[s.kind];
+              const pick = () => (s.snippet ? insert(s.snippet) : insertFormula(s.code));
               return (
                 <div
                   key={s.key}
-                  className="w-full text-left px-2 py-1.5 rounded-lg border border-transparent hover:border-[var(--chrome-line)] hover:bg-[var(--accent-soft)]/50 group transition-colors duration-120 ease-out"
+                  role="button"
+                  tabIndex={0}
+                  onClick={pick}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      pick();
+                    }
+                  }}
+                  title={s.hint}
+                  aria-label={s.label}
+                  className="w-full text-left px-2 py-1.5 rounded-lg border border-transparent hover:border-[var(--chrome-line)] hover:bg-[var(--accent-soft)]/50 group transition-colors duration-120 ease-out cursor-pointer"
                 >
-                  <button
-                    type="button"
-                    className="w-full text-left cursor-pointer"
-                    onClick={() => (s.snippet ? insert(s.snippet) : insertFormula(s.code))}
-                    title={s.hint}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[var(--accent)] shrink-0" aria-hidden="true">
-                        <KindIcon />
-                      </span>
-                      <span className="text-[13px] leading-4 truncate">{s.label}</span>
-                      <span className="ml-auto text-[var(--faint)] group-hover:text-[var(--accent)] group-hover:opacity-100 opacity-0 text-[15px] leading-4 shrink-0 transition-opacity" aria-hidden="true">
-                        +
-                      </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[var(--accent)] shrink-0" aria-hidden="true">
+                      <KindIcon />
+                    </span>
+                    <span className="text-[13px] leading-4 truncate">{s.label}</span>
+                    <span className="ml-auto text-[var(--faint)] group-hover:text-[var(--accent)] group-hover:opacity-100 opacity-0 text-[15px] leading-4 shrink-0 transition-opacity" aria-hidden="true">
+                      +
+                    </span>
+                  </div>
+                  <div className="math-input text-[11.5px] leading-4 text-[var(--chrome-soft)] truncate pl-6 mt-0.5">
+                    {s.code.split('\n')[0]}
+                    {s.code.includes('\n') ? ' …' : ''}
+                  </div>
+                  {(s.doc ?? s.hint) && (
+                    <div className="math-input text-[10.5px] leading-4 text-[var(--faint)] truncate pl-6 mt-0.5">
+                      {s.doc ?? s.hint}
                     </div>
-                    <div className="math-input text-[11.5px] leading-4 text-[var(--chrome-soft)] truncate pl-6 mt-0.5">
-                      {s.code.split('\n')[0]}
-                      {s.code.includes('\n') ? ' …' : ''}
-                    </div>
-                    {(s.doc ?? s.hint) && (
-                      <div className="math-input text-[10.5px] leading-4 text-[var(--faint)] truncate pl-6 mt-0.5">
-                        {s.doc ?? s.hint}
+                  )}
+                  {formulas && s.vars && s.vars.length > 0 && (
+                    <div className="pl-6 mt-1">
+                      <div className="text-[10px] uppercase tracking-[0.08em] text-[var(--faint)]">
+                        {t('formulaPal.vars')}
                       </div>
-                    )}
-                  </button>
+                      {s.vars.map((v) => (
+                        <div key={v.name} className="math-input text-[11px] leading-4 text-[var(--chrome-soft)] truncate">
+                          <span className="text-[var(--accent)]">{v.name}</span>
+                          {' — '}
+                          {v.label[lang]}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {formulas && s.sources && s.sources.length > 0 && (
                     <div className="flex flex-wrap gap-x-2 gap-y-0.5 pl-6 mt-1">
                       {s.sources.map((src) => (
@@ -352,6 +379,7 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
                           href={src.url}
                           target="_blank"
                           rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
                           className="text-[10.5px] leading-4 text-[var(--accent)] underline truncate max-w-full"
                         >
                           {src.title}
