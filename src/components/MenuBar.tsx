@@ -8,7 +8,7 @@ import { THEMES } from '../theme';
 import { t, themeLabel, type Lang } from '../i18n';
 import { connectLive, disconnectLive, getLiveUrl, setLiveUrl, testLiveConnection } from '../lib/liveSync';
 import {
-  IFx, IFormula, IGrid, IOpen, IPaw, IPlot, IPlot3d, IPrint, IProgram,
+  IConst, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
   IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo,
 } from './Icon';
 
@@ -64,6 +64,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const togglePalette = useCanvasStore((s) => s.togglePalette);
   const formulaPaletteOpen = useCanvasStore((s) => s.formulaPaletteOpen);
   const toggleFormulaPalette = useCanvasStore((s) => s.toggleFormulaPalette);
+  const constPaletteOpen = useCanvasStore((s) => s.constPaletteOpen);
+  const toggleConstPalette = useCanvasStore((s) => s.toggleConstPalette);
   const liveConnected = useCanvasStore((s) => s.liveConnected);
   const liveError = useCanvasStore((s) => s.liveError);
   const theme = useCanvasStore((s) => s.theme);
@@ -78,6 +80,19 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
 
   const [open, setOpen] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [toolbarW, setToolbarW] = useState(0);
+
+  // Точное центрирование меню по окну: левый «отголосок» повторяет ширину
+  // правого блока (быстрые действия), чтобы меню стояло строго по центру.
+  useEffect(() => {
+    const el = toolbarRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setToolbarW(el.offsetWidth));
+    ro.observe(el);
+    setToolbarW(el.offsetWidth);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -184,6 +199,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
         { sep: true },
         { id: 'ins-pal', icon: <IFx />, label: t('menu.insPal'), hint: 'ƒx', action: run(togglePalette) },
         { id: 'ins-fpal', icon: <IFormula />, label: t('menu.insFormulaPal'), hint: '∑', action: run(toggleFormulaPalette) },
+        { id: 'ins-cpal', icon: <IConst />, label: t('menu.insConstPal'), hint: '∞', action: run(toggleConstPalette) },
       ],
     },
     {
@@ -193,6 +209,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
         { id: 'grid', icon: <IGrid />, label: t('menu.grid'), checked: showGrid, action: run(toggleGrid) },
         { id: 'palette', icon: <IFx />, label: t('menu.palette'), checked: paletteOpen, action: run(togglePalette) },
         { id: 'fpalette', icon: <IFormula />, label: t('menu.formulaPalette'), checked: formulaPaletteOpen, action: run(toggleFormulaPalette) },
+        { id: 'cpalette', icon: <IConst />, label: t('menu.constPalette'), checked: constPaletteOpen, action: run(toggleConstPalette) },
         { id: 'live', icon: <ISignal />, label: t('menu.liveSync'), checked: liveConnected, action: run(toggleLive) },
         { id: 'recalc', icon: <IRecalc />, label: t('menu.recalc'), hint: 'Ctrl+↵', action: run(recalc) },
         { id: 'variables', icon: <IFx />, label: t('menu.variables'), hint: 'Ctrl+K', action: run(onOpenNavigator) },
@@ -271,36 +288,31 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
       role="menubar"
       aria-label={t('menu.main')}
     >
-      <div className="flex items-center gap-2 mr-1 select-none">
-        <span className="text-[var(--accent)] inline-flex" aria-hidden="true"><IPaw /></span>
-        <span className="font-semibold tracking-tight text-[14px] whitespace-nowrap">
-          NyaMath
-        </span>
+      {/* левый «отголосок» ширины правого блока: меню строго по центру окна */}
+      <div style={{ width: toolbarW }} className="shrink-0" aria-hidden="true" />
+      <div className="flex-1 flex justify-center min-w-0">
+        {menus.map((m) => (
+          <div key={m.id} className="relative hidden md:block">
+            <button
+              type="button"
+              role="menuitem"
+              aria-haspopup="menu"
+              aria-expanded={open === m.id}
+              className={`nya-mbtn ${open === m.id ? 'is-open' : ''}`}
+              onClick={() => setOpen((v) => (v === m.id ? null : m.id))}
+              onMouseEnter={() => {
+                if (open !== null && open !== m.id) setOpen(m.id);
+              }}
+            >
+              {m.label}
+            </button>
+            {open === m.id && drop(m)}
+          </div>
+        ))}
       </div>
 
-      {menus.map((m) => (
-        <div key={m.id} className="relative hidden md:block">
-          <button
-            type="button"
-            role="menuitem"
-            aria-haspopup="menu"
-            aria-expanded={open === m.id}
-            className={`nya-mbtn ${open === m.id ? 'is-open' : ''}`}
-            onClick={() => setOpen((v) => (v === m.id ? null : m.id))}
-            onMouseEnter={() => {
-              if (open !== null && open !== m.id) setOpen(m.id);
-            }}
-          >
-            {m.label}
-          </button>
-          {open === m.id && drop(m)}
-        </div>
-      ))}
-
-      <div className="flex-1" />
-
       {/* частые действия — всегда под рукой */}
-      <div className="flex items-center gap-0.5" role="toolbar" aria-label={t('menu.edit')}>
+      <div ref={toolbarRef} className="flex items-center gap-0.5 shrink-0" role="toolbar" aria-label={t('menu.edit')}>
         <button type="button" className="nya-tbtn" onClick={undo} disabled={!canUndo} title={`${t('menu.undo')} · Ctrl+Z`} aria-label={t('menu.undo')}>
           <IUndo />
         </button>
@@ -330,6 +342,16 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
           aria-pressed={formulaPaletteOpen}
         >
           <IFormula />
+        </button>
+        <button
+          type="button"
+          className={`nya-tbtn ${constPaletteOpen ? 'is-on' : ''}`}
+          onClick={toggleConstPalette}
+          title={t('menu.constPalette')}
+          aria-label={t('menu.constPalette')}
+          aria-pressed={constPaletteOpen}
+        >
+          <IConst />
         </button>
         <button
           type="button"

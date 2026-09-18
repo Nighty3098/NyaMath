@@ -400,8 +400,20 @@ body {
   border-radius: 10px;
   border: 1.5px solid var(--accent-line);
   background: var(--accent-soft);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
   will-change: transform;
+}
+
+/* Слой теней окон поверх всего экрана (палитры и т.п.) */
+.nya-ghost-layer-fixed {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  overflow: hidden;
+}
+.nya-ghost-layer-fixed .nya-ghost {
+  box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.4);
+  opacity: 0.95;
 }
 
 .math-input {
@@ -431,13 +443,11 @@ body {
 }
 
 /* ===== Минималистичная дизайн-система: единый ритм, мягкие поверхности ===== */
-/* Notion/Claude-стиль: компактные радиусы, едва заметные тени, тёплые нейтрали. */
+/* Notion/Claude-стиль: компактные радиусы, без теней, тёплые нейтрали. */
 :root {
   --radius-s: 6px;
   --radius-m: 8px;
   --radius-l: 12px;
-  --shadow-card: 0 1px 2px rgba(31, 30, 29, 0.06), 0 4px 16px rgba(31, 30, 29, 0.07);
-  --shadow-pop: 0 12px 40px rgba(31, 30, 29, 0.16), 0 2px 8px rgba(31, 30, 29, 0.1);
   --chrome-blur: saturate(1.1) blur(10px);
 }
 
@@ -486,7 +496,6 @@ body {
   min-width: 15.5rem;
   padding: 6px;
   border-radius: var(--radius-m);
-  box-shadow: var(--shadow-pop);
 }
 .menu-item {
   display: flex;
@@ -527,9 +536,9 @@ body {
   border-radius: var(--radius-s);
   color: var(--ink);
   outline: none;
-  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+  transition: border-color 140ms ease-out;
 }
-.nya-input:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft); }
+.nya-input:focus { border-color: var(--accent-line); }
 .nya-input::placeholder { color: var(--faint); }
 
 /* Окошко редактирования блока: спокойная карточка, ничего лишнего.
@@ -563,10 +572,10 @@ textarea.nya-editor { resize: none; }
   white-space: nowrap;
 }
 
-/* Блоки: единый минимализм — мягкая рамка, спокойная тень, акцент только у выбранного */
+/* Блоки: единый минимализм — мягкая рамка, акцент только у выбранного */
 .nya-block {
   border-radius: var(--radius-m);
-  transition: box-shadow 150ms ease-out, border-color 150ms ease-out, background 150ms ease-out;
+  transition: border-color 150ms ease-out, background 150ms ease-out;
 }
 .nya-region .nya-block:focus-within > .opacity-0 { opacity: 1; }
 .nya-block-error {
@@ -583,10 +592,8 @@ textarea.nya-editor { resize: none; }
 /* Зумбар-пилюля и палитра: стекло, минимум шума */
 .nya-zoombar {
   border-radius: 999px;
-  box-shadow: var(--shadow-card);
   backdrop-filter: var(--chrome-blur);
 }
-.nya-palette-float { box-shadow: var(--shadow-pop); }
 .pal-pack {
   position: sticky;
   top: 0;

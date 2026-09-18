@@ -155,12 +155,12 @@ function MathBlockView({ block, scale }: Props) {
       <div
         ref={regionRef}
         data-block-id={block.id}
-        className={`nya-block relative rounded-xl px-2 py-1 transition-shadow group ${
+        className={`nya-block relative rounded-xl px-2 py-1 group ${
           block.error
-            ? 'shadow-[0_0_0_1.5px_var(--danger)] bg-[var(--danger-bg)]'
+            ? 'outline outline-2 outline-[var(--danger)] bg-[var(--danger-bg)]'
             : selected
-              ? 'shadow-[0_0_0_1.5px_var(--accent-line)]'
-              : 'hover:shadow-[0_0_0_1px_var(--hover-line)]'
+              ? 'outline outline-2 outline-[var(--accent-line)]'
+              : 'hover:outline hover:outline-1 hover:outline-[var(--hover-line)]'
         }`}
         style={block.w ? { width: block.w } : undefined}
         onClick={(e) => {

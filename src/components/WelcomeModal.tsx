@@ -3,12 +3,10 @@ import { useCanvasStore } from "../store/canvasStore";
 import { t } from "../i18n";
 import {
   IFormula,
-  IPaw,
   IPlot,
   IPlot3d,
   IProgram,
   ISim,
-  IX,
   IZap,
   IDemo,
   IOpen,
@@ -41,7 +39,6 @@ export default function WelcomeModal({
 
   const [closing, setClosing] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const closeBtn = useRef<HTMLButtonElement>(null);
 
   const close = () => {
     if (closing) return;
@@ -50,7 +47,6 @@ export default function WelcomeModal({
   };
 
   useEffect(() => {
-    closeBtn.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
@@ -127,105 +123,100 @@ export default function WelcomeModal({
         role="dialog"
         aria-modal="true"
         aria-label={t("w.aria")}
-        className={`welcome-card relative w-[560px] max-w-full max-h-[92dvh] overflow-y-auto rounded-[18px] border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] shadow-2xl px-7 py-6 ${closing ? "welcome-exit" : ""}`}
+        className={`welcome-card relative w-[840px] max-w-full max-h-[92dvh] overflow-y-auto rounded-[18px] border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] px-7 py-6 ${closing ? "welcome-exit" : ""}`}
       >
-        <button
-          ref={closeBtn}
-          type="button"
-          onClick={close}
-          aria-label={t("w.close")}
-          className="nya-tbtn absolute right-4 top-4"
-        >
-          <IX />
-        </button>
-
-        <div className="welcome-chunk welcome-d0 flex items-center gap-2.5">
-          <span
-            className="text-[var(--accent)] text-[32px] inline-flex"
-            aria-hidden="true"
-          >
-            <IPaw />
-          </span>
-          <span className="font-semibold tracking-tight text-[19px]">
-            NyaMath
-          </span>
-        </div>
-        <p className="welcome-chunk welcome-d0 text-[13px] leading-5 text-[var(--chrome-soft)] mt-1.5">
-          {t("w.tag")}
-        </p>
-
-        <div className="welcome-chunk welcome-d1 grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 gap-2 mt-5">
-          {quick.map((q) => (
-            <button
-              key={q.title}
-              type="button"
-              onClick={start(q.fn)}
-              className="flex flex-col gap-1 rounded-xl border border-[var(--chrome-line)] px-3 py-3 text-left cursor-pointer transition-colors duration-150 ease-out hover:border-[var(--accent-line)] hover:bg-[var(--accent-soft)]/40 active:scale-[0.97]"
-            >
-              <span className="text-[var(--accent)]" aria-hidden="true">
-                {q.icon}
+        <div className="grid grid-cols-1 items-center gap-x-8 gap-y-4 md:grid-cols-[auto_1fr]">
+          <div className="welcome-chunk welcome-d0 flex flex-col items-center justify-center">
+            <img
+              src="/favicon.svg"
+              alt="NyaMath"
+              className="h-[312px] w-[312px] max-w-full"
+            />
+          </div>
+          <div className="min-w-0">
+            <div className="welcome-chunk welcome-d0">
+              <span className="font-semibold tracking-tight text-[19px]">
+                NyaMath
               </span>
-              <span className="block text-[13px] font-medium leading-4">
-                {q.title}
-              </span>
-              <span className="math-input block text-[11px] leading-4 text-[var(--chrome-soft)] truncate">
-                {q.sub}
-              </span>
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => {
-              onOpenFile();
-              close();
-            }}
-            className="flex flex-col gap-1 rounded-xl border border-dashed border-[var(--chrome-line)] px-3 py-3 text-left cursor-pointer transition-colors duration-150 ease-out hover:border-[var(--accent-line)] active:scale-[0.97]"
-          >
-            <span className="text-[var(--chrome-soft)]" aria-hidden="true">
-              <IOpen />
-            </span>
-            <span className="block text-[13px] font-medium leading-4">
-              {t("w.openFile")}
-            </span>
-            <span className="math-input block text-[11px] leading-4 text-[var(--chrome-soft)]">
-              .json
-            </span>
-          </button>
-        </div>
+            </div>
+            <p className="welcome-chunk welcome-d0 text-[13px] leading-5 text-[var(--chrome-soft)] mt-1.5">
+              {t("w.tag")}
+            </p>
 
-        <div className="welcome-chunk welcome-d2 flex items-center gap-2 flex-wrap mt-4 pt-4 border-t border-[var(--chrome-line)]">
-          <button
-            type="button"
-            onClick={start(loadTestScenario)}
-            className={ghostBtn}
-          >
-            <IZap /> {t("w.demo1")}
-          </button>
-          <button
-            type="button"
-            onClick={start(loadAdvancedDemo)}
-            className={ghostBtn}
-          >
-            <IDemo /> {t("w.demo2")}
-          </button>
-          <button
-            type="button"
-            onClick={close}
-            className={`${ghostBtn} ml-auto`}
-          >
-            <IBlank /> {t("w.blank")}
-          </button>
-        </div>
+            <div className="welcome-chunk welcome-d1 grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 gap-2 mt-5">
+              {quick.map((q) => (
+                <button
+                  key={q.title}
+                  type="button"
+                  onClick={start(q.fn)}
+                  className="flex flex-col gap-1 rounded-xl border border-[var(--chrome-line)] px-3 py-3 text-left cursor-pointer transition-colors duration-150 ease-out hover:border-[var(--accent-line)] hover:bg-[var(--accent-soft)]/40 active:scale-[0.97]"
+                >
+                  <span className="text-[var(--accent)]" aria-hidden="true">
+                    {q.icon}
+                  </span>
+                  <span className="block text-[13px] font-medium leading-4">
+                    {q.title}
+                  </span>
+                  <span className="math-input block text-[11px] leading-4 text-[var(--chrome-soft)] truncate">
+                    {q.sub}
+                  </span>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenFile();
+                  close();
+                }}
+                className="flex flex-col gap-1 rounded-xl border border-dashed border-[var(--chrome-line)] px-3 py-3 text-left cursor-pointer transition-colors duration-150 ease-out hover:border-[var(--accent-line)] active:scale-[0.97]"
+              >
+                <span className="text-[var(--chrome-soft)]" aria-hidden="true">
+                  <IOpen />
+                </span>
+                <span className="block text-[13px] font-medium leading-4">
+                  {t("w.openFile")}
+                </span>
+                <span className="math-input block text-[11px] leading-4 text-[var(--chrome-soft)]">
+                  .json
+                </span>
+              </button>
+            </div>
 
-        <p className="welcome-chunk welcome-d2 text-[11px] text-[var(--chrome-soft)] mt-4">
-          {t("w.creator")}{" "}
-          <a
-            className="underline underline-offset-2 hover:text-[var(--chrome-ink)]"
-            href="https://github.com/Nighty3098"
-          >
-            Nighty3098
-          </a>
-        </p>
+            <div className="welcome-chunk welcome-d2 flex items-center gap-2 flex-wrap mt-4 pt-4 border-t border-[var(--chrome-line)]">
+              <button
+                type="button"
+                onClick={start(loadTestScenario)}
+                className={ghostBtn}
+              >
+                <IZap /> {t("w.demo1")}
+              </button>
+              <button
+                type="button"
+                onClick={start(loadAdvancedDemo)}
+                className={ghostBtn}
+              >
+                <IDemo /> {t("w.demo2")}
+              </button>
+              <button
+                type="button"
+                onClick={close}
+                className={`${ghostBtn} ml-auto`}
+              >
+                <IBlank /> {t("w.blank")}
+              </button>
+            </div>
+
+            <p className="welcome-chunk welcome-d2 text-[11px] text-[var(--chrome-soft)] mt-4">
+              {t("w.creator")}{" "}
+              <a
+                className="underline underline-offset-2 hover:text-[var(--chrome-ink)]"
+                href="https://github.com/Nighty3098"
+              >
+                Nighty3098
+              </a>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

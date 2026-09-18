@@ -85,12 +85,12 @@ function ProgramBlockView({ block, scale }: Props) {
       <div
         ref={regionRef}
         data-block-id={block.id}
-        className={`nya-block relative rounded-xl pl-2.5 pr-1.5 py-1 border-l-[3px] transition-shadow group ${
+        className={`nya-block relative rounded-xl pl-2.5 pr-1.5 py-1 border-l-[3px] group ${
           block.error
-            ? 'border-[var(--danger)] bg-[var(--danger-bg)] shadow-[0_0_0_1.5px_var(--danger)]'
+            ? 'border-[var(--danger)] bg-[var(--danger-bg)] outline outline-2 outline-[var(--danger)]'
             : selected
-              ? 'border-[var(--ink)] shadow-[0_0_0_1.5px_var(--accent-line)]'
-              : 'border-[var(--ink)]/60 hover:shadow-[0_0_0_1px_var(--hover-line)]'
+              ? 'border-[var(--ink)] outline outline-2 outline-[var(--accent-line)]'
+              : 'border-[var(--ink)]/60 hover:outline hover:outline-1 hover:outline-[var(--hover-line)]'
         }`}
         style={block.w ? { width: block.w } : undefined}
         onClick={(e) => {

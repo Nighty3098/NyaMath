@@ -4,11 +4,115 @@ import Canvas from './components/Canvas';
 import WelcomeModal from './components/WelcomeModal';
 import FunctionPalette from './components/FunctionPalette';
 import VariableNavigator from './components/VariableNavigator';
-import { useCanvasStore } from './store/canvasStore';
+import { savePaletteUi, useCanvasStore } from './store/canvasStore';
 import { saveDocument } from './lib/saveDocument';
 import { installPrintCleanup } from './lib/print';
 import { clearShareParamFromUrl, decodeShareParam, readLangFromUrl, readShareParamFromUrl, readTemplateFromUrl } from './lib/share';
 import { t } from './i18n';
+
+/** Док-зона слева/справа: палитры пристыкованы на всю высоту стороны.
+ *  Общая ширина зоны — ресайзер меняет ширину всего стека одинаково. */
+function DockZone({ side }: { side: 'left' | 'right' }) {
+  const paletteOpen = useCanvasStore((s) => s.paletteOpen);
+  const paletteMode = useCanvasStore((s) => s.paletteMode);
+  const formulaPaletteOpen = useCanvasStore((s) => s.formulaPaletteOpen);
+  const formulaPaletteMode = useCanvasStore((s) => s.formulaPaletteMode);
+  const constPaletteOpen = useCanvasStore((s) => s.constPaletteOpen);
+  const constPaletteMode = useCanvasStore((s) => s.constPaletteMode);
+  const full = side === 'left' ? 'left' : 'right';
+  const hasFuncs = paletteOpen && paletteMode === full;
+  const hasForms = formulaPaletteOpen && formulaPaletteMode === full;
+  const hasConsts = constPaletteOpen && constPaletteMode === full;
+  if (!hasFuncs && !hasForms && !hasConsts) return null;
+  return (
+    <DockZoneInner
+      side={side}
+      hasFuncs={hasFuncs}
+      hasForms={hasForms}
+      hasConsts={hasConsts}
+    />
+  );
+}
+
+function DockZoneInner({
+  side,
+  hasFuncs,
+  hasForms,
+  hasConsts,
+}: {
+  side: 'left' | 'right';
+  hasFuncs: boolean;
+  hasForms: boolean;
+  hasConsts: boolean;
+}) {
+  const setPaletteDockW = useCanvasStore((s) => s.setPaletteDockW);
+  const setFormulaPaletteDockW = useCanvasStore((s) => s.setFormulaPaletteDockW);
+  const setConstPaletteDockW = useCanvasStore((s) => s.setConstPaletteDockW);
+  const dockW = useCanvasStore((s) => s.paletteDockW);
+  const formulaDockW = useCanvasStore((s) => s.formulaPaletteDockW);
+  const constDockW = useCanvasStore((s) => s.constPaletteDockW);
+  const zoneW = Math.max(hasFuncs ? dockW : 0, hasForms ? formulaDockW : 0, hasConsts ? constDockW : 0);
+  const dockResizeRef = useRef<{ start: number; size: number } | null>(null);
+
+  const resize = (w: number) => {
+    const nw = Math.min(640, Math.max(280, Math.round(w)));
+    if (hasFuncs) setPaletteDockW(nw);
+    if (hasForms) setFormulaPaletteDockW(nw);
+    if (hasConsts) setConstPaletteDockW(nw);
+  };
+
+  const gutter = (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={t('pal.resize')}
+      title={t('pal.resize')}
+      className="w-[7px] shrink-0 cursor-ew-resize hover:bg-white/10 active:bg-white/15 touch-none"
+      onPointerDown={(e) => {
+        dockResizeRef.current = { start: e.clientX, size: zoneW };
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={(e) => {
+        const st = dockResizeRef.current;
+        if (!st) return;
+        const dx = e.clientX - st.start;
+        resize(st.size + (side === 'left' ? dx : -dx));
+      }}
+      onPointerUp={() => {
+        dockResizeRef.current = null;
+        if (hasFuncs) savePaletteUi();
+        if (hasForms) savePaletteUi('formulas');
+        if (hasConsts) savePaletteUi('constants');
+      }}
+      onPointerCancel={() => {
+        dockResizeRef.current = null;
+      }}
+    />
+  );
+
+  return (
+    <div
+      className={`h-full shrink-0 flex items-stretch bg-[var(--chrome)] text-[var(--chrome-ink)] ${
+        side === 'left' ? 'border-r' : 'border-l'
+      } border-[var(--chrome-line)]`}
+      style={{ width: zoneW }}
+      role="complementary"
+      aria-label={
+        side === 'left'
+          ? [hasFuncs ? t('pal.aria') : '', hasForms ? t('formulaPal.aria') : '', hasConsts ? t('constPal.aria') : ''].filter(Boolean).join(' · ')
+          : [hasForms ? t('formulaPal.aria') : '', hasFuncs ? t('pal.aria') : '', hasConsts ? t('constPal.aria') : ''].filter(Boolean).join(' · ')
+      }
+    >
+      {side === 'right' && gutter}
+      <div className="flex-1 min-w-0 flex flex-col min-h-0">
+        {hasFuncs && <FunctionPalette />}
+        {hasForms && <FunctionPalette variant="formulas" />}
+        {hasConsts && <FunctionPalette variant="constants" />}
+      </div>
+      {side === 'left' && gutter}
+    </div>
+  );
+}
 
 export default function App() {
   const theme = useCanvasStore((s) => s.theme);
@@ -19,6 +123,8 @@ export default function App() {
   const paletteMode = useCanvasStore((s) => s.paletteMode);
   const formulaPaletteOpen = useCanvasStore((s) => s.formulaPaletteOpen);
   const formulaPaletteMode = useCanvasStore((s) => s.formulaPaletteMode);
+  const constPaletteOpen = useCanvasStore((s) => s.constPaletteOpen);
+  const constPaletteMode = useCanvasStore((s) => s.constPaletteMode);
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const [welcomeForced, setWelcomeForced] = useState(false);
   const [navigatorOpen, setNavigatorOpen] = useState(false);
@@ -186,19 +292,18 @@ export default function App() {
           e.target.value = '';
         }}
       />
-      {/* рабочая зона: рейка инструментов + док-панели по бокам + холст */}
+      {/* рабочая зона: док-зоны по бокам (стек палитр) + холст */}
       <div className="nya-workspace flex-1 flex flex-row min-h-0 min-w-0">
-        {paletteOpen && paletteMode === 'left' && <FunctionPalette />}
-        {formulaPaletteOpen && formulaPaletteMode === 'left' && <FunctionPalette variant="formulas" />}
+        <DockZone side="left" />
         <div className="flex-1 relative flex flex-col min-h-0 min-w-0">
           <Canvas />
         </div>
-        {formulaPaletteOpen && formulaPaletteMode === 'right' && <FunctionPalette variant="formulas" />}
-        {paletteOpen && paletteMode === 'right' && <FunctionPalette />}
+        <DockZone side="right" />
       </div>
       {/* плавающие палитры — окна поверх всего, не часть canvas */}
       {paletteOpen && paletteMode === 'float' && <FunctionPalette />}
       {formulaPaletteOpen && formulaPaletteMode === 'float' && <FunctionPalette variant="formulas" />}
+      {constPaletteOpen && constPaletteMode === 'float' && <FunctionPalette variant="constants" />}
       {/* Ctrl+K: навигатор переменных листа */}
       {navigatorOpen && <VariableNavigator onClose={() => setNavigatorOpen(false)} />}
       {showWelcome && <WelcomeModal onClose={closeWelcome} onOpenFile={() => fileRef.current?.click()} />}

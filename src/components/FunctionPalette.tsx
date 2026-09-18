@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SNIPPETS, type Snippet } from '../engine/packs';
 import { FORMULA_SECTIONS, FORMULAS } from '../data/formulas';
-import { savePaletteUi, useCanvasStore } from '../store/canvasStore';
+import { CONST_SECTIONS, CONSTANTS } from '../data/constants';
+import { savePaletteUi, useCanvasStore, type PaletteMode } from '../store/canvasStore';
 import { lx, packName, t, type PackId } from '../i18n';
 import {
-  ICalc, IChart, IChip, IContour, IFx, IField, IFormula, IGrid,
+  ICalc, IChart, IChip, IConst, IContour, IFx, IField, IFormula, IGrid,
   IPlot, IProgram, IResize, IScale, ISignal, ISim, IUnits, IX, IZap,
 } from './Icon';
+import { hideGhostFixed, moveGhostFixed, showGhostFixed } from './dragGhost';
 
 const PACKS: PackId[] = ['matrices', 'stats', 'uncertainty', 'physics', 'em', 'control', 'materials', 'units', 'calc', 'computing', 'telecom', 'programs', 'plots', 'sim'];
 
@@ -38,17 +40,21 @@ const KIND_ICONS: Record<Snippet['kind'], () => React.JSX.Element> = {
 const POS_KEY = 'nyamath-palette-pos';
 const POS_KEY_LEGACY = 'wengineering-palette-pos';
 const FORMULA_POS_KEY = 'nyamath-formula-palette-pos';
-type PaletteVariant = 'functions' | 'formulas';
+const CONST_POS_KEY = 'nyamath-const-palette-pos';
+
+type PaletteVariant = 'functions' | 'formulas' | 'constants';
 /** Зона прилипания к краям экрана, px */
 const SNAP_ZONE = 28;
 /** Сдвиг, после которого тяга док-панели превращается в открепление */
 const UNDOCK_DIST = 14;
 
 function loadPos(variant: PaletteVariant): { x: number; y: number } {
-  const fallback = variant === 'formulas' ? { x: 48, y: 88 } : { x: 8, y: 48 };
+  const fallback = variant === 'formulas' ? { x: 48, y: 88 } : variant === 'constants' ? { x: 128, y: 48 } : { x: 8, y: 48 };
   try {
     const raw = variant === 'formulas'
       ? localStorage.getItem(FORMULA_POS_KEY)
+      : variant === 'constants'
+      ? localStorage.getItem(CONST_POS_KEY)
       : localStorage.getItem(POS_KEY) ?? localStorage.getItem(POS_KEY_LEGACY);
     if (!raw) return fallback;
     const p = JSON.parse(raw) as { x?: unknown; y?: unknown };
@@ -64,14 +70,15 @@ function loadPos(variant: PaletteVariant): { x: number; y: number } {
 
 /**
  * Палитра функций: float — окно поверх всего (перетаскивание + ресайз),
- * left/right — док-панель на всю высоту со сдвигом холста (ресайз ширины).
- * Прилипание — перетаскиванием к левому/правому краю экрана, открепление —
+ * left/right/top/bottom — док-панель к краю со сдвигом холста (ресайз ширины/высоты).
+ * Прилипание — перетаскиванием к любому краю экрана (ближайшему), открепление —
  * тягой за шапку док-панели. Вкл/выкл — через меню «Вид». Не часть canvas.
  */
 export default function FunctionPalette({ variant = 'functions' }: { variant?: PaletteVariant }) {
   const formulas = variant === 'formulas';
-  const posKey = formulas ? FORMULA_POS_KEY : POS_KEY;
-  const searchId = formulas ? 'formula-search' : 'fx-search';
+  const consts = variant === 'constants';
+  const posKey = formulas ? FORMULA_POS_KEY : consts ? CONST_POS_KEY : POS_KEY;
+  const searchId = formulas ? 'formula-search' : consts ? 'const-search' : 'fx-search';
   const addBlock = useCanvasStore((s) => s.addBlock);
   const addBlocks = useCanvasStore((s) => s.addBlocks);
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
@@ -79,24 +86,28 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
   const addContourBlock = useCanvasStore((s) => s.addContourBlock);
   const addProgramBlock = useCanvasStore((s) => s.addProgramBlock);
   const addSimBlock = useCanvasStore((s) => s.addSimBlock);
-  const setPaletteOpen = useCanvasStore((s) => (formulas ? s.setFormulaPaletteOpen : s.setPaletteOpen));
-  const mode = useCanvasStore((s) => (formulas ? s.formulaPaletteMode : s.paletteMode));
-  const setPaletteMode = useCanvasStore((s) => (formulas ? s.setFormulaPaletteMode : s.setPaletteMode));
-  const palW = useCanvasStore((s) => (formulas ? s.formulaPaletteW : s.paletteW));
-  const palH = useCanvasStore((s) => (formulas ? s.formulaPaletteH : s.paletteH));
-  const setPaletteSize = useCanvasStore((s) => (formulas ? s.setFormulaPaletteSize : s.setPaletteSize));
-  const dockW = useCanvasStore((s) => (formulas ? s.formulaPaletteDockW : s.paletteDockW));
-  const setPaletteDockW = useCanvasStore((s) => (formulas ? s.setFormulaPaletteDockW : s.setPaletteDockW));
+  const setPaletteOpen = useCanvasStore((s) => (formulas ? s.setFormulaPaletteOpen : consts ? s.setConstPaletteOpen : s.setPaletteOpen));
+  const mode = useCanvasStore((s) => (formulas ? s.formulaPaletteMode : consts ? s.constPaletteMode : s.paletteMode));
+  const setPaletteMode = useCanvasStore((s) => (formulas ? s.setFormulaPaletteMode : consts ? s.setConstPaletteMode : s.setPaletteMode));
+  const palW = useCanvasStore((s) => (formulas ? s.formulaPaletteW : consts ? s.constPaletteW : s.paletteW));
+  const palH = useCanvasStore((s) => (formulas ? s.formulaPaletteH : consts ? s.constPaletteH : s.paletteH));
+  const setPaletteSize = useCanvasStore((s) => (formulas ? s.setFormulaPaletteSize : consts ? s.setConstPaletteSize : s.setPaletteSize));
   // подписка ради перерендера при смене языка
   const lang = useCanvasStore((s) => s.lang);
   const [q, setQ] = useState('');
   const [pos, setPos] = useState(() => loadPos(variant));
-  const [snap, setSnap] = useState<'left' | 'right' | null>(null);
-  // жесты: живут в ref'ах, движение/отпускание — на window (переживают смену режима)
-  const floatDrag = useRef<{ dx: number; dy: number } | null>(null);
-  const dockPend = useRef<{ x: number; y: number } | null>(null);
+  const [snap, setSnap] = useState<PaletteMode | null>(null);
+  // перетаскивание окна: живёт в ref'е, едет только лёгкая тень (как у блоков),
+  // оригинал стоит на месте до отпускания — ноль ре-рендеров в ходе жеста
+  const dragRef = useRef<{
+    px: number; py: number;
+    ox: number; oy: number;
+    gx: number; gy: number;
+    w: number; h: number;
+    fromDock: boolean; moved: boolean;
+  } | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const resizeRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
-  const dockResizeRef = useRef<{ x: number; w: number } | null>(null);
 
   const docked = mode !== 'float';
 
@@ -131,12 +142,16 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
 
   const sections = formulas
     ? FORMULA_SECTIONS.map((sec) => ({ id: sec.id, label: lx(sec.label) }))
+    : consts
+    ? CONST_SECTIONS.map((sec) => ({ id: sec.id, label: lx(sec.label) }))
     : PACKS.map((pack) => ({ id: pack, label: packName(pack) }));
 
   const items = useMemo<PalItem[]>(() => {
     const sectionLabel = (id: string): string =>
       formulas
         ? lx(FORMULA_SECTIONS.find((sec) => sec.id === id)?.label ?? { ru: id, en: id })
+        : consts
+        ? lx(CONST_SECTIONS.find((sec) => sec.id === id)?.label ?? { ru: id, en: id })
         : packName(id as PackId);
     const all: PalItem[] = formulas
       ? (FORMULAS as FormulaRow[]).map((f) => ({
@@ -150,6 +165,16 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
           plot2d: f.plot2d,
           plot3d: f.plot3d,
           sim: f.sim,
+          kind: 'math' as const,
+        }))
+      : consts
+      ? CONSTANTS.map((k) => ({
+          key: k.id,
+          section: k.section,
+          label: k.label[lang],
+          hint: k.hint[lang],
+          code: k.code,
+          sources: k.sources,
           kind: 'math' as const,
         }))
       : SNIPPETS.map((s, i) => ({
@@ -179,7 +204,7 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
             v.label[lang].toLowerCase().includes(needle),
         ),
     );
-  }, [q, lang, formulas]);
+  }, [q, lang, formulas, consts]);
 
   const insert = (s: Snippet) => {
     const p = place();
@@ -232,57 +257,72 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
 
   const close = () => setPaletteOpen(false);
 
-  // Единый цикл перетаскивания на window: переживает undock (смену дерева)
+  // Единый цикл перетаскивания на window: оригинал стоит, едет лёгкая тень
+  // (как у блоков), финал коммитится разом на отпускании.
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
-      // тяга док-панели: превысили порог — открепляем в окно у курсора
-      if (dockPend.current && !floatDrag.current) {
-        const dx = e.clientX - dockPend.current.x;
-        const dy = e.clientY - dockPend.current.y;
-        if (dx * dx + dy * dy > UNDOCK_DIST * UNDOCK_DIST) {
-          dockPend.current = null;
-          setPaletteMode('float');
-          const np = { x: e.clientX - 200, y: Math.max(0, e.clientY - 16) };
-          setPos(np);
-          try {
-            localStorage.setItem(posKey, JSON.stringify(np));
-          } catch { /* ignore */ }
-          floatDrag.current = { dx: 200, dy: 16 };
-          setSnap(null);
-          return;
-        }
+      const d = dragRef.current;
+      if (!d) return;
+      const dx = e.clientX - d.px;
+      const dy = e.clientY - d.py;
+      if (!d.moved) {
+        // док-панель: толчок до UNDOCK_DIST; окно — порог 3px
+        const thresh = d.fromDock ? UNDOCK_DIST : 3;
+        if (Math.abs(dx) + Math.abs(dy) <= thresh) return;
+        d.moved = true;
+        showGhostFixed([{ x: d.ox, y: d.oy, w: d.w, h: d.h }]);
       }
-      if (floatDrag.current) {
-        const nx = Math.min(Math.max(-320, e.clientX - floatDrag.current.dx), window.innerWidth - 80);
-        const ny = Math.min(Math.max(0, e.clientY - floatDrag.current.dy), window.innerHeight - 60);
-        setPos({ x: nx, y: ny });
-        // подсветка зоны прилипания у краёв
-        setSnap(e.clientX <= SNAP_ZONE ? 'left' : e.clientX >= window.innerWidth - SNAP_ZONE ? 'right' : null);
-      }
+      moveGhostFixed(dx, dy);
+      // подсветка зоны прилипания: ближе к левому краю → left, правому → right
+      setSnap(
+        e.clientX <= SNAP_ZONE ? 'left'
+        : e.clientX >= window.innerWidth - SNAP_ZONE ? 'right'
+        : null,
+      );
     };
-    const onUp = () => {
-      if (dockPend.current) {
-        dockPend.current = null;
-        return;
-      }
-      if (floatDrag.current) {
-        floatDrag.current = null;
-        // отпустили в зоне края — пристыковать, иначе запомнить позицию окна
-        setSnap((s) => {
-          if (s) {
-            setPaletteMode(s);
-            savePaletteUi(variant);
-          } else {
-            setPos((p) => {
-              try {
-                localStorage.setItem(posKey, JSON.stringify(p));
-              } catch { /* ignore */ }
-              return p;
-            });
+    const onUp = (e: PointerEvent) => {
+      const d = dragRef.current;
+      dragRef.current = null;
+      if (!d?.moved) return;
+      hideGhostFixed();
+      const nx = Math.min(Math.max(-320, e.clientX - d.gx), window.innerWidth - 80);
+      const ny = Math.min(Math.max(0, e.clientY - d.gy), window.innerHeight - 60);
+      setSnap((s) => {
+        if (s) {
+          // отпустили у края — пристыковать на всю сторону
+          // если место уже занято другой палитрой — пересадить её на противоположную
+          const st = useCanvasStore.getState();
+          const paired = s === 'left' ? 'right' : 'left';
+          const others: { mode: PaletteMode; set: (m: PaletteMode) => void }[] =
+            variant === 'functions'
+              ? [
+                  { mode: st.formulaPaletteMode, set: st.setFormulaPaletteMode },
+                  { mode: st.constPaletteMode, set: st.setConstPaletteMode },
+                ]
+              : variant === 'formulas'
+              ? [
+                  { mode: st.paletteMode, set: st.setPaletteMode },
+                  { mode: st.constPaletteMode, set: st.setConstPaletteMode },
+                ]
+              : [
+                  { mode: st.paletteMode, set: st.setPaletteMode },
+                  { mode: st.formulaPaletteMode, set: st.setFormulaPaletteMode },
+                ];
+          for (const o of others) {
+            if (o.mode === s) o.set(paired);
           }
-          return null;
-        });
-      }
+          setPaletteMode(s);
+          savePaletteUi(variant);
+        } else {
+          // тянули док-панель — открепляем в плавающее окно
+          if (d.fromDock) setPaletteMode('float');
+          setPos({ x: nx, y: ny });
+          try {
+            localStorage.setItem(posKey, JSON.stringify({ x: nx, y: ny }));
+          } catch { /* ignore */ }
+        }
+        return null;
+      });
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -291,6 +331,7 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
+      hideGhostFixed();
     };
   }, [setPaletteMode, posKey, variant]);
 
@@ -308,24 +349,29 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
       onPointerDown={(e) => {
         if ((e.target as HTMLElement).closest('input,button')) return;
         e.preventDefault();
-        if (docked) {
-          dockPend.current = { x: e.clientX, y: e.clientY };
-        } else {
-          floatDrag.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y };
-        }
+        const rect = rootRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        dragRef.current = {
+          px: e.clientX, py: e.clientY,
+          ox: rect.left, oy: rect.top,
+          gx: e.clientX - rect.left, gy: e.clientY - rect.top,
+          w: rect.width, h: rect.height,
+          fromDock: docked,
+          moved: false,
+        };
       }}
-      title={t(formulas ? 'formulaPal.aria' : 'pal.aria')}
+      title={t(formulas ? 'formulaPal.aria' : consts ? 'constPal.aria' : 'pal.aria')}
     >
       <span className="text-[var(--accent)] shrink-0" aria-hidden="true">
-        {formulas ? <IFormula /> : <IFx />}
+        {formulas ? <IFormula /> : consts ? <IConst /> : <IFx />}
       </span>
       <label htmlFor={searchId} className="sr-only">
-        {t(formulas ? 'formulaPal.searchLabel' : 'pal.searchLabel')}
+        {t(formulas ? 'formulaPal.searchLabel' : consts ? 'constPal.searchLabel' : 'pal.searchLabel')}
       </label>
       <input
         id={searchId}
         className="nya-input flex-1 min-w-0 min-h-[34px] px-2.5 py-1 text-[13px]"
-        placeholder={t(formulas ? 'formulaPal.searchPh' : 'pal.searchPh')}
+        placeholder={t(formulas ? 'formulaPal.searchPh' : consts ? 'constPal.searchPh' : 'pal.searchPh')}
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onPointerDown={(e) => e.stopPropagation()}
@@ -336,7 +382,7 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
         type="button"
         className="nya-tbtn w-8 h-8 shrink-0"
         onClick={close}
-        aria-label={t(formulas ? 'formulaPal.close' : 'pal.close')}
+        aria-label={t(formulas ? 'formulaPal.close' : consts ? 'constPal.close' : 'pal.close')}
       >
         <IX />
       </button>
@@ -348,7 +394,7 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
       {sections.map((sec) => {
         const rows = items.filter((s) => s.section === sec.id);
         if (!rows.length) return null;
-        const SecIcon = formulas ? IFormula : PACK_ICONS[sec.id as PackId];
+        const SecIcon = formulas ? IFormula : consts ? IConst : PACK_ICONS[sec.id as PackId];
         return (
           <div key={sec.id} className="mt-1.5">
             <div className="pal-pack flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--faint)] px-2 py-1.5 rounded-lg">
@@ -445,7 +491,7 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
                       )}
                     </div>
                   )}
-                  {formulas && s.sources && s.sources.length > 0 && (
+                  {(formulas || consts) && s.sources && s.sources.length > 0 && (
                     <div className="flex flex-wrap gap-x-2 gap-y-0.5 pl-6 mt-1">
                       {s.sources.map((src) => (
                         <a
@@ -467,50 +513,20 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
           </div>
         );
       })}
-      {items.length === 0 && <div className="text-[13px] text-[var(--chrome-soft)] p-3">{t(formulas ? 'formulaPal.empty' : 'pal.empty')}</div>}
+      {items.length === 0 && <div className="text-[13px] text-[var(--chrome-soft)] p-3">{t(formulas ? 'formulaPal.empty' : consts ? 'constPal.empty' : 'pal.empty')}</div>}
     </div>
   );
 
   if (docked) {
-    const gutter = (
-      <div
-        role="separator"
-        aria-orientation="vertical"
-        aria-label={t('pal.resize')}
-        title={t('pal.resize')}
-        className="w-[7px] shrink-0 cursor-ew-resize hover:bg-white/10 active:bg-white/15 touch-none"
-        onPointerDown={(e) => {
-          dockResizeRef.current = { x: e.clientX, w: dockW };
-          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-        }}
-        onPointerMove={(e) => {
-          const st = dockResizeRef.current;
-          if (!st) return;
-          const dx = e.clientX - st.x;
-          setPaletteDockW(st.w + (mode === 'left' ? dx : -dx));
-        }}
-        onPointerUp={() => {
-          dockResizeRef.current = null;
-          savePaletteUi(variant);
-        }}
-        onPointerCancel={() => {
-          dockResizeRef.current = null;
-        }}
-      />
-    );
+    // пристыкованный режим: зону (ширина, рамка, ручка ресайза) строит App.zone,
+    // палитра лишь занимает выделенное место и тянется на всю высоту
     return (
       <div
-        className="h-full shrink-0 flex items-stretch bg-[var(--chrome)] text-[var(--chrome-ink)]"
-        style={{ width: dockW }}
-        role="complementary"
-        aria-label={t(formulas ? 'formulaPal.aria' : 'pal.aria')}
+        ref={rootRef}
+        className="flex-1 min-h-0 min-w-0 flex flex-col bg-[var(--chrome)] text-[var(--chrome-ink)]"
       >
-        {mode === 'right' && gutter}
-        <div className="flex-1 min-w-0 flex flex-col">
-          {header}
-          {list}
-        </div>
-        {mode === 'left' && gutter}
+        {header}
+        {list}
       </div>
     );
   }
@@ -521,13 +537,15 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
       {snap && (
         <div
           aria-hidden="true"
-          className={`fixed top-10 bottom-0 z-40 w-[300px] max-w-[40vw] pointer-events-none border-2 border-dashed border-[var(--accent-line)] bg-[var(--accent-soft)] ${
-            snap === 'left' ? 'left-0 rounded-r-xl' : 'right-0 rounded-l-xl'
+          className={`fixed z-40 pointer-events-none border-2 border-dashed border-[var(--accent-line)] bg-[var(--accent-soft)] ${
+            snap === 'left' ? 'left-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-r-xl'
+            : 'right-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-l-xl'
           }`}
         />
       )}
       <div
-        className="nya-palette-float fixed z-50 flex flex-col rounded-xl border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] shadow-2xl"
+        ref={rootRef}
+        className="nya-palette-float fixed z-50 flex flex-col rounded-xl border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)]"
         style={{ left: pos.x, top: pos.y, width: palW, height: Math.min(palH, window.innerHeight - pos.y - 8) }}
         role="dialog"
         aria-label={t(formulas ? 'formulaPal.aria' : 'pal.aria')}
@@ -567,7 +585,9 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
           onClick={(e) => e.stopPropagation()}
           onDoubleClick={(e) => e.stopPropagation()}
         >
-          <IResize />
+          <span className="inline-block rotate-90" aria-hidden="true">
+            <IResize />
+          </span>
         </span>
       </div>
     </>

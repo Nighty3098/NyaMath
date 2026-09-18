@@ -160,7 +160,7 @@ export default function VariableNavigator({ onClose }: Props) {
       }}
     >
       <div className="absolute inset-0 bg-black/30" />
-      <div className="relative w-[680px] max-w-[92vw] h-[460px] max-h-[85vh] flex flex-col rounded-xl bg-[var(--sheet)] border border-[var(--line)] shadow-2xl overflow-hidden">
+      <div className="relative w-[680px] max-w-[92vw] h-[460px] max-h-[85vh] flex flex-col rounded-xl bg-[var(--sheet)] border border-[var(--line)] overflow-hidden">
         {/* шапка: поиск + количество */}
         <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--line)]">
           <span className="text-[var(--faint)] inline-flex" aria-hidden="true">

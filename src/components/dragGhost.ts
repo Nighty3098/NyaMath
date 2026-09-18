@@ -58,3 +58,46 @@ export function measureBlock(id: string): { x: number; y: number; w: number; h: 
   const c = canvas.getBoundingClientRect();
   return { x: r.left - c.left, y: r.top - c.top, w: r.width, h: r.height };
 }
+
+// ── Тень для окон поверх экрана (палитры, диалоги и т.п.) ──
+
+let fixedGhosts: GhostRect[] = [];
+
+function fixedLayer(): HTMLElement | null {
+  let host = document.querySelector('.nya-ghost-layer-fixed');
+  if (!host) {
+    host = document.createElement('div');
+    host.className = 'nya-ghost-layer-fixed';
+    document.body.append(host);
+  }
+  return host as HTMLElement;
+}
+
+/** Показать тень окна в экранных координатах: ориг стоит, едет только тень. */
+export function showGhostFixed(rects: { x: number; y: number; w: number; h: number }[]): void {
+  hideGhostFixed();
+  const host = fixedLayer();
+  if (!host) return;
+  fixedGhosts = rects.map((r) => {
+    const el = document.createElement('div');
+    el.className = 'nya-ghost';
+    el.style.width = `${Math.max(24, r.w)}px`;
+    el.style.height = `${Math.max(24, r.h)}px`;
+    el.style.transform = `translate(${r.x}px, ${r.y}px)`;
+    host.append(el);
+    return { el, x: r.x, y: r.y };
+  });
+}
+
+/** Сдвинуть все тени окон (экранные px, дёшево — только transform). */
+export function moveGhostFixed(dx: number, dy: number): void {
+  for (const g of fixedGhosts) {
+    g.el.style.transform = `translate(${g.x + dx}px, ${g.y + dy}px)`;
+  }
+}
+
+/** Убрать тени окон. */
+export function hideGhostFixed(): void {
+  for (const g of fixedGhosts) g.el.remove();
+  fixedGhosts = [];
+}

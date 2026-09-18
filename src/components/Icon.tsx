@@ -21,6 +21,7 @@ import {
   faFlask,
   faFolderOpen,
   faGripVertical,
+  faInfinity,
   faLayerGroup,
   faMicrochip,
   faMoon,
@@ -110,3 +111,5 @@ export const IChip = () => <Fa icon={faMicrochip} />;
 export const ITune = () => <Fa icon={faSliders} />;
 /** ЭМ поля: атом */
 export const IField = () => <Fa icon={faAtom} />;
+/** Физические константы: бесконечность (константа как вечная величина) */
+export const IConst = () => <Fa icon={faInfinity} />;

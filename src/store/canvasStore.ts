@@ -60,6 +60,17 @@ export interface CanvasState {
   setFormulaPaletteSize: (w: number, h: number) => void;
   formulaPaletteDockW: number;
   setFormulaPaletteDockW: (w: number) => void;
+  /** Палитра физических констант (третий источник: константы + их справка) */
+  constPaletteOpen: boolean;
+  setConstPaletteOpen: (v: boolean) => void;
+  toggleConstPalette: () => void;
+  constPaletteMode: PaletteMode;
+  setConstPaletteMode: (m: PaletteMode) => void;
+  constPaletteW: number;
+  constPaletteH: number;
+  setConstPaletteSize: (w: number, h: number) => void;
+  constPaletteDockW: number;
+  setConstPaletteDockW: (w: number) => void;
   recalcCounter: number;
   /** Асинхронный пересчёт (#6): идёт ли джоба, прогресс симуляции, её блок */
   computeActive: boolean;
@@ -248,12 +259,15 @@ function restore(): Record<string, MathBlockData> {
   }
 }
 
-/** Режим и размеры палитры (персист отдельно от документа). */
+/** Режим и размеры палитры (персист отдельно от документа).
+ *  Док — универсально: left/right — на всю сторону (верх-низ).
+ *  Палитры одного края стекаются друг над другом и делят общую ширину. */
 export type PaletteMode = 'float' | 'left' | 'right';
 
 const PAL_UI_KEY = 'nyamath-palette-ui';
 const PAL_UI_KEY_LEGACY = 'wengineering-palette-ui';
 const FORMULA_PAL_UI_KEY = 'nyamath-formula-palette-ui';
+const CONST_PAL_UI_KEY = 'nyamath-const-palette-ui';
 
 interface PaletteUi {
   mode: PaletteMode;
@@ -265,14 +279,21 @@ interface PaletteUi {
 
 const DEFAULT_PALETTE_UI: PaletteUi = { mode: 'float', w: 400, h: 560, dockW: 400, open: false };
 
-function loadPaletteUi(variant: 'functions' | 'formulas' = 'functions'): PaletteUi {
+function loadPaletteUi(variant: 'functions' | 'formulas' | 'constants' = 'functions'): PaletteUi {
   try {
     const raw = variant === 'formulas'
       ? localStorage.getItem(FORMULA_PAL_UI_KEY)
+      : variant === 'constants'
+      ? localStorage.getItem(CONST_PAL_UI_KEY)
       : localStorage.getItem(PAL_UI_KEY) ?? localStorage.getItem(PAL_UI_KEY_LEGACY);
     if (!raw) return DEFAULT_PALETTE_UI;
     const p = JSON.parse(raw) as Partial<PaletteUi>;
-    const mode: PaletteMode = p.mode === 'left' || p.mode === 'right' ? p.mode : 'float';
+    // миграция старых угловых режимов: lt/lb → left, rt/rb → right
+    const m = p.mode as unknown;
+    const mode: PaletteMode =
+      m === 'lt' || m === 'lb' || m === 'left' ? 'left'
+      : m === 'rt' || m === 'rb' || m === 'right' ? 'right'
+      : 'float';
     const num = (v: unknown, lo: number, hi: number, fb: number): number =>
       typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fb;
     return {
@@ -289,6 +310,7 @@ function loadPaletteUi(variant: 'functions' | 'formulas' = 'functions'): Palette
 
 const initialPaletteUi = loadPaletteUi();
 const initialFormulaPaletteUi = loadPaletteUi('formulas');
+const initialConstPaletteUi = loadPaletteUi('constants');
 
 /** История: лимит глубины и троттлинг снапшотов при печати (leading edge). */
 const HISTORY_LIMIT = 100;
@@ -478,6 +500,30 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   formulaPaletteDockW: initialFormulaPaletteUi.dockW,
   setFormulaPaletteDockW: (w) =>
     set({ formulaPaletteDockW: Math.min(640, Math.max(280, Math.round(w))) }),
+  constPaletteOpen: initialConstPaletteUi.open,
+  setConstPaletteOpen: (v) => {
+    set({ constPaletteOpen: v });
+    savePaletteUi('constants');
+  },
+  toggleConstPalette: () => {
+    set((s) => ({ constPaletteOpen: !s.constPaletteOpen }));
+    savePaletteUi('constants');
+  },
+  constPaletteMode: initialConstPaletteUi.mode,
+  setConstPaletteMode: (m) => {
+    set({ constPaletteMode: m });
+    savePaletteUi('constants');
+  },
+  constPaletteW: initialConstPaletteUi.w,
+  constPaletteH: initialConstPaletteUi.h,
+  setConstPaletteSize: (w, h) =>
+    set({
+      constPaletteW: Math.min(720, Math.max(320, Math.round(w))),
+      constPaletteH: Math.min(1200, Math.max(320, Math.round(h))),
+    }),
+  constPaletteDockW: initialConstPaletteUi.dockW,
+  setConstPaletteDockW: (w) =>
+    set({ constPaletteDockW: Math.min(640, Math.max(280, Math.round(w))) }),
   setLang: (l) =>
     set((s) => {
       setLangState(l);
@@ -883,12 +929,17 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 }));
 
 /** Сохранить режим/размеры/показ палитры (вызывать по окончании жеста ресайза/дока). */
-export function savePaletteUi(variant: 'functions' | 'formulas' = 'functions') {
+export function savePaletteUi(variant: 'functions' | 'formulas' | 'constants' = 'functions') {
   try {
     const s = useCanvasStore.getState();
     const ui: PaletteUi = variant === 'formulas'
       ? { mode: s.formulaPaletteMode, w: s.formulaPaletteW, h: s.formulaPaletteH, dockW: s.formulaPaletteDockW, open: s.formulaPaletteOpen }
+      : variant === 'constants'
+      ? { mode: s.constPaletteMode, w: s.constPaletteW, h: s.constPaletteH, dockW: s.constPaletteDockW, open: s.constPaletteOpen }
       : { mode: s.paletteMode, w: s.paletteW, h: s.paletteH, dockW: s.paletteDockW, open: s.paletteOpen };
-    localStorage.setItem(variant === 'formulas' ? FORMULA_PAL_UI_KEY : PAL_UI_KEY, JSON.stringify(ui));
+    localStorage.setItem(
+      variant === 'formulas' ? FORMULA_PAL_UI_KEY : variant === 'constants' ? CONST_PAL_UI_KEY : PAL_UI_KEY,
+      JSON.stringify(ui),
+    );
   } catch { /* ignore */ }
 }
