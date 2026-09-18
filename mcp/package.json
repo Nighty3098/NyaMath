@@ -7,7 +7,7 @@
   "scripts": {
     "build": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\"",
     "typecheck": "tsc --noEmit",
-    "test": "node test/smoke.mjs"
+    "test": "node test/smoke.mjs && node test/sync.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0",

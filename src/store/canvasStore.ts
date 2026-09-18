@@ -98,6 +98,15 @@ export interface CanvasState {
   loadAdvancedDemo: () => void;
   /** Загрузить документ из файла (валидация + миграция) */
   loadDocument: (data: unknown) => { ok: boolean; message: string };
+  /** Live-синхронизация с MCP-сервисом */
+  liveConnected: boolean;
+  liveUrl: string;
+  liveError: string | null;
+  setLiveConnected: (v: boolean) => void;
+  setLiveUrl: (url: string) => void;
+  setLiveError: (msg: string | null) => void;
+  /** Применить входящий снапшот сервиса (без засорения истории undo) */
+  applyRemoteBlocks: (data: unknown) => { ok: boolean; count: number };
   updatePlot: (id: string, patch: Partial<MathBlockData>) => void;
   /** История undo/redo (снапшоты blocks, без persist) */
   past: Record<string, MathBlockData>[];
@@ -826,6 +835,37 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     persist(next);
     set((s) => ({ blocks: next, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
     return { ok: true, message: t('doc.loaded', { n: Object.keys(rec).length, bad: bad ? t('doc.loadedBad', { bad }) : '' }) };
+  },
+
+  liveConnected: false,
+  liveUrl: (() => {
+    try {
+      return localStorage.getItem('nyamath-live-url') ?? 'http://localhost:3777';
+    } catch {
+      return 'http://localhost:3777';
+    }
+  })(),
+  liveError: null,
+  setLiveConnected: (v) => set({ liveConnected: v }),
+  setLiveUrl: (url) => set({ liveUrl: url }),
+  setLiveError: (msg) => set({ liveError: msg }),
+
+  applyRemoteBlocks: (data) => {
+    if (!Array.isArray(data)) return { ok: false, count: 0 };
+    if (data.length > 5000) return { ok: false, count: 0 };
+    const rec: Record<string, MathBlockData> = {};
+    for (const item of data) {
+      const b = migrate(item);
+      if (b) rec[b.id] = b;
+    }
+    const next = withRecalc(rec);
+    persist(next);
+    set((s) => ({
+      blocks: next,
+      selectedIds: s.selectedIds.filter((id) => next[id]),
+      recalcCounter: s.recalcCounter + 1,
+    }));
+    return { ok: true, count: Object.keys(rec).length };
   },
 
   updatePlot: (id, patch) => {

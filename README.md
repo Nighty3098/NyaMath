@@ -10,10 +10,15 @@ ODE/FDTD simulations, and units (`10 GHz`, `23 mm`, `207 ohm`) on an infinite ca
 
 ```bash
 npm install
-npm run dev      # dev server with HMR
+npm run dev      # сайт (vite) + MCP-сервис с live-шиной (:3777) в одном терминале
+npm run dev:site # только сайт, без сервиса
 npm run build    # type-check + production build → dist/
 npm run lint     # oxlint
 ```
+
+`npm run dev` сначала собирает `mcp/dist`, затем поднимает MCP-сервис
+(`--port=$NYAMATH_PORT`, по умолчанию `3777`) рядом с vite: агент через
+stdio и приложение через *View → Live sync* видят один документ в реалтайме.
 
 ## Features
 
@@ -118,6 +123,36 @@ Resource `nya://document` — JSON summary of the document.
 - "Plot it": `nya_add_block{kind: plot, plotFn: "sin(x); cos(x/2)"}` → `nya_get_plot_data{id}` → analyze points.
 - "What's this error?": `nya_status` → `nya_get_block{id}` → `nya_update_block` / `nya_move_block` (reordering fixes use-before-def).
 - "Continue the calculation and keep it": `nya_open{path}` → edits → `nya_save{}` → open the file in the app.
+
+### Realtime sync (agent ↔ UI live)
+
+By default the MCP server only speaks stdio and the web app keeps its own
+document — a JSON file is the only bridge. For live collaboration, run the
+server as the single source of truth:
+
+```bash
+NYAMATH_PORT=3777 node mcp/dist/index.js   # or: node mcp/dist/index.js --port=3777
+```
+
+This enables a dependency-free HTTP layer next to stdio:
+
+| Endpoint      | What it does                                              |
+|---------------|-----------------------------------------------------------|
+| `GET /events` | SSE stream — `snapshot` frames on every document change   |
+| `POST /push`  | UI pushes its document `{blocks: [...]}` (validated)      |
+| `GET /snapshot` | Current `{rev, blocks}` (slim, no plot previews)        |
+| `GET /status` | `{rev, blocks, docPath}`                                  |
+
+In the app: *View → Live sync* (or the status dot in the toolbar), enter the
+service URL once. After that:
+
+- every agent tool call recalculates and broadcasts → the canvas updates live;
+- every local edit is debounced and POSTed back → the agent sees it in scope;
+- echo is suppressed by content comparison; conflicts resolve last-writer-wins
+  by monotonic `rev` (remote snapshots don't pollute undo history).
+
+`npm test` in `mcp/` covers both stdio (`smoke.mjs`, 20 checks) and the sync
+layer (`sync.mjs`: push/validation/snapshot/SSE).
 
 ### Notes
 

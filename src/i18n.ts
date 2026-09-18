@@ -81,9 +81,16 @@ const ru = {
   'menu.formulaPalette': 'Палитра формул',
   'menu.ex20': 'Вариант 20 · электродинамика',
   'menu.exdemo': 'Демо · матрицы и программы',
+  'menu.liveSync': 'Синхронизация Live',
   'menu.welcome': 'Показать приветствие',
   'menu.language': 'Язык',
   'confirm.clear': 'Очистить холст?',
+
+  'live.on': 'Подключено к live-сервису',
+  'live.off': 'Live-сервис недоступен',
+  'live.urlPrompt': 'Адрес live-сервиса:',
+  'live.noConn': 'Нет соединения — запущен ли сервис? (node mcp/dist/index.js --port=3777)',
+  'live.checkFail': 'Сервис недоступен по адресу {url}\nОшибка: {error}\n\nПроверьте:\n1) запущен ли MCP с флагом --port (npm run dev поднимает сам);\n2) тот ли порт (занятый порт роняет сервис — смотрите лог [mcp]);\n3) блокировщики в браузере.',
 
   'share.copied': 'Ссылка скопирована: блоков {n}, длина URL {chars}. Отправь её — откроется тот же лист.',
   'share.copyManual': 'Не смог скопировать автоматически. Ссылка (блоков {n}, символов {chars}):\n{url}',
@@ -407,9 +414,16 @@ const en: Record<StrKey, string> = {
   'menu.formulaPalette': 'Formula palette',
   'menu.ex20': 'Variant 20 · electrodynamics',
   'menu.exdemo': 'Demo · matrices and programs',
+  'menu.liveSync': 'Live sync',
   'menu.welcome': 'Show welcome dialog',
   'menu.language': 'Language',
   'confirm.clear': 'Clear the canvas?',
+
+  'live.on': 'Connected to live service',
+  'live.off': 'Live service unavailable',
+  'live.urlPrompt': 'Live service URL:',
+  'live.noConn': 'No connection — is the service running? (node mcp/dist/index.js --port=3777)',
+  'live.checkFail': 'Service unreachable at {url}\nError: {error}\n\nCheck:\n1) MCP started with --port (npm run dev does it);\n2) the port is right (a busy port kills the service — see [mcp] log);\n3) browser blockers.',
 
   'share.copied': 'Link copied: {n} blocks, URL length {chars}. Send it — the same sheet will open.',
   'share.copyManual': 'Could not copy automatically. Link ({n} blocks, {chars} chars):\n{url}',

@@ -25,6 +25,7 @@ import {
 } from '../../src/engine/mathEngine.js';
 import { samplePlotBlock } from '../../src/engine/plotSample.js';
 import { samplePlot3d } from '../../src/engine/plot3dSample.js';
+import { startSyncServer } from './syncServer.js';
 import { TEST_SCENARIO_LINES } from '../../src/data/testScenario.js';
 import { ADVANCED_DEMO } from '../../src/data/demoAdvanced.js';
 
@@ -33,6 +34,10 @@ import { ADVANCED_DEMO } from '../../src/data/demoAdvanced.js';
 let blocks: MathBlockData[] = [];
 let docPath: string | null = process.env['NYAMATH_DOC'] ?? process.env['WENG_DOC'] ?? null;
 let lastScope: Scope = createBaseScope();
+/** Монотонная ревизия документа для realtime-синхронизации (растёт при каждом изменении). */
+let rev = 0;
+/** Рассылка снапшота подписанным UI-клиентам (null — sync-сервер выключен). */
+let broadcastSync: (() => void) | null = null;
 
 function blank(id: string, x: number, y: number, kind: MathBlockData['kind'] = 'math'): MathBlockData {
   return {
@@ -47,6 +52,20 @@ function refresh(): void {
   const { blocks: out, scope } = recalculateAll(blocks);
   blocks = blocks.map((b) => out[b.id] ?? b);
   lastScope = scope;
+  rev += 1;
+  broadcastSync?.();
+}
+
+/** Блоки без пересчитываемых полей — для файла и realtime-рассылки. */
+function slimBlocks(): MathBlockData[] {
+  return blocks.map((b) => {
+    const { plotPreview: _pp, simResult: _sr, ...rest } = b as MathBlockData & {
+      simResult?: unknown;
+    };
+    void _pp;
+    void _sr;
+    return rest as MathBlockData;
+  });
 }
 
 function validateBlock(raw: unknown): MathBlockData | null {
@@ -569,6 +588,31 @@ async function main(): Promise<void> {
     } catch {
       /* стартуем с пустым документом */
     }
+  }
+  // Realtime-шина: --port 3777 или $NYAMATH_PORT. Работает параллельно со stdio:
+  // MCP-инструменты мутируют тот же документ, UI-клиенты получают снапшоты по SSE.
+  const portArg = process.argv.find((a) => a.startsWith('--port='));
+  const portRaw = portArg?.slice('--port='.length) ?? process.env['NYAMATH_PORT'] ?? '';
+  const port = Number(portRaw);
+  if (portRaw && Number.isInteger(port) && port >= 0 && port <= 65535) {
+    const sync = startSyncServer(port, {
+      getSnapshot: () => ({ rev, blocks: slimBlocks() }),
+      applyPush: (raw) => {
+        if (raw.length > 5000) throw new Error('Слишком много блоков (>5000)');
+        const rec: MathBlockData[] = [];
+        for (const item of raw) {
+          const b = validateBlock(item);
+          if (b) rec.push(b);
+        }
+        if (!rec.length && raw.length > 0) throw new Error('Нет корректных блоков');
+        blocks = rec;
+        refresh();
+        return rev;
+      },
+      getStatus: () => ({ rev, blocks: blocks.length, docPath }),
+    });
+    // Важно: в stdout только MCP-протокол, служебное — в stderr.
+    console.error(`[nyamath] sync on http://localhost:${sync.port} (SSE /events, POST /push)`);
   }
   const transport = new StdioServerTransport();
   await server.connect(transport);

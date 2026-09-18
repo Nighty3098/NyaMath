@@ -6,6 +6,7 @@ import { downloadLatexReport, downloadMarkdown } from '../lib/report';
 import { SHARE_WARN_CHARS, shareDocument } from '../lib/share';
 import { THEMES } from '../theme';
 import { t, themeLabel, type Lang } from '../i18n';
+import { connectLive, disconnectLive, getLiveUrl, setLiveUrl, testLiveConnection } from '../lib/liveSync';
 import {
   IFx, IFormula, IGrid, IOpen, IPaw, IPlot, IPlot3d, IPrint, IProgram,
   IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo,
@@ -62,6 +63,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
   const togglePalette = useCanvasStore((s) => s.togglePalette);
   const formulaPaletteOpen = useCanvasStore((s) => s.formulaPaletteOpen);
   const toggleFormulaPalette = useCanvasStore((s) => s.toggleFormulaPalette);
+  const liveConnected = useCanvasStore((s) => s.liveConnected);
+  const liveError = useCanvasStore((s) => s.liveError);
   const theme = useCanvasStore((s) => s.theme);
   const setTheme = useCanvasStore((s) => s.setTheme);
   const toggleTheme = useCanvasStore((s) => s.toggleTheme);
@@ -98,6 +101,26 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
   const run = (fn: () => void) => () => {
     setOpen(null);
     fn();
+  };
+
+  /** Live-синхронизация с MCP-сервисом: вкл — спросить URL один раз, выкл — разрыв. */
+  const toggleLive = () => {
+    const st = useCanvasStore.getState();
+    if (st.liveConnected) {
+      disconnectLive();
+      return;
+    }
+    const cur = getLiveUrl();
+    const url = window.prompt(t('live.urlPrompt'), cur)?.trim() || cur;
+    // сначала проверяем сервис обычным запросом — иначе молча висим на битой SSE
+    void testLiveConnection(url).then((r) => {
+      if (!r.ok) {
+        alert(t('live.checkFail', { url, error: r.error ?? '?' }));
+        return;
+      }
+      setLiveUrl(url);
+      connectLive();
+    });
   };
 
   /** Поделиться: JSON → slim → фразы → deflate → base64url → ссылка в буфере (+язык). */
@@ -169,6 +192,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
         { id: 'grid', icon: <IGrid />, label: t('menu.grid'), checked: showGrid, action: run(toggleGrid) },
         { id: 'palette', icon: <IFx />, label: t('menu.palette'), checked: paletteOpen, action: run(togglePalette) },
         { id: 'fpalette', icon: <IFormula />, label: t('menu.formulaPalette'), checked: formulaPaletteOpen, action: run(toggleFormulaPalette) },
+        { id: 'live', icon: <ISignal />, label: t('menu.liveSync'), checked: liveConnected, action: run(toggleLive) },
         { id: 'recalc', icon: <IRecalc />, label: t('menu.recalc'), hint: 'Ctrl+↵', action: run(recalc) },
         { sep: true },
         ...THEMES.map((th) => ({
@@ -304,6 +328,20 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
           aria-pressed={formulaPaletteOpen}
         >
           <IFormula />
+        </button>
+        <button
+          type="button"
+          className={`nya-tbtn ${liveConnected ? 'is-on' : ''}`}
+          onClick={toggleLive}
+          title={liveConnected ? t('live.on') : (liveError ?? t('live.off'))}
+          aria-label={t('menu.liveSync')}
+          aria-pressed={liveConnected}
+        >
+          <span
+            aria-hidden="true"
+            className="inline-block w-2 h-2 rounded-full"
+            style={{ background: liveConnected ? 'var(--ok)' : 'var(--faint)' }}
+          />
         </button>
         <button type="button" className="nya-tbtn" onClick={toggleTheme} title={theme} aria-label={theme}>
           {THEMES.find((x) => x.id === theme)?.kind === 'light' ? <IMoon /> : <ISun />}
