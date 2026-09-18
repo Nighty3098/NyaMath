@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { sortBlocksTopDown } from '../engine/dependencies';
+import { registerBlockFocus } from '../lib/focusBlock';
 import MathBlockView from './MathBlockView';
 import PlotBlockView from './PlotBlockView';
 import ContourBlockView from './ContourBlockView';
@@ -91,6 +92,22 @@ export default function Canvas() {
     targetRef.current = n;
     setView(n);
   }, []);
+
+  // Навигация из Ctrl+K-навигатора: центрируем лист на блоке и выделяем его.
+  useEffect(() => {
+    return registerBlockFocus((id) => {
+      const b = useCanvasStore.getState().blocks[id];
+      if (!b) return;
+      const c = containerRef.current;
+      const cw = c?.clientWidth ?? 1200;
+      const ch = c?.clientHeight ?? 800;
+      const v = viewRef.current;
+      const bx = b.x + (b.w ?? 640) / 2;
+      const by = b.y + 60;
+      applyView({ ...v, x: cw / 2 - bx * v.k, y: ch / 2 - by * v.k });
+      useCanvasStore.getState().select(id);
+    });
+  }, [applyView]);
 
   /** Мгновенно и view, и target (панорама должна быть отзывчивой, без инерции) */
   const shiftView = useCallback((dx: number, dy: number) => {

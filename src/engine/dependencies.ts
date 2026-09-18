@@ -34,6 +34,9 @@ export interface MathBlockData {
   plotTrace?: 'line' | 'bar' | 'stem';
   plotErr?: string;
   plotLogx?: boolean;
+  /** Единица оси (масштаб тиков), например «ГГц», «рад/с», «мм» */
+  plotXUnit?: string;
+  plotYUnit?: string;
   plotTitle?: string;
   plotXLabel?: string;
   plotYLabel?: string;
@@ -165,7 +168,7 @@ function simDepsKey(b: MathBlockData): string {
   return `sim:${b.simMode ?? ''}|${b.simStates ?? ''}|${b.simDerivs ?? ''}|${b.simAux ?? ''}|${b.simParams ?? ''}|${b.simInit ?? ''}|${b.simEvents ?? ''}|${b.simFdtdLayers ?? ''}`;
 }
 
-function blockDeps(b: MathBlockData): string[] {
+export function blockDeps(b: MathBlockData): string[] {
   let key: string | null;
   switch (b.kind) {
     case 'math': key = `m:${b.rawInput}`; break;
@@ -180,7 +183,7 @@ function blockDeps(b: MathBlockData): string[] {
   return v.slice();
 }
 
-function blockDefs(b: MathBlockData): string[] {
+export function blockDefs(b: MathBlockData): string[] {
   let key: string | null;
   switch (b.kind) {
     case 'math': key = `m:${b.rawInput}`; break;

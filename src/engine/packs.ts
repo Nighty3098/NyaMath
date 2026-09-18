@@ -5,6 +5,7 @@
 import type { MathJsInstance, MathNode } from 'mathjs';
 import { t, type LText, type PackId } from '../i18n';
 import { SI_CONSTANTS, CODATA2022 } from './constants';
+import { MATERIALS, MAT_PROP_KEYS, MAT_PROP_NAMES, findMaterial, type MatPropKey } from './materials';
 import { getCompiledPre, preprocessJ, preprocessRanges } from './mathEngine';
 import { adaptiveSimpson, brent, nelderMead, newtonSystem, rk4Step } from './numeric';
 
@@ -688,6 +689,22 @@ export function buildPackScope(math: MathJsInstance): Scope {
       return math.matrix(flat.map((z) => f(Number(z))) as never) as unknown as T[];
     }
     return f(needNum(w));
+  };
+
+  const PROP_ALIASES: Array<[string, MatPropKey]> = [
+    ['sigma', 'sigma'], ['conductivity', 'sigma'], ['cond', 'sigma'],
+    ['rho', 'rho'], ['density', 'rho'],
+    ['epsr', 'eps_r'], ['epsilonr', 'eps_r'], ['permittivity', 'eps_r'], ['dielectricconstant', 'eps_r'], ['dk', 'eps_r'],
+    ['mur', 'mu_r'], ['permeability', 'mu_r'],
+    ['alphares', 'alpha_res'], ['alphatemp', 'alpha_res'], ['tcr', 'alpha_res'], ['alpha', 'alpha_res'],
+    ['melting', 'melting'], ['meltingpoint', 'melting'], ['melt', 'melting'],
+    ['ct', 'ct'], ['thermalconductivity', 'ct'], ['lambda', 'ct'], ['ktherm', 'ct'],
+    ['cp', 'cp'], ['specificheat', 'cp'], ['heatcapacity', 'cp'],
+    ['bandgap', 'bandgap'], ['eg', 'bandgap'], ['gap', 'bandgap'],
+  ];
+  const matPropKeyOf = (s: string): MatPropKey | undefined => {
+    const n = s.toLowerCase().replace(/[^a-z0-9]/gi, '');
+    return PROP_ALIASES.find(([a]) => a === n)?.[1];
   };
 
   const zinLineImpl = (ZL: unknown, Z0: unknown, betaL: unknown): unknown => {
@@ -1935,6 +1952,38 @@ export function buildPackScope(math: MathJsInstance): Scope {
       return math.matrix(rows);
     },
 
+    // ---------- материалы (справочник) ----------
+    // Данные — типичные справочные значения (CRC Handbook, Кей/Лэби) при
+    // 20–25 °C. Поиск регистронезависимый: id / формула / EN / RU.
+    matlist: () => {
+      const rows = MATERIALS.map((m) => [m.id, m.en, m.ru, m.type]);
+      return math.matrix(rows as never);
+    },
+    matType: (m: unknown) => {
+      const mat = findMaterial(needStr(m));
+      if (!mat) throw new Error(t('e.matNotFound', { name: String(m) }));
+      return mat.type;
+    },
+    matProp: (m: unknown, p: unknown) => {
+      const mat = findMaterial(needStr(m));
+      if (!mat) throw new Error(t('e.matNotFound', { name: String(m) }));
+      const key = matPropKeyOf(needStr(p));
+      if (!key) throw new Error(t('e.matPropNotFound', { prop: String(p) }));
+      const v = mat.props[key];
+      if (v === undefined) throw new Error(t('e.matPropApply', { mat: mat.en, prop: String(p) }));
+      return v;
+    },
+    matProps: (m: unknown) => {
+      const mat = findMaterial(needStr(m));
+      if (!mat) throw new Error(t('e.matNotFound', { name: String(m) }));
+      const rows = MAT_PROP_KEYS.filter((k) => mat.props[k] !== undefined).map((k) => [
+        MAT_PROP_NAMES[k].en,
+        mat.props[k] as number,
+      ]);
+      return math.matrix(rows as never);
+    },
+    matHas: (m: unknown) => findMaterial(needStr(m)) !== null,
+
     // ---------- неопределённость измерений ----------
     // GUM: JCGM 100:2008 (текст: bipm.org), ГОСТ 34100.3-2017 ≡ ISO/IEC Guide 98-3.
     // МИ-школа: МИ 1317, ГОСТ Р 8.736-2011 (многократные прямые измерения).
@@ -2356,6 +2405,8 @@ export const PACK_NAMES = [
   'friisPr', 'friisDb', 'sMag2db', 'db2mag',
   // САУ / АЧХ-ФЧХ (Bode)
   'bodeH', 'bodeMagDb', 'bodePhaseDeg', 'bodeFreqs', 'bode',
+  // материалы (справочник)
+  'matlist', 'matType', 'matProp', 'matProps', 'matHas',
   // программирование: строки/массивы
   'chrU', 'ordU', 'strlenU', 'strUpper', 'strLower', 'substrU',
   'splitStr', 'joinStr', 'parseNum', 'uniqueVals', 'histC',
@@ -2543,6 +2594,11 @@ export const SNIPPETS: Snippet[] = [
     plot2d: 'bodePhaseDeg([1], [1, 2, 10], x)' },
   { pack: 'control', label: { ru: 'Лог. сетка частот', en: 'Log freq grid' }, hint: { ru: 'ω рад/с, геом. шаг', en: 'ω rad/s, geometric' }, doc: 'Bode·САУ', code: 'bodeFreqs(10, 10^4, 5) =', kind: 'math' },
   { pack: 'control', label: { ru: 'Комплексный отклик', en: 'Complex response' }, hint: { ru: 'H(jω) как число', en: 'H(jω) complex' }, doc: 'Bode·САУ', code: 'bodeH([1], [1, 2, 10], 1) =\nabs(bodeH([1], [1, 2, 10], 1)) =', kind: 'math' },
+  { pack: 'materials', label: { ru: 'Проводимость металла', en: 'Metal conductivity' }, hint: { ru: 'σ в См/м', en: 'σ in S/m' }, doc: 'Материалы: matProp(id, prop)', code: 'matProp("copper", "sigma") =\nmatProp("Cu", "sigma") =', kind: 'math' },
+  { pack: 'materials', label: { ru: 'Все свойства материала', en: 'All material properties' }, hint: { ru: 'таблица [параметр, значение]', en: '[prop, value] table' }, doc: 'Материалы', code: 'matProps("FR-4") =', kind: 'math' },
+  { pack: 'materials', label: { ru: 'Диэлектрик: εᵣ', en: 'Dielectric: εᵣ' }, hint: { ru: 'материал + свойство', en: 'material + property' }, code: 'matProp("PTFE", "eps_r") =\nmatProp("вода", "eps_r") =', kind: 'math' },
+  { pack: 'materials', label: { ru: 'Полупроводник: E_g', en: 'Semiconductor: E_g' }, hint: { ru: 'ширина зоны', en: 'bandgap' }, code: 'matProp("Si", "bandgap") =\nmatProp("GaAs", "bandgap") =', kind: 'math' },
+  { pack: 'materials', label: { ru: 'Проверка наличия', en: 'Existence check' }, hint: { ru: 'true/false', en: 'true/false' }, code: 'matHas("Li") =\nmatHas("медь") =', kind: 'math' },
   // программирование
   {
     pack: 'programs', label: { ru: 'Бинарный поиск', en: 'Binary search' }, hint: { ru: 'деление пополам, assert', en: 'bisection, assert' },

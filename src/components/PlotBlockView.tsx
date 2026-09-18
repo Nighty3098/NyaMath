@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { compilePlotExpr, evaluateLine, preprocessJ, preprocessRanges } from '../engine/mathEngine';
+import { parseUnitScale } from '../engine/unitScale';
 import type { EvalFunction } from 'mathjs';
 import { useDocScope } from './useDocScope';import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
@@ -122,6 +123,14 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   const title = (block.plotTitle ?? '').trim();
   const xLabel = (block.plotXLabel ?? '').trim();
   const yLabel = (block.plotYLabel ?? '').trim();
+  // Единицы оси: значение = тик / scale; подпись оси дополняется единицей.
+  const xU = parseUnitScale(block.plotXUnit ?? '');
+  const yU = parseUnitScale(block.plotYUnit ?? '');
+  const xUnitRaw = (block.plotXUnit ?? '').trim();
+  const yUnitRaw = (block.plotYUnit ?? '').trim();
+  const xAxisLabel = xUnitRaw ? (xLabel ? `${xLabel}, ${xUnitRaw}` : xUnitRaw) : xLabel;
+  const yAxisLabel = yUnitRaw ? (yLabel ? `${yLabel}, ${yUnitRaw}` : yUnitRaw) : yLabel;
+  const unitBad = (!xU.ok && xUnitRaw !== '') || (!yU.ok && yUnitRaw !== '');
   const showGrid = block.plotGrid ?? true;
   const showLegend = block.plotLegend ?? true;
   const padT = title ? 26 : PAD_T;
@@ -659,6 +668,18 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
                 spellCheck={false}
               />
             </label>
+            <label title={t('p2.xUnit')}>
+              <input
+                className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                value={xUnitRaw}
+                placeholder={t('p2.xUnit')}
+                aria-label={t('p2.xUnit')}
+                onChange={(e) => updatePlot(block.id, { plotXUnit: e.target.value })}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                spellCheck={false}
+              />
+            </label>
             <label>
               Y{' '}
               <input
@@ -667,6 +688,18 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
                 placeholder="y"
                 aria-label={t('p2.yLabel')}
                 onChange={(e) => updatePlot(block.id, { plotYLabel: e.target.value })}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                spellCheck={false}
+              />
+            </label>
+            <label title={t('p2.yUnit')}>
+              <input
+                className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                value={yUnitRaw}
+                placeholder={t('p2.yUnit')}
+                aria-label={t('p2.yUnit')}
+                onChange={(e) => updatePlot(block.id, { plotYUnit: e.target.value })}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
                 spellCheck={false}
@@ -752,20 +785,20 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             )}
             {/* сетка + тики */}
             {showGrid &&
-              xticks.map((t) => (
-                <g key={`x${t}`}>
-                  <line x1={X(t)} y1={padT} x2={X(t)} y2={ph - PAD_B} stroke={pal.grid} strokeOpacity={pal.gridOpacity} />
-                  <text x={X(t)} y={ph - PAD_B + 14} fontSize={9} fill={pal.tick} textAnchor="middle">
-                    {fmtTick(t)}
+              xticks.map((v) => (
+                <g key={`x${v}`}>
+                  <line x1={X(v)} y1={padT} x2={X(v)} y2={ph - PAD_B} stroke={pal.grid} strokeOpacity={pal.gridOpacity} />
+                  <text x={X(v)} y={ph - PAD_B + 14} fontSize={9} fill={pal.tick} textAnchor="middle">
+                    {fmtTick(v / xU.scale)}
                   </text>
                 </g>
               ))}
             {showGrid &&
-              yticks.map((t) => (
-                <g key={`y${t}`}>
-                  <line x1={PAD_L} y1={Y(t)} x2={pw - PAD_R} y2={Y(t)} stroke={pal.grid} strokeOpacity={pal.gridOpacity} />
-                  <text x={PAD_L - 5} y={Y(t) + 3} fontSize={9} fill={pal.tick} textAnchor="end">
-                    {fmtTick(t)}
+              yticks.map((v) => (
+                <g key={`y${v}`}>
+                  <line x1={PAD_L} y1={Y(v)} x2={pw - PAD_R} y2={Y(v)} stroke={pal.grid} strokeOpacity={pal.gridOpacity} />
+                  <text x={PAD_L - 5} y={Y(v) + 3} fontSize={9} fill={pal.tick} textAnchor="end">
+                    {fmtTick(v / yU.scale)}
                   </text>
                 </g>
               ))}
@@ -800,14 +833,14 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             )}
             {series.map((s, i) => renderErrors(s.errs, s.color, i))}
             {/* подписи осей */}
-            {xLabel && (
+            {xAxisLabel && (
               <text x={pw - PAD_R} y={ph - 4} fontSize={10} fill={pal.tick} textAnchor="end">
-                {xLabel}
+                {xAxisLabel}
               </text>
             )}
-            {yLabel && (
+            {yAxisLabel && (
               <text x={12} y={padT + 4} fontSize={10} fill={pal.tick} textAnchor="start" transform={`rotate(-90 12 ${padT + 4})`}>
-                {yLabel}
+                {yAxisLabel}
               </text>
             )}
             {/* легенда */}
@@ -825,6 +858,11 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
         <div ref={footRef} className="text-[11px] text-[var(--faint)] mt-1 truncate">
           {t('p2.footer', { fn: fnText, x0: xmin, x1: xmax })}
         </div>
+        {unitBad && (
+          <div className="text-[10px] text-[var(--danger)]/80 truncate" title={t('p2.badUnit', { u: !xU.ok ? xUnitRaw : yUnitRaw })}>
+            ⚠ {t('p2.badUnit', { u: !xU.ok ? xUnitRaw : yUnitRaw })}
+          </div>
+        )}
         {/* ручка размера */}
         <span
           className="absolute -right-3 -bottom-3 w-7 h-7 cursor-nwse-resize touch-none select-none"

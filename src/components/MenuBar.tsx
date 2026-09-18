@@ -15,6 +15,7 @@ import {
 interface MenuBarProps {
   onOpenFile: () => void;
   onShowWelcome: () => void;
+  onOpenNavigator: () => void;
 }
 
 type Entry =
@@ -44,7 +45,7 @@ function atCross(): { x: number; y: number } {
  * вынесенные undo/redo/пересчёт и тихий статус листа.
  * Клик — открыть, наведение при открытом — переключить, Esc/клик мимо — закрыть.
  */
-export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
+export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: MenuBarProps) {
   const blocks = useCanvasStore((s) => s.blocks);
   const addBlock = useCanvasStore((s) => s.addBlock);
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
@@ -194,6 +195,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome }: MenuBarProps) {
         { id: 'fpalette', icon: <IFormula />, label: t('menu.formulaPalette'), checked: formulaPaletteOpen, action: run(toggleFormulaPalette) },
         { id: 'live', icon: <ISignal />, label: t('menu.liveSync'), checked: liveConnected, action: run(toggleLive) },
         { id: 'recalc', icon: <IRecalc />, label: t('menu.recalc'), hint: 'Ctrl+↵', action: run(recalc) },
+        { id: 'variables', icon: <IFx />, label: t('menu.variables'), hint: 'Ctrl+K', action: run(onOpenNavigator) },
         { sep: true },
         ...THEMES.map((th) => ({
           id: `theme-${th.id}`,

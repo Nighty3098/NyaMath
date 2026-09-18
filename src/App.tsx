@@ -3,6 +3,7 @@ import MenuBar from './components/MenuBar';
 import Canvas from './components/Canvas';
 import WelcomeModal from './components/WelcomeModal';
 import FunctionPalette from './components/FunctionPalette';
+import VariableNavigator from './components/VariableNavigator';
 import { useCanvasStore } from './store/canvasStore';
 import { saveDocument } from './lib/saveDocument';
 import { installPrintCleanup } from './lib/print';
@@ -20,6 +21,7 @@ export default function App() {
   const formulaPaletteMode = useCanvasStore((s) => s.formulaPaletteMode);
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const [welcomeForced, setWelcomeForced] = useState(false);
+  const [navigatorOpen, setNavigatorOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Смена темы без «смазывания»: глушим транзишены на один кадр
@@ -66,6 +68,11 @@ export default function App() {
         if (inField) return;
         e.preventDefault();
         useCanvasStore.getState().redo();
+      } else if (e.code === 'KeyK') {
+        // Ctrl+K — навигатор переменных листа (в полях тоже работает)
+        e.preventDefault();
+        if (e.repeat) return;
+        setNavigatorOpen((v) => !v);
       }
     };
     window.addEventListener('keydown', onKey, true);
@@ -164,6 +171,7 @@ export default function App() {
       <MenuBar
         onOpenFile={() => fileRef.current?.click()}
         onShowWelcome={() => setWelcomeForced(true)}
+        onOpenNavigator={() => setNavigatorOpen(true)}
       />
       <input
         ref={fileRef}
@@ -191,6 +199,8 @@ export default function App() {
       {/* плавающие палитры — окна поверх всего, не часть canvas */}
       {paletteOpen && paletteMode === 'float' && <FunctionPalette />}
       {formulaPaletteOpen && formulaPaletteMode === 'float' && <FunctionPalette variant="formulas" />}
+      {/* Ctrl+K: навигатор переменных листа */}
+      {navigatorOpen && <VariableNavigator onClose={() => setNavigatorOpen(false)} />}
       {showWelcome && <WelcomeModal onClose={closeWelcome} onOpenFile={() => fileRef.current?.click()} />}
     </div>
   );

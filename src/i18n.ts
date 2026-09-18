@@ -77,6 +77,7 @@ const ru = {
   'menu.redo': 'Вернуть',
   'menu.recalc': 'Пересчитать всё',
   'menu.grid': 'Сетка',
+  'menu.variables': 'Переменные',
   'menu.palette': 'Палитра функций',
   'menu.formulaPalette': 'Палитра формул',
   'menu.ex20': 'Вариант 20 · электродинамика',
@@ -126,6 +127,24 @@ const ru = {
   'w.openFile': 'Открыть файл…',
   'w.blank': 'Чистый лист',
   'w.creator': 'Создатель:',
+
+  'nv.title': 'Переменные листа',
+  'nv.search': 'Поиск переменной…',
+  'nv.empty': 'Ничего не найдено',
+  'nv.none': 'Нет переменных — объявите их в блоках выше',
+  'nv.defs': 'Определяется в',
+  'nv.uses': 'Используется в',
+  'nv.usedIn': 'Используется в {n} блоках',
+  'nv.goto': 'Перейти к блоку',
+  'nv.kind.math': 'Математика',
+  'nv.kind.plot': 'График',
+  'nv.kind.plot3d': '3D-график',
+  'nv.kind.contour': 'Контур',
+  'nv.kind.program': 'Программа',
+  'nv.kind.sim': 'Симуляция',
+  'nv.kind.slider': 'Слайдер',
+  'nv.kind.text': 'Текст',
+  'nv.open': 'Ctrl+K — переменные листа',
 
   'pal.aria': 'Палитра функций',
   'pal.insert': 'ƒx Вставка',
@@ -211,6 +230,10 @@ const ru = {
   'p2.legend': 'Легенда',
   'p2.logx': 'log x',
   'p2.logxRange': 'Для log x нужно 0 < xmin < xmax',
+  'p2.xUnit': 'X ед.',
+  'p2.yUnit': 'Y ед.',
+  'p2.badUnit': 'Не понял единицу: «{u}»',
+  'p2.fmtUnit': 'единицы: {u} на деление',
   'p2.png': 'Скачать PNG',
   'p2.csv': 'Скачать CSV',
 
@@ -325,6 +348,9 @@ const ru = {
   'e.unitConvert': 'Не могу перевести «{q}» в «{u}»: проверьте размерности',
   'e.badUnitName': 'Плохое имя единицы: "{name}"',
   'e.calcArgs': 'Неверные аргументы функции',
+  'e.matNotFound': 'Материал не найден: {name}',
+  'e.matPropNotFound': 'Неизвестное свойство: {prop}',
+  'e.matPropApply': 'Свойство «{prop}» не задано для {mat}',
   'e.calcNoConv': 'Не сошлось — смените старт или постановку',
   'e.sliderVar': 'Слайдер: плохое имя переменной',
   'e.sliderRange': 'Слайдер: нужно мин < макс',
@@ -413,6 +439,7 @@ const en: Record<StrKey, string> = {
   'menu.redo': 'Redo',
   'menu.recalc': 'Recalculate all',
   'menu.grid': 'Grid',
+  'menu.variables': 'Variables',
   'menu.palette': 'Function palette',
   'menu.formulaPalette': 'Formula palette',
   'menu.ex20': 'Variant 20 · electrodynamics',
@@ -462,6 +489,24 @@ const en: Record<StrKey, string> = {
   'w.openFile': 'Open file…',
   'w.blank': 'Blank sheet',
   'w.creator': 'Creator:',
+
+  'nv.title': 'Sheet variables',
+  'nv.search': 'Search variables…',
+  'nv.empty': 'Nothing found',
+  'nv.none': 'No variables yet — define them in blocks above',
+  'nv.defs': 'Defined in',
+  'nv.uses': 'Used in',
+  'nv.usedIn': 'Used in {n} blocks',
+  'nv.goto': 'Go to block',
+  'nv.kind.math': 'Math',
+  'nv.kind.plot': 'Plot',
+  'nv.kind.plot3d': '3D plot',
+  'nv.kind.contour': 'Contour',
+  'nv.kind.program': 'Program',
+  'nv.kind.sim': 'Simulation',
+  'nv.kind.slider': 'Slider',
+  'nv.kind.text': 'Text',
+  'nv.open': 'Ctrl+K — sheet variables',
 
   'pal.aria': 'Function palette',
   'pal.insert': 'ƒx Insert',
@@ -547,6 +592,10 @@ const en: Record<StrKey, string> = {
   'p2.legend': 'Legend',
   'p2.logx': 'log x',
   'p2.logxRange': 'Need 0 < xmin < xmax for log x',
+  'p2.xUnit': 'X units',
+  'p2.yUnit': 'Y units',
+  'p2.badUnit': 'Unknown unit: "{u}"',
+  'p2.fmtUnit': 'units: {u} per tick',
   'p2.png': 'Download PNG',
   'p2.csv': 'Download CSV',
 
@@ -661,6 +710,9 @@ const en: Record<StrKey, string> = {
   'e.unitConvert': 'Cannot convert "{q}" to "{u}": check the dimensions',
   'e.badUnitName': 'Bad unit name: "{name}"',
   'e.calcArgs': 'Bad function arguments',
+  'e.matNotFound': 'Material not found: {name}',
+  'e.matPropNotFound': 'Unknown property: {prop}',
+  'e.matPropApply': 'Property "{prop}" is not defined for {mat}',
   'e.calcNoConv': 'Did not converge — change start or setup',
   'e.sliderVar': 'Slider: bad variable name',
   'e.sliderRange': 'Slider: need min < max',
@@ -746,7 +798,7 @@ export function themeLabel(id: ThemeName): string {
   return themeNames[id][current];
 }
 
-export type PackId = 'matrices' | 'stats' | 'uncertainty' | 'physics' | 'telecom' | 'programs' | 'plots' | 'sim' | 'units' | 'calc' | 'computing' | 'em' | 'control';
+export type PackId = 'matrices' | 'stats' | 'uncertainty' | 'physics' | 'telecom' | 'programs' | 'plots' | 'sim' | 'units' | 'calc' | 'computing' | 'em' | 'control' | 'materials';
 
 const packNames: Record<PackId, { ru: string; en: string }> = {
   matrices: { ru: 'Матрицы', en: 'Matrices' },
@@ -762,6 +814,7 @@ const packNames: Record<PackId, { ru: string; en: string }> = {
   computing: { ru: 'Выч. техника', en: 'Computing' },
   em: { ru: 'ЭМ поля', en: 'EM fields' },
   control: { ru: 'САУ / АЧХ', en: 'Control / Bode' },
+  materials: { ru: 'Материалы', en: 'Materials' },
 };
 
 /** Название пака сниппетов на текущем языке. */
