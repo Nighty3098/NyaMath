@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import MenuBar from './components/MenuBar';
-import ToolRail from './components/ToolRail';
 import Canvas from './components/Canvas';
 import WelcomeModal from './components/WelcomeModal';
 import FunctionPalette from './components/FunctionPalette';
@@ -181,7 +180,6 @@ export default function App() {
       />
       {/* рабочая зона: рейка инструментов + док-панели по бокам + холст */}
       <div className="nya-workspace flex-1 flex flex-row min-h-0 min-w-0">
-        <ToolRail />
         {paletteOpen && paletteMode === 'left' && <FunctionPalette />}
         {formulaPaletteOpen && formulaPaletteMode === 'left' && <FunctionPalette variant="formulas" />}
         <div className="flex-1 relative flex flex-col min-h-0 min-w-0">
