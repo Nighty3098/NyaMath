@@ -96,5 +96,22 @@ check(true, 'remove ok');
 const res = await client.readResource({ uri: 'nya://document' });
 check(res.contents[0].text.includes('Z_c_abs') || res.contents[0].text.length > 100, 'resource nya://document');
 
+// 13. ask/answer: вопрос пользователю + запись ответа в переменную
+const ask = await call('nya_ask', { question: 'Какое напряжение питания?', options: ['5', '12', '24'], var: 'Vcc' });
+check(ask.data.ok && ask.data.kind === 'ask' && ask.data.question.includes('напряжение'), `ask registered (${ask.data.id})`);
+let st = await call('nya_status');
+check(st.data.pendingAsks === 1, `pendingAsks = ${st.data.pendingAsks}`);
+let bad = await call('nya_answer', { id: ask.data.id, answer: '48' });
+check(!!bad.isError && bad.data.error.includes('5 / 12 / 24'), `ask rejects unknown option: ${bad.data.error}`);
+const ok = await call('nya_answer', { id: ask.data.id, answer: '12' });
+check(ok.data.answer === '12' && ok.data.var.value === '12', `ask answered, Vcc=${ok.data.var?.value}`);
+st = await call('nya_status');
+check(st.data.pendingAsks === 0 && st.data.blocks > 30, `ask resolved, pending=${st.data.pendingAsks}`);
+r = await call('nya_get_scope');
+check(r.data.variables['Vcc'] === '12', `Vcc in scope = ${r.data.variables['Vcc']}`);
+r = await call('nya_ask', { question: 'Замечание к расчёту?', var: 'note' });
+const note = await call('nya_answer', { id: r.data.id, answer: 'проверить допуски' });
+check(note.data.var.value === 'проверить допуски', `string var in scope: ${note.data.var?.value}`);
+
 console.log(`\nSMOKE PASS: ${pass} checks`);
 await client.close();

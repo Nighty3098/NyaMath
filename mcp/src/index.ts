@@ -159,7 +159,7 @@ server.tool(
   async (): Promise<CallToolResult> => {
     const errors = blocks.filter((b) => b.error).map((b) => ({ id: b.id, rawInput: b.rawInput.split('\n')[0], error: b.error }));
     const vars = Object.keys(lastScope).filter((k) => !['i', 'j'].includes(k));
-    return ok({ blocks: blocks.length, errors, errorCount: errors.length, variables: vars.length, docPath });
+    return ok({ blocks: blocks.length, errors, errorCount: errors.length, variables: vars.length, pendingAsks: pendingAsks.size, docPath });
   },
 );
 
@@ -392,6 +392,94 @@ server.tool(
     return ok({ variables: out, count: Object.keys(out).length });
   },
 );
+
+/* ---------------- диалог с пользователем ---------------- */
+
+interface PendingAsk {
+  id: string;
+  question: string;
+  options: string[] | null;
+  var: string | null;
+  resolved: boolean;
+}
+
+/** Зарегистрированные вопросы к пользователю (лимит 50). */
+const pendingAsks = new Map<string, PendingAsk>();
+
+server.tool(
+  'nya_ask',
+  'Задать вопрос пользователю (варианты ответа или свободный текст). Вопрос только регистрируется — ' +
+    'покажите его человеку и верните ответ через nya_answer. Ответ можно записать в переменную документа (var)',
+  {
+    question: z.string().min(1).describe('Вопрос пользователю'),
+    options: z.array(z.string().min(1).max(200)).min(1).max(20).optional().describe('Варианты ответа (если выбранного ответа нет — свободный текст)'),
+    var: z.string().regex(/^[A-Za-z_]\w*$/).optional().describe('Имя переменной, в которую записать ответ (var := ответ)'),
+  },
+  async ({ question, options, var: varName }): Promise<CallToolResult> => {
+    if (pendingAsks.size >= 50) return fail('Слишком много необработанных вопросов — ответьте на них через nya_answer');
+    let id = `ask-${uuid().slice(0, 8)}`;
+    while (pendingAsks.has(id)) id = `ask-${uuid().slice(0, 8)}`;
+    const ask: PendingAsk = {
+      id,
+      question,
+      options: options?.length ? options : null,
+      var: varName ?? null,
+      resolved: false,
+    };
+    pendingAsks.set(ask.id, ask);
+    return ok({
+      ok: true,
+      kind: 'ask',
+      id: ask.id,
+      question: ask.question,
+      options: ask.options,
+      var: ask.var,
+      hint: 'Покажите вопрос пользователю; ответ верните вызовом nya_answer с этим id.',
+    });
+  },
+);
+
+server.tool(
+  'nya_answer',
+  'Вернуть ответ пользователя на вопрос, зарегистрированный nya_ask. Если вопрос был с вариантами — ответ должен совпасть (или быть номером варианта). ' +
+    'При наличии var ответ сохраняется в документе (var := значение)',
+  { id: z.string().describe('ID из nya_ask'), answer: z.string().describe('Ответ пользователя') },
+  async ({ id, answer }): Promise<CallToolResult> => {
+    const ask = pendingAsks.get(id);
+    if (!ask) return fail(`Вопрос ${id} не найден или уже обработан`);
+    if (ask.options) {
+      const byIndex = /^[1-9]\d*$/.test(answer) ? ask.options[Number(answer) - 1] : undefined;
+      if (byIndex === undefined && !ask.options.includes(answer)) {
+        return fail(`Ответ должен быть одним из: ${ask.options.join(' / ')}`);
+      }
+    }
+    if (ask.var) {
+      const val = /^[+-]?(\d+([.,]\d*)?|\.\d+)([eE][+-]?\d+)?$/.test(answer.trim()) ? Number(answer.replace(',', '.')) : answer;
+      const literal = typeof val === 'number' ? String(val) : JSON.stringify(answer);
+      const id2 = uuid();
+      const y = blocks.length ? Math.max(...blocks.map((b) => b.y)) + 64 : 60;
+      blocks.push({ ...blank(id2, 80, y), rawInput: `${ask.var} := ${literal}` });
+    }
+    ask.resolved = true;
+    pendingAsks.delete(id);
+    refresh();
+    const val = pendingScopeGet(ask.var);
+    return ok({
+      ok: true,
+      id: ask.id,
+      question: ask.question,
+      answer,
+      var: ask.var ? { name: ask.var, value: val } : null,
+    });
+  },
+);
+
+function pendingScopeGet(name: string | null): string | null {
+  if (!name) return null;
+  const v = lastScope[name];
+  if (v === undefined) return null;
+  return typeof v === 'function' ? 'f(x) — функция' : formatResult(v);
+}
 
 server.tool(
   'nya_get_plot_data',

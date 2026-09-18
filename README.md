@@ -114,6 +114,7 @@ formulas and programs).
 | `nya_open` / `nya_save` | Project file (validation, migration) |
 | `nya_load_example` | `variant20` (electrodynamics) or `advanced` (matrices/programs) |
 | `nya_recalc` | Force recalculation |
+| `nya_ask` / `nya_answer` | Ask the user a question (with optional answer `options`), record the reply. `var` writes the answer into the document scope (`var := answer`, numeric when it parses as a number) |
 
 Resource `nya://document` — JSON summary of the document.
 
