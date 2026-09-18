@@ -1,4 +1,5 @@
 import type { LText } from '../i18n';
+import { FORMULA_VARS, type FormulaVar } from './formulaVars';
 
 export interface FormulaSection {
   id: string;
@@ -17,6 +18,8 @@ export interface Formula {
   hint: LText;
   code: string;
   sources: FormulaSource[];
+  /** Легенда переменных (что обозначает каждая) — подтягивается из formulaVars.ts. */
+  vars?: FormulaVar[];
 }
 
 export const FORMULA_SECTIONS: FormulaSection[] = [
@@ -208,6 +211,27 @@ export const FORMULAS: Formula[] = [
     hint: { ru: 'v = (m₁v₁+m₂v₂)/(m₁+m₂)', en: 'v = (m₁v₁+m₂v₂)/(m₁+m₂)' },
     code: 'm1 := 2\nv1 := 6\nm2 := 4\nv2 := 0\nv_after := (m1*v1 + m2*v2)/(m1 + m2)\nv_after =',
     sources: [W2('Inelastic collision — Wikipedia', 'https://en.wikipedia.org/wiki/Inelastic_collision')],
+  },
+  {
+    id: 'elastic-collision', section: 'dynamics',
+    label: { ru: 'Упругий удар', en: 'Elastic collision' },
+    hint: { ru: 'сохранение импульса и энергии; v₁,v₂ после', en: 'momentum and energy conserved; v₁,v₂ after' },
+    code: 'm1 := 2\nv1 := 6\nm2 := 4\nv2 := 0\nv1_after := ((m1 - m2)*v1 + 2*m2*v2)/(m1 + m2)\nv2_after := (2*m1*v1 + (m2 - m1)*v2)/(m1 + m2)\n[v1_after; v2_after] =',
+    sources: [W2('Elastic collision — Wikipedia', 'https://en.wikipedia.org/wiki/Elastic_collision')],
+  },
+  {
+    id: 'restitution-collision', section: 'dynamics',
+    label: { ru: 'Удар с восстановлением (материал)', en: 'Restitution collision (material)' },
+    hint: { ru: 'e — коэфф. восстановления материала; e=1 упруго, e=0 неупруго', en: 'e — restitution of the material; e=1 elastic, e=0 inelastic' },
+    code: 'm1 := 2\nv1 := 6\nm2 := 4\nv2 := 0\ne_rest := 0.8\nv1_after := (m1*v1 + m2*v2 + m2*e_rest*(v2 - v1))/(m1 + m2)\nv2_after := (m1*v1 + m2*v2 + m1*e_rest*(v1 - v2))/(m1 + m2)\n[v1_after; v2_after] =',
+    sources: [W2('Coefficient of restitution — Wikipedia', 'https://en.wikipedia.org/wiki/Coefficient_of_restitution')],
+  },
+  {
+    id: 'ball-mass-density', section: 'dynamics',
+    label: { ru: 'Масса шара через плотность', en: 'Ball mass from density' },
+    hint: { ru: 'm = ρ·4/3·π·r³', en: 'm = ρ·4/3·π·r³' },
+    code: 'rho_m := 7800\nr_bl := 0.05\nm_bl := rho_m*4/3*pi*r_bl^3\nm_bl =',
+    sources: [W2('Density — Wikipedia', 'https://en.wikipedia.org/wiki/Density')],
   },
   {
     id: 'friction', section: 'dynamics',
@@ -2233,4 +2257,160 @@ export const FORMULAS: Formula[] = [
     code: 'data := [2.3, 3.1, 2.8, 4, 3.5, 2.9]\nlo := min(data)\nhi := max(data)\nmid_n := (3.1 - lo)/(hi - lo)\nmid_n =',
     sources: [W2('Feature scaling — Wikipedia', 'https://en.wikipedia.org/wiki/Feature_scaling')],
   },
+  // ---- добрано аудитом: недостающие базовые характеристики ----
+  {
+    id: 'escape-v2', section: 'dynamics',
+    label: { ru: 'Вторая космическая скорость', en: 'Escape velocity' },
+    hint: { ru: 'v = √(2GM/r)', en: 'v = √(2GM/r)' },
+    code: 'M_p := 5.97*10^24\nr_or := 6371*10^3\nv2 := sqrt(2*G_const*M_p/r_or)\nv2 =',
+    sources: [W2('Escape velocity — Wikipedia', 'https://en.wikipedia.org/wiki/Escape_velocity')],
+  },
+  {
+    id: 'internal-energy-ideal', section: 'molecular',
+    label: { ru: 'Внутренняя энергия идеального газа', en: 'Ideal gas internal energy' },
+    hint: { ru: 'U = (3/2)·n·R·T (одноатомный)', en: 'U = (3/2)·n·R·T (monatomic)' },
+    code: 'n_mol := 2\nT_k := 300\nU_in := 1.5*n_mol*R_gas*T_k\nU_in =',
+    sources: [W2('Ideal gas law — Wikipedia', 'https://en.wikipedia.org/wiki/Ideal_gas_law')],
+  },
+  {
+    id: 'charge-energy', section: 'electrostatics',
+    label: { ru: 'Энергия заряда в поле', en: 'Charge energy in field' },
+    hint: { ru: 'W = q·U', en: 'W = q·U' },
+    code: 'q_mv := 1.6*10^-19\nU_v := 100\nW_q := q_mv*U_v\nW_q =',
+    sources: [W2('Electric potential energy — Wikipedia', 'https://en.wikipedia.org/wiki/Electric_potential_energy')],
+  },
+  {
+    id: 'ohm-full', section: 'circuits',
+    label: { ru: 'Закон Ома для полной цепи', en: 'Ohm law for full circuit' },
+    hint: { ru: 'I = E/(R+r)', en: 'I = E/(R+r)' },
+    code: 'E_emf := 12\nR_ld := 10\nr_in := 0.5\nI_full := E_emf/(R_ld + r_in)\nI_full =',
+    sources: [W2('Electromotive force — Wikipedia', 'https://en.wikipedia.org/wiki/Electromotive_force')],
+  },
+  {
+    id: 'power-ac', section: 'circuits',
+    label: { ru: 'Активная мощность (AC)', en: 'Active power (AC)' },
+    hint: { ru: 'P = U·I·cosφ', en: 'P = U·I·cosφ' },
+    code: 'U_v := 220\nI_c := 5\nphi_ac := pi/6\nP_ac := U_v*I_c*cos(phi_ac)\nP_ac =',
+    sources: [W2('AC power — Wikipedia', 'https://en.wikipedia.org/wiki/AC_power')],
+  },
+  {
+    id: 'flux-linkage', section: 'magnetism',
+    label: { ru: 'Потокосцепление', en: 'Flux linkage' },
+    hint: { ru: 'Ψ = N·B·S', en: 'Ψ = N·B·S' },
+    code: 'N_tr := 100\nB_f := 0.5\nS_ar := 0.02\nPsi_fl := N_tr*B_f*S_ar\nPsi_fl =',
+    sources: [W2('Magnetic flux — Wikipedia', 'https://en.wikipedia.org/wiki/Magnetic_flux')],
+  },
+  {
+    id: 'wave-eq', section: 'oscillations',
+    label: { ru: 'Уравнение бегущей волны', en: 'Travelling wave equation' },
+    hint: { ru: 'y = A·sin(ωt − kx)', en: 'y = A·sin(ωt − kx)' },
+    code: 'A_m := 0.1\nw_0 := 10\nk_wn := 2\nt_s := 0.2\nx_p := 0.5\ny_wv := A_m*sin(w_0*t_s - k_wn*x_p)\ny_wv =',
+    sources: [W2('Wave equation — Wikipedia', 'https://en.wikipedia.org/wiki/Wave_equation')],
+  },
+  {
+    id: 'light-in-medium', section: 'optics',
+    label: { ru: 'Скорость света в среде', en: 'Speed of light in medium' },
+    hint: { ru: 'v = c/n', en: 'v = c/n' },
+    code: 'n_md := 1.5\nv_lt := c_light/n_md\nv_lt =',
+    sources: [W2('Refractive index — Wikipedia', 'https://en.wikipedia.org/wiki/Refractive_index')],
+  },
+  {
+    id: 'compton-wavelength', section: 'special',
+    label: { ru: 'Комптоновская длина волны', en: 'Compton wavelength' },
+    hint: { ru: 'λc = h/(m·c)', en: 'λc = h/(m·c)' },
+    code: 'm_kg := 9.1*10^-31\nlam_c := h_planck/(m_kg*c_light)\nlam_c =',
+    sources: [W2('Compton wavelength — Wikipedia', 'https://en.wikipedia.org/wiki/Compton_wavelength')],
+  },
+  {
+    id: 'gcd-lcm', section: 'mathalgebra',
+    label: { ru: 'НОД и НОК', en: 'GCD and LCM' },
+    hint: { ru: 'gcd, lcm', en: 'gcd, lcm' },
+    code: '[gcd(12, 18); lcm(12, 18)] =',
+    sources: [W2('Greatest common divisor — Wikipedia', 'https://en.wikipedia.org/wiki/Greatest_common_divisor')],
+  },
+  {
+    id: 'std-angles', section: 'mathtrig',
+    label: { ru: 'Табличные значения', en: 'Standard angles' },
+    hint: { ru: 'sin 30°/45°/60°, cos 60°', en: 'sin 30°/45°/60°, cos 60°' },
+    code: '[sin(pi/6); sin(pi/4); sin(pi/3); cos(pi/3)] =',
+    sources: [W2('Trigonometric functions — Wikipedia', 'https://en.wikipedia.org/wiki/Trigonometric_functions')],
+  },
+  {
+    id: 'euler-series', section: 'mathcalc',
+    label: { ru: 'Число e рядом', en: 'Euler number via series' },
+    hint: { ru: 'e = Σ1/k! → 2.718…', en: 'e = Σ1/k! → 2.718…' },
+    code: 'numsum("1/factorial(k)", "k", 0, 10) =',
+    sources: [W2('E (mathematical constant) — Wikipedia', 'https://en.wikipedia.org/wiki/E_(mathematical_constant)')],
+  },
+  {
+    id: 'uniform-moments', section: 'probability',
+    label: { ru: 'Равномерное: среднее и дисперсия', en: 'Uniform mean and variance' },
+    hint: { ru: 'μ = (a+b)/2; σ² = (b−a)²/12', en: 'μ = (a+b)/2; σ² = (b−a)²/12' },
+    code: 'a_u := 0\nb_u := 10\nmu_un := (a_u + b_u)/2\nvar_un := (b_u - a_u)^2/12\n[mu_un; var_un] =',
+    sources: [W2('Continuous uniform distribution — Wikipedia', 'https://en.wikipedia.org/wiki/Continuous_uniform_distribution')],
+  },
+  {
+    id: 'stat-mode', section: 'statistics',
+    label: { ru: 'Мода', en: 'Mode' },
+    hint: { ru: 'mode(data)', en: 'mode(data)' },
+    code: 'data := [1, 2, 2, 3, 3, 3, 4]\nmode(data) =',
+    sources: [W2('Mode (statistics) — Wikipedia', 'https://en.wikipedia.org/wiki/Mode_(statistics)')],
+  },
+  // ---- поправки на реальные свойства (аудит идеализаций) ----
+  {
+    id: 'power-force', section: 'dynamics',
+    label: { ru: 'Мощность через силу', en: 'Power via force' },
+    hint: { ru: 'P = F·v', en: 'P = F·v' },
+    code: 'F_app := 30\nv_vel := 5\nP_fv := F_app*v_vel\nP_fv =',
+    sources: [W2('Power (physics) — Wikipedia', 'https://en.wikipedia.org/wiki/Power_(physics)')],
+  },
+  {
+    id: 'mech-efficiency', section: 'dynamics',
+    label: { ru: 'КПД механизма', en: 'Mechanical efficiency' },
+    hint: { ru: 'η = A_пол/A_затр; потери — трение', en: 'η = useful/spent; losses — friction' },
+    code: 'A_use := 800\nA_sp := 1000\neta_m := A_use/A_sp\neta_m =',
+    sources: [W2('Mechanical efficiency — Wikipedia', 'https://en.wikipedia.org/wiki/Mechanical_efficiency')],
+  },
+  {
+    id: 'static-friction-limit', section: 'dynamics',
+    label: { ru: 'Трение покоя (максимум)', en: 'Static friction (max)' },
+    hint: { ru: 'F_max = μs·N; μs зависит от материалов', en: 'F_max = μs·N; μs depends on materials' },
+    code: 'm_kg := 5\nmu_s := 0.4\nF_max := mu_s*m_kg*g_std\nF_max =',
+    sources: [W2('Friction — Wikipedia', 'https://en.wikipedia.org/wiki/Friction')],
+  },
+  {
+    id: 'van-der-waals', section: 'molecular',
+    label: { ru: 'Реальный газ (Ван-дер-Ваальс)', en: 'Real gas (Van der Waals)' },
+    hint: { ru: 'p = nRT/(V−nb) − a(n/V)²; a,b — газ', en: 'p = nRT/(V−nb) − a(n/V)²; a,b — gas-specific' },
+    code: 'n_mol := 1\nT_k := 300\nV_v := 0.024\na_vdw := 0.14\nb_vdw := 3.9*10^-5\nP_vdw := n_mol*R_gas*T_k/(V_v - n_mol*b_vdw) - a_vdw*(n_mol/V_v)^2\nP_vdw =',
+    sources: [W2('Van der Waals equation — Wikipedia', 'https://en.wikipedia.org/wiki/Van_der_Waals_equation')],
+  },
+  {
+    id: 'ac-rms', section: 'circuits',
+    label: { ru: 'Действующее напряжение', en: 'RMS voltage' },
+    hint: { ru: 'U = Umax/√2', en: 'U = Umax/√2' },
+    code: 'U_max := 311\nU_rms := U_max/sqrt(2)\nU_rms =',
+    sources: [W2('AC power — Wikipedia', 'https://en.wikipedia.org/wiki/AC_power')],
+  },
+  {
+    id: 'damped-period', section: 'oscillations',
+    label: { ru: 'Период затухающих колебаний', en: 'Damped period' },
+    hint: { ru: 'T = 2π/√(ω₀²−β²); β — трение', en: 'T = 2π/√(ω₀²−β²); β — damping' },
+    code: 'w_0 := 10\nbeta_d := 1\nT_dmp := 2*pi/sqrt(w_0^2 - beta_d^2)\nT_dmp =',
+    sources: [W2('Harmonic oscillator — Wikipedia', 'https://en.wikipedia.org/wiki/Harmonic_oscillator')],
+  },
+  {
+    id: 'cauchy-dispersion', section: 'optics',
+    label: { ru: 'Дисперсия (Коши)', en: 'Dispersion (Cauchy)' },
+    hint: { ru: 'n = A + B/λ²; λ в мкм, A,B — стекло', en: 'n = A + B/λ²; λ in μm, A,B — glass' },
+    code: 'A_c := 1.5046\nB_c := 0.0042\nlam_um := 0.55\nn_cy := A_c + B_c/lam_um^2\nn_cy =',
+    sources: [W2("Cauchy's equation — Wikipedia", 'https://en.wikipedia.org/wiki/Cauchy%27s_equation')],
+  },
 ];
+
+// Легенда переменных из formulaVars.ts — чтобы в палитре было видно,
+// что обозначает каждая переменная (RU/EN).
+for (const f of FORMULAS) {
+  const v = FORMULA_VARS[f.id];
+  if (v) f.vars = v;
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { recalculateAll } from '../engine/dependencies';
 import { FORMULAS, FORMULA_SECTIONS } from './formulas';
+import { FORMULA_VARS } from './formulaVars';
 import { getLang } from '../i18n';
 
 describe('formula catalog', () => {
@@ -53,6 +54,30 @@ describe('formula catalog', () => {
       const res = recalculateAll(blocks);
       for (const b of Object.values(res.blocks)) {
         expect(b.error, `${f.id} [${b.rawInput}]: ${b.error ?? ''}`).toBeNull();
+      }
+    }
+  });
+
+  it('variable legends cover every formula with assignments', () => {
+    const ids = new Set(FORMULAS.map((f) => f.id));
+    for (const id of Object.keys(FORMULA_VARS)) {
+      expect(ids.has(id), `legend for unknown formula ${id}`).toBe(true);
+    }
+    const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    for (const f of FORMULAS) {
+      const vars = FORMULA_VARS[f.id];
+      // легенда обязана быть ровно у формул с присваиваниями
+      expect(Boolean(vars?.length), `${f.id}: legend presence mismatch`).toBe(f.code.includes(':='));
+      expect(f.vars, `${f.id}: vars not merged`).toEqual(vars ?? undefined);
+      const seen = new Set<string>();
+      for (const v of vars ?? []) {
+        expect(v.name.length, `${f.id}: empty var name`).toBeGreaterThan(0);
+        expect(seen.has(v.name), `${f.id}: duplicate var ${v.name}`).toBe(false);
+        seen.add(v.name);
+        expect(v.label.ru.length, `${f.id}/${v.name}: empty ru`).toBeGreaterThan(0);
+        expect(v.label.en.length, `${f.id}/${v.name}: empty en`).toBeGreaterThan(0);
+        const re = new RegExp(`(?<![A-Za-z0-9_])${esc(v.name)}(?![A-Za-z0-9_])`);
+        expect(re.test(f.code), `${f.id}: var ${v.name} not found in code`).toBe(true);
       }
     }
   });
