@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { recalculateAll } from '../engine/dependencies';
+import { compilePlotExpr, preprocessJ, preprocessRanges } from '../engine/mathEngine';
+import { getSimModel } from '../engine/simEngine';
 import { FORMULAS, FORMULA_SECTIONS } from './formulas';
 import { FORMULA_VARS } from './formulaVars';
 import { getLang } from '../i18n';
@@ -80,6 +82,29 @@ describe('formula catalog', () => {
         expect(re.test(f.code), `${f.id}: var ${v.name} not found in code`).toBe(true);
       }
     }
+  });
+
+  it('plot and sim attachments are valid', () => {
+    let plots = 0;
+    let sims = 0;
+    for (const f of FORMULAS) {
+      for (const key of ['plot2d', 'plot3d'] as const) {
+        const expr = f[key];
+        if (expr === undefined) continue;
+        expect(expr.trim().length, `${f.id}: empty ${key}`).toBeGreaterThan(0);
+        for (const part of expr.split(';')) {
+          const compiled = compilePlotExpr(preprocessRanges(`(${preprocessJ(part.trim(), false)})`));
+          expect(compiled, `${f.id}: ${key} does not compile [${part.trim()}]`).not.toBeNull();
+        }
+        plots++;
+      }
+      if (f.sim !== undefined) {
+        expect(getSimModel(f.sim), `${f.id}: unknown sim model ${f.sim}`).toBeTruthy();
+        sims++;
+      }
+    }
+    expect(plots, 'no plot attachments').toBeGreaterThan(0);
+    expect(sims, 'no sim attachments').toBeGreaterThan(0);
   });
 
   it('catalog is non-empty and covers all sections', () => {

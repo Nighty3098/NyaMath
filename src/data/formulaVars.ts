@@ -295,6 +295,30 @@ export const FORMULA_VARS: Record<string, FormulaVar[]> = {
     V('A2', 'площадь 2', 'area 2'),
     V('F2', 'сила 2', 'force 2'),
   ],
+  'rot-inertia-point': [
+    V('m_kg', 'масса', 'mass'),
+    V('r_rad', 'радиус', 'radius'),
+    V('I_pt', 'момент инерции', 'moment of inertia'),
+  ],
+  'rot-energy': [
+    V('I_ax', 'момент инерции', 'moment of inertia'),
+    V('w_ang', 'угловая скорость', 'angular velocity'),
+    V('E_rot', 'энергия вращения', 'rotational energy'),
+  ],
+  'center-mass-2': [
+    V('m1', 'масса 1', 'mass 1'),
+    V('x1', 'координата 1', 'coordinate 1'),
+    V('m2', 'масса 2', 'mass 2'),
+    V('x2', 'координата 2', 'coordinate 2'),
+    V('x_cm', 'центр масс', 'center of mass'),
+  ],
+  'elevator-weight': [
+    V('m_kg', 'масса', 'mass'),
+    V('g_g', 'ускорение свободного падения', 'free-fall acceleration'),
+    V('a_el', 'ускорение лифта', 'elevator acceleration'),
+    V('P_up', 'вес вверх', 'weight going up'),
+    V('P_dn', 'вес вниз', 'weight going down'),
+  ],
   // ================= МКТ И ТЕРМОДИНАМИКА =================
   'ideal-gas': [
     V('n_mol', 'количество вещества', 'amount of substance'),
@@ -1016,6 +1040,17 @@ export const FORMULA_VARS: Record<string, FormulaVar[]> = {
     V('z_rs', 'красное смещение', 'redshift'),
     V('v_rs', 'скорость удаления', 'recession velocity'),
   ],
+  'newton-rings': [
+    V('m_or', 'порядок', 'order'),
+    V('lam_w', 'длина волны', 'wavelength'),
+    V('R_l', 'радиус линзы', 'lens radius'),
+    V('r_nr', 'радиус кольца', 'ring radius'),
+  ],
+  'thin-film-coating': [
+    V('lam_w', 'длина волны', 'wavelength'),
+    V('n_f', 'показатель плёнки', 'film index'),
+    V('d_f', 'толщина плёнки', 'film thickness'),
+  ],
   // ================= КВАНТОВАЯ И РЕЛЯТИВИСТСКАЯ ФИЗИКА =================
   'mass-energy': [
     V('m_kg', 'масса', 'mass'),
@@ -1186,6 +1221,27 @@ export const FORMULA_VARS: Record<string, FormulaVar[]> = {
   'lsolve-sys': [
     V('A_m', 'матрица системы', 'system matrix'),
     V('b_v', 'вектор правой части', 'right-hand side vector'),
+  ],
+  'cramer-2x2': [
+    V('A_m', 'матрица системы', 'system matrix'),
+    V('D_c', 'определитель системы', 'system determinant'),
+    V('x_c', 'корень x', 'root x'),
+    V('y_c', 'корень y', 'root y'),
+  ],
+  'matmul-demo': [
+    V('A_m', 'матрица A', 'matrix A'),
+    V('B_m', 'матрица B', 'matrix B'),
+  ],
+  'matpow-fib': [
+    V('F_m', 'матрица Фибоначчи', 'Fibonacci matrix'),
+  ],
+  'trace-add': [
+    V('A_m', 'матрица A', 'matrix A'),
+    V('B_m', 'матрица B', 'matrix B'),
+  ],
+  'det-product-check': [
+    V('A_m', 'матрица A', 'matrix A'),
+    V('B_m', 'матрица B', 'matrix B'),
   ],
   'eigen-vals': [
     V('A_m', 'матрица', 'matrix'),
@@ -1529,5 +1585,731 @@ export const FORMULA_VARS: Record<string, FormulaVar[]> = {
     V('B_c', 'коэффициент B', 'coefficient B'),
     V('lam_um', 'длина волны, мкм', 'wavelength, μm'),
     V('n_cy', 'показатель преломления', 'refractive index'),
+  ],
+  // ================= ЭМ ПОЛЯ И ВОЛНЫ =================
+  'em-wave-speed': [
+    V('v_em', 'скорость ЭМВ', 'EM wave speed'),
+  ],
+  'em-wavelength': [
+    V('f_hz', 'частота', 'frequency'),
+    V('lam_rf', 'длина волны', 'wavelength'),
+  ],
+  'em-vac-impedance': [
+    V('Z0', 'волновое сопротивление вакуума', 'vacuum impedance'),
+  ],
+  'skin-depth-cu': [
+    V('f_hz', 'частота', 'frequency'),
+    V('sig_cu', 'проводимость меди', 'copper conductivity'),
+    V('delta_s', 'глубина скин-слоя', 'skin depth'),
+  ],
+  'displacement-current': [
+    V('f_hz', 'частота', 'frequency'),
+    V('eps_r', 'диэлектрическая проницаемость', 'permittivity'),
+    V('E_m', 'амплитуда поля', 'field amplitude'),
+    V('J_d', 'плотность тока смещения', 'displacement current density'),
+  ],
+  'poynting-flux': [
+    V('E_f', 'напряжённость E', 'electric field'),
+    V('H_f', 'напряжённость H', 'magnetic field'),
+    V('S_p', 'плотность потока мощности', 'power flux density'),
+  ],
+  'em-energy-density': [
+    V('eps_r', 'диэлектрическая проницаемость', 'permittivity'),
+    V('E_f', 'напряжённость E', 'electric field'),
+    V('mu_r', 'магнитная проницаемость', 'permeability'),
+    V('H_f', 'напряжённость H', 'magnetic field'),
+    V('w_em', 'плотность энергии', 'energy density'),
+  ],
+  'charge-relaxation': [
+    V('eps_r', 'диэлектрическая проницаемость', 'permittivity'),
+    V('sig_m', 'проводимость', 'conductivity'),
+    V('tau_r', 'время релаксации', 'relaxation time'),
+  ],
+  'dielectric-criterion': [
+    V('sig_m', 'проводимость', 'conductivity'),
+    V('f_hz', 'частота', 'frequency'),
+    V('eps_r', 'диэлектрическая проницаемость', 'permittivity'),
+    V('crit', 'критерий σ/(ωε)', 'criterion σ/(ωε)'),
+  ],
+  'waveguide-cutoff': [
+    V('a_wg', 'ширина волновода', 'waveguide width'),
+    V('f_c', 'частота отсечки', 'cutoff frequency'),
+  ],
+  'guide-wavelength': [
+    V('f_hz', 'частота', 'frequency'),
+    V('a_wg', 'ширина волновода', 'waveguide width'),
+    V('lam_0', 'длина волны в вакууме', 'vacuum wavelength'),
+    V('f_c', 'частота отсечки', 'cutoff frequency'),
+    V('lam_g', 'длина волны в волноводе', 'guide wavelength'),
+  ],
+  'coax-impedance': [
+    V('eps_r', 'диэлектрическая проницаемость', 'permittivity'),
+    V('d_in', 'диаметр жилы', 'inner diameter'),
+    V('D_out', 'диаметр оплётки', 'outer diameter'),
+    V('Z_coax', 'импеданс', 'impedance'),
+  ],
+  'reflection-coeff': [
+    V('Z_L', 'сопротивление нагрузки', 'load impedance'),
+    V('Z_0', 'волновое сопротивление', 'line impedance'),
+    V('Gamma_r', 'коэффициент отражения', 'reflection coefficient'),
+  ],
+  'vswr-calc': [
+    V('Gamma_r', 'коэффициент отражения', 'reflection coefficient'),
+    V('SWR', 'КСВН', 'VSWR'),
+  ],
+  'refl-power': [
+    V('Gamma_r', 'коэффициент отражения', 'reflection coefficient'),
+    V('P_refl', 'доля отражённой мощности', 'reflected power share'),
+  ],
+  'friis-link': [
+    V('P_t', 'мощность передатчика', 'transmitter power'),
+    V('G_t', 'усиление передачи', 'transmit gain'),
+    V('G_r', 'усиление приёма', 'receive gain'),
+    V('f_hz', 'частота', 'frequency'),
+    V('d_m', 'дальность', 'distance'),
+    V('lam_rf', 'длина волны', 'wavelength'),
+    V('P_r', 'мощность на приёмнике', 'received power'),
+  ],
+  'cable-atten': [
+    V('alpha_db', 'погонное затухание', 'loss per meter'),
+    V('len_m', 'длина', 'length'),
+    V('A_db', 'затухание, дБ', 'attenuation, dB'),
+    V('P_ratio', 'доля мощности на выходе', 'output power share'),
+  ],
+  'phase-shift-line': [
+    V('f_hz', 'частота', 'frequency'),
+    V('eps_r', 'диэлектрическая проницаемость', 'permittivity'),
+    V('len_m', 'длина', 'length'),
+    V('beta_w', 'фазовая постоянная', 'phase constant'),
+    V('phi_deg', 'набег фазы, градусы', 'phase shift, degrees'),
+  ],
+  'energy-balance-em': [
+    V('P_st', 'мощность источника', 'source power'),
+    V('P_ls', 'потери', 'losses'),
+    V('P_stored', 'запасённая мощность', 'stored power'),
+    V('P_tr', 'излучённая мощность', 'radiated power'),
+  ],
+  'complex-poynting': [
+    V('E_m', 'амплитуда E', 'E amplitude'),
+    V('H_m', 'амплитуда H', 'H amplitude'),
+    V('P_avg', 'средний поток', 'average flux'),
+  ],
+  'field-decay-skin': [
+    V('E0', 'поле на поверхности', 'surface field'),
+    V('delta_s', 'глубина скин-слоя', 'skin depth'),
+    V('x_p', 'глубина', 'depth'),
+    V('E_px', 'поле на глубине', 'field at depth'),
+  ],
+  'propagation-const': [
+    V('f_hz', 'частота', 'frequency'),
+    V('eps_r', 'диэлектрическая проницаемость', 'permittivity'),
+    V('beta_w', 'фазовая постоянная', 'phase constant'),
+  ],
+  // ================= ПОЛУПРОВОДНИКИ =================
+  'drift-velocity': [
+    V('mu_n', 'подвижность', 'mobility'),
+    V('E_f', 'напряжённость', 'field strength'),
+    V('V_dr', 'дрейфовая скорость', 'drift velocity'),
+  ],
+  'mobility-def': [
+    V('V_dr', 'дрейфовая скорость', 'drift velocity'),
+    V('E_f', 'напряжённость', 'field strength'),
+    V('mu_n', 'подвижность', 'mobility'),
+  ],
+  'conductivity-n': [
+    V('n_cn', 'концентрация электронов', 'electron concentration'),
+    V('mu_n', 'подвижность', 'mobility'),
+    V('sig_n', 'проводимость', 'conductivity'),
+  ],
+  'resistivity-semi': [
+    V('sig_n', 'проводимость', 'conductivity'),
+    V('rho_n', 'удельное сопротивление', 'resistivity'),
+  ],
+  'mass-action': [
+    V('n_i', 'собственная концентрация', 'intrinsic concentration'),
+    V('n_cn', 'концентрация электронов', 'electron concentration'),
+    V('p_cn', 'концентрация дырок', 'hole concentration'),
+  ],
+  'intrinsic-ni': [
+    V('N_c', 'плотность состояний зоны проводимости', 'conduction band states'),
+    V('N_v', 'плотность состояний валентной зоны', 'valence band states'),
+    V('E_g', 'ширина запрещённой зоны', 'band gap'),
+    V('T_k', 'температура', 'temperature'),
+    V('n_i', 'собственная концентрация', 'intrinsic concentration'),
+  ],
+  'fermi-midgap': [
+    V('E_g', 'ширина запрещённой зоны', 'band gap'),
+    V('phi_F', 'уровень Ферми', 'Fermi level'),
+  ],
+  'fermi-n-shift': [
+    V('N_d', 'концентрация доноров', 'donor concentration'),
+    V('n_i', 'собственная концентрация', 'intrinsic concentration'),
+    V('phi_T', 'тепловой потенциал', 'thermal voltage'),
+    V('dphi_F', 'сдвиг Ферми', 'Fermi shift'),
+  ],
+  'minority-carriers': [
+    V('n_i', 'собственная концентрация', 'intrinsic concentration'),
+    V('N_d', 'легирование', 'doping'),
+    V('p_min', 'неосновные носители', 'minority carriers'),
+  ],
+  'carrier-lifetime': [
+    V('r_rc', 'коэффициент рекомбинации', 'recombination coefficient'),
+    V('p_cn', 'концентрация дырок', 'hole concentration'),
+    V('tau_n', 'время жизни', 'lifetime'),
+  ],
+  'recomb-rate': [
+    V('r_rc', 'коэффициент рекомбинации', 'recombination coefficient'),
+    V('n_cn', 'концентрация электронов', 'electron concentration'),
+    V('p_cn', 'концентрация дырок', 'hole concentration'),
+    V('R_rc', 'скорость рекомбинации', 'recombination rate'),
+  ],
+  'diffusion-length': [
+    V('D_n', 'коэффициент диффузии', 'diffusion coefficient'),
+    V('tau_n', 'время жизни', 'lifetime'),
+    V('L_n', 'диффузионная длина', 'diffusion length'),
+  ],
+  'einstein-relation': [
+    V('mu_n', 'подвижность', 'mobility'),
+    V('phi_T', 'тепловой потенциал', 'thermal voltage'),
+    V('D_n', 'коэффициент диффузии', 'diffusion coefficient'),
+  ],
+  'diffusion-profile': [
+    V('dn0', 'избыток у поверхности', 'surface excess'),
+    V('L_n', 'диффузионная длина', 'diffusion length'),
+    V('x_p', 'координата', 'coordinate'),
+    V('dn_x', 'избыток в точке', 'excess at point'),
+  ],
+  'thermal-voltage': [
+    V('T_k', 'температура', 'temperature'),
+    V('phi_T', 'тепловой потенциал', 'thermal voltage'),
+  ],
+  'conductivity-total': [
+    V('n_i', 'собственная концентрация', 'intrinsic concentration'),
+    V('mu_n', 'подвижность электронов', 'electron mobility'),
+    V('mu_p', 'подвижность дырок', 'hole mobility'),
+    V('sig_t', 'полная проводимость', 'total conductivity'),
+  ],
+  'bandgap-cutoff': [
+    V('E_g', 'ширина запрещённой зоны, эВ', 'band gap, eV'),
+    V('lam_c', 'край поглощения', 'absorption edge'),
+  ],
+  'drift-current': [
+    V('sig_n', 'проводимость', 'conductivity'),
+    V('E_f', 'напряжённость', 'field strength'),
+    V('j_dr', 'плотность тока', 'current density'),
+  ],
+  'semi-resistor': [
+    V('rho_n', 'удельное сопротивление', 'resistivity'),
+    V('len_w', 'длина', 'length'),
+    V('S_w', 'сечение', 'cross-section'),
+    V('R_sm', 'сопротивление образца', 'sample resistance'),
+  ],
+  'neutrality-check': [
+    V('p_cn', 'дырки', 'holes'),
+    V('n_cn', 'электроны', 'electrons'),
+    V('N_d', 'доноры', 'donors'),
+    V('N_a', 'акцепторы', 'acceptors'),
+    V('bal', 'баланс (должен быть 0)', 'balance (must be 0)'),
+  ],
+  'diode-iv': [
+    V('I_s', 'ток насыщения', 'saturation current'),
+    V('U_d', 'напряжение', 'voltage'),
+    V('phi_T', 'тепловой потенциал', 'thermal voltage'),
+    V('I_d', 'ток диода', 'diode current'),
+  ],
+  'builtin-potential': [
+    V('N_a', 'концентрация акцепторов', 'acceptor concentration'),
+    V('N_d', 'концентрация доноров', 'donor concentration'),
+    V('n_i', 'собственная концентрация', 'intrinsic concentration'),
+    V('phi_T', 'тепловой потенциал', 'thermal voltage'),
+    V('V0', 'контактная разность', 'built-in potential'),
+  ],
+  // ================= ТЕЛЕКОМ И СЕТИ =================
+  'hosts-count': [
+    V('n_h', 'хостовые биты', 'host bits'),
+    V('N_hosts', 'число хостов', 'host count'),
+  ],
+  'subnets-count': [
+    V('m_bits', 'заимствованные биты', 'borrowed bits'),
+    V('S_sub', 'число подсетей', 'subnet count'),
+  ],
+  'broadcast-offset': [
+    V('net_oct', 'октет сети', 'network octet'),
+    V('n_h', 'хостовые биты', 'host bits'),
+    V('bc_oct', 'октет broadcast', 'broadcast octet'),
+  ],
+  'prefix-hostbits': [
+    V('prefix', 'длина префикса', 'prefix length'),
+    V('n_h', 'хостовые биты', 'host bits'),
+  ],
+  'mask-octet': [
+    V('k_bits', 'биты маски в октете', 'mask bits in octet'),
+    V('m_oct', 'октет маски', 'mask octet'),
+  ],
+  'wildcard-octet': [
+    V('m_oct', 'октет маски', 'mask octet'),
+    V('w_oct', 'октет wildcard', 'wildcard octet'),
+  ],
+  'class-c-hosts': [
+    V('N_c', 'хосты класса C', 'class C hosts'),
+  ],
+  'class-b-hosts': [
+    V('N_b', 'хосты класса B', 'class B hosts'),
+  ],
+  'class-a-hosts': [
+    V('N_a', 'хосты класса A', 'class A hosts'),
+  ],
+  'db-ratio': [
+    V('P1', 'мощность 1', 'power 1'),
+    V('P2', 'мощность 2', 'power 2'),
+    V('L_db', 'отношение, дБ', 'ratio, dB'),
+  ],
+  'dbm-power': [
+    V('P_w', 'мощность, Вт', 'power, W'),
+    V('P_dbm', 'мощность, дБм', 'power, dBm'),
+  ],
+  'watts-from-dbm': [
+    V('P_dbm', 'мощность, дБм', 'power, dBm'),
+    V('P_w', 'мощность, Вт', 'power, W'),
+  ],
+  'shannon-capacity': [
+    V('B_hz', 'полоса', 'bandwidth'),
+    V('snr_db', 'отношение сигнал/шум, дБ', 'SNR, dB'),
+    V('C_sh', 'пропускная способность', 'capacity'),
+  ],
+  'fspl-loss': [
+    V('d_m', 'дальность', 'distance'),
+    V('f_hz', 'частота', 'frequency'),
+    V('L_fs', 'потери, дБ', 'loss, dB'),
+  ],
+  'refl-power-t': [
+    V('Gamma_r', 'коэффициент отражения', 'reflection coefficient'),
+    V('P_refl', 'отражённая доля', 'reflected share'),
+    V('P_trans', 'прошедшая доля', 'transmitted share'),
+  ],
+  's-param-db': [
+    V('S_mag', 'модуль S', 'S magnitude'),
+    V('S_db', 'значение, дБ', 'value, dB'),
+  ],
+  'quarter-antenna': [
+    V('f_hz', 'частота', 'frequency'),
+    V('l_ant', 'длина штыря', 'antenna length'),
+  ],
+  'nyquist-rate': [
+    V('B_hz', 'полоса', 'bandwidth'),
+    V('M_lvl', 'число уровней', 'level count'),
+    V('R_ny', 'скорость', 'rate'),
+  ],
+  'thermal-noise-v': [
+    V('T_k', 'температура', 'temperature'),
+    V('R_r', 'сопротивление', 'resistance'),
+    V('B_hz', 'полоса', 'bandwidth'),
+    V('V_n', 'напряжение шума', 'noise voltage'),
+  ],
+  'adc-snr': [
+    V('N_bits', 'разрядность', 'bit depth'),
+    V('SNR_adc', 'отношение сигнал/шум, дБ', 'SNR, dB'),
+  ],
+  'link-margin': [
+    V('P_rx', 'принятая мощность, дБм', 'received power, dBm'),
+    V('P_min', 'чувствительность, дБм', 'sensitivity, dBm'),
+    V('M_link', 'запас, дБ', 'margin, dB'),
+  ],
+  'bytes-fmt': [
+    V('R_bit', 'скорость, бит/с', 'rate, bit/s'),
+    V('R_byte', 'скорость, байт/с', 'rate, byte/s'),
+  ],
+  // ================= ЛОГИКА И БИТЫ =================
+  'and-gate': [
+    V('X1', 'вход 1', 'input 1'),
+    V('X2', 'вход 2', 'input 2'),
+    V('Y_and', 'выход И', 'AND output'),
+  ],
+  'or-gate': [
+    V('X1', 'вход 1', 'input 1'),
+    V('X2', 'вход 2', 'input 2'),
+    V('Y_or', 'выход ИЛИ', 'OR output'),
+  ],
+  'xor-gate': [
+    V('X1', 'вход 1', 'input 1'),
+    V('X2', 'вход 2', 'input 2'),
+    V('Y_xor', 'выход XOR', 'XOR output'),
+  ],
+  'nand-gate': [
+    V('X1', 'вход 1', 'input 1'),
+    V('X2', 'вход 2', 'input 2'),
+    V('Y_nand', 'выход И-НЕ', 'NAND output'),
+  ],
+  'nor-gate': [
+    V('X1', 'вход 1', 'input 1'),
+    V('X2', 'вход 2', 'input 2'),
+    V('Y_nor', 'выход ИЛИ-НЕ', 'NOR output'),
+  ],
+  'and-truth-table': [
+    V('and_t', 'таблица И', 'AND table'),
+  ],
+  'or-truth-table': [
+    V('or_t', 'таблица ИЛИ', 'OR table'),
+  ],
+  'xor-truth-table': [
+    V('xor_t', 'таблица XOR', 'XOR table'),
+  ],
+  'demorgan-and': [
+    V('a_b', 'бит A', 'bit A'),
+    V('b_b', 'бит B', 'bit B'),
+    V('lhs', 'левая часть', 'left side'),
+    V('rhs', 'правая часть', 'right side'),
+  ],
+  'demorgan-or': [
+    V('a_b', 'бит A', 'bit A'),
+    V('b_b', 'бит B', 'bit B'),
+    V('lhs', 'левая часть', 'left side'),
+    V('rhs', 'правая часть', 'right side'),
+  ],
+  'double-negation': [
+    V('a_b', 'бит A', 'bit A'),
+    V('dneg', 'двойное отрицание', 'double negation'),
+  ],
+  'absorption-law': [
+    V('a_b', 'бит A', 'bit A'),
+    V('b_b', 'бит B', 'bit B'),
+    V('absorb', 'результат', 'result'),
+  ],
+  'majority-vote': [
+    V('a_b', 'бит A', 'bit A'),
+    V('b_b', 'бит B', 'bit B'),
+    V('c_b', 'бит C', 'bit C'),
+    V('maj', 'большинство', 'majority'),
+  ],
+  'mux-2to1': [
+    V('S_sw', 'селектор', 'selector'),
+    V('A_in', 'вход A', 'input A'),
+    V('B_in', 'вход B', 'input B'),
+    V('Y_mux', 'выход', 'output'),
+  ],
+  // ================= ЯДЕРНАЯ ФИЗИКА =================
+  'nucleus-radius': [
+    V('A_n', 'массовое число', 'mass number'),
+    V('R0', 'константа', 'constant'),
+    V('R_n', 'радиус ядра', 'nucleus radius'),
+  ],
+  'mass-defect': [
+    V('Z_p', 'число протонов', 'proton count'),
+    V('N_n', 'число нейтронов', 'neutron count'),
+    V('m_p', 'масса протона, а.е.м.', 'proton mass, u'),
+    V('m_n', 'масса нейтрона, а.е.м.', 'neutron mass, u'),
+    V('M_He', 'масса ядра, а.е.м.', 'nucleus mass, u'),
+    V('dm_u', 'дефект масс, а.е.м.', 'mass defect, u'),
+  ],
+  'binding-per-nucleon': [
+    V('dm_u', 'дефект масс, а.е.м.', 'mass defect, u'),
+    V('A_n', 'массовое число', 'mass number'),
+    V('eps_b', 'удельная связь, МэВ', 'binding per nucleon, MeV'),
+  ],
+  'remaining-fraction': [
+    V('k_hl', 'число периодов', 'half-life count'),
+    V('f_left', 'остаток', 'remainder'),
+  ],
+  'mean-lifetime': [
+    V('T_half', 'период полураспада', 'half-life'),
+    V('tau_m', 'среднее время жизни', 'mean lifetime'),
+  ],
+  'detector-counts': [
+    V('A_act', 'активность, Бк', 'activity, Bq'),
+    V('t_s', 'время', 'time'),
+    V('eta_d', 'эффективность', 'efficiency'),
+    V('C_cnt', 'отсчёты', 'counts'),
+  ],
+  'alpha-q-u238': [
+    V('M_U', 'масса U, а.е.м.', 'U mass, u'),
+    V('M_Th', 'масса Th, а.е.м.', 'Th mass, u'),
+    V('M_He', 'масса He, а.е.м.', 'He mass, u'),
+    V('dm_u', 'дефект масс, а.е.м.', 'mass defect, u'),
+    V('Q_al', 'энергия α, МэВ', 'alpha energy, MeV'),
+  ],
+  'fusion-dt': [
+    V('M_D', 'масса D, а.е.м.', 'D mass, u'),
+    V('M_T', 'масса T, а.е.м.', 'T mass, u'),
+    V('M_He', 'масса He, а.е.м.', 'He mass, u'),
+    V('M_n', 'масса нейтрона, а.е.м.', 'neutron mass, u'),
+    V('dm_u', 'дефект масс, а.е.м.', 'mass defect, u'),
+    V('Q_dt', 'выход, МэВ', 'yield, MeV'),
+  ],
+  'fission-energy': [
+    V('E_mev', 'энергия, МэВ', 'energy, MeV'),
+    V('E_j', 'энергия, Дж', 'energy, J'),
+  ],
+  'half-thickness': [
+    V('mu_at', 'коэффициент ослабления', 'attenuation coefficient'),
+    V('x_half', 'слой половинного ослабления', 'half-value layer'),
+  ],
+  'gamma-attenuation': [
+    V('I0', 'начальная интенсивность', 'initial intensity'),
+    V('mu_at', 'коэффициент ослабления', 'attenuation coefficient'),
+    V('x_m', 'толщина', 'thickness'),
+    V('I_x', 'интенсивность', 'intensity'),
+  ],
+  'k-ar-age': [
+    V('D_ar', 'аргон', 'argon'),
+    V('P_k', 'калий', 'potassium'),
+    V('lam_d', 'постоянная распада', 'decay constant'),
+    V('t_age', 'возраст', 'age'),
+  ],
+  'u-to-mev': [
+    V('m_u', 'масса, а.е.м.', 'mass, u'),
+    V('E_mev', 'энергия, МэВ', 'energy, MeV'),
+  ],
+  'tritium-beta-q': [
+    V('M_H3', 'масса трития, а.е.м.', 'tritium mass, u'),
+    V('M_He3', 'масса He-3, а.е.м.', 'He-3 mass, u'),
+    V('dm_u', 'дефект масс, а.е.м.', 'mass defect, u'),
+    V('Q_b', 'энергия, кэВ', 'energy, keV'),
+  ],
+  'pu238-power': [
+    V('m_g', 'масса, г', 'mass, g'),
+    V('M_mol', 'молярная масса', 'molar mass'),
+    V('N_at', 'число ядер', 'number of nuclei'),
+    V('T_half', 'период полураспада, с', 'half-life, s'),
+    V('lam_d', 'постоянная распада', 'decay constant'),
+    V('E_al', 'энергия α, Дж', 'alpha energy, J'),
+    V('P_pu', 'тепловая мощность', 'thermal power'),
+  ],
+  'c14-age': [
+    V('f_c', 'доля C-14', 'C-14 fraction'),
+    V('T_half', 'период полураспада', 'half-life'),
+    V('lam_d', 'постоянная распада', 'decay constant'),
+    V('t_age', 'возраст', 'age'),
+  ],
+  'he4-binding': [
+    V('dm_u', 'дефект масс, а.е.м.', 'mass defect, u'),
+    V('E_he', 'энергия связи, МэВ', 'binding energy, MeV'),
+  ],
+  'pp-chain-q': [
+    V('M_H', 'масса H, а.е.м.', 'H mass, u'),
+    V('M_He', 'масса He, а.е.м.', 'He mass, u'),
+    V('dm_u', 'дефект масс, а.е.м.', 'mass defect, u'),
+    V('Q_pp', 'выход, МэВ', 'yield, MeV'),
+  ],
+  'neutron-activation': [
+    V('N_at', 'число ядер', 'number of nuclei'),
+    V('sig_b', 'сечение, м²', 'cross-section, m²'),
+    V('phi_n', 'поток нейтронов', 'neutron flux'),
+    V('lam_d', 'постоянная распада', 'decay constant'),
+    V('t_s', 'время', 'time'),
+    V('A_nv', 'наведённая активность', 'induced activity'),
+  ],
+  'fission-power-rate': [
+    V('R_fs', 'делений в секунду', 'fissions per second'),
+    V('E_j', 'энергия деления, Дж', 'fission energy, J'),
+    V('P_fs', 'мощность', 'power'),
+  ],
+  // ================= МАТЕМАТИКА · КОМПЛЕКСНЫЕ =================
+  'complex-add': [
+    V('z1', 'число 1', 'number 1'),
+    V('z2', 'число 2', 'number 2'),
+    V('z_sum', 'сумма', 'sum'),
+  ],
+  'complex-mul': [
+    V('z1', 'число 1', 'number 1'),
+    V('z2', 'число 2', 'number 2'),
+    V('z_mul', 'произведение', 'product'),
+  ],
+  'complex-conj': [
+    V('z_c', 'комплексное число', 'complex number'),
+  ],
+  'complex-div': [
+    V('z_q', 'частное', 'quotient'),
+  ],
+  'complex-arg': [
+    V('z_c', 'комплексное число', 'complex number'),
+  ],
+  'complex-polar-form': [
+    V('z_c', 'комплексное число', 'complex number'),
+    V('phi', 'аргумент', 'argument'),
+    V('z_rec', 'восстановленное число', 'recovered number'),
+  ],
+  'demoivre-check': [
+    V('z_c', 'комплексное число', 'complex number'),
+    V('w1', 'степень напрямую', 'direct power'),
+    V('phi', 'аргумент', 'argument'),
+    V('w2', 'степень по Муавру', 'De Moivre power'),
+  ],
+  'mod-mult-check': [
+    V('z1', 'число 1', 'number 1'),
+    V('z2', 'число 2', 'number 2'),
+  ],
+  'mandelbrot-iter': [
+    V('c_m', 'параметр', 'parameter'),
+    V('z1', 'итерация 1', 'iteration 1'),
+    V('z2', 'итерация 2', 'iteration 2'),
+    V('z3', 'итерация 3', 'iteration 3'),
+  ],
+  'complex-plane-dist': [
+    V('z1', 'точка 1', 'point 1'),
+    V('z2', 'точка 2', 'point 2'),
+    V('d_pl', 'расстояние', 'distance'),
+  ],
+  'rotation-j': [
+    V('z_c', 'число', 'number'),
+    V('z_r', 'повёрнутое число', 'rotated number'),
+  ],
+  're-additive': [
+    V('z1', 'число 1', 'number 1'),
+    V('z2', 'число 2', 'number 2'),
+  ],
+  'modulus-squared': [
+    V('z_c', 'комплексное число', 'complex number'),
+  ],
+  'triangle-inequality': [
+    V('z1', 'число 1', 'number 1'),
+    V('z2', 'число 2', 'number 2'),
+  ],
+  'complex-inverse': [
+    V('z_c', 'комплексное число', 'complex number'),
+  ],
+  // ================= МАТЕМАТИКА · РЯДЫ =================
+  'sum-first-n': [
+    V('n_n', 'число членов', 'number of terms'),
+    V('S_f', 'сумма', 'sum'),
+  ],
+  'sum-squares': [
+    V('n_n', 'число членов', 'number of terms'),
+    V('S_sq', 'сумма квадратов', 'sum of squares'),
+  ],
+  'sum-cubes': [
+    V('n_n', 'число членов', 'number of terms'),
+    V('S_cb', 'сумма кубов', 'sum of cubes'),
+  ],
+  'geom-partial': [
+    V('q_g', 'знаменатель', 'common ratio'),
+    V('n_n', 'число членов', 'number of terms'),
+    V('S_gp', 'частичная сумма', 'partial sum'),
+  ],
+  'harmonic-partial': [
+    V('n_n', 'число членов', 'number of terms'),
+    V('H_ap', 'приближение', 'approximation'),
+  ],
+  'ratio-test': [
+    V('n_n', 'номер', 'number'),
+    V('L_rt', 'предел отношения', 'ratio limit'),
+  ],
+  'root-test': [
+    V('n_n', 'номер', 'number'),
+    V('L_crt', 'предел корня', 'root limit'),
+  ],
+  'leibniz-bound': [
+    V('n_n', 'номер', 'number'),
+    V('R_bd', 'граница остатка', 'remainder bound'),
+  ],
+  'taylor-remainder': [
+    V('M_c', 'максимум производной', 'derivative maximum'),
+    V('x_p', 'точка', 'point'),
+    V('n_n', 'степень', 'degree'),
+    V('R_t', 'остаток', 'remainder'),
+  ],
+  'binomial-approx': [
+    V('x_p', 'малый прирост', 'small increment'),
+    V('a_p', 'показатель', 'exponent'),
+  ],
+  'fourier-b1-line': [
+    V('b1', 'коэффициент b₁', 'coefficient b₁'),
+  ],
+  'fourier-square-3': [
+    V('x_p', 'точка', 'point'),
+    V('S3', 'сумма 3 гармоник', '3-harmonic sum'),
+  ],
+  'telescoping-sum': [
+    V('n_n', 'число членов', 'number of terms'),
+  ],
+  'fourier-a1-x2': [
+    V('a1', 'коэффициент a₁', 'coefficient a₁'),
+  ],
+  // ================= МАТЕМАТИКА · ДУ =================
+  'ode-first-order-check': [
+    V('lhs', 'левая часть в точке', 'left side at point'),
+  ],
+  'ode-equilibrium': [
+    V('P_c', 'коэффициент', 'coefficient'),
+    V('y_ss', 'стационар', 'steady state'),
+  ],
+  'newton-cooling': [
+    V('T_s', 'температура среды', 'ambient temperature'),
+    V('T0', 'начальная температура', 'initial temperature'),
+    V('k_c', 'коэффициент теплоотдачи', 'heat transfer coefficient'),
+    V('t_s', 'время', 'time'),
+    V('T_t', 'температура', 'temperature'),
+  ],
+  'logistic-growth': [
+    V('K_cp', 'ёмкость среды', 'carrying capacity'),
+    V('A_l', 'константа', 'constant'),
+    V('r_g', 'скорость роста', 'growth rate'),
+    V('t_s', 'время', 'time'),
+    V('P_l', 'популяция', 'population'),
+  ],
+  'harmonic-analytic': [
+    V('A_m', 'амплитуда', 'amplitude'),
+    V('w_0', 'частота', 'frequency'),
+    V('t_s', 'время', 'time'),
+    V('x_an', 'смещение', 'displacement'),
+  ],
+  'complex-roots-sol': [
+    V('C1', 'константа 1', 'constant 1'),
+    V('C2', 'константа 2', 'constant 2'),
+    V('alpha', 'затухание', 'damping'),
+    V('beta', 'частота', 'frequency'),
+    V('x_p', 'точка', 'point'),
+    V('y_cr', 'решение', 'solution'),
+  ],
+  'euler-step': [
+    V('y0', 'старт', 'start'),
+    V('h_st', 'шаг', 'step'),
+    V('f_xy', 'правая часть', 'right side'),
+    V('y1', 'следующая точка', 'next point'),
+  ],
+  'exp-growth-check': [
+    V('dif', 'невязка (должна быть 0)', 'residual (must be 0)'),
+  ],
+  'rc-ode-sol': [
+    V('Q0', 'начальный заряд', 'initial charge'),
+    V('R_r', 'сопротивление', 'resistance'),
+    V('C_c', 'ёмкость', 'capacitance'),
+    V('t_s', 'время', 'time'),
+    V('q_t', 'заряд', 'charge'),
+  ],
+  'rl-current': [
+    V('E_emf', 'ЭДС', 'EMF'),
+    V('R_r', 'сопротивление', 'resistance'),
+    V('L_in', 'индуктивность', 'inductance'),
+    V('t_s', 'время', 'time'),
+    V('I_rl', 'ток', 'current'),
+  ],
+  'small-angle-error': [
+    V('theta', 'угол', 'angle'),
+    V('rel', 'относительная ошибка', 'relative error'),
+  ],
+  'superposition-beats': [
+    V('t_s', 'время', 'time'),
+    V('S_sp', 'сумма', 'sum'),
+  ],
+  'sine-ode-check': [
+    V('dif', 'невязка (должна быть 0)', 'residual (must be 0)'),
+  ],
+  'repeated-root-sol': [
+    V('C1', 'константа 1', 'constant 1'),
+    V('C2', 'константа 2', 'constant 2'),
+    V('lam', 'корень', 'root'),
+    V('x_p', 'точка', 'point'),
+    V('y_rr', 'решение', 'solution'),
+  ],
+  'terminal-velocity': [
+    V('m_kg', 'масса', 'mass'),
+    V('g_g', 'ускорение свободного падения', 'free-fall acceleration'),
+    V('k_dr', 'сопротивление среды', 'drag coefficient'),
+    V('v_term', 'установившаяся скорость', 'terminal velocity'),
+  ],
+  'direction-field-slope': [
+    V('x_p', 'координата x', 'x coordinate'),
+    V('y_p', 'координата y', 'y coordinate'),
+    V('slope', 'наклон', 'slope'),
   ],
 };
