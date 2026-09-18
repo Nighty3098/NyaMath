@@ -24,7 +24,7 @@ export const math: MathJsInstance = create(all, {});
   for (const k of [
     'nlsolve', 'find', 'minerr', 'minimize', 'maximize', 'root', 'bvp',
     'ndiff', 'nint', 'nsum', 'nprod', 'numdiff', 'numint', 'numsum', 'numprod',
-    'taylor', 'limit', 'numgrad',
+    'taylor', 'limit', 'numgrad', 'uMC',
   ]) {
     try {
       math.import({ [k]: packScope[k] } as never, { override: false });

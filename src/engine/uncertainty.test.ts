@@ -102,3 +102,65 @@ describe('5725 / 21748 schemes', () => {
     expect(num('uTopDown(0.15, 0.08)')).toBeCloseTo(0.17, 12);
   });
 });
+
+describe('GUM-S1 Monte-Carlo (uMC)', () => {
+  const vec = (expr: string): number[] => {
+    const r = evaluateLine(expr, createBaseScope());
+    if (r.error) throw new Error(`${expr} → ${r.error}`);
+    const v = r.value as { toArray?: () => number[] } | number;
+    if (v !== null && typeof v === 'object' && typeof v.toArray === 'function') return v.toArray();
+    return [v as number];
+  };
+
+  it('single normal input: mean/u/U match GUM-S1', () => {
+    // x ~ N(10, 0.5)² формально; u(x)=0.5, U95=1.95996·0.5
+    const [mean, u, U] = vec('uMC("x", [[x, 10, 0.5, "norm"]], 200000, 42)');
+    expect(Math.abs(mean - 10)).toBeLessThan(0.005);
+    expect(Math.abs(u - 0.5)).toBeLessThan(0.5 * 0.02);
+    expect(Math.abs(U - 0.5 * 1.959964)).toBeLessThan(0.5 * 1.959964 * 0.02);
+  });
+
+  it('propagates via RSS for independent normals (GUM-S1 9.4)', () => {
+    // модель a+b-c с a=N(100,1), b=N(50,0.5), c=N(2,0.2):
+    // y=148, u=√(1²+0.5²+0.2²)=1.135782
+    const [mean, u] = vec('uMC("a+b-c", [[a, 100, 1, "norm"], [b, 50, 0.5, "norm"], [c, 2, 0.2, "norm"]], 200000, 7)');
+    expect(Math.abs(mean - 148)).toBeLessThan(0.01);
+    const wantU = Math.sqrt(1 + 0.25 + 0.04);
+    expect(Math.abs(u - wantU)).toBeLessThan(wantU * 0.02);
+  });
+
+  it('rect/tri/ushape stds match GUM 4.3', () => {
+    // a/√3, a/√6, a/√2
+    const [m1, u1] = vec('uMC("x", [[x, 0, 1, "rect"]], 200000, 1)');
+    expect(Math.abs(m1)).toBeLessThan(0.005);
+    expect(Math.abs(u1 - 1 / Math.sqrt(3))).toBeLessThan((1 / Math.sqrt(3)) * 0.02);
+    const [, u2] = vec('uMC("x", [[x, 0, 1, "tri"]], 200000, 1)');
+    expect(Math.abs(u2 - 1 / Math.sqrt(6))).toBeLessThan((1 / Math.sqrt(6)) * 0.02);
+    const [, u3] = vec('uMC("x", [[x, 0, 1, "ushape"]], 200000, 1)');
+    expect(Math.abs(u3 - 1 / Math.sqrt(2))).toBeLessThan((1 / Math.sqrt(2)) * 0.02);
+  });
+
+  it('deterministic under the same seed; differs without it', () => {
+    const a = vec('uMC("sqrt(x)", [[x, 4, 0.1, "norm"]], 50000, 123)');
+    const b = vec('uMC("sqrt(x)", [[x, 4, 0.1, "norm"]], 50000, 123)');
+    const c = vec('uMC("sqrt(x)", [[x, 4, 0.1, "norm"]], 50000, 124)');
+    expect(a).toEqual(b);
+    expect(a[0]).not.toBe(c[0]);
+  });
+
+  it('95% interval brackets the analytic value', () => {
+    const [mean, , U] = vec('uMC("x", [[x, 0, 1, "norm"]], 200000, 9)');
+    expect(Math.abs(mean)).toBeLessThan(0.005);
+    // эмпирические квантили 200k норм. шумят ~±0.01: допуск 0.05 (≈2.5σ)
+    expect(Math.abs(U - 1.959964)).toBeLessThan(0.05);
+  });
+
+  it('rejects bad stub inputs', () => {
+    expect(evaluateLine('uMC("x", [] , 100) =', createBaseScope()).error).not.toBeNull();
+    expect(evaluateLine('uMC("x", [[x, 1, -1]], 100) =', createBaseScope()).error).not.toBeNull();
+    expect(evaluateLine('uMC("x", [[x, 1]], 100) =', createBaseScope()).error).not.toBeNull();
+    expect(evaluateLine('uMC("x", [[1, 2, 0.1]], 100) =', createBaseScope()).error).not.toBeNull();
+    expect(evaluateLine('uMC("x", [[x, 1, 0.1, "cauchy"]], 100) =', createBaseScope()).error).not.toBeNull();
+    expect(evaluateLine('uMC("x", [[x, 1, 0.1]], 50) =', createBaseScope()).error).not.toBeNull();
+  });
+});

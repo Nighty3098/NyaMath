@@ -4,6 +4,7 @@
  */
 import type { MathJsInstance, MathNode } from 'mathjs';
 import { t, type LText, type PackId } from '../i18n';
+import { SI_CONSTANTS, CODATA2022 } from './constants';
 import { getCompiledPre, preprocessJ, preprocessRanges } from './mathEngine';
 import { adaptiveSimpson, brent, nelderMead, newtonSystem, rk4Step } from './numeric';
 
@@ -82,9 +83,10 @@ export function buildPackScope(math: MathJsInstance): Scope {
     return a.length > 1 ? a[1] : 1;
   };
 
-  const C = 299792458;
-  const MU0 = 4 * Math.PI * 1e-7;
-  const EPS0 = 1 / (MU0 * C * C);
+  const C = SI_CONSTANTS.c;
+  // μ₀/ε₀/η₀ — измеряемые CODATA 2022 (после SI-2019 не 4π·10⁻⁷ и не 1/(μ₀c²)):
+  const MU0 = CODATA2022.mu_0;
+  const EPS0 = CODATA2022.eps_0;
 
   /* ----- помощники для rawArgs-функций (доступ к scope вызывающего) ----- */
   type RawFn = (args: MathNode[], math: MathJsInstance, scope: Scope) => unknown;
@@ -450,10 +452,10 @@ export function buildPackScope(math: MathJsInstance): Scope {
   };
 
   /* ----- общие помощники новых паков (ВТ / высшая математика / физика / ЭМ) ----- */
-  const ETA0 = Math.sqrt(MU0 / EPS0);
-  const R_GAS = 8.314462618;
-  const SIGMA_SB = 5.670374419e-8;
-  const G_STD = 9.80665;
+  const ETA0 = CODATA2022.Z_0;
+  const R_GAS = SI_CONSTANTS.R_gas;
+  const SIGMA_SB = SI_CONSTANTS.sigma_sb;
+  const G_STD = SI_CONSTANTS.g_std;
 
   const truncI = (v: unknown): number => {
     const n = Number(v);
@@ -645,6 +647,47 @@ export function buildPackScope(math: MathJsInstance): Scope {
     const n = Number(a);
     if (!isFinite(n)) throw new Error(t('e.calcArgs'));
     return n;
+  };
+
+  // ---- помощники Bode (САУ/АЧХ): полиномы от jω -------------------------
+  const coefArr = (v: unknown): number[] => {
+    const a = asArr(v).map(Number);
+    if (!a.length || a.some((z) => !isFinite(z))) throw new Error(t('e.calcArgs'));
+    return a;
+  };
+  /** Значение полинома (коэфф. старшая→младшая) на jω: {re, im}. */
+  const polyAt = (c: number[], w: number): { re: number; im: number } => {
+    let re = 0;
+    let im = 0;
+    for (const k of c) {
+      const nre = -im * w;
+      const nim = re * w;
+      re = nre + k;
+      im = nim;
+    }
+    return { re, im };
+  };
+  /** H(jω) = num/den, комплексные re/im (throws при полюсе на оси). */
+  const pqAt = (num: number[], den: number[], w: number): { re: number; im: number } => {
+    const n = polyAt(num, w);
+    const d = polyAt(den, w);
+    const denAbs2 = d.re * d.re + d.im * d.im;
+    if (!(denAbs2 > 0)) throw new Error(t('e.calcArgs'));
+    return { re: (n.re * d.re + n.im * d.im) / denAbs2, im: (n.im * d.re - n.re * d.im) / denAbs2 };
+  };
+  /** |H(jω)| */
+  const magAt = (num: number[], den: number[], w: number): number => {
+    const q = pqAt(num, den, w);
+    return Math.sqrt(q.re * q.re + q.im * q.im);
+  };
+  /** Скаляр → скаляр; массив/матрица → поэлементно (mathjs Matrix). */
+  const asArrAny = <T>(w: unknown, f: (x: number) => T): T | T[] => {
+    if (Array.isArray(w)) return math.matrix((w as unknown[]).map((z) => f(Number(z))) as never) as unknown as T[];
+    if (w !== null && typeof w === 'object' && 'toArray' in (w as object)) {
+      const flat = ((w as { toArray: () => unknown }).toArray() as unknown[]).flat(Infinity);
+      return math.matrix(flat.map((z) => f(Number(z))) as never) as unknown as T[];
+    }
+    return f(needNum(w));
   };
 
   const zinLineImpl = (ZL: unknown, Z0: unknown, betaL: unknown): unknown => {
@@ -855,18 +898,30 @@ export function buildPackScope(math: MathJsInstance): Scope {
       return math.matrix(f.map((x) => (x - m) / (sd || 1)));
     },
 
-    // ---------- физика: константы SI ----------
+    // ---------- физика: константы SI (CODATA-2022, см. constants.ts) ----------
     c_light: C,
     mu_0: MU0,
     eps_0: EPS0,
-    h_planck: 6.62607015e-34,
-    hbar: 6.62607015e-34 / (2 * Math.PI),
-    k_B: 1.380649e-23,
-    q_e: 1.602176634e-19,
-    N_A: 6.02214076e23,
-    G_const: 6.6743e-11,
-    m_e: 9.1093837015e-31,
-    m_p: 1.67262192369e-27,
+    h_planck: SI_CONSTANTS.h,
+    hbar: SI_CONSTANTS.hbar,
+    k_B: SI_CONSTANTS.k_B,
+    q_e: SI_CONSTANTS.q_e,
+    N_A: SI_CONSTANTS.N_A,
+    G_const: CODATA2022.G_const,
+    m_e: CODATA2022.m_e,
+    m_p: CODATA2022.m_p,
+    m_n: CODATA2022.m_n,
+    u_mass: CODATA2022.u_mass,
+    alpha: CODATA2022.alpha,
+    alpha_inv: CODATA2022.alpha_inv,
+    mu_B: CODATA2022.mu_B,
+    mu_N: CODATA2022.mu_N,
+    R_inf: CODATA2022.R_inf,
+    a0: CODATA2022.a0,
+    r_e: CODATA2022.r_e,
+    lam_compton: CODATA2022.lam_compton,
+    Z_0: CODATA2022.Z_0,
+    F_const: SI_CONSTANTS.F_const,
 
     // ---------- телекоммуникации ----------
     // dB — отношение мощностей; dBV — отношение напряжений
@@ -1588,9 +1643,9 @@ export function buildPackScope(math: MathJsInstance): Scope {
     R_gas: R_GAS,
     sigma_sb: SIGMA_SB,
     g_std: G_STD,
-    atm_pa: 101325,
-    au_m: 1.495978707e11,
-    ly_m: 9.4607304725808e15,
+    atm_pa: SI_CONSTANTS.atm_pa,
+    au_m: SI_CONSTANTS.au_m,
+    ly_m: SI_CONSTANTS.ly_m,
     kinE: (m: unknown, v: unknown) => {
       const mm = needNum(m);
       const vv = needNum(v);
@@ -1823,6 +1878,63 @@ export function buildPackScope(math: MathJsInstance): Scope {
     },
     db2mag: (db: unknown) => 10 ** (needNum(db) / 20),
 
+    // ---------- САУ / АЧХ-ФЧХ (Bode) ----------
+    // Передаточная функция задаётся коэффициентами полиномов (старшая →
+    // младшая): H(s) = num/den. Частоты — радиан/с, массив или скаляр.
+    bodeH: (num: unknown, den: unknown, w: unknown) => {
+      const N = coefArr(num);
+      const D = coefArr(den);
+      return asArrAny(w, (x0) => {
+        const q = pqAt(N, D, x0);
+        return math.complex(q.re, q.im);
+      });
+    },
+    bodeMagDb: (num: unknown, den: unknown, w: unknown) => {
+      const N = coefArr(num);
+      const D = coefArr(den);
+      return asArrAny(w, (x) => {
+        const m = magAt(N, D, x);
+        return m > 0 ? 20 * Math.log10(m) : -Infinity;
+      });
+    },
+    bodePhaseDeg: (num: unknown, den: unknown, w: unknown) => {
+      const N = coefArr(num);
+      const D = coefArr(den);
+      return asArrAny(w, (x) => {
+        const { re, im } = pqAt(N, D, x);
+        return (Math.atan2(im, re) * 180) / Math.PI; // (−180, 180]
+      });
+    },
+    bodeFreqs: (wmin: unknown, wmax: unknown, n?: unknown) => {
+      const lo = needNum(wmin);
+      const hi = needNum(wmax);
+      const nn = n === undefined ? 200 : needNum(n);
+      if (!(lo > 0 && hi > lo && Number.isInteger(nn) && nn >= 3 && nn <= 1000)) throw new Error(t('e.calcArgs'));
+      const out: number[] = new Array(nn);
+      const llo = Math.log(lo);
+      const lhi = Math.log(hi);
+      for (let k = 0; k < nn; k++) out[k] = Math.exp(llo + (k / (nn - 1)) * (lhi - llo));
+      return math.matrix(out);
+    },
+    // Сводная таблица Bode: [ω рад/с, |H| в дБ] (n строк × 2 столбца)
+    bode: (num: unknown, den: unknown, wmin?: unknown, wmax?: unknown, n?: unknown) => {
+      const lo = wmin === undefined ? 1e-2 : needNum(wmin);
+      const hi = wmax === undefined ? 1e3 : needNum(wmax);
+      const nn = n === undefined ? 200 : needNum(n);
+      const N = coefArr(num);
+      const D = coefArr(den);
+      if (!(lo > 0 && hi > lo && Number.isInteger(nn) && nn >= 3 && nn <= 1000)) throw new Error(t('e.calcArgs'));
+      const llo = Math.log(lo);
+      const lhi = Math.log(hi);
+      const rows: number[][] = [];
+      for (let k = 0; k < nn; k++) {
+        const x = Math.exp(llo + (k / (nn - 1)) * (lhi - llo));
+        const m = magAt(N, D, x);
+        rows.push([x, m > 0 ? 20 * Math.log10(m) : -Infinity]);
+      }
+      return math.matrix(rows);
+    },
+
     // ---------- неопределённость измерений ----------
     // GUM: JCGM 100:2008 (текст: bipm.org), ГОСТ 34100.3-2017 ≡ ISO/IEC Guide 98-3.
     // МИ-школа: МИ 1317, ГОСТ Р 8.736-2011 (многократные прямые измерения).
@@ -1904,6 +2016,145 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const place = Math.floor(Math.log10(ru)) - 1; // декада 2-й значащей цифры
       return Number((Math.round(Y / 10 ** place) * 10 ** place).toPrecision(12));
     },
+    // ── Монте-Карло: GUM Supplement 1 (JCGM 101:2008), воспроизводимый seed.
+    // uMC("R1*R2/(R1+R2)", [[R1, 100, 1, "rect"], [R2, 50, 0.5, "norm"]], 200000) →
+    //   [y_mean, u_y, U95]
+    uMC: raw((args, _m, scope) => {
+      const model = needStr(evNode(args[0], scope));
+      const N = args.length > 2 && evNode(args[2], scope) !== null ? needNum(evNode(args[2], scope)) : 200000;
+      const seed = args.length > 3 && evNode(args[3], scope) !== null ? needNum(evNode(args[3], scope)) : null;
+      // Разбор матрицы входов: имена берутся как символы из AST (без вычисления),
+      // чтобы запись [[R1, 100, 1, "rect"]] работала без предобъявления R1.
+      type Cell = { type: 'name' | 'num' | 'str' | 'other'; value: string | number | null };
+      const astCell = (n: MathNode): Cell => {
+        if (n.type === 'SymbolNode') return { type: 'name', value: (n as unknown as { name: string }).name };
+        const v = (n as { value?: unknown }).value;
+        if (n.type === 'ConstantNode' && typeof v === 'number') return { type: 'num', value: v };
+        if (n.type === 'ConstantNode' && typeof v === 'string') return { type: 'str', value: v };
+        if (n.type === 'OperatorNode' && (n as { isUnary?: boolean }).isUnary) {
+          const inner = astCell((n as { args?: MathNode[] }).args?.[0] as MathNode);
+          if (inner.type === 'num') return { type: 'num', value: -Number(inner.value) };
+        }
+        return { type: 'other', value: null };
+      };
+      const astRowsIn = (n: MathNode): Cell[][] | null => {
+        const rows = (n as { items?: MathNode[] }).items;
+        if ((n.type !== 'ArrayNode' && n.type !== 'MatrixNode') || !rows) return null;
+        const out: Cell[][] = [];
+        for (const rn of rows) {
+          const cells = (rn as { items?: MathNode[] }).items;
+          if ((rn.type !== 'ArrayNode' && rn.type !== 'MatrixNode') || !cells) return null;
+          out.push(cells.map(astCell));
+        }
+        return out.length ? out : null;
+      };
+      const rowInputs = (r: Cell[]): { name: string; mean: number; u: number; dist: string } => {
+        if (r.length < 3) throw new Error(t('e.calcArgs'));
+        const name = String(r[0].value ?? '');
+        if (r[0].type !== 'name' && r[0].type !== 'str') throw new Error(t('e.calcArgs'));
+        if (!/^[A-Za-z_]\w*$/.test(name)) throw new Error(t('e.calcArgs'));
+        const numOf = (c: Cell): number => {
+          if (c.type === 'num') return Number(c.value);
+          if (c.value === null) throw new Error(t('e.calcArgs'));
+          return needNum(c.value);
+        };
+        const mean = numOf(r[1]);
+        const u = numOf(r[2]);
+        let dist = 'norm';
+        if (r.length > 3 && r[3] && r[3].type === 'str') {
+          dist = String(r[3].value).toLowerCase();
+        } else if (r.length > 3 && r[3] && r[3].type !== 'other') {
+          throw new Error(t('e.calcArgs'));
+        }
+        if (!(u >= 0) || !['norm', 'rect', 'tri', 'ushape'].includes(dist)) throw new Error(t('e.calcArgs'));
+        return { name, mean, u, dist };
+      };
+      let inputs: ReturnType<typeof rowInputs>[];
+      const ast = astRowsIn(args[1]);
+      if (ast) {
+        inputs = ast.map(rowInputs);
+      } else {
+        // Резервный путь: уже вычисленная матрица (например, из переменной)
+        const M0 = evNode(args[1], scope);
+        let a: unknown;
+        if (M0 !== null && typeof M0 === 'object' && 'toArray' in (M0 as object)) {
+          a = ((M0 as { toArray: () => unknown }).toArray() as unknown[]).map((r) => (Array.isArray(r) ? [...r] : [r]));
+        } else if (Array.isArray(M0)) {
+          a = (M0 as unknown[]).map((r) => (Array.isArray(r) ? [...r] : [r]));
+        } else {
+          throw new Error(t('e.calcArgs'));
+        }
+        inputs = (a as unknown[][]).map((r) => {
+          const c0 = String(r[0]);
+          const cell0: Cell = /^[A-Za-z_]\w*$/.test(c0) ? { type: 'name', value: c0 } : { type: 'str', value: c0 };
+          return rowInputs([
+            cell0,
+            { type: 'other', value: r[1] as number },
+            { type: 'other', value: r[2] as number },
+            r.length > 3 && r[3] !== undefined ? { type: 'str', value: String(r[3]) } : { type: 'other', value: null },
+          ]);
+        });
+      }
+      if (!inputs.length || !Number.isInteger(N) || N < 100 || N > 2000000) throw new Error(t('e.calcArgs'));
+      const ev = numEvaluator(model, scope);
+      // mulberry32 — детерминированный PRNG; gaussian — Box–Muller на той же ленте
+      const makePrng = (): (() => number) => {
+        let s = (seed === null ? (Math.random() * 0xffffffff) >>> 0 : (seed >>> 0)) || 0x9e3779b9;
+        return () => {
+          s = (s + 0x6d2b79f5) >>> 0;
+          let x = s;
+          x = Math.imul(x ^ (x >>> 15), x | 1);
+          x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+          return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+        };
+      };
+      const prng = makePrng();
+      let spare: number | null = null;
+      const gauss = (): number => {
+        if (spare !== null) {
+          const v = spare;
+          spare = null;
+          return v;
+        }
+        let u = 0;
+        let v = 0;
+        do {
+          u = prng() * 2 - 1;
+          v = prng() * 2 - 1;
+        } while (u * u + v * v > 1 || u * u + v * v === 0);
+        const s = Math.sqrt((-2 * Math.log(u * u + v * v)) / (u * u + v * v));
+        spare = u * s;
+        return v * s;
+      };
+      const sample = (inp: { mean: number; u: number; dist: string }): number => {
+        const { mean, u, dist } = inp;
+        if (dist === 'rect') return mean + u * (2 * prng() - 1); // GUM-S1 6.4.4.1
+        if (dist === 'tri') return mean + u * (prng() + prng() - 1); // 6.4.4.2: треугольная
+        if (dist === 'ushape') return mean + u * Math.cos(Math.PI * prng()); // 6.4.4.3: U-образная
+        return mean + u * gauss(); // 6.4.3: нормальная
+      };
+      const ys = new Float64Array(N);
+      const bind: Record<string, number> = {};
+      for (let i = 0; i < N; i++) {
+        for (const inp of inputs) bind[inp.name] = sample(inp);
+        let y: number;
+        try {
+          y = ev(bind);
+        } catch {
+          throw new Error(t('e.calcArgs'));
+        }
+        ys[i] = y;
+      }
+      const mean = ys.reduce((s, y) => s + y, 0) / N;
+      let s2 = 0;
+      for (let i = 0; i < N; i++) s2 += (ys[i] - mean) * (ys[i] - mean);
+      const uy = Math.sqrt(s2 / (N - 1)); // GUM-S1 8.3: стандартная неопределённость
+      const sorted = Array.from(ys).sort((p, q) => p - q);
+      const pct = (p: number): number => sorted[Math.min(N - 1, Math.max(0, Math.round(p * (N - 1))))];
+      const lo = pct(0.025);
+      const hi = pct(0.975);
+      return math.matrix([mean, uy, (hi - lo) / 2]); // GUM-S1 7.10: 95% интервал
+    }),
     confEps: (S: unknown, n: unknown, P?: unknown) => {
       const SS = needNum(S);
       const N = needNum(n);
@@ -2073,6 +2324,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
 export const PACK_NAMES = [
   'seq', 'linspace', 'rows', 'cols', 'rms', 'sinc', 'augment', 'zscore',
   'c_light', 'mu_0', 'eps_0', 'h_planck', 'hbar', 'k_B', 'q_e', 'N_A', 'G_const', 'm_e', 'm_p',
+  'm_n', 'u_mass', 'alpha', 'alpha_inv', 'mu_B', 'mu_N', 'R_inf', 'a0', 'r_e', 'lam_compton',
+  'Z_0', 'F_const',
   'R_gas', 'sigma_sb', 'g_std', 'atm_pa', 'au_m', 'ly_m',
   'dB', 'dBV', 'idB', 'dBm', 'WdBm', 'lambda_f', 'fspl', 'fspl_dB', 'defunit',
   'convertTo', 'inUnits', 'hasUnit',
@@ -2101,12 +2354,14 @@ export const PACK_NAMES = [
   'coaxCap', 'coaxInd', 'coaxZ', 'plateCap', 'solenoidL', 'microstripZ',
   'wgCutoff', 'wgLambda', 'coulombF', 'ePointQ', 'bWire', 'cycFreq',
   'friisPr', 'friisDb', 'sMag2db', 'db2mag',
+  // САУ / АЧХ-ФЧХ (Bode)
+  'bodeH', 'bodeMagDb', 'bodePhaseDeg', 'bodeFreqs', 'bode',
   // программирование: строки/массивы
   'chrU', 'ordU', 'strlenU', 'strUpper', 'strLower', 'substrU',
   'splitStr', 'joinStr', 'parseNum', 'uniqueVals', 'histC',
   // неопределённость измерений (GUM / МИ / ПМГ / 5725 / 21748)
   'uMean', 'nuMean', 'uRect', 'uTri', 'uNorm', 'uUshape', 'uComb', 'nuEff',
-  'normQuant', 'tStud', 'kCov', 'uExpand', 'uncRound', 'resRound',
+  'normQuant', 'tStud', 'kCov', 'uExpand', 'uncRound', 'resRound', 'uMC',
   'confEps', 'thetaComb', 'deltaComb', 'pmgSumAbs', 'pmgRSS', 'pmgExpand',
   'repLim', 'uTopDown', 'prec5725',
 ];
@@ -2168,6 +2423,7 @@ export const SNIPPETS: Snippet[] = [
   { pack: 'uncertainty', label: { ru: 'Тип B (распределения)', en: 'Type B (distributions)' }, hint: { ru: 'rect/tri/norm/ushape', en: 'rect/tri/norm/ushape' }, doc: 'GUM 4.3 · ГОСТ 34100.3-2017', code: 'uRect(0.5) =\nuTri(0.5) =\nuNorm(0.3, 2) =', kind: 'math', plot2d: 'uRect(x); uTri(x)' },
   { pack: 'uncertainty', label: { ru: 'Степени свободы + k', en: 'DoF + coverage k' }, hint: { ru: 'Уэлч–Саттертуэйт, Стьюдент', en: 'Welch–Satterthwaite, Student' }, doc: 'GUM G.4, 6.3 · ГОСТ 34100.3-2017', code: 'us := [0.12, 0.23]\nne := nuEff(us, [9, Infinity])\nkCov(ne) =', kind: 'math' },
   { pack: 'uncertainty', label: { ru: 'Округление результата', en: 'Result rounding' }, hint: { ru: '2 значащие цифры (GUM 7)', en: '2 significant digits (GUM 7)' }, doc: 'GUM 7.2 · ГОСТ 34100.3-2017', code: 'u := uncRound(0.02341)\nresRound(10.0613, u) =', kind: 'math' },
+  { pack: 'uncertainty', label: { ru: 'Монте-Карло uMC', en: 'Monte-Carlo uMC' }, hint: { ru: 'GUM-S1: модель + распределения входов', en: 'GUM-S1: model + input PDFs' }, doc: 'GUM-S1 JCGM 101:2008 · ГОСТ 54500.1-2011', code: 'uMC("R1*R2/(R1+R2)", [[R1, 100, 1, "rect"], [R2, 50, 0.5, "norm"]], 100000) =', kind: 'math' },
   { pack: 'uncertainty', label: { ru: 'МИ: прямые многократные', en: 'MI: repeated direct' }, hint: { ru: 'ε, θ, Δ по ГОСТ 8.736', en: 'ε, θ, Δ per GOST 8.736' }, doc: 'МИ 1317 · ГОСТ Р 8.736-2011', code: 'e := confEps(0.12, 10)\nt := thetaComb([0.04, 0.03])\ndeltaComb(e, 0.07, 0.038, t) =', kind: 'math' },
   { pack: 'uncertainty', label: { ru: 'ПМГ: суммирование', en: 'PMG: combination' }, hint: { ru: 'Б.3–Б.5: |Δ|, RSS, K_P', en: 'B.3–B.5: |Δ|, RSS, K_P' }, code: 'Sc := pmgRSS([0.1, 0.05], [0.2, 0.1])\npmgExpand(Sc, 2) =', kind: 'math', doc: 'ПМГ 96-2009, прил. Б' },
   { pack: 'uncertainty', label: { ru: 'Прецизионность p×n', en: 'Precision p×n' }, hint: { ru: 's_r, s_L, s_R (схема 5725-2)', en: 's_r, s_L, s_R (5725-2 scheme)' }, doc: 'схема ГОСТ Р ИСО 5725-2', code: 'M := [10.1, 10.3; 9.9, 10.0; 10.2, 10.1]\nprec5725(M) =', kind: 'math' },
@@ -2281,6 +2537,12 @@ export const SNIPPETS: Snippet[] = [
   { pack: 'em', label: { ru: 'Волновод', en: 'Waveguide' }, hint: { ru: 'отсечка TE10', en: 'TE10 cutoff' }, code: 'wgCutoff(23*10^-3) =\nwgLambda(10*10^9, 23*10^-3) =', kind: 'math', plot2d: 'wgLambda(10*10^9, x)' },
   { pack: 'em', label: { ru: 'Линия связи (Фриис)', en: 'Link budget (Friis)' }, hint: { ru: 'дБм на приёмнике', en: 'dBm at receiver' }, code: 'friisDb(20, 2, 2, 2.4*10^9, 1000) =', kind: 'math', plot2d: 'friisDb(20, 2, 2, 2.4*10^9, x)' },
   { pack: 'em', label: { ru: 'Поле заряда и провода', en: 'Charge and wire field' }, hint: { ru: 'Кулон, Био–Савар', en: 'Coulomb, Biot–Savart' }, code: 'ePointQ(1.6*10^-19, 10^-10) =\nbWire(1, 10^-3) =', kind: 'math', plot2d: 'ePointQ(1.6*10^-19, x); bWire(1, x)' },
+  { pack: 'control', label: { ru: 'АЧХ по Bode', en: 'Bode magnitude' }, hint: { ru: '|H(jω)| в дБ', en: '|H(jω)| in dB' }, doc: 'Bode·САУ: H(s)=num/den', code: 'bode([1], [1, 2, 10]) =', kind: 'math',
+    plot2d: 'bodeMagDb([1], [1, 2, 10], x)' },
+  { pack: 'control', label: { ru: 'ФЧХ по Bode', en: 'Bode phase' }, hint: { ru: 'arg H(jω), градусы', en: 'arg H(jω), degrees' }, doc: 'Bode·САУ: сдвиг фазы', code: 'bodePhaseDeg([1], [1, 2, 10], 1) =\nbodePhaseDeg([1], [1, 2, 10], 10) =', kind: 'math',
+    plot2d: 'bodePhaseDeg([1], [1, 2, 10], x)' },
+  { pack: 'control', label: { ru: 'Лог. сетка частот', en: 'Log freq grid' }, hint: { ru: 'ω рад/с, геом. шаг', en: 'ω rad/s, geometric' }, doc: 'Bode·САУ', code: 'bodeFreqs(10, 10^4, 5) =', kind: 'math' },
+  { pack: 'control', label: { ru: 'Комплексный отклик', en: 'Complex response' }, hint: { ru: 'H(jω) как число', en: 'H(jω) complex' }, doc: 'Bode·САУ', code: 'bodeH([1], [1, 2, 10], 1) =\nabs(bodeH([1], [1, 2, 10], 1)) =', kind: 'math' },
   // программирование
   {
     pack: 'programs', label: { ru: 'Бинарный поиск', en: 'Binary search' }, hint: { ru: 'деление пополам, assert', en: 'bisection, assert' },

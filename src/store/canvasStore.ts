@@ -188,6 +188,7 @@ function migrate(raw: unknown): MathBlockData | null {
     plotProj,
     plotTrace,
     plotErr: strOrUndef(b.plotErr),
+    plotLogx: typeof b.plotLogx === 'boolean' ? b.plotLogx : undefined,
     plotTitle: strOrUndef(b.plotTitle),
     plotXLabel: strOrUndef(b.plotXLabel),
     plotYLabel: strOrUndef(b.plotYLabel),
@@ -325,6 +326,7 @@ function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathB
       x.plotYmin !== y.plotYmin || x.plotYmax !== y.plotYmax || x.plotMode !== y.plotMode ||
       x.plotResolution !== y.plotResolution || x.plotWireframe !== y.plotWireframe ||
       x.plotProj !== y.plotProj || x.plotTrace !== y.plotTrace || x.plotErr !== y.plotErr ||
+      x.plotLogx !== y.plotLogx ||
       x.plotTitle !== y.plotTitle || x.plotXLabel !== y.plotXLabel || x.plotYLabel !== y.plotYLabel ||
       x.plotGrid !== y.plotGrid || x.plotLegend !== y.plotLegend ||
       x.exportName !== y.exportName || x.w !== y.w || x.h !== y.h ||

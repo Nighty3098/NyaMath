@@ -42,6 +42,19 @@ const fmtTick = (v: number) => {
   return String(Number(v.toPrecision(4)));
 };
 
+/** Логарифмические тики: 1, 2, 5 · 10ᵖ внутри (lo, hi). */
+function logTicks(lo: number, hi: number): number[] {
+  const out: number[] = [];
+  for (let p = Math.floor(Math.log10(lo)); p <= Math.ceil(Math.log10(hi)); p++) {
+    const base = 10 ** p;
+    for (const m of [1, 2, 5]) {
+      const v = m * base;
+      if (v >= lo - 1e-12 && v <= hi + 1e-12) out.push(v);
+    }
+  }
+  return out;
+}
+
 interface Series {
   expr: string;
   color: string;
@@ -104,6 +117,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   const xmax = block.plotXmax ?? 10;
   const proj = block.plotProj === 'polar' ? 'polar' : 'xy';
   const trace = block.plotTrace === 'bar' || block.plotTrace === 'stem' ? block.plotTrace : 'line';
+  const logx = block.plotLogx === true;
   const errText = (block.plotErr ?? '').trim();
   const title = (block.plotTitle ?? '').trim();
   const xLabel = (block.plotXLabel ?? '').trim();
@@ -114,6 +128,22 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   // Ручной размер: ширина/высота области графика (шапка +chromeH)
   const pw = block.w ?? W;
   const ph = Math.max(180, (block.h ?? H + chromeH) - chromeH);
+  // Координата X: линейная или логарифмическая (Bode). Для logx xmin>0.
+  const geom = useMemo(
+    () => ({
+      X: (x: number) =>
+        logx
+          ? PAD_L + (Math.log(x / xmin) / Math.log(xmax / xmin)) * (pw - PAD_L - PAD_R)
+          : PAD_L + ((x - xmin) / (xmax - xmin)) * (pw - PAD_L - PAD_R),
+      xAt: (k: number): number => {
+        const tt = k / (N_PTS - 1);
+        return logx ? xmin * Math.pow(xmax / xmin, tt) : xmin + (xmax - xmin) * tt;
+      },
+    }),
+    [xmin, xmax, pw, logx],
+  );
+  const X = geom.X;
+  const xAt = geom.xAt;
   // Scope последнего пересчёта стора (#2): без повторного recalculateAll.
   const base = useDocScope(blocks);
 
@@ -127,6 +157,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
         .slice(0, 5);
       if (!exprs.length) return fail(t('p2.empty'));
       if (!(xmin < xmax)) return fail(t('p2.needRange'));
+      if (logx && !(xmin > 0)) return fail(t('p2.logxRange'));
 
       // Выражения компилируем один раз (а не parse на каждую из 240 точек);
       // точки гоняем через общий scope-объект. Некомпилируемое → null-точки.
@@ -184,13 +215,13 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
               return;
             }
             for (let k = 0; k < N_PTS; k++) {
-              xs.push(xmin + ((xmax - xmin) * k) / (N_PTS - 1));
+              xs.push(xAt(k));
               ys.push(y0);
             }
           }
         } else {
           for (let k = 0; k < N_PTS; k++) {
-            const x = xmin + ((xmax - xmin) * k) / (N_PTS - 1);
+            const x = xAt(k);
             let y: number | null = null;
             try {
               y = numOf(evalAt(expr, x));
@@ -228,7 +259,6 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
       lo -= span * 0.12;
       hi += span * 0.12;
 
-      const X = (x: number) => PAD_L + ((x - xmin) / (xmax - xmin)) * (pw - PAD_L - PAD_R);
       const Y = (y: number) => ph - PAD_B - ((y - lo) / (hi - lo)) * (ph - padT - PAD_B);
       const out: Series[] = [];
       let polarInfo: PolarGrid | null = null;
@@ -334,13 +364,12 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           out.push({ expr: r.expr, color, d, errs });
         }
       });
-      return { series: out, ymin: lo, ymax: hi, err: null as string | null, xticks: niceTicks(xmin, xmax), yticks: niceTicks(lo, hi), polar: null, raw };
+      return { series: out, ymin: lo, ymax: hi, err: null as string | null, xticks: logx ? logTicks(xmin, xmax) : niceTicks(xmin, xmax), yticks: niceTicks(lo, hi), polar: null, raw };
     } catch (e) {
       return fail(e instanceof Error ? e.message : String(e));
     }
-  }, [fnText, xmin, xmax, proj, trace, errText, base, pw, ph, padT, pal]);
+  }, [fnText, xmin, xmax, proj, trace, errText, logx, base, pw, ph, padT, pal, X, xAt]);
 
-  const X = (x: number) => PAD_L + ((x - xmin) / (xmax - xmin)) * (pw - PAD_L - PAD_R);
   const Y = (y: number) => ph - PAD_B - ((y - ymin) / (ymax - ymin)) * (ph - padT - PAD_B);
 
   useEffect(() => {
@@ -578,6 +607,20 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
               />
               {t('p2.grid')}
             </label>
+            {proj === 'xy' && (
+              <label title={t('p2.logx')} className="inline-flex items-center gap-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-current"
+                  checked={logx}
+                  aria-label={t('p2.logx')}
+                  onChange={(e) => updatePlot(block.id, { plotLogx: e.target.checked })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                {t('p2.logx')}
+              </label>
+            )}
             <label className="inline-flex items-center gap-1 cursor-pointer">
               <input
                 type="checkbox"

@@ -209,6 +209,8 @@ const ru = {
   'p2.yLabel': 'Подпись Y',
   'p2.grid': 'Сетка',
   'p2.legend': 'Легенда',
+  'p2.logx': 'log x',
+  'p2.logxRange': 'Для log x нужно 0 < xmin < xmax',
   'p2.png': 'Скачать PNG',
   'p2.csv': 'Скачать CSV',
 
@@ -543,6 +545,8 @@ const en: Record<StrKey, string> = {
   'p2.yLabel': 'Y label',
   'p2.grid': 'Grid',
   'p2.legend': 'Legend',
+  'p2.logx': 'log x',
+  'p2.logxRange': 'Need 0 < xmin < xmax for log x',
   'p2.png': 'Download PNG',
   'p2.csv': 'Download CSV',
 
@@ -742,7 +746,7 @@ export function themeLabel(id: ThemeName): string {
   return themeNames[id][current];
 }
 
-export type PackId = 'matrices' | 'stats' | 'uncertainty' | 'physics' | 'telecom' | 'programs' | 'plots' | 'sim' | 'units' | 'calc' | 'computing' | 'em';
+export type PackId = 'matrices' | 'stats' | 'uncertainty' | 'physics' | 'telecom' | 'programs' | 'plots' | 'sim' | 'units' | 'calc' | 'computing' | 'em' | 'control';
 
 const packNames: Record<PackId, { ru: string; en: string }> = {
   matrices: { ru: 'Матрицы', en: 'Matrices' },
@@ -757,6 +761,7 @@ const packNames: Record<PackId, { ru: string; en: string }> = {
   calc: { ru: 'Исчисление', en: 'Calculus' },
   computing: { ru: 'Выч. техника', en: 'Computing' },
   em: { ru: 'ЭМ поля', en: 'EM fields' },
+  control: { ru: 'САУ / АЧХ', en: 'Control / Bode' },
 };
 
 /** Название пака сниппетов на текущем языке. */

@@ -33,6 +33,7 @@ export interface MathBlockData {
   plotProj?: 'xy' | 'polar';
   plotTrace?: 'line' | 'bar' | 'stem';
   plotErr?: string;
+  plotLogx?: boolean;
   plotTitle?: string;
   plotXLabel?: string;
   plotYLabel?: string;

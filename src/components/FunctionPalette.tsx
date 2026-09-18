@@ -8,7 +8,7 @@ import {
   IPlot, IProgram, IResize, IScale, ISignal, ISim, IUnits, IX, IZap,
 } from './Icon';
 
-const PACKS: PackId[] = ['matrices', 'stats', 'uncertainty', 'physics', 'em', 'units', 'calc', 'computing', 'telecom', 'programs', 'plots', 'sim'];
+const PACKS: PackId[] = ['matrices', 'stats', 'uncertainty', 'physics', 'em', 'control', 'units', 'calc', 'computing', 'telecom', 'programs', 'plots', 'sim'];
 
 const PACK_ICONS: Record<PackId, () => React.JSX.Element> = {
   matrices: IGrid,
@@ -16,6 +16,7 @@ const PACK_ICONS: Record<PackId, () => React.JSX.Element> = {
   uncertainty: IScale,
   physics: IZap,
   em: IField,
+  control: ISignal,
   units: IUnits,
   calc: ICalc,
   computing: IChip,
