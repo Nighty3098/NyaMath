@@ -73,6 +73,7 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
   const addBlock = useCanvasStore((s) => s.addBlock);
   const addBlocks = useCanvasStore((s) => s.addBlocks);
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
+  const addPlot3dBlock = useCanvasStore((s) => s.addPlot3dBlock);
   const addContourBlock = useCanvasStore((s) => s.addContourBlock);
   const addProgramBlock = useCanvasStore((s) => s.addProgramBlock);
   const addSimBlock = useCanvasStore((s) => s.addSimBlock);
@@ -105,6 +106,9 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
     code: string;
     sources: { title: string; url: string }[];
     vars?: { name: string; label: { ru: string; en: string } }[];
+    plot2d?: string;
+    plot3d?: string;
+    sim?: string;
   }
 
   interface PalItem {
@@ -116,6 +120,9 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
     doc?: string;
     sources?: { title: string; url: string }[];
     vars?: { name: string; label: { ru: string; en: string } }[];
+    plot2d?: string;
+    plot3d?: string;
+    sim?: string;
     kind: Snippet['kind'];
     snippet?: Snippet;
   }
@@ -138,6 +145,9 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
           code: f.code,
           sources: f.sources,
           vars: f.vars,
+          plot2d: f.plot2d,
+          plot3d: f.plot3d,
+          sim: f.sim,
           kind: 'math' as const,
         }))
       : SNIPPETS.map((s, i) => ({
@@ -190,6 +200,20 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
     addBlocks(lines, p.x, p.y);
     // place() уже увёл прицел на один шаг — дошагнуть под всю лесенку
     useCanvasStore.getState().nudgeCross(0, 140 * (lines.length - 1));
+  };
+
+  /** Вставка 2D/3D-графика или симуляции, привязанных к формуле */
+  const insertPlot2d = (fn: string) => {
+    const p = place();
+    addPlotBlock(p.x, p.y, fn);
+  };
+  const insertPlot3d = (fn: string) => {
+    const p = place();
+    addPlot3dBlock(p.x, p.y, fn);
+  };
+  const insertSim = (modelId: string) => {
+    const p = place();
+    addSimBlock(p.x, p.y, modelId);
   };
 
   const close = () => setPaletteOpen(false);
@@ -330,6 +354,8 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
                   tabIndex={0}
                   onClick={pick}
                   onKeyDown={(e) => {
+                    // вложенные кнопки/ссылки обрабатывают клавиши сами
+                    if ((e.target as HTMLElement).closest('button,a')) return;
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
                       pick();
@@ -369,6 +395,40 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
                           {v.label[lang]}
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {formulas && (s.plot2d || s.plot3d || s.sim) && (
+                    <div className="flex flex-wrap gap-1.5 pl-6 mt-1.5" onClick={(e) => e.stopPropagation()}>
+                      {s.plot2d && (
+                        <button
+                          type="button"
+                          className="text-[11px] px-2 min-h-[28px] rounded-lg border border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--accent-line)] hover:text-[var(--ink)] cursor-pointer"
+                          title={t('formulaPal.plot2d')}
+                          onClick={() => insertPlot2d(s.plot2d!)}
+                        >
+                          2D
+                        </button>
+                      )}
+                      {s.plot3d && (
+                        <button
+                          type="button"
+                          className="text-[11px] px-2 min-h-[28px] rounded-lg border border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--accent-line)] hover:text-[var(--ink)] cursor-pointer"
+                          title={t('formulaPal.plot3d')}
+                          onClick={() => insertPlot3d(s.plot3d!)}
+                        >
+                          3D
+                        </button>
+                      )}
+                      {s.sim && (
+                        <button
+                          type="button"
+                          className="text-[11px] px-2 min-h-[28px] rounded-lg border border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--accent-line)] hover:text-[var(--ink)] cursor-pointer"
+                          title={t('formulaPal.sim')}
+                          onClick={() => insertSim(s.sim!)}
+                        >
+                          ▶
+                        </button>
+                      )}
                     </div>
                   )}
                   {formulas && s.sources && s.sources.length > 0 && (

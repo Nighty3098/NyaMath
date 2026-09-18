@@ -141,6 +141,9 @@ const ru = {
   'formulaPal.close': 'Закрыть палитру формул',
   'formulaPal.empty': 'Ничего не найдено',
   'formulaPal.vars': 'Переменные',
+  'formulaPal.plot2d': 'Вставить 2D-график',
+  'formulaPal.plot3d': 'Вставить 3D-график',
+  'formulaPal.sim': 'Вставить симуляцию',
 
   'c.aria': 'Бесконечный рабочий лист: двойной клик создаёт блок, перетаскивание с зажатой кнопкой выделяет',
   'c.title': 'ЛКМ-drag — выделение • Space/MMB/RMB — панорама • колесо — панорама • Ctrl+колесо — зум • двойной клик — новый блок',
@@ -464,6 +467,9 @@ const en: Record<StrKey, string> = {
   'formulaPal.close': 'Close formula palette',
   'formulaPal.empty': 'Nothing found',
   'formulaPal.vars': 'Variables',
+  'formulaPal.plot2d': 'Insert 2D plot',
+  'formulaPal.plot3d': 'Insert 3D plot',
+  'formulaPal.sim': 'Insert simulation',
 
   'c.aria': 'Infinite worksheet: double-click creates a block, dragging with a pressed button selects',
   'c.title': 'LMB-drag — select • Space/MMB/RMB — pan • wheel — pan • Ctrl+wheel — zoom • double-click — new block',
