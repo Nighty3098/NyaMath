@@ -159,6 +159,7 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
           doc: s.doc,
           kind: s.kind,
           snippet: s,
+          plot2d: s.plot2d,
         }));
     const needle = q.trim().toLowerCase();
     if (!needle) return all;
@@ -180,6 +181,17 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
 
   const insert = (s: Snippet) => {
     const p = place();
+    // plot со своими переменными: сначала блоки переменных выше,
+    // затем график ниже — он видит их значения и пересчитывается от них
+    const varLines = (s.vars ?? '').split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+    if ((s.kind === 'plot' || s.kind === 'contour') && varLines.length > 0) {
+      addBlocks(varLines, p.x, p.y);
+      const gy = p.y + 64 * varLines.length;
+      if (s.kind === 'plot') addPlotBlock(p.x, gy, s.code, s.plot);
+      else addContourBlock(p.x, gy, s.code);
+      useCanvasStore.getState().nudgeCross(0, 64 * varLines.length);
+      return;
+    }
     if (s.kind === 'plot') addPlotBlock(p.x, p.y, s.code, s.plot);
     else if (s.kind === 'contour') addContourBlock(p.x, p.y, s.code);
     else if (s.kind === 'program') addProgramBlock(p.x, p.y, s.code, s.exportName ?? '');
@@ -397,7 +409,7 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
                       ))}
                     </div>
                   )}
-                  {formulas && (s.plot2d || s.plot3d || s.sim) && (
+                  {(s.plot2d || s.plot3d || s.sim) && (
                     <div className="flex flex-wrap gap-1.5 pl-6 mt-1.5" onClick={(e) => e.stopPropagation()}>
                       {s.plot2d && (
                         <button

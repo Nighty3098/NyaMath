@@ -2122,6 +2122,16 @@ export interface Snippet {
   exportName?: string;
   /** Нормативная подпись: ГОСТ/методика, откуда формула (показывается в палитре) */
   doc?: string;
+  /**
+   * Переменные графика: строки `x := ...` — вставляются мат-блоками ВЫШЕ
+   * plot-блока, чтобы график пересчитывался от их значений (порядок сверху-вниз).
+   */
+  vars?: string;
+  /**
+   * Готовое выражение 2D-графика для math-сниппета (видит переменные документа).
+   * В палитре — кнопка 2D; сам сниппет при этом определяет переменные.
+   */
+  plot2d?: string;
   /** Преднастройки plot-блока (проекция, стиль, оформление) */
   plot?: {
     plotProj?: 'xy' | 'polar';
@@ -2139,40 +2149,40 @@ export interface Snippet {
 
 export const SNIPPETS: Snippet[] = [
   // матрицы
-  { pack: 'matrices', label: { ru: 'Матрица 2×2', en: '2×2 matrix' }, hint: { ru: '[ ; ] — строки', en: '[ ; ] — rows' }, code: 'A := [1, 2; 3, 4]', kind: 'math' },
-  { pack: 'matrices', label: { ru: 'Определитель', en: 'Determinant' }, hint: { ru: 'det(M)', en: 'det(M)' }, code: 'det(A) =', kind: 'math' },
-  { pack: 'matrices', label: { ru: 'Обратная', en: 'Inverse' }, hint: { ru: 'inv(M)', en: 'inv(M)' }, code: 'B := inv(A)', kind: 'math' },
-  { pack: 'matrices', label: { ru: 'Транспонирование', en: 'Transpose' }, hint: { ru: "A' или transpose", en: "A' or transpose" }, code: 'transpose(A) =', kind: 'math' },
-  { pack: 'matrices', label: { ru: 'Решение СЛАУ', en: 'Linear system' }, hint: { ru: 'x = A⁻¹·b', en: 'x = A⁻¹·b' }, code: 'x := inv(A)*[5; 6]', kind: 'math' },
-  { pack: 'matrices', label: { ru: 'Диапазон 1..n', en: 'Range 1..n' }, hint: { ru: 'вектор-столбец значений', en: 'column vector of values' }, code: 'n := seq(0, 10)', kind: 'math' },
-  { pack: 'matrices', label: { ru: 'linspace', en: 'linspace' }, hint: { ru: 'N точек [a,b]', en: 'N points [a,b]' }, code: 't := linspace(0, 1, 11)', kind: 'math' },
+  { pack: 'matrices', label: { ru: 'Матрица 2×2', en: '2×2 matrix' }, hint: { ru: '[ ; ] — строки', en: '[ ; ] — rows' }, code: 'A := [1, 2; 3, 4]', kind: 'math', plot2d: 'A' },
+  { pack: 'matrices', label: { ru: 'Определитель', en: 'Determinant' }, hint: { ru: 'det(M)', en: 'det(M)' }, code: 'det(A) =', kind: 'math', plot2d: 'det([[x, 2], [3, 4]])' },
+  { pack: 'matrices', label: { ru: 'Обратная', en: 'Inverse' }, hint: { ru: 'inv(M)', en: 'inv(M)' }, code: 'B := inv(A)', kind: 'math', plot2d: 'inv([[1, 2], [3, 4]])' },
+  { pack: 'matrices', label: { ru: 'Транспонирование', en: 'Transpose' }, hint: { ru: "A' или transpose", en: "A' or transpose" }, code: 'transpose(A) =', kind: 'math', plot2d: 'transpose([[1, 2], [3, 4]])' },
+  { pack: 'matrices', label: { ru: 'Решение СЛАУ', en: 'Linear system' }, hint: { ru: 'x = A⁻¹·b', en: 'x = A⁻¹·b' }, code: 'x := inv(A)*[5; 6]', kind: 'math', plot2d: 'inv([[2, 1], [1, 3]])*[5, 6]' },
+  { pack: 'matrices', label: { ru: 'Диапазон 1..n', en: 'Range 1..n' }, hint: { ru: 'вектор-столбец значений', en: 'column vector of values' }, code: 'n := seq(0, 10)', kind: 'math', plot2d: 'n' },
+  { pack: 'matrices', label: { ru: 'linspace', en: 'linspace' }, hint: { ru: 'N точек [a,b]', en: 'N points [a,b]' }, code: 't := linspace(0, 1, 11)', kind: 'math', plot2d: 't' },
   // статистика
-  { pack: 'stats', label: { ru: 'Выборка', en: 'Sample' }, hint: { ru: 'вектор данных', en: 'data vector' }, code: 'data := [2.3, 3.1, 2.8, 4.0, 3.5, 2.9]', kind: 'math' },
+  { pack: 'stats', label: { ru: 'Выборка', en: 'Sample' }, hint: { ru: 'вектор данных', en: 'data vector' }, code: 'data := [2.3, 3.1, 2.8, 4.0, 3.5, 2.9]', kind: 'math', plot2d: 'data' },
   { pack: 'stats', label: { ru: 'Среднее', en: 'Mean' }, hint: { ru: 'mean(v)', en: 'mean(v)' }, code: 'mean(data) =', kind: 'math' },
   { pack: 'stats', label: { ru: 'СКО', en: 'Std dev' }, hint: { ru: 'std(v)', en: 'std(v)' }, code: 'std(data) =', kind: 'math' },
   { pack: 'stats', label: { ru: 'RMS', en: 'RMS' }, hint: { ru: 'среднеквадратичное', en: 'root mean square' }, code: 'rms(data) =', kind: 'math' },
   { pack: 'stats', label: { ru: 'Медиана/квантиль', en: 'Median/quantile' }, hint: { ru: 'median, quantileSeq', en: 'median, quantileSeq' }, code: 'median(data) =', kind: 'math' },
   // неопределённость измерений (GUM / МИ / ПМГ / 5725 / 21748)
-  { pack: 'uncertainty', label: { ru: 'Бюджет GUM', en: 'GUM budget' }, hint: { ru: 'A + B → суммарная → расширенная', en: 'A + B → combined → expanded' }, doc: 'GUM · ГОСТ 34100.3-2017, разд. 4–6', code: 'x := [10.1, 10.3, 9.9, 10.2, 10.0]\nuA := uMean(x)\nuB := uRect(0.15)\nuC := uComb([uA, uB])\nU := uExpand(uC, 2)\nU =', kind: 'math' },
+  { pack: 'uncertainty', label: { ru: 'Бюджет GUM', en: 'GUM budget' }, hint: { ru: 'A + B → суммарная → расширенная', en: 'A + B → combined → expanded' }, doc: 'GUM · ГОСТ 34100.3-2017, разд. 4–6', code: 'x := [10.1, 10.3, 9.9, 10.2, 10.0]\nuA := uMean(x)\nuB := uRect(0.15)\nuC := uComb([uA, uB])\nU := uExpand(uC, 2)\nU =', kind: 'math', plot2d: 'x' },
   { pack: 'uncertainty', label: { ru: 'Тип A (выборка)', en: 'Type A (sample)' }, hint: { ru: 'uMean — СКО среднего', en: 'uMean — std of the mean' }, doc: 'GUM 4.2 · ГОСТ 34100.3-2017', code: 'uMean([2.31, 2.29, 2.33, 2.30]) =', kind: 'math' },
-  { pack: 'uncertainty', label: { ru: 'Тип B (распределения)', en: 'Type B (distributions)' }, hint: { ru: 'rect/tri/norm/ushape', en: 'rect/tri/norm/ushape' }, doc: 'GUM 4.3 · ГОСТ 34100.3-2017', code: 'uRect(0.5) =\nuTri(0.5) =\nuNorm(0.3, 2) =', kind: 'math' },
+  { pack: 'uncertainty', label: { ru: 'Тип B (распределения)', en: 'Type B (distributions)' }, hint: { ru: 'rect/tri/norm/ushape', en: 'rect/tri/norm/ushape' }, doc: 'GUM 4.3 · ГОСТ 34100.3-2017', code: 'uRect(0.5) =\nuTri(0.5) =\nuNorm(0.3, 2) =', kind: 'math', plot2d: 'uRect(x); uTri(x)' },
   { pack: 'uncertainty', label: { ru: 'Степени свободы + k', en: 'DoF + coverage k' }, hint: { ru: 'Уэлч–Саттертуэйт, Стьюдент', en: 'Welch–Satterthwaite, Student' }, doc: 'GUM G.4, 6.3 · ГОСТ 34100.3-2017', code: 'us := [0.12, 0.23]\nne := nuEff(us, [9, Infinity])\nkCov(ne) =', kind: 'math' },
   { pack: 'uncertainty', label: { ru: 'Округление результата', en: 'Result rounding' }, hint: { ru: '2 значащие цифры (GUM 7)', en: '2 significant digits (GUM 7)' }, doc: 'GUM 7.2 · ГОСТ 34100.3-2017', code: 'u := uncRound(0.02341)\nresRound(10.0613, u) =', kind: 'math' },
   { pack: 'uncertainty', label: { ru: 'МИ: прямые многократные', en: 'MI: repeated direct' }, hint: { ru: 'ε, θ, Δ по ГОСТ 8.736', en: 'ε, θ, Δ per GOST 8.736' }, doc: 'МИ 1317 · ГОСТ Р 8.736-2011', code: 'e := confEps(0.12, 10)\nt := thetaComb([0.04, 0.03])\ndeltaComb(e, 0.07, 0.038, t) =', kind: 'math' },
   { pack: 'uncertainty', label: { ru: 'ПМГ: суммирование', en: 'PMG: combination' }, hint: { ru: 'Б.3–Б.5: |Δ|, RSS, K_P', en: 'B.3–B.5: |Δ|, RSS, K_P' }, code: 'Sc := pmgRSS([0.1, 0.05], [0.2, 0.1])\npmgExpand(Sc, 2) =', kind: 'math', doc: 'ПМГ 96-2009, прил. Б' },
   { pack: 'uncertainty', label: { ru: 'Прецизионность p×n', en: 'Precision p×n' }, hint: { ru: 's_r, s_L, s_R (схема 5725-2)', en: 's_r, s_L, s_R (5725-2 scheme)' }, doc: 'схема ГОСТ Р ИСО 5725-2', code: 'M := [10.1, 10.3; 9.9, 10.0; 10.2, 10.1]\nprec5725(M) =', kind: 'math' },
   { pack: 'uncertainty', label: { ru: 'Top-down оценка', en: 'Top-down estimate' }, hint: { ru: 'упрощённо по 21748', en: 'simplified per 21748' }, doc: 'подход ГОСТ Р ИСО 21748', code: 'uTopDown(0.15, 0.08) =', kind: 'math' },
-  { pack: 'uncertainty', label: { ru: 'Пределы r, R', en: 'Limits r, R' }, hint: { ru: '2.8·s (5725-6)', en: '2.8·s (5725-6)' }, doc: 'ГОСТ Р ИСО 5725-6', code: 'repLim(0.12) =', kind: 'math' },
+  { pack: 'uncertainty', label: { ru: 'Пределы r, R', en: 'Limits r, R' }, hint: { ru: '2.8·s (5725-6)', en: '2.8·s (5725-6)' }, doc: 'ГОСТ Р ИСО 5725-6', code: 'repLim(0.12) =', kind: 'math', plot2d: 'repLim(x)' },
   // физика
-  { pack: 'physics', label: { ru: 'Фотон 650 нм', en: '650 nm photon' }, hint: { ru: 'E = h·c/λ', en: 'E = h·c/λ' }, code: 'E_ph := h_planck*c_light/(650*10^-9)', kind: 'math' },
-  { pack: 'physics', label: { ru: 'Энергия в эВ', en: 'Energy in eV' }, hint: { ru: '/q_e', en: '/q_e' }, code: 'E_eV := E_ph/q_e', kind: 'math' },
-  { pack: 'physics', label: { ru: 'Тепловая энергия', en: 'Thermal energy' }, hint: { ru: 'k_B·T', en: 'k_B·T' }, code: 'E_th := k_B*300', kind: 'math' },
+  { pack: 'physics', label: { ru: 'Фотон 650 нм', en: '650 nm photon' }, hint: { ru: 'E = h·c/λ', en: 'E = h·c/λ' }, code: 'E_ph := h_planck*c_light/(650*10^-9)', kind: 'math', plot2d: 'h_planck*c_light/x' },
+  { pack: 'physics', label: { ru: 'Энергия в эВ', en: 'Energy in eV' }, hint: { ru: '/q_e', en: '/q_e' }, code: 'E_eV := E_ph/q_e', kind: 'math', plot2d: 'h_planck*c_light/(x*q_e)' },
+  { pack: 'physics', label: { ru: 'Тепловая энергия', en: 'Thermal energy' }, hint: { ru: 'k_B·T', en: 'k_B·T' }, code: 'E_th := k_B*300', kind: 'math', plot2d: 'k_B*x' },
   // телеком
-  { pack: 'telecom', label: { ru: 'Мощность в дБм', en: 'Power in dBm' }, hint: { ru: 'Вт → дБм', en: 'W → dBm' }, code: 'dBm(20*10^-3) =', kind: 'math' },
-  { pack: 'telecom', label: { ru: 'дБм в ватты', en: 'dBm to watts' }, hint: { ru: 'обратно', en: 'reverse' }, code: 'WdBm(13) =', kind: 'math' },
-  { pack: 'telecom', label: { ru: 'FSPL', en: 'FSPL' }, hint: { ru: 'потери, d — м, f — Гц', en: 'loss, d — m, f — Hz' }, code: 'L := fspl_dB(1000, 2.4*10^9)', kind: 'math' },
-  { pack: 'telecom', label: { ru: 'Длина волны', en: 'Wavelength' }, hint: { ru: 'λ(f)', en: 'λ(f)' }, code: 'lambda_f(2.4*10^9) =', kind: 'math' },
-  { pack: 'telecom', label: { ru: 'Отношение в дБ', en: 'Ratio in dB' }, hint: { ru: '10·lg', en: '10·lg' }, code: 'dB(100) =', kind: 'math' },
+  { pack: 'telecom', label: { ru: 'Мощность в дБм', en: 'Power in dBm' }, hint: { ru: 'Вт → дБм', en: 'W → dBm' }, code: 'dBm(20*10^-3) =', kind: 'math', plot2d: 'dBm(x)' },
+  { pack: 'telecom', label: { ru: 'FSPL', en: 'FSPL' }, hint: { ru: 'потери, d — м, f — Гц', en: 'loss, d — m, f — Hz' }, code: 'L := fspl_dB(1000, 2.4*10^9)', kind: 'math', plot2d: 'fspl_dB(x, 2.4*10^9)' },
+  { pack: 'telecom', label: { ru: 'Длина волны', en: 'Wavelength' }, hint: { ru: 'λ(f)', en: 'λ(f)' }, code: 'lambda_f(2.4*10^9) =', kind: 'math', plot2d: 'lambda_f(x)' },
+  { pack: 'telecom', label: { ru: 'дБм в ватты', en: 'dBm to watts' }, hint: { ru: 'обратно', en: 'reverse' }, code: 'WdBm(13) =', kind: 'math', plot2d: 'WdBm(x)' },
+  { pack: 'telecom', label: { ru: 'Отношение в дБ', en: 'Ratio in dB' }, hint: { ru: '10·lg', en: '10·lg' }, code: 'dB(100) =', kind: 'math', plot2d: 'dB(x)' },
   // программы
   {
     pack: 'programs', label: { ru: 'Факториал (for)', en: 'Factorial (for)' }, hint: { ru: 'цикл, экспорт fact', en: 'loop, exports fact' },
@@ -2191,14 +2201,14 @@ export const SNIPPETS: Snippet[] = [
     code: 's := 0\nk := 0\nwhile s < 100\n  k := k + 1\n  if k/2 == round(k/2)\n    s := s + k\n  else\n    s := s + 1\n  end\nend\ns', kind: 'program',
   },
   // графики
-  { pack: 'plots', label: { ru: 'sin + cos', en: 'sin + cos' }, hint: { ru: 'две серии через ;', en: 'two series via ;' }, code: 'sin(x); cos(x/2)', kind: 'plot' },
-  { pack: 'plots', label: { ru: 'Затухание', en: 'Damping' }, hint: { ru: 'экспонента × синус', en: 'exponential × sine' }, code: 'exp(-x/5)*sin(x)', kind: 'plot' },
-  { pack: 'plots', label: { ru: 'Полярный: трилистник', en: 'Polar: three petals' }, hint: { ru: 'r(θ), θ — радианы', en: 'r(θ), θ in radians' }, code: 'cos(3*x)', kind: 'plot', plot: { plotProj: 'polar', plotXmin: 0, plotXmax: 6.2832 } },
-  { pack: 'plots', label: { ru: 'Столбцы', en: 'Bars' }, hint: { ru: 'bar-стиль', en: 'bar style' }, code: 'sin(x)', kind: 'plot', plot: { plotTrace: 'bar' } },
-  { pack: 'plots', label: { ru: 'Стебли', en: 'Stem' }, hint: { ru: 'stem-стиль', en: 'stem style' }, code: 'exp(-x/5)*sin(x)', kind: 'plot', plot: { plotTrace: 'stem' } },
-  { pack: 'plots', label: { ru: 'С погрешностями', en: 'With errors' }, hint: { ru: '±err(x)', en: '±err(x)' }, code: 'sin(x)', kind: 'plot', plot: { plotErr: '0.1 + 0.05*abs(sin(2*x))' } },
-  { pack: 'plots', label: { ru: 'Оформленный', en: 'Titled' }, hint: { ru: 'заголовок и подписи осей', en: 'title and axis labels' }, code: 'sin(x); cos(x/2)', kind: 'plot', plot: { plotTitle: 'Гармоники', plotXLabel: 'x, рад', plotYLabel: 'y' } },
-  { pack: 'plots', label: { ru: 'Изолинии', en: 'Isolines' }, hint: { ru: 'контурный график f(x,y)', en: 'contour plot of f(x,y)' }, code: 'sin(sqrt(x^2+y^2))', kind: 'contour' },
+  { pack: 'plots', label: { ru: 'sin + cos', en: 'sin + cos' }, hint: { ru: 'две серии через ; · A и w — переменные выше', en: 'two series via ; · A and w are variables above' }, code: 'A1*sin(w1*x); A2*cos(w2*x)', kind: 'plot', vars: 'A1 := 1\nw1 := 1\nA2 := 1\nw2 := 0.5' },
+  { pack: 'plots', label: { ru: 'Затухание', en: 'Damping' }, hint: { ru: 'экспонента × синус · A, tau — переменные выше', en: 'exponential × sine · A, tau are variables above' }, code: 'A_m*exp(-x/tau)*sin(x)', kind: 'plot', vars: 'A_m := 1\ntau := 5' },
+  { pack: 'plots', label: { ru: 'Полярный: трилистник', en: 'Polar: three petals' }, hint: { ru: 'r(θ), k — число лепестков', en: 'r(θ), k — petal count' }, code: 'cos(k_pt*x)', kind: 'plot', vars: 'k_pt := 3', plot: { plotProj: 'polar', plotXmin: 0, plotXmax: 6.2832 } },
+  { pack: 'plots', label: { ru: 'Столбцы', en: 'Bars' }, hint: { ru: 'bar-стиль · A — переменная выше', en: 'bar style · A is a variable above' }, code: 'A_m*sin(x)', kind: 'plot', vars: 'A_m := 1', plot: { plotTrace: 'bar' } },
+  { pack: 'plots', label: { ru: 'Стебли', en: 'Stem' }, hint: { ru: 'stem-стиль · A, tau — переменные выше', en: 'stem style · A, tau are variables above' }, code: 'A_m*exp(-x/tau)*sin(x)', kind: 'plot', vars: 'A_m := 1\ntau := 5', plot: { plotTrace: 'stem' } },
+  { pack: 'plots', label: { ru: 'С погрешностями', en: 'With errors' }, hint: { ru: '±err(x) · A — переменная выше', en: '±err(x) · A is a variable above' }, code: 'A_m*sin(x)', kind: 'plot', vars: 'A_m := 1', plot: { plotErr: '0.1 + 0.05*abs(sin(2*x))' } },
+  { pack: 'plots', label: { ru: 'Оформленный', en: 'Titled' }, hint: { ru: 'заголовок и подписи · A, tau — переменные выше', en: 'title and labels · A, tau are variables above' }, code: 'A_m*sin(x); A_m*exp(-x/tau)*sin(x)', kind: 'plot', vars: 'A_m := 1\ntau := 5', plot: { plotTitle: 'Гармоники', plotXLabel: 'x, рад', plotYLabel: 'y' } },
+  { pack: 'plots', label: { ru: 'Изолинии', en: 'Isolines' }, hint: { ru: 'контурный график · k — переменная выше', en: 'contour plot · k is a variable above' }, code: 'sin(k_w*sqrt(x^2+y^2))', kind: 'contour', vars: 'k_w := 1' },
   // единицы измерения
   { pack: 'units', label: { ru: 'Длина (SI)', en: 'Length (SI)' }, hint: { ru: 'метры, сантиметры', en: 'meters, centimeters' }, code: 'L := 5 m', kind: 'math' },
   { pack: 'units', label: { ru: 'Расстояние в метрах', en: 'Distance in meters' }, hint: { ru: 'g := 10cm = m', en: 'g := 10cm = m' }, code: 'g := 10 cm = m', kind: 'math' },
@@ -2214,14 +2224,14 @@ export const SNIPPETS: Snippet[] = [
   { pack: 'calc', label: { ru: 'На множители', en: 'Factor' }, hint: { ru: 'разложение полинома', en: 'polynomial factoring' }, code: 'sfactor("x^2 + 3*x + 2", "x") =', kind: 'math' },
   { pack: 'calc', label: { ru: 'Производная (симв.)', en: 'Derivative (sym.)' }, hint: { ru: 'символьное дифференцирование', en: 'symbolic differentiation' }, code: 'sderiv("sin(x^2)", "x") =', kind: 'math' },
   { pack: 'calc', label: { ru: 'Интеграл (симв.)', en: 'Integral (sym.)' }, hint: { ru: 'табличный интеграл', en: 'table integral' }, code: 'sint("x^2", "x") =', kind: 'math' },
-  { pack: 'calc', label: { ru: 'Производная (числ.)', en: 'Derivative (num.)' }, hint: { ru: 'd/dx в точке', en: 'd/dx at a point' }, code: 'numdiff("sin(x)", "x", 1) =', kind: 'math' },
-  { pack: 'calc', label: { ru: 'Интеграл (числ.)', en: 'Integral (num.)' }, hint: { ru: '∫ на отрезке', en: '∫ over an interval' }, code: 'numint("sin(x)", "x", 0, 3.14159) =', kind: 'math' },
+  { pack: 'calc', label: { ru: 'Производная (числ.)', en: 'Derivative (num.)' }, hint: { ru: 'd/dx в точке', en: 'd/dx at a point' }, code: 'numdiff("sin(x)", "x", 1) =', kind: 'math', plot2d: 'numdiff("sin(t)", "t", x)' },
+  { pack: 'calc', label: { ru: 'Интеграл (числ.)', en: 'Integral (num.)' }, hint: { ru: '∫ на отрезке', en: '∫ over an interval' }, code: 'numint("sin(x)", "x", 0, 3.14159) =', kind: 'math', plot2d: 'numint("sin(t)", "t", 0, x)' },
   { pack: 'calc', label: { ru: 'Сумма ряда', en: 'Series sum' }, hint: { ru: 'Σ по целым', en: 'Σ over integers' }, code: 'numsum("k^2", "k", 1, 100) =', kind: 'math' },
   { pack: 'calc', label: { ru: 'Корень (Брент)', en: 'Root (Brent)' }, hint: { ru: 'на отрезке [a, b]', en: 'on [a, b]' }, code: 'root("x^3 - 2", "x", 0, 2) =', kind: 'math' },
   { pack: 'calc', label: { ru: 'Система (find)', en: 'System (find)' }, hint: { ru: 'Ньютон для системы', en: 'Newton for a system' }, code: 'find(["x^2+y^2-4", "x-y-1"], ["x", "y"], [1, 0]) =', kind: 'math' },
   { pack: 'calc', label: { ru: 'Минимум', en: 'Minimum' }, hint: { ru: 'Нелдер–Мид', en: 'Nelder–Mead' }, code: 'minimize("(x-2)^2", ["x"], [0]) =', kind: 'math' },
-  { pack: 'calc', label: { ru: 'Корни полинома', en: 'Polynomial roots' }, hint: { ru: 'коэфф. по возрастанию степени', en: 'coeffs ascending' }, code: 'polyroots([2, -3, 1]) =', kind: 'math' },
-  { pack: 'calc', label: { ru: 'Аппроксимация', en: 'Polyfit' }, hint: { ru: 'МНК-полином', en: 'least-squares polynomial' }, code: 'polyfit([0, 1, 2, 3], [1, 3, 7, 13], 2) =', kind: 'math' },
+  { pack: 'calc', label: { ru: 'Корни полинома', en: 'Polynomial roots' }, hint: { ru: 'коэфф. по возрастанию степени', en: 'coeffs ascending' }, code: 'polyroots([2, -3, 1]) =', kind: 'math', plot2d: 'polyroots([2, -3, 1])' },
+  { pack: 'calc', label: { ru: 'Аппроксимация', en: 'Polyfit' }, hint: { ru: 'МНК-полином', en: 'least-squares polynomial' }, code: 'polyfit([0, 1, 2, 3], [1, 3, 7, 13], 2) =', kind: 'math', plot2d: 'polyfit([0, 1, 2, 3], [1, 3, 7, 13], 2)' },
   { pack: 'calc', label: { ru: 'Краевая задача', en: 'Boundary value' }, hint: { ru: 'стрельба y"=f', en: 'shooting for y"=f' }, code: 'bvp("-y", "x", 0, 1, 0, 1) =', kind: 'math' },
   // симуляции (code = id модели)
   { pack: 'sim', label: { ru: 'Маятник', en: 'Pendulum' }, hint: { ru: 'нелинейные колебания', en: 'nonlinear swings' }, code: 'pendulum', kind: 'sim' },
@@ -2239,38 +2249,38 @@ export const SNIPPETS: Snippet[] = [
   { pack: 'sim', label: { ru: 'Даффинг', en: 'Duffing' }, hint: { ru: 'хаос, двуямный', en: 'chaos, double-well' }, code: 'duffing', kind: 'sim' },
   // вычислительная техника
   { pack: 'computing', label: { ru: 'DEC → BIN/HEX', en: 'DEC to BIN/HEX' }, hint: { ru: 'системы счисления', en: 'number bases' }, code: 'dec2bin(13) =\ndec2hex(255) =', kind: 'math' },
-  { pack: 'computing', label: { ru: 'Битовые операции', en: 'Bit operations' }, hint: { ru: 'и/или/искл.или, сдвиги', en: 'and/or/xor, shifts' }, code: 'bitand(12, 10) =\nbitor(12, 10) =\nshl(3, 2) =', kind: 'math' },
-  { pack: 'computing', label: { ru: 'Популяция битов', en: 'Popcount' }, hint: { ru: 'число единиц, чётность', en: 'ones count, parity' }, code: 'popcount(255) =\nparity(13) =\nhammdist(12, 10) =', kind: 'math' },
-  { pack: 'computing', label: { ru: 'АЦП: SNR и шаг', en: 'ADC: SNR and step' }, hint: { ru: 'разрядность → дБ', en: 'bits → dB' }, code: 'adcSNR(12) =\nquantStep(3.3, 12) =', kind: 'math' },
-  { pack: 'computing', label: { ru: 'Шеннон', en: 'Shannon' }, hint: { ru: 'пропускная способность', en: 'channel capacity' }, code: 'shannonCap(20*10^6, 30) =', kind: 'math' },
+  { pack: 'computing', label: { ru: 'Битовые операции', en: 'Bit operations' }, hint: { ru: 'и/или/искл.или, сдвиги', en: 'and/or/xor, shifts' }, code: 'bitand(12, 10) =\nbitor(12, 10) =\nshl(3, 2) =', kind: 'math', plot2d: 'bitand(x, 10)' },
+  { pack: 'computing', label: { ru: 'Популяция битов', en: 'Popcount' }, hint: { ru: 'число единиц, чётность', en: 'ones count, parity' }, code: 'popcount(255) =\nparity(13) =\nhammdist(12, 10) =', kind: 'math', plot2d: 'popcount(x)' },
+  { pack: 'computing', label: { ru: 'АЦП: SNR и шаг', en: 'ADC: SNR and step' }, hint: { ru: 'разрядность → дБ', en: 'bits → dB' }, code: 'adcSNR(12) =\nquantStep(3.3, 12) =', kind: 'math', plot2d: 'adcSNR(x)' },
+  { pack: 'computing', label: { ru: 'Шеннон', en: 'Shannon' }, hint: { ru: 'пропускная способность', en: 'channel capacity' }, code: 'shannonCap(20*10^6, 30) =', kind: 'math', plot2d: 'shannonCap(x, 30)' },
   { pack: 'computing', label: { ru: 'CRC / хеш строки', en: 'CRC / string hash' }, hint: { ru: 'контрольные суммы', en: 'checksums' }, code: 'crc16("123456789") =\ncrc32("123456789") =', kind: 'math' },
-  { pack: 'computing', label: { ru: 'LFSR-последовательность', en: 'LFSR sequence' }, hint: { ru: 'псевдослучайные биты', en: 'pseudorandom bits' }, code: 'lfsrSeq(31, 27, 16, 5) =', kind: 'math' },
+  { pack: 'computing', label: { ru: 'LFSR-последовательность', en: 'LFSR sequence' }, hint: { ru: 'псевдослучайные биты', en: 'pseudorandom bits' }, code: 'lfsrSeq(31, 27, 16, 5) =', kind: 'math', plot2d: 'lfsrSeq(31, 27, 16, 5)' },
   { pack: 'computing', label: { ru: 'Размер в байтах', en: 'Byte size' }, hint: { ru: 'B/KiB/MiB…', en: 'B/KiB/MiB…' }, code: 'bytesFmt(1536) =', kind: 'math' },
   // высшая математика
   { pack: 'calc', label: { ru: 'Ряд Тейлора', en: 'Taylor series' }, hint: { ru: 'полином в точке', en: 'polynomial at a point' }, code: 'taylor("sin(x)", "x", 0, 5) =', kind: 'math' },
   { pack: 'calc', label: { ru: 'Предел', en: 'Limit' }, hint: { ru: 'численный предел', en: 'numeric limit' }, code: 'limit("sin(x)/x", "x", 0) =', kind: 'math' },
   { pack: 'calc', label: { ru: 'Градиент', en: 'Gradient' }, hint: { ru: 'численные производные', en: 'numeric derivatives' }, code: 'numgrad("x^2+y^2", ["x", "y"], [1, 2]) =', kind: 'math' },
-  { pack: 'calc', label: { ru: 'ДПФ и спектр', en: 'DFT and spectrum' }, hint: { ru: 'dft, амплитуды', en: 'dft, magnitudes' }, code: 'dftMag([0, 1, 0, -1]) =', kind: 'math' },
-  { pack: 'calc', label: { ru: 'Собственные числа', en: 'Eigenvalues' }, hint: { ru: 'спектр матрицы', en: 'matrix spectrum' }, code: 'eigen([2, 1; 1, 2]) =', kind: 'math' },
+  { pack: 'calc', label: { ru: 'ДПФ и спектр', en: 'DFT and spectrum' }, hint: { ru: 'dft, амплитуды', en: 'dft, magnitudes' }, code: 'dftMag([0, 1, 0, -1]) =', kind: 'math', plot2d: 'dftMag([0, 1, 0, -1])' },
+  { pack: 'calc', label: { ru: 'Собственные числа', en: 'Eigenvalues' }, hint: { ru: 'спектр матрицы', en: 'matrix spectrum' }, code: 'eigen([2, 1; 1, 2]) =', kind: 'math', plot2d: 'eigen([[2, 1], [1, 2]])' },
   { pack: 'calc', label: { ru: 'Ранг и число обусловленности', en: 'Rank and condition' }, hint: { ru: 'rankMat, condNum', en: 'rankMat, condNum' }, code: 'rankMat([1, 2; 2, 4]) =\ncondNum([1, 2; 3, 4]) =', kind: 'math' },
-  { pack: 'calc', label: { ru: 'Нормальное распределение', en: 'Normal distribution' }, hint: { ru: 'pdf/cdf', en: 'pdf/cdf' }, code: 'normpdf(0) =\nnormcdf(1.96) =', kind: 'math' },
+  { pack: 'calc', label: { ru: 'Нормальное распределение', en: 'Normal distribution' }, hint: { ru: 'pdf/cdf', en: 'pdf/cdf' }, code: 'normpdf(0) =\nnormcdf(1.96) =', kind: 'math', plot2d: 'normpdf(x)' },
   { pack: 'calc', label: { ru: 'Интерполяция и трапеции', en: 'Interp and trapz' }, hint: { ru: 'табличные данные', en: 'tabular data' }, code: 'interpLin([0, 1, 2], [0, 10, 40], 1.5) =\ntrapzY([0, 10, 40], 1) =', kind: 'math' },
   // физика
-  { pack: 'physics', label: { ru: 'Кинетика', en: 'Kinetics' }, hint: { ru: 'энергия и импульс', en: 'energy and momentum' }, code: 'kinE(2, 10) =\nmomP(2, 10) =', kind: 'math' },
-  { pack: 'physics', label: { ru: 'Орбита', en: 'Orbit' }, hint: { ru: 'скорость и период', en: 'velocity and period' }, code: 'orbitVel(5.97*10^24, 6771000) =\nescapeVel(5.97*10^24, 6371000) =', kind: 'math' },
-  { pack: 'physics', label: { ru: 'Чёрное тело', en: 'Black body' }, hint: { ru: 'Стефан–Больцман', en: 'Stefan–Boltzmann' }, code: 'blackbodyP(5800, 1) =', kind: 'math' },
-  { pack: 'physics', label: { ru: 'Распад', en: 'Decay' }, hint: { ru: 'экспонента, T1/2', en: 'exponential, half-life' }, code: 'lam := half2lam(10)\ndecayN(1000, lam, 5) =', kind: 'math' },
-  { pack: 'physics', label: { ru: 'Резонанс LC', en: 'LC resonance' }, hint: { ru: 'частота и добротность', en: 'frequency and Q' }, code: 'lcFreq(0.1, 10*10^-6) =\nrlcQ(10, 0.1, 10*10^-6) =', kind: 'math' },
+  { pack: 'physics', label: { ru: 'Кинетика', en: 'Kinetics' }, hint: { ru: 'энергия и импульс', en: 'energy and momentum' }, code: 'kinE(2, 10) =\nmomP(2, 10) =', kind: 'math', plot2d: 'kinE(2, x)' },
+  { pack: 'physics', label: { ru: 'Орбита', en: 'Orbit' }, hint: { ru: 'скорость и период', en: 'velocity and period' }, code: 'orbitVel(5.97*10^24, 6771000) =\nescapeVel(5.97*10^24, 6371000) =', kind: 'math', plot2d: 'orbitVel(5.97*10^24, x)' },
+  { pack: 'physics', label: { ru: 'Чёрное тело', en: 'Black body' }, hint: { ru: 'Стефан–Больцман', en: 'Stefan–Boltzmann' }, code: 'blackbodyP(5800, 1) =', kind: 'math', plot2d: 'blackbodyP(x, 1)' },
+  { pack: 'physics', label: { ru: 'Распад', en: 'Decay' }, hint: { ru: 'экспонента, T1/2', en: 'exponential, half-life' }, code: 'lam := half2lam(10)\ndecayN(1000, lam, 5) =', kind: 'math', plot2d: 'decayN(1000, lam, x)' },
+  { pack: 'physics', label: { ru: 'Резонанс LC', en: 'LC resonance' }, hint: { ru: 'частота и добротность', en: 'frequency and Q' }, code: 'lcFreq(0.1, 10*10^-6) =\nrlcQ(10, 0.1, 10*10^-6) =', kind: 'math', plot2d: 'lcFreq(0.1, x)' },
   // ЭМ поля
-  { pack: 'em', label: { ru: 'Гамма и КСВ', en: 'Gamma and VSWR' }, hint: { ru: 'отражение от нагрузки', en: 'load reflection' }, code: 'gammaZL(75, 50) =\nvswr(75, 50) =', kind: 'math' },
-  { pack: 'em', label: { ru: 'Входное сопротивление линии', en: 'Line input impedance' }, hint: { ru: 'отрезок βl', en: 'βl section' }, code: 'zinLine(75, 50, pi/4) =', kind: 'math' },
-  { pack: 'em', label: { ru: 'Скин-слой', en: 'Skin depth' }, hint: { ru: 'глубина проникновения', en: 'penetration depth' }, code: 'skinDepth(50, 5.8*10^7) =', kind: 'math' },
+  { pack: 'em', label: { ru: 'Гамма и КСВ', en: 'Gamma and VSWR' }, hint: { ru: 'отражение от нагрузки', en: 'load reflection' }, code: 'gammaZL(75, 50) =\nvswr(75, 50) =', kind: 'math', plot2d: 'gammaZL(x, 50)' },
+  { pack: 'em', label: { ru: 'Входное сопротивление линии', en: 'Line input impedance' }, hint: { ru: 'отрезок βl', en: 'βl section' }, code: 'zinLine(75, 50, pi/4) =', kind: 'math', plot2d: 'zinLine(75, 50, x)' },
+  { pack: 'em', label: { ru: 'Скин-слой', en: 'Skin depth' }, hint: { ru: 'глубина проникновения', en: 'penetration depth' }, code: 'skinDepth(50, 5.8*10^7) =', kind: 'math', plot2d: 'skinDepth(x, 5.8*10^7)' },
   { pack: 'em', label: { ru: 'Потери в диэлектрике', en: 'Dielectric loss' }, hint: { ru: 'alpha, beta', en: 'alpha, beta' }, code: 'propConst(3.3, 0.012, 10*10^9) =', kind: 'math' },
-  { pack: 'em', label: { ru: 'Коаксиал 50 Ом', en: '50 Ohm coax' }, hint: { ru: 'геометрия по Z', en: 'geometry for Z' }, code: 'coaxZ(2.1, 0.5*10^-3, 1.65*10^-3) =\ncoaxCap(2.1, 0.5*10^-3, 1.65*10^-3) =', kind: 'math' },
-  { pack: 'em', label: { ru: 'Микрополосок', en: 'Microstrip' }, hint: { ru: 'Хаммерстад', en: 'Hammerstad' }, code: 'microstripZ(3*10^-3, 1.5*10^-3, 4.4) =', kind: 'math' },
-  { pack: 'em', label: { ru: 'Волновод', en: 'Waveguide' }, hint: { ru: 'отсечка TE10', en: 'TE10 cutoff' }, code: 'wgCutoff(23*10^-3) =\nwgLambda(10*10^9, 23*10^-3) =', kind: 'math' },
-  { pack: 'em', label: { ru: 'Линия связи (Фриис)', en: 'Link budget (Friis)' }, hint: { ru: 'дБм на приёмнике', en: 'dBm at receiver' }, code: 'friisDb(20, 2, 2, 2.4*10^9, 1000) =', kind: 'math' },
-  { pack: 'em', label: { ru: 'Поле заряда и провода', en: 'Charge and wire field' }, hint: { ru: 'Кулон, Био–Савар', en: 'Coulomb, Biot–Savart' }, code: 'ePointQ(1.6*10^-19, 10^-10) =\nbWire(1, 10^-3) =', kind: 'math' },
+  { pack: 'em', label: { ru: 'Коаксиал 50 Ом', en: '50 Ohm coax' }, hint: { ru: 'геометрия по Z', en: 'geometry for Z' }, code: 'coaxZ(2.1, 0.5*10^-3, 1.65*10^-3) =\ncoaxCap(2.1, 0.5*10^-3, 1.65*10^-3) =', kind: 'math', plot2d: 'coaxZ(2.1, 0.5*10^-3, x)' },
+  { pack: 'em', label: { ru: 'Микрополосок', en: 'Microstrip' }, hint: { ru: 'Хаммерстад', en: 'Hammerstad' }, code: 'microstripZ(3*10^-3, 1.5*10^-3, 4.4) =', kind: 'math', plot2d: 'microstripZ(x, 1.5*10^-3, 4.4)' },
+  { pack: 'em', label: { ru: 'Волновод', en: 'Waveguide' }, hint: { ru: 'отсечка TE10', en: 'TE10 cutoff' }, code: 'wgCutoff(23*10^-3) =\nwgLambda(10*10^9, 23*10^-3) =', kind: 'math', plot2d: 'wgLambda(10*10^9, x)' },
+  { pack: 'em', label: { ru: 'Линия связи (Фриис)', en: 'Link budget (Friis)' }, hint: { ru: 'дБм на приёмнике', en: 'dBm at receiver' }, code: 'friisDb(20, 2, 2, 2.4*10^9, 1000) =', kind: 'math', plot2d: 'friisDb(20, 2, 2, 2.4*10^9, x)' },
+  { pack: 'em', label: { ru: 'Поле заряда и провода', en: 'Charge and wire field' }, hint: { ru: 'Кулон, Био–Савар', en: 'Coulomb, Biot–Savart' }, code: 'ePointQ(1.6*10^-19, 10^-10) =\nbWire(1, 10^-3) =', kind: 'math', plot2d: 'ePointQ(1.6*10^-19, x); bWire(1, x)' },
   // программирование
   {
     pack: 'programs', label: { ru: 'Бинарный поиск', en: 'Binary search' }, hint: { ru: 'деление пополам, assert', en: 'bisection, assert' },

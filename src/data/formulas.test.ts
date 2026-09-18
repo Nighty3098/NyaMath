@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { recalculateAll } from '../engine/dependencies';
 import { compilePlotExpr, preprocessJ, preprocessRanges } from '../engine/mathEngine';
+import { samplePlotBlock } from '../engine/plotSample';
+import { samplePlot3d } from '../engine/plot3dSample';
 import { getSimModel } from '../engine/simEngine';
 import { FORMULAS, FORMULA_SECTIONS } from './formulas';
 import { FORMULA_VARS } from './formulaVars';
@@ -105,6 +107,28 @@ describe('formula catalog', () => {
     }
     expect(plots, 'no plot attachments').toBeGreaterThan(0);
     expect(sims, 'no sim attachments').toBeGreaterThan(0);
+  });
+
+  it('every attached plot renders points in its formula scope', () => {
+    for (const f of FORMULAS) {
+      if (f.plot2d === undefined && f.plot3d === undefined) continue;
+      const block = {
+        id: `p-${f.id}`, x: 0, y: 0, rawInput: f.code, displayLatex: '', resultStr: '',
+        resultLatex: '', resultValue: null, error: null,
+        dependencies: [], definedVar: null, isOutput: true, kind: 'math' as const,
+      };
+      const res = recalculateAll([block]);
+      if (f.plot2d !== undefined) {
+        const s = samplePlotBlock(f.plot2d, res.scope, -10, 10, 60);
+        const n = (s?.series ?? []).flatMap((ser) => ser.ys).filter((y) => typeof y === 'number' && isFinite(y)).length;
+        expect(n, `${f.id}: plot2d is empty on default range`).toBeGreaterThanOrEqual(1);
+      }
+      if (f.plot3d !== undefined) {
+        const s = samplePlot3d(f.plot3d, res.scope, { xmin: -5, xmax: 5, ymin: -5, ymax: 5, res: 12, mode: 'auto' });
+        const zs = ((s as { zs?: unknown[][] } | null)?.zs ?? []).flat(Infinity);
+        expect(zs.some((z) => typeof z === 'number' && isFinite(z)), `${f.id}: plot3d is empty`).toBe(true);
+      }
+    }
   });
 
   it('catalog is non-empty and covers all sections', () => {

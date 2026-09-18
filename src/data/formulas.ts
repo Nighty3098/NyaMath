@@ -59,6 +59,7 @@ export const FORMULAS: Formula[] = [
   // ================= МЕХАНИКА · КИНЕМАТИКА =================
   {
     id: 'vel-uniform', section: 'kinematics',
+    plot2d: 'v*x',
     label: { ru: 'Равномерное движение', en: 'Uniform motion' },
     hint: { ru: 's = v·t; v — скорость, t — время', en: 's = v·t; v — velocity, t — time' },
     code: 'v := 10\nt := 2\ns := v*t\ns =',
@@ -66,6 +67,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'vel-uniform-eq', section: 'kinematics',
+    plot2d: 'v0*x + a_acc*x^2/2',
     label: { ru: 'Равноускоренное движение', en: 'Uniformly accelerated motion' },
     hint: { ru: 's = v₀·t + a·t²/2; v₀ — нач. скорость, a — ускорение', en: 's = v₀·t + a·t²/2; v₀ — initial velocity, a — acceleration' },
     code: 'v0 := 20\na_acc := 2\nt_s := 5\ns_dist := v0*t_s + a_acc*t_s^2/2\ns_dist =',
@@ -73,6 +75,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'vel-final', section: 'kinematics',
+    plot2d: 'sqrt(v0^2 + 2*a_acc*x)',
     label: { ru: 'Скорость без времени', en: 'Velocity without time' },
     hint: { ru: 'v = √(v₀² + 2·a·s); для равноускоренного движения', en: 'v = √(v₀² + 2·a·s); uniformly accelerated' },
     code: 'v0 := 20\na_acc := 2\ns_dist := 100\nv_end := sqrt(v0^2 + 2*a_acc*s_dist)\nv_end =',
@@ -80,6 +83,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'free-fall', section: 'kinematics',
+    plot2d: 'g_g*x^2/2',
     label: { ru: 'Свободное падение', en: 'Free fall' },
     hint: { ru: 'h = g·t²/2; без сопротивления воздуха', en: 'h = g·t²/2; no air drag' },
     code: 'g_g := 9.8\nt_s := 3\nh_fall := g_g*t_s^2/2\nh_fall =',
@@ -87,6 +91,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'free-fall-v', section: 'kinematics',
+    plot2d: 'g_g*x',
     label: { ru: 'Скорость при падении', en: 'Fall velocity' },
     hint: { ru: 'v = g·t; из покоя', en: 'v = g·t; from rest' },
     code: 'g_g := 9.8\nt_s := 3\nv_end := g_g*t_s\nv_end =',
@@ -94,6 +99,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'throw-up', section: 'kinematics',
+    plot2d: 'v0*x - g_g*x^2/2',
     label: { ru: 'Бросок вертикально вверх', en: 'Vertical throw up' },
     hint: { ru: 'H = v₀²/(2g); t_пол = 2v₀/g', en: 'H = v₀²/(2g); t_up = 2v₀/g' },
     code: 'v0 := 20\ng_g := 9.8\nH_max := v0^2/(2*g_g)\nt_up := 2*v0/g_g\n[H_max; t_up] =',
@@ -101,6 +107,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'throw-angle', section: 'kinematics',
+    plot2d: 'x*tan(alpha) - g_g*x^2/(2*v0^2*cos(alpha)^2)',
     label: { ru: 'Бросок под углом: дальность', en: 'Projectile range' },
     hint: { ru: 'R = v₀²·sin(2α)/g; α — угол к горизонту', en: 'R = v₀²·sin(2α)/g; α — elevation angle' },
     code: 'v0 := 20\nalpha := pi/6\ng_g := 9.8\nR_range := v0^2*sin(2*alpha)/g_g\nR_range =',
@@ -108,6 +115,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'throw-angle-h', section: 'kinematics',
+    plot2d: 'x*tan(alpha) - g_g*x^2/(2*v0^2*cos(alpha)^2)',
     label: { ru: 'Бросок под углом: высота', en: 'Projectile max height' },
     hint: { ru: 'H = v₀²·sin²α/(2g)', en: 'H = v₀²·sin²α/(2g)' },
     code: 'v0 := 20\nalpha := pi/6\ng_g := 9.8\nH_max := v0^2*sin(alpha)^2/(2*g_g)\nH_max =',
@@ -115,6 +123,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'throw-angle-t', section: 'kinematics',
+    plot2d: 'x*tan(alpha) - g_g*x^2/(2*v0^2*cos(alpha)^2)',
     label: { ru: 'Бросок под углом: время полёта', en: 'Projectile flight time' },
     hint: { ru: 't = 2·v₀·sinα/g; приземление на тот же уровень', en: 't = 2·v₀·sinα/g; same launch level' },
     code: 'v0 := 20\nalpha := pi/6\ng_g := 9.8\nt_flight := 2*v0*sin(alpha)/g_g\nt_flight =',
@@ -122,6 +131,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'horiz-throw', section: 'kinematics',
+    plot2d: 'H_cl - g_g*x^2/(2*v0^2)',
     label: { ru: 'Горизонтальный бросок', en: 'Horizontal throw' },
     hint: { ru: 't = √(2H/g); дальность R = v₀·t', en: 't = √(2H/g); range R = v₀·t' },
     code: 'v0 := 15\nH_cl := 20\ng_g := 9.8\nt_fall := sqrt(2*H_cl/g_g)\nR_rng := v0*t_fall\n[t_fall; R_rng] =',
@@ -129,6 +139,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'angular-vel', section: 'kinematics',
+    plot2d: '2*pi*x',
     label: { ru: 'Угловая скорость и период', en: 'Angular velocity and period' },
     hint: { ru: 'ω = 2πf; T = 1/f', en: 'ω = 2πf; T = 1/f' },
     code: 'f_hz := 50\nw_ang := 2*pi*f_hz\nT_per := 1/f_hz\n[w_ang; T_per] =',
@@ -136,6 +147,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'lin-ang', section: 'kinematics',
+    plot2d: 'w_ang*x',
     label: { ru: 'Связь линейной и угловой скорости', en: 'Linear vs angular speed' },
     hint: { ru: 'v = ω·r', en: 'v = ω·r' },
     code: 'w_ang := 314.1592654\nr_rad := 0.1\nv_lin := w_ang*r_rad\nv_lin =',
@@ -143,6 +155,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'ang-accel', section: 'kinematics',
+    plot2d: 'w1*x + a_ang*x^2/2',
     label: { ru: 'Равноускоренное вращение', en: 'Uniform angular acceleration' },
     hint: { ru: 'θ = ω₀·t + ε·t²/2', en: 'θ = ω₀·t + ε·t²/2' },
     code: 'w1 := 0\nw2 := 100\nt_s := 4\na_ang := (w2 - w1)/t_s\ntheta_rot := w1*t_s + a_ang*t_s^2/2\n[a_ang; theta_rot] =',
@@ -157,6 +170,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'braking', section: 'kinematics',
+    plot2d: 'v0 + a_dec*x',
     label: { ru: 'Торможение', en: 'Deceleration' },
     hint: { ru: 'a = (v − v₀)/t; тормозной путь s = v₀²/(2a)', en: 'a = (v − v₀)/t; stop distance s = v₀²/(2a)' },
     code: 'v0 := 20\nv_end := 0\nt_s := 5\na_dec := (v_end - v0)/t_s\ns_stop := v0^2/(2*abs(a_dec))\n[a_dec; s_stop] =',
@@ -193,6 +207,7 @@ export const FORMULAS: Formula[] = [
   // ================= МЕХАНИКА · ДИНАМИКА =================
   {
     id: 'newton2', section: 'dynamics',
+    plot2d: 'x/m_kg',
     label: { ru: 'Второй закон Ньютона', en: "Newton's second law" },
     hint: { ru: 'F = m·a', en: 'F = m·a' },
     code: 'm_kg := 2\nF_net := 10\na_acc := F_net/m_kg\na_acc =',
@@ -207,6 +222,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'momentum-p', section: 'dynamics',
+    plot2d: 'm_kg*x',
     label: { ru: 'Импульс тела', en: 'Momentum' },
     hint: { ru: 'p = m·v', en: 'p = m·v' },
     code: 'm_kg := 3\nv_vel := 5\np_mom := m_kg*v_vel\np_mom =',
@@ -221,6 +237,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'inelastic-collision', section: 'dynamics',
+    plot2d: '(m1*v1 + x*v2)/(m1 + x)',
     label: { ru: 'Неупругий удар', en: 'Perfectly inelastic collision' },
     hint: { ru: 'v = (m₁v₁+m₂v₂)/(m₁+m₂)', en: 'v = (m₁v₁+m₂v₂)/(m₁+m₂)' },
     code: 'm1 := 2\nv1 := 6\nm2 := 4\nv2 := 0\nv_after := (m1*v1 + m2*v2)/(m1 + m2)\nv_after =',
@@ -235,6 +252,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'restitution-collision', section: 'dynamics',
+    plot2d: '(m1*v1 + m2*v2 + m2*x*(v2-v1))/(m1+m2)',
     label: { ru: 'Удар с восстановлением (материал)', en: 'Restitution collision (material)' },
     hint: { ru: 'e — коэфф. восстановления материала; e=1 упруго, e=0 неупруго', en: 'e — restitution of the material; e=1 elastic, e=0 inelastic' },
     code: 'm1 := 2\nv1 := 6\nm2 := 4\nv2 := 0\ne_rest := 0.8\nv1_after := (m1*v1 + m2*v2 + m2*e_rest*(v2 - v1))/(m1 + m2)\nv2_after := (m1*v1 + m2*v2 + m1*e_rest*(v1 - v2))/(m1 + m2)\n[v1_after; v2_after] =',
@@ -249,6 +267,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'friction', section: 'dynamics',
+    plot2d: 'x*m_kg*g_std',
     label: { ru: 'Сила трения', en: 'Friction force' },
     hint: { ru: 'F = μ·N; N = m·g на горизонтальной опоре', en: 'F = μ·N; N = m·g on flat surface' },
     code: 'm_kg := 5\nmu_f := 0.3\nF_fric := mu_f*m_kg*g_std\nF_fric =',
@@ -256,6 +275,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'incline-normal', section: 'dynamics',
+    plot2d: 'm_kg*g_std*cos(x)',
     label: { ru: 'Наклонная плоскость: реакция', en: 'Incline: normal force' },
     hint: { ru: 'N = m·g·cosα', en: 'N = m·g·cosα' },
     code: 'm_kg := 10\nalpha_ang := pi/6\nN_norm := m_kg*g_std*cos(alpha_ang)\nN_norm =',
@@ -263,6 +283,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'incline-slide', section: 'dynamics',
+    plot2d: 'm_kg*g_std*sin(x) - mu_f*m_kg*g_std*cos(x)',
     label: { ru: 'Наклонная плоскость: скольжение', en: 'Incline: sliding force' },
     hint: { ru: 'F = m·g(sinα − μ·cosα)', en: 'F = m·g(sinα − μ·cosα)' },
     code: 'm_kg := 10\nalpha_ang := pi/6\nmu_f := 0.2\nF_slide := m_kg*g_std*sin(alpha_ang) - mu_f*m_kg*g_std*cos(alpha_ang)\nF_slide =',
@@ -270,6 +291,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'hooke', section: 'dynamics',
+    plot2d: 'k_spr*x',
     label: { ru: 'Закон Гука', en: "Hooke's law" },
     hint: { ru: 'F = k·x', en: 'F = k·x' },
     code: 'k_spr := 200\nx_el := 0.05\nF_hooke := k_spr*x_el\nF_hooke =',
@@ -277,6 +299,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'work-const', section: 'dynamics',
+    plot2d: 'F_app*d_dist*cos(x)',
     label: { ru: 'Работа постоянной силы', en: 'Work of constant force' },
     hint: { ru: 'W = F·s·cosφ', en: 'W = F·s·cosφ' },
     code: 'F_app := 50\nd_dist := 3\nphi_ang := 0\nW_work := F_app*d_dist*cos(phi_ang)\nW_work =',
@@ -291,6 +314,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'kin-energy', section: 'dynamics',
+    plot2d: 'm_kg*x^2/2',
     label: { ru: 'Кинетическая энергия', en: 'Kinetic energy' },
     hint: { ru: 'E = m·v²/2', en: 'E = m·v²/2' },
     code: 'm_kg := 2\nv_vel := 10\nE_kin := m_kg*v_vel^2/2\nE_kin =',
@@ -298,6 +322,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'pot-energy', section: 'dynamics',
+    plot2d: 'm_kg*g_std*x',
     label: { ru: 'Потенциальная энергия', en: 'Potential energy' },
     hint: { ru: 'E = m·g·h', en: 'E = m·g·h' },
     code: 'm_kg := 2\nH_h := 10\nE_pot := m_kg*g_std*H_h\nE_pot =',
@@ -312,6 +337,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'centripetal-a', section: 'dynamics',
+    plot2d: 'x^2/r_rad',
     label: { ru: 'Центростремительное ускорение', en: 'Centripetal acceleration' },
     hint: { ru: 'a = v²/r', en: 'a = v²/r' },
     code: 'v_vel := 10\nr_rad := 5\na_cent := v_vel^2/r_rad\na_cent =',
@@ -319,6 +345,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'centripetal-f', section: 'dynamics',
+    plot2d: 'm_kg*x^2/r_rad',
     label: { ru: 'Центростремительная сила', en: 'Centripetal force' },
     hint: { ru: 'F = m·v²/r', en: 'F = m·v²/r' },
     code: 'm_kg := 0.5\nv_vel := 4\nr_rad := 0.8\nF_cent := m_kg*v_vel^2/r_rad\nF_cent =',
@@ -326,6 +353,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'torque', section: 'dynamics',
+    plot2d: 'x*L_arm',
     label: { ru: 'Момент силы', en: 'Torque' },
     hint: { ru: 'M = F·L; сила плечу перпендикулярна', en: 'M = F·L; force perpendicular to arm' },
     code: 'F_f := 20\nL_arm := 0.3\nM_torque := F_f*L_arm\nM_torque =',
@@ -333,6 +361,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'ang-momentum', section: 'dynamics',
+    plot2d: 'm_kg*x*r_rad',
     label: { ru: 'Момент импульса (материальная точка)', en: 'Angular momentum (point mass)' },
     hint: { ru: 'L = m·v·r', en: 'L = m·v·r' },
     code: 'm_kg := 2\nv_vel := 3\nr_rad := 0.5\nL_ang := m_kg*v_vel*r_rad\nL_ang =',
@@ -340,6 +369,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'universal-grav', section: 'dynamics',
+    plot2d: 'G_const*m1*m2/x^2',
     label: { ru: 'Закон всемирного тяготения', en: "Newton's law of gravitation" },
     hint: { ru: 'F = G·m₁·m₂/r²', en: 'F = G·m₁·m₂/r²' },
     code: 'm1 := 5.97*10^24\nm2 := 1000\nr_or := 6771*10^3\nF_gr := G_const*m1*m2/r_or^2\nF_gr =',
@@ -347,6 +377,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'orbit-v1', section: 'dynamics',
+    plot2d: 'sqrt(G_const*M_p/x)',
     label: { ru: 'Первая космическая скорость', en: 'Orbital speed' },
     hint: { ru: 'v = √(G·M/r)', en: 'v = √(G·M/r)' },
     code: 'M_p := 5.97*10^24\nr_or := 6771*10^3\nv1 := sqrt(G_const*M_p/r_or)\nv1 =',
@@ -362,6 +393,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'pressure-force', section: 'dynamics',
+    plot2d: 'x/A_ar',
     label: { ru: 'Давление', en: 'Pressure' },
     hint: { ru: 'p = F/A', en: 'p = F/A' },
     code: 'F_p := 100\nA_ar := 0.5\np_pres := F_p/A_ar\np_pres =',
@@ -369,6 +401,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'hydrostatic', section: 'dynamics',
+    plot2d: 'rho_f*g_std*x',
     label: { ru: 'Гидростатическое давление', en: 'Hydrostatic pressure' },
     hint: { ru: 'p = ρ·g·h', en: 'p = ρ·g·h' },
     code: 'rho_f := 1000\nH_h := 10\np_hyd := rho_f*g_std*H_h\np_hyd =',
@@ -376,6 +409,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'archimedes', section: 'dynamics',
+    plot2d: 'rho_f*g_std*x',
     label: { ru: 'Сила Архимеда', en: 'Buoyant force' },
     hint: { ru: 'F = ρ·g·V (вытесненный объём)', en: 'F = ρ·g·V (displaced volume)' },
     code: 'rho_f := 1000\nV_b := 0.002\nF_arch := rho_f*g_std*V_b\nF_arch =',
@@ -383,6 +417,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'pascal-law', section: 'dynamics',
+    plot2d: 'F1/A1*x',
     label: { ru: 'Гидравлический пресс', en: 'Hydraulic press' },
     hint: { ru: 'F₂ = F₁·(A₂/A₁)', en: 'F₂ = F₁·(A₂/A₁)' },
     code: 'F1 := 100\nA1 := 0.01\nA2 := 0.1\nF2 := F1*(A2/A1)\nF2 =',
@@ -390,6 +425,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'rot-inertia-point', section: 'dynamics',
+    plot2d: 'm_kg*x^2',
     label: { ru: 'Момент инерции точки', en: 'Point moment of inertia' },
     hint: { ru: 'I = m·r²', en: 'I = m·r²' },
     code: 'm_kg := 2\nr_rad := 0.5\nI_pt := m_kg*r_rad^2\nI_pt =',
@@ -397,6 +433,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'rot-energy', section: 'dynamics',
+    plot2d: 'I_ax*x^2/2',
     label: { ru: 'Энергия вращения', en: 'Rotational energy' },
     hint: { ru: 'E = I·ω²/2', en: 'E = I·ω²/2' },
     code: 'I_ax := 0.5\nw_ang := 10\nE_rot := I_ax*w_ang^2/2\nE_rot =',
@@ -411,6 +448,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'elevator-weight', section: 'dynamics',
+    plot2d: 'm_kg*(g_g+x)',
     label: { ru: 'Вес в лифте', en: 'Elevator weight' },
     hint: { ru: 'P = m(g+a); вверх +', en: 'P = m(g+a); up +' },
     code: 'm_kg := 70\ng_g := 9.8\na_el := 2\nP_up := m_kg*(g_g + a_el)\nP_dn := m_kg*(g_g - a_el)\n[P_up; P_dn] =',
@@ -419,6 +457,7 @@ export const FORMULAS: Formula[] = [
   // ================= МКТ И ТЕРМОДИНАМИКА =================
   {
     id: 'ideal-gas', section: 'molecular',
+    plot2d: 'n_mol*R_gas*T_k/x',
     label: { ru: 'Уравнение Менделеева — Клапейрона', en: 'Ideal gas law' },
     hint: { ru: 'p·V = n·R·T', en: 'p·V = n·R·T' },
     code: 'n_mol := 1\nT_k := 300\nV_v := 0.001\nP_pres := n_mol*R_gas*T_k/V_v\nP_pres =',
@@ -433,6 +472,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'boyle-law', section: 'molecular',
+    plot2d: 'P1*V1/x',
     label: { ru: 'Закон Бойля — Мариотта', en: "Boyle's law" },
     hint: { ru: 'p₁V₁ = p₂V₂ (T = const)', en: 'p₁V₁ = p₂V₂ (T = const)' },
     code: 'P1 := 10^5\nV1 := 0.002\nV2 := 0.0005\nP2 := P1*V1/V2\nP2 =',
@@ -440,6 +480,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'gay-lussac-v', section: 'molecular',
+    plot2d: 'V1/T1*x',
     label: { ru: 'Закон Гей-Люссака (V,T)', en: "Charles's law" },
     hint: { ru: 'V₁/T₁ = V₂/T₂ (p = const)', en: 'V₁/T₁ = V₂/T₂ (p = const)' },
     code: 'V1 := 0.001\nT1 := 300\nT2 := 450\nV2 := V1*T2/T1\nV2 =',
@@ -447,6 +488,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'p-nkT', section: 'molecular',
+    plot2d: 'x*k_B*T_k',
     label: { ru: 'Давление газа (концентрация)', en: 'Pressure from number density' },
     hint: { ru: 'p = n·k·T', en: 'p = n·k·T' },
     code: 'n_m3 := 10^25\nT_k := 300\np_press := n_m3*k_B*T_k\np_press =',
@@ -462,6 +504,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'e-avg', section: 'molecular',
+    plot2d: '1.5*k_B*x',
     label: { ru: 'Средняя кинетическая энергия молекулы', en: 'Average molecular KE' },
     hint: { ru: 'E = (3/2)·k·T (одноатомный газ)', en: 'E = (3/2)·k·T (monatomic gas)' },
     code: 'T_k := 300\nE_avg := 1.5*k_B*T_k\nE_avg =',
@@ -483,6 +526,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'q-heat', section: 'molecular',
+    plot2d: 'c_c*m_kg*x',
     label: { ru: 'Количество теплоты (нагрев)', en: 'Heat (sensible)' },
     hint: { ru: 'Q = c·m·ΔT', en: 'Q = c·m·ΔT' },
     code: 'c_c := 4187\nm_kg := 1\ndT := 10\nQ_heat := c_c*m_kg*dT\nQ_heat =',
@@ -490,6 +534,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'q-fusion', section: 'molecular',
+    plot2d: 'lam_fus*x',
     label: { ru: 'Теплота плавления', en: 'Heat of fusion' },
     hint: { ru: 'Q = λ·m', en: 'Q = λ·m' },
     code: 'lam_fus := 3.3*10^5\nm_kg := 2\nQ_f := lam_fus*m_kg\nQ_f =',
@@ -497,6 +542,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'q-vapor', section: 'molecular',
+    plot2d: 'L_vap*x',
     label: { ru: 'Теплота парообразования', en: 'Heat of vaporization' },
     hint: { ru: 'Q = L·m', en: 'Q = L·m' },
     code: 'L_vap := 2.26*10^6\nm_kg := 0.5\nQ_vap := L_vap*m_kg\nQ_vap =',
@@ -504,6 +550,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'q-fuel', section: 'molecular',
+    plot2d: 'q_fuel*x',
     label: { ru: 'Теплота сгорания топлива', en: 'Heat of combustion' },
     hint: { ru: 'Q = q·m', en: 'Q = q·m' },
     code: 'q_fuel := 4.6*10^7\nm_kg := 2\nQ_c := q_fuel*m_kg\nQ_c =',
@@ -518,6 +565,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'work-isobar', section: 'molecular',
+    plot2d: 'P_p*x',
     label: { ru: 'Работа газа (изобарный)', en: 'Isobaric work' },
     hint: { ru: 'A = p·ΔV', en: 'A = p·ΔV' },
     code: 'P_p := 101325\ndV := 0.001\nW_gas := P_p*dV\nW_gas =',
@@ -525,6 +573,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'efficiency', section: 'molecular',
+    plot2d: '(Q1-x)/Q1',
     label: { ru: 'КПД тепловой машины', en: 'Thermal efficiency' },
     hint: { ru: 'η = (Q₁ − Q₂)/Q₁ = A/Q₁', en: 'η = (Q₁ − Q₂)/Q₁ = A/Q₁' },
     code: 'Q1 := 1000\nQ2 := 600\neta_e := (Q1 - Q2)/Q1\neta_e =',
@@ -532,6 +581,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'carnot', section: 'molecular',
+    plot2d: '(T1-x)/T1',
     label: { ru: 'КПД цикла Карно', en: 'Carnot efficiency' },
     hint: { ru: 'η = (T₁ − T₂)/T₁; T в кельвинах', en: 'η = (T₁ − T₂)/T₁; T in kelvin' },
     code: 'T1 := 500\nT2 := 300\neta_c := (T1 - T2)/T1\neta_c =',
@@ -539,6 +589,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'adiabatic', section: 'molecular',
+    plot2d: 'P1*(V1/x)^gam_ad',
     label: { ru: 'Адиабатный процесс', en: 'Adiabatic process' },
     hint: { ru: 'p₁V₁ᵞ = p₂V₂ᵞ; γ = Cp/Cv', en: 'p₁V₁ᵞ = p₂V₂ᵞ; γ = Cp/Cv' },
     code: 'P1 := 10^5\nV1 := 0.001\ngam_ad := 1.4\nV2 := 0.002\nP2 := P1*(V1/V2)^gam_ad\nP2 =',
@@ -546,6 +597,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'thermo-expand', section: 'molecular',
+    plot2d: 'alpha_lin*L0*x',
     label: { ru: 'Тепловое расширение', en: 'Thermal expansion' },
     hint: { ru: 'ΔL = α·L₀·ΔT', en: 'ΔL = α·L₀·ΔT' },
     code: 'L0 := 10\nalpha_lin := 1.2*10^-5\ndT := 50\ndL := alpha_lin*L0*dT\ndL =',
@@ -554,6 +606,7 @@ export const FORMULAS: Formula[] = [
   // ================= ЭЛЕКТРОСТАТИКА =================
   {
     id: 'coulomb', section: 'electrostatics',
+    plot2d: 'q1*q2/(4*pi*eps_0*x^2)',
     label: { ru: 'Закон Кулона', en: "Coulomb's law" },
     hint: { ru: 'F = k·q₁·q₂/r²; k = 1/(4πε₀)', en: 'F = k·q₁·q₂/r²; k = 1/(4πε₀)' },
     code: 'q1 := 1.6*10^-19\nq2 := 1.6*10^-19\nr_c := 10^-10\nF_c := q1*q2/(4*pi*eps_0*r_c^2)\nF_c =',
@@ -561,6 +614,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'e-field-point', section: 'electrostatics',
+    plot2d: 'q_pt/(4*pi*eps_0*x^2)',
     label: { ru: 'Напряжённость поля точечного заряда', en: 'Point charge field' },
     hint: { ru: 'E = k·q/r²', en: 'E = k·q/r²' },
     code: 'q_pt := 1.6*10^-19\nr_pt := 0.01\nE_f := q_pt/(4*pi*eps_0*r_pt^2)\nE_f =',
@@ -568,6 +622,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'potential-point', section: 'electrostatics',
+    plot2d: 'q_pt/(4*pi*eps_0*x)',
     label: { ru: 'Потенциал точечного заряда', en: 'Point charge potential' },
     hint: { ru: 'φ = k·q/r', en: 'φ = k·q/r' },
     code: 'q_pt := 1.6*10^-19\nr_pt := 0.01\nphi_pot := q_pt/(4*pi*eps_0*r_pt)\nphi_pot =',
@@ -582,6 +637,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'capacitance-def', section: 'electrostatics',
+    plot2d: 'C_c*x',
     label: { ru: 'Ёмкость и заряд', en: 'Capacitance and charge' },
     hint: { ru: 'q = C·U', en: 'q = C·U' },
     code: 'C_c := 10*10^-6\nU_c := 12\nQ_charge := C_c*U_c\nQ_charge =',
@@ -589,6 +645,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'cap-parallel-plate', section: 'electrostatics',
+    plot2d: 'eps_0*eps_r*S_ar/x',
     label: { ru: 'Плоский конденсатор', en: 'Parallel-plate capacitor' },
     hint: { ru: 'C = ε₀·ε·S/d', en: 'C = ε₀·ε·S/d' },
     code: 'eps_r := 1\nS_ar := 0.01\nd_gap := 0.001\nC_cap := eps_0*eps_r*S_ar/d_gap\nC_cap =',
@@ -610,6 +667,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'cap-energy', section: 'electrostatics',
+    plot2d: 'C_c*x^2/2',
     label: { ru: 'Энергия конденсатора', en: 'Capacitor energy' },
     hint: { ru: 'W = C·U²/2', en: 'W = C·U²/2' },
     code: 'C_c := 10*10^-6\nU_c := 12\nW_cap := C_c*U_c^2/2\nW_cap =',
@@ -617,6 +675,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'field-energy-density', section: 'electrostatics',
+    plot2d: 'eps_0*x^2/2',
     label: { ru: 'Плотность энергии поля', en: 'Field energy density' },
     hint: { ru: 'w = ε₀·E²/2', en: 'w = ε₀·E²/2' },
     code: 'E_f := 10^6\nw_dens := eps_0*E_f^2/2\nw_dens =',
@@ -652,6 +711,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'charge-quantum', section: 'electrostatics',
+    plot2d: 'x*q_e',
     label: { ru: 'Заряд избыточных электронов', en: 'Charge of excess electrons' },
     hint: { ru: 'q = N·e', en: 'q = N·e' },
     code: 'N_el := 10^10\nq_n := N_el*q_e\nq_n =',
@@ -659,6 +719,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'electron-deflection', section: 'electrostatics',
+    plot2d: 'q_e*x/m_kg',
     label: { ru: 'Движение заряда в поле', en: 'Charge in uniform field' },
     hint: { ru: 'a = qE/m', en: 'a = qE/m' },
     code: 'E_f := 10^4\nm_kg := 9.1*10^-31\na_defl := q_e*E_f/m_kg\na_defl =',
@@ -674,6 +735,7 @@ export const FORMULAS: Formula[] = [
   // ---- добрано: кинематика до 22 ----
   {
     id: 'tangential-accel', section: 'kinematics',
+    plot2d: 'eps_ang*x',
     label: { ru: 'Тангенциальное ускорение', en: 'Tangential acceleration' },
     hint: { ru: 'a_τ = ε·r', en: 'a_τ = ε·r' },
     code: 'eps_ang := 2\nr_rad := 0.5\na_tan := eps_ang*r_rad\na_tan =',
@@ -681,6 +743,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'normal-accel', section: 'kinematics',
+    plot2d: 'w_ang^2*x',
     label: { ru: 'Нормальное ускорение', en: 'Normal (centripetal) acceleration' },
     hint: { ru: 'a_n = ω²·r = v²/r', en: 'a_n = ω²·r = v²/r' },
     code: 'w_ang := 10\nr_rad := 0.5\na_nor := w_ang^2*r_rad\na_nor =',
@@ -725,6 +788,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'dipole-axis-field', section: 'electrostatics',
+    plot2d: '2*p_dp/(4*pi*eps_0*x^3)',
     label: { ru: 'Поле диполя на оси', en: 'Dipole field on axis' },
     hint: { ru: 'E = k·2p/r³ (r ≫ l)', en: 'E = k·2p/r³ (r ≫ l)' },
     code: 'p_dp := 1.6*10^-29\nr_pt := 10^-9\nE_dp := 2*p_dp/(4*pi*eps_0*r_pt^3)\nE_dp =',
@@ -746,6 +810,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'electron-speed-voltage', section: 'electrostatics',
+    plot2d: 'sqrt(2*q_e*x/m_kg)',
     label: { ru: 'Скорость электрона после напряжения', en: 'Electron speed from voltage' },
     hint: { ru: 'v = √(2qU/m)', en: 'v = √(2qU/m)' },
     code: 'U_v := 100\nm_kg := 9.1*10^-31\nv_el := sqrt(2*q_e*U_v/m_kg)\nv_el =',
@@ -754,6 +819,7 @@ export const FORMULAS: Formula[] = [
   // ================= ПОСТОЯННЫЙ ТОК =================
   {
     id: 'ohm-law', section: 'circuits',
+    plot2d: 'x/R_r',
     label: { ru: 'Закон Ома', en: "Ohm's law" },
     hint: { ru: 'I = U/R', en: 'I = U/R' },
     code: 'U_v := 12\nR_r := 4\nI_c := U_v/R_r\nI_c =',
@@ -761,6 +827,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'power-dc', section: 'circuits',
+    plot2d: 'U_v*x',
     label: { ru: 'Мощность тока', en: 'Electric power' },
     hint: { ru: 'P = U·I', en: 'P = U·I' },
     code: 'U_v := 12\nI_c := 3\nP_dc := U_v*I_c\nP_dc =',
@@ -768,6 +835,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'power-ri', section: 'circuits',
+    plot2d: 'x^2*R_r',
     label: { ru: 'Мощность через R и I', en: 'Power via R and I' },
     hint: { ru: 'P = I²·R = U²/R', en: 'P = I²·R = U²/R' },
     code: 'I_c := 3\nR_r := 4\nP_ri := I_c^2*R_r\nP_ri =',
@@ -775,6 +843,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'joule-heat', section: 'circuits',
+    plot2d: 'I_c^2*R_r*x',
     label: { ru: 'Закон Джоуля — Ленца', en: 'Joule heating' },
     hint: { ru: 'Q = I²·R·t', en: 'Q = I²·R·t' },
     code: 'I_c := 2\nR_r := 10\ndt_t := 60\nQ_j := I_c^2*R_r*dt_t\nQ_j =',
@@ -782,6 +851,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'work-current', section: 'circuits',
+    plot2d: 'U_v*I_c*x',
     label: { ru: 'Работа тока', en: 'Work of current' },
     hint: { ru: 'A = U·I·t', en: 'A = U·I·t' },
     code: 'U_v := 220\nI_c := 5\ndt_t := 60\nA_dc := U_v*I_c*dt_t\nA_dc =',
@@ -803,6 +873,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'voltage-divider', section: 'circuits',
+    plot2d: 'U_in*x/(R1+x)',
     label: { ru: 'Делитель напряжения', en: 'Voltage divider' },
     hint: { ru: 'U₂ = U·R₂/(R₁+R₂)', en: 'U₂ = U·R₂/(R₁+R₂)' },
     code: 'U_in := 12\nR1 := 10\nR2 := 22\nU2 := U_in*R2/(R1 + R2)\nU2 =',
@@ -810,6 +881,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'current-divider', section: 'circuits',
+    plot2d: 'I_in*x/(R1+x)',
     label: { ru: 'Делитель тока', en: 'Current divider' },
     hint: { ru: 'I₁ = I·R₂/(R₁+R₂)', en: 'I₁ = I·R₂/(R₁+R₂)' },
     code: 'I_in := 3\nR1 := 10\nR2 := 22\nI1 := I_in*R2/(R1 + R2)\nI1 =',
@@ -817,6 +889,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'emf-terminal', section: 'circuits',
+    plot2d: 'E_emf - x*r_in',
     label: { ru: 'Напряжение на клеммах', en: 'Terminal voltage' },
     hint: { ru: 'U = E − I·r', en: 'U = E − I·r' },
     code: 'E_emf := 12\nI_c := 2\nr_in := 0.5\nU_term := E_emf - I_c*r_in\nU_term =',
@@ -831,6 +904,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'source-efficiency', section: 'circuits',
+    plot2d: 'x/(x+r_in)',
     label: { ru: 'КПД источника', en: 'Source efficiency' },
     hint: { ru: 'η = R/(R+r)', en: 'η = R/(R+r)' },
     code: 'R_ld := 10\nr_in := 0.5\neta_s := R_ld/(R_ld + r_in)\neta_s =',
@@ -845,6 +919,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'resistivity', section: 'circuits',
+    plot2d: 'rho_cu*x/S_w',
     label: { ru: 'Сопротивление проводника', en: 'Wire resistance' },
     hint: { ru: 'R = ρ·l/S', en: 'R = ρ·l/S' },
     code: 'rho_cu := 1.7*10^-8\nlen_w := 100\nS_w := 1.5*10^-6\nR_wr := rho_cu*len_w/S_w\nR_wr =',
@@ -852,6 +927,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'res-temp', section: 'circuits',
+    plot2d: 'R0*(1+alpha_t*x)',
     label: { ru: 'Зависимость R от температуры', en: 'R vs temperature' },
     hint: { ru: 'R = R₀(1+α·ΔT)', en: 'R = R₀(1+α·ΔT)' },
     code: 'R0 := 100\nalpha_t := 0.004\ndT := 50\nR_hot := R0*(1 + alpha_t*dT)\nR_hot =',
@@ -873,6 +949,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'rc-discharge', section: 'circuits',
+    plot2d: 'U0*exp(-x/(R_r*C_c))',
     label: { ru: 'Разряд конденсатора', en: 'Capacitor discharge' },
     hint: { ru: 'U = U₀·e^(−t/RC)', en: 'U = U₀·e^(−t/RC)' },
     code: 'U0 := 12\nR_r := 1000\nC_c := 10*10^-6\ndt_t := 0.01\nU_rc := U0*exp(-dt_t/(R_r*C_c))\nU_rc =',
@@ -881,6 +958,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'ind-energy', section: 'circuits',
+    plot2d: 'L_in*x^2/2',
     label: { ru: 'Энергия катушки', en: 'Inductor energy' },
     hint: { ru: 'W = L·I²/2', en: 'W = L·I²/2' },
     code: 'L_in := 0.1\nI_c := 2\nW_ind := L_in*I_c^2/2\nW_ind =',
@@ -888,6 +966,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'thomson-freq', section: 'circuits',
+    plot2d: '1/(2*pi*sqrt(L_in*x))',
     label: { ru: 'Резонанс LC (Томсон)', en: 'LC resonance (Thomson)' },
     hint: { ru: 'f = 1/(2π√(LC))', en: 'f = 1/(2π√(LC))' },
     code: 'L_in := 0.1\nC_c := 10*10^-6\nf_lc := 1/(2*pi*sqrt(L_in*C_c))\nf_lc =',
@@ -895,6 +974,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'reactance-xl-xc', section: 'circuits',
+    plot2d: '2*pi*x*L_in; 1/(2*pi*x*C_c)',
     label: { ru: 'Реактивные сопротивления', en: 'Reactances Xl, Xc' },
     hint: { ru: 'Xl = 2πfL; Xc = 1/(2πfC)', en: 'Xl = 2πfL; Xc = 1/(2πfC)' },
     code: 'f_hz := 50\nL_in := 0.1\nC_c := 10*10^-6\nXl := 2*pi*f_hz*L_in\nXc := 1/(2*pi*f_hz*C_c)\n[Xl; Xc] =',
@@ -910,6 +990,7 @@ export const FORMULAS: Formula[] = [
   // ================= МАГНЕТИЗМ =================
   {
     id: 'ampere-force', section: 'magnetism',
+    plot2d: 'I_c*B_f*L_w*sin(x)',
     label: { ru: 'Сила Ампера', en: "Ampère's force" },
     hint: { ru: 'F = I·B·L·sinα', en: 'F = I·B·L·sinα' },
     code: 'I_c := 5\nB_f := 0.2\nL_w := 0.4\nalpha := pi/2\nF_amp := I_c*B_f*L_w*sin(alpha)\nF_amp =',
@@ -917,6 +998,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'lorentz-force', section: 'magnetism',
+    plot2d: 'q_e*x*B_f*sin(alpha)',
     label: { ru: 'Сила Лоренца', en: 'Lorentz force' },
     hint: { ru: 'F = q·v·B·sinα', en: 'F = q·v·B·sinα' },
     code: 'v_vel := 10^6\nalpha := pi/2\nB_f := 0.5\nF_lor := q_e*v_vel*B_f*sin(alpha)\nF_lor =',
@@ -924,6 +1006,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'cyclotron-radius', section: 'magnetism',
+    plot2d: 'm_kg*x/(q_e*B_f)',
     label: { ru: 'Радиус циклотрона', en: 'Cyclotron radius' },
     hint: { ru: 'r = m·v/(q·B)', en: 'r = m·v/(q·B)' },
     code: 'm_kg := 9.1*10^-31\nv_vel := 10^6\nB_f := 0.01\nr_cyc := m_kg*v_vel/(q_e*B_f)\nr_cyc =',
@@ -945,6 +1028,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'wire-field', section: 'magnetism',
+    plot2d: 'mu_0*I_c/(2*pi*x)',
     label: { ru: 'Поле прямого провода', en: 'Straight wire field' },
     hint: { ru: 'B = μ₀·I/(2πr)', en: 'B = μ₀·I/(2πr)' },
     code: 'I_c := 10\nr_pt := 0.05\nB_wr := mu_0*I_c/(2*pi*r_pt)\nB_wr =',
@@ -966,6 +1050,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'toroid-field', section: 'magnetism',
+    plot2d: 'mu_0*N_tr*I_c/(2*pi*x)',
     label: { ru: 'Поле тороида', en: 'Toroid field' },
     hint: { ru: 'B = μ₀·N·I/(2πr)', en: 'B = μ₀·N·I/(2πr)' },
     code: 'N_tr := 1000\nI_c := 3\nr_tr := 0.1\nB_tr := mu_0*N_tr*I_c/(2*pi*r_tr)\nB_tr =',
@@ -973,6 +1058,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'mag-flux', section: 'magnetism',
+    plot2d: 'B_f*S_ar*cos(x)',
     label: { ru: 'Магнитный поток', en: 'Magnetic flux' },
     hint: { ru: 'Φ = B·S·cosα', en: 'Φ = B·S·cosα' },
     code: 'B_f := 0.5\nS_ar := 0.02\nalpha := 0\nPhi_m := B_f*S_ar*cos(alpha)\nPhi_m =',
@@ -980,6 +1066,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'faraday-emf', section: 'magnetism',
+    plot2d: 'N_tr*x/dt_t',
     label: { ru: 'Закон Фарадея', en: "Faraday's law" },
     hint: { ru: 'E = N·ΔΦ/Δt (модуль)', en: 'E = N·ΔΦ/Δt (magnitude)' },
     code: 'N_tr := 100\ndPhi := 0.01\ndt_t := 0.1\nE_ind := N_tr*dPhi/dt_t\nE_ind =',
@@ -987,6 +1074,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'motional-emf', section: 'magnetism',
+    plot2d: 'B_f*len_c*x',
     label: { ru: 'ЭДС движения', en: 'Motional EMF' },
     hint: { ru: 'E = B·l·v', en: 'E = B·l·v' },
     code: 'B_f := 0.5\nlen_c := 0.3\nv_vel := 4\nE_mot := B_f*len_c*v_vel\nE_mot =',
@@ -994,6 +1082,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'self-induction', section: 'magnetism',
+    plot2d: 'L_in*x/dt_t',
     label: { ru: 'ЭДС самоиндукции', en: 'Self-induced EMF' },
     hint: { ru: 'E = L·ΔI/Δt (модуль)', en: 'E = L·ΔI/Δt (magnitude)' },
     code: 'L_in := 0.2\ndI := 3\ndt_t := 0.05\nE_self := L_in*dI/dt_t\nE_self =',
@@ -1001,6 +1090,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'mag-energy', section: 'magnetism',
+    plot2d: 'L_in*x^2/2',
     label: { ru: 'Энергия магнитного поля катушки', en: 'Coil field energy' },
     hint: { ru: 'W = L·I²/2', en: 'W = L·I²/2' },
     code: 'L_in := 0.2\nI_c := 3\nW_mag := L_in*I_c^2/2\nW_mag =',
@@ -1008,6 +1098,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'mag-energy-density', section: 'magnetism',
+    plot2d: 'x^2/(2*mu_0)',
     label: { ru: 'Плотность энергии магнитного поля', en: 'Magnetic energy density' },
     hint: { ru: 'w = B²/(2μ₀)', en: 'w = B²/(2μ₀)' },
     code: 'B_f := 1\nw_mag := B_f^2/(2*mu_0)\nw_mag =',
@@ -1015,6 +1106,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'loop-torque', section: 'magnetism',
+    plot2d: 'N_tr*I_c*B_f*S_ar*sin(x)',
     label: { ru: 'Момент рамки с током', en: 'Current loop torque' },
     hint: { ru: 'M = N·I·B·S·sinα', en: 'M = N·I·B·S·sinα' },
     code: 'N_tr := 10\nI_c := 2\nB_f := 0.5\nS_ar := 0.01\nalpha := pi/2\nM_lp := N_tr*I_c*B_f*S_ar*sin(alpha)\nM_lp =',
@@ -1029,6 +1121,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'parallel-wires-force', section: 'magnetism',
+    plot2d: 'mu_0*I1*I2*L_w/(2*pi*x)',
     label: { ru: 'Сила двух проводов', en: 'Parallel wires force' },
     hint: { ru: 'F = μ₀·I₁·I₂·L/(2πd)', en: 'F = μ₀·I₁·I₂·L/(2πd)' },
     code: 'I1 := 10\nI2 := 10\nL_w := 1\nd_wr := 0.1\nF_ww := mu_0*I1*I2*L_w/(2*pi*d_wr)\nF_ww =',
@@ -1036,6 +1129,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'hall-voltage', section: 'magnetism',
+    plot2d: 'x*B_f/(n_cn*q_e*d_th)',
     label: { ru: 'Датчик Холла', en: 'Hall voltage' },
     hint: { ru: 'U = I·B/(n·q·d)', en: 'U = I·B/(n·q·d)' },
     code: 'I_c := 0.01\nB_f := 0.5\nn_cn := 10^28\nd_th := 10^-3\nU_hall := I_c*B_f/(n_cn*q_e*d_th)\nU_hall =',
@@ -1043,6 +1137,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'b-from-h', section: 'magnetism',
+    plot2d: 'mu_0*mu_r*x',
     label: { ru: 'B через H в магнетике', en: 'B from H in material' },
     hint: { ru: 'B = μ₀·μ·H', en: 'B = μ₀·μ·H' },
     code: 'mu_r := 1000\nH_f := 100\nB_mt := mu_0*mu_r*H_f\nB_mt =',
@@ -1065,6 +1160,8 @@ export const FORMULAS: Formula[] = [
   // ================= КОЛЕБАНИЯ И ВОЛНЫ =================
   {
     id: 'shm-displacement', section: 'oscillations',
+    plot2d: 'A_m*cos(w_0*x+phi_0)',
+    sim: 'oscillator',
     label: { ru: 'Гармоническое смещение', en: 'Harmonic displacement' },
     hint: { ru: 'x = A·cos(ωt+φ)', en: 'x = A·cos(ωt+φ)' },
     code: 'A_m := 0.1\nw_0 := 10\nt_s := 0.2\nphi_0 := 0\nx_sh := A_m*cos(w_0*t_s + phi_0)\nx_sh =',
@@ -1072,6 +1169,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'spring-period', section: 'oscillations',
+    plot2d: '2*pi*sqrt(x/k_spr)',
     label: { ru: 'Период пружинного маятника', en: 'Spring pendulum period' },
     hint: { ru: 'T = 2π√(m/k)', en: 'T = 2π√(m/k)' },
     code: 'm_kg := 0.5\nk_spr := 20\nT_spr := 2*pi*sqrt(m_kg/k_spr)\nT_spr =',
@@ -1080,6 +1178,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'spring-freq', section: 'oscillations',
+    plot2d: 'sqrt(k_spr/x)/(2*pi)',
     label: { ru: 'Частота пружинного маятника', en: 'Spring frequency' },
     hint: { ru: 'f = (1/2π)√(k/m); ω = √(k/m)', en: 'f = (1/2π)√(k/m); ω = √(k/m)' },
     code: 'm_kg := 0.5\nk_spr := 20\nw_0 := sqrt(k_spr/m_kg)\nf_0 := w_0/(2*pi)\n[w_0; f_0] =',
@@ -1087,6 +1186,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'math-pendulum', section: 'oscillations',
+    plot2d: '2*pi*sqrt(x/g_g)',
     label: { ru: 'Период нитяного маятника', en: 'Simple pendulum period' },
     hint: { ru: 'T = 2π√(L/g)', en: 'T = 2π√(L/g)' },
     code: 'L_pen := 1\ng_g := 9.8\nT_pen := 2*pi*sqrt(L_pen/g_g)\nT_pen =',
@@ -1095,6 +1195,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'physical-pendulum', section: 'oscillations',
+    plot2d: '2*pi*sqrt(x/(m_kg*g_std*d_cm))',
     label: { ru: 'Физический маятник', en: 'Physical pendulum' },
     hint: { ru: 'T = 2π√(I/(mgd))', en: 'T = 2π√(I/(mgd))' },
     code: 'I_ax := 0.12\nm_kg := 1\nd_cm := 0.3\nT_ph := 2*pi*sqrt(I_ax/(m_kg*g_std*d_cm))\nT_ph =',
@@ -1102,6 +1203,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'shm-energy', section: 'oscillations',
+    plot2d: 'k_spr*x^2/2',
     label: { ru: 'Энергия колебаний', en: 'Oscillation energy' },
     hint: { ru: 'E = k·A²/2 = m·ω²·A²/2', en: 'E = k·A²/2 = m·ω²·A²/2' },
     code: 'k_spr := 20\nA_m := 0.1\nE_sh := k_spr*A_m^2/2\nE_sh =',
@@ -1109,6 +1211,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'shm-vmax-amax', section: 'oscillations',
+    plot2d: 'x*w_0',
     label: { ru: 'Макс. скорость и ускорение', en: 'Max velocity and acceleration' },
     hint: { ru: 'v_max = A·ω; a_max = A·ω²', en: 'v_max = A·ω; a_max = A·ω²' },
     code: 'A_m := 0.1\nw_0 := 10\nv_max := A_m*w_0\na_max := A_m*w_0^2\n[v_max; a_max] =',
@@ -1158,6 +1261,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'string-wave', section: 'oscillations',
+    plot2d: 'sqrt(x/mu_lin)',
     label: { ru: 'Волна в струне', en: 'String wave speed' },
     hint: { ru: 'v = √(F/μ)', en: 'v = √(F/μ)' },
     code: 'F_ten := 100\nmu_lin := 0.01\nv_str := sqrt(F_ten/mu_lin)\nv_str =',
@@ -1165,6 +1269,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'string-harmonics', section: 'oscillations',
+    plot2d: 'n_h*v_str/(2*x)',
     label: { ru: 'Гармоники струны', en: 'String harmonics' },
     hint: { ru: 'f_n = n·v/(2L)', en: 'f_n = n·v/(2L)' },
     code: 'v_str := 100\nL_st := 0.5\nn_h := 1\nf_h := n_h*v_str/(2*L_st)\nf_h =',
@@ -1179,6 +1284,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'doppler-sound', section: 'oscillations',
+    plot2d: 'f_src*c_snd/(c_snd-x)',
     label: { ru: 'Доплер (звук, источник)', en: 'Doppler (moving source)' },
     hint: { ru: "f' = f·c/(c−v_s)", en: "f' = f·c/(c−v_s)" },
     code: 'f_src := 440\nc_snd := 340\nv_src := 20\nf_obs := f_src*c_snd/(c_snd - v_src)\nf_obs =',
@@ -1193,6 +1299,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'sound-level', section: 'oscillations',
+    plot2d: '10*log10(x/I0)',
     label: { ru: 'Уровень громкости', en: 'Sound level' },
     hint: { ru: 'L = 10·log10(I/I₀)', en: 'L = 10·log10(I/I₀)' },
     code: 'I_snd := 10^-6\nI0 := 10^-12\nL_db := 10*log10(I_snd/I0)\nL_db =',
@@ -1200,6 +1307,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'lc-period', section: 'oscillations',
+    plot2d: '2*pi*sqrt(L_in*x)',
     label: { ru: 'Период LC-контура', en: 'LC period' },
     hint: { ru: 'T = 2π√(LC)', en: 'T = 2π√(LC)' },
     code: 'L_in := 0.1\nC_c := 10*10^-6\nT_lc := 2*pi*sqrt(L_in*C_c)\nT_lc =',
@@ -1223,6 +1331,7 @@ export const FORMULAS: Formula[] = [
   // ================= ОПТИКА =================
   {
     id: 'snell-law', section: 'optics',
+    plot2d: 'asin(n1*sin(x)/n2)',
     label: { ru: 'Закон Снеллиуса', en: "Snell's law" },
     hint: { ru: 'n₁·sinθ₁ = n₂·sinθ₂', en: 'n₁·sinθ₁ = n₂·sinθ₂' },
     code: 'n1 := 1\ntheta1 := pi/6\nn2 := 1.5\ntheta2 := asin(n1*sin(theta1)/n2)\ntheta2 =',
@@ -1237,6 +1346,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'thin-lens', section: 'optics',
+    plot2d: '1/(1/F_len-1/x)',
     label: { ru: 'Формула тонкой линзы', en: 'Thin lens equation' },
     hint: { ru: '1/F = 1/d + 1/f', en: '1/F = 1/d + 1/f' },
     code: 'F_len := 0.1\nd_obj := 0.3\nf_img := 1/(1/F_len - 1/d_obj)\nf_img =',
@@ -1244,6 +1354,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'lens-magnification', section: 'optics',
+    plot2d: 'x/d_obj',
     label: { ru: 'Увеличение линзы', en: 'Lens magnification' },
     hint: { ru: 'Γ = f/d = H/h', en: 'Γ = f/d = H/h' },
     code: 'd_obj := 0.3\nf_img := 0.15\nGamma_l := f_img/d_obj\nGamma_l =',
@@ -1272,6 +1383,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'double-slit-fringe', section: 'optics',
+    plot2d: 'x*L_sc/d_sl',
     label: { ru: 'Ширина полосы Юнга', en: 'Double-slit fringe width' },
     hint: { ru: 'Δx = λ·L/d', en: 'Δx = λ·L/d' },
     code: 'lam_w := 550*10^-9\nL_sc := 1\nd_sl := 0.5*10^-3\nfr_w := lam_w*L_sc/d_sl\nfr_w =',
@@ -1286,6 +1398,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'malus-law', section: 'optics',
+    plot2d: 'I0*cos(x)^2',
     label: { ru: 'Закон Малюса', en: "Malus's law" },
     hint: { ru: 'I = I₀·cos²α', en: 'I = I₀·cos²α' },
     code: 'I0 := 100\nalpha := pi/6\nI_ml := I0*cos(alpha)^2\nI_ml =',
@@ -1300,6 +1413,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'photon-energy', section: 'optics',
+    plot2d: 'h_planck*c_light/x',
     label: { ru: 'Энергия фотона', en: 'Photon energy' },
     hint: { ru: 'E = h·c/λ', en: 'E = h·c/λ' },
     code: 'lam_w := 550*10^-9\nE_ph := h_planck*c_light/lam_w\nE_ph =',
@@ -1307,6 +1421,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'photon-momentum', section: 'optics',
+    plot2d: 'h_planck/x',
     label: { ru: 'Импульс фотона', en: 'Photon momentum' },
     hint: { ru: 'p = h/λ', en: 'p = h/λ' },
     code: 'lam_w := 550*10^-9\np_ph := h_planck/lam_w\np_ph =',
@@ -1321,6 +1436,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'illuminance', section: 'optics',
+    plot2d: 'I_lm/x^2',
     label: { ru: 'Освещённость', en: 'Illuminance' },
     hint: { ru: 'E = I/d² (нормальное падение)', en: 'E = I/d² (normal incidence)' },
     code: 'I_lm := 100\nd_m := 2\nE_lx := I_lm/d_m^2\nE_lx =',
@@ -1342,6 +1458,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'rayleigh', section: 'optics',
+    plot2d: '1.22*x/D_ap',
     label: { ru: 'Предел разрешения', en: 'Resolution limit' },
     hint: { ru: 'θ = 1.22·λ/D', en: 'θ = 1.22·λ/D' },
     code: 'lam_w := 550*10^-9\nD_ap := 0.1\ntheta_r := 1.22*lam_w/D_ap\ntheta_r =',
@@ -1349,6 +1466,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'wien-law', section: 'optics',
+    plot2d: 'b_w/x',
     label: { ru: 'Закон Вина', en: "Wien's law" },
     hint: { ru: 'λ_max = b/T; b = 2.898·10⁻³', en: 'λ_max = b/T; b = 2.898·10⁻³' },
     code: 'T_k := 5800\nb_w := 2.898*10^-3\nlam_max := b_w/T_k\nlam_max =',
@@ -1356,6 +1474,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'stefan-boltzmann', section: 'optics',
+    plot2d: 'sigma_sb*x^4',
     label: { ru: 'Закон Стефана — Больцмана', en: 'Stefan–Boltzmann law' },
     hint: { ru: 'E = σ·T⁴', en: 'E = σ·T⁴' },
     code: 'T_k := 5800\nE_sb := sigma_sb*T_k^4\nE_sb =',
@@ -1400,6 +1519,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'gamma-factor', section: 'special',
+    plot2d: '1/sqrt(1-x^2)',
     label: { ru: 'Лоренц-фактор', en: 'Lorentz factor' },
     hint: { ru: 'γ = 1/√(1−β²); β = v/c', en: 'γ = 1/√(1−β²); β = v/c' },
     code: 'v_vel := 0.8*c_light\nbeta_r := v_vel/c_light\ngamma_r := 1/sqrt(1 - beta_r^2)\ngamma_r =',
@@ -1407,6 +1527,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'time-dilation', section: 'special',
+    plot2d: 'dt0/sqrt(1-x^2)',
     label: { ru: 'Замедление времени', en: 'Time dilation' },
     hint: { ru: 'Δt = Δt₀/√(1−β²)', en: 'Δt = Δt₀/√(1−β²)' },
     code: 'dt0 := 1\nbeta_r := 0.8\ndt_mv := dt0/sqrt(1 - beta_r^2)\ndt_mv =',
@@ -1414,6 +1535,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'length-contraction', section: 'special',
+    plot2d: 'L0*sqrt(1-x^2)',
     label: { ru: 'Сокращение длины', en: 'Length contraction' },
     hint: { ru: 'L = L₀√(1−β²)', en: 'L = L₀√(1−β²)' },
     code: 'L0 := 100\nbeta_r := 0.8\nL_mv := L0*sqrt(1 - beta_r^2)\nL_mv =',
@@ -1421,6 +1543,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'rel-mass', section: 'special',
+    plot2d: 'm0/sqrt(1-x^2)',
     label: { ru: 'Релятивистская масса', en: 'Relativistic mass' },
     hint: { ru: 'm = m₀/√(1−β²)', en: 'm = m₀/√(1−β²)' },
     code: 'm0 := 9.1*10^-31\nbeta_r := 0.8\nm_rel := m0/sqrt(1 - beta_r^2)\nm_rel =',
@@ -1428,6 +1551,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'rel-energy', section: 'special',
+    plot2d: 'x*m0*c_light^2',
     label: { ru: 'Полная релятивистская энергия', en: 'Total relativistic energy' },
     hint: { ru: 'E = γ·m₀·c²', en: 'E = γ·m₀·c²' },
     code: 'm0 := 9.1*10^-31\ngamma_r := 1.6667\nE_rel := gamma_r*m0*c_light^2\nE_rel =',
@@ -1435,6 +1559,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'rel-kinetic', section: 'special',
+    plot2d: '(x-1)*m0*c_light^2',
     label: { ru: 'Релятивистская кинетическая энергия', en: 'Relativistic kinetic energy' },
     hint: { ru: 'E_k = (γ−1)m₀c²', en: 'E_k = (γ−1)m₀c²' },
     code: 'm0 := 9.1*10^-31\ngamma_r := 1.6667\nEk_rel := (gamma_r - 1)*m0*c_light^2\nEk_rel =',
@@ -1456,6 +1581,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'rel-doppler', section: 'special',
+    plot2d: 'lam_0*sqrt((1+x)/(1-x))',
     label: { ru: 'Релятивистский Доплер (продольный)', en: 'Relativistic Doppler' },
     hint: { ru: 'λ = λ₀√((1+β)/(1−β))', en: 'λ = λ₀√((1+β)/(1−β))' },
     code: 'lam_0 := 550*10^-9\nbeta_r := 0.01\nlam_rd := lam_0*sqrt((1 + beta_r)/(1 - beta_r))\nlam_rd =',
@@ -1463,6 +1589,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'planck-energy', section: 'special',
+    plot2d: 'h_planck*x',
     label: { ru: 'Квант Планка', en: 'Planck quantum' },
     hint: { ru: 'E = h·ν', en: 'E = h·ν' },
     code: 'nu_fr := 5*10^14\nE_q := h_planck*nu_fr\nE_q =',
@@ -1470,6 +1597,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'photoeffect', section: 'special',
+    plot2d: 'h_planck*c_light/x - A_wf',
     label: { ru: 'Фотоэффект (Эйнштейн)', en: 'Photoelectric effect' },
     hint: { ru: 'K_max = hc/λ − A', en: 'K_max = hc/λ − A' },
     code: 'lam_w := 400*10^-9\nA_wf := 2*1.6*10^-19\nK_max := h_planck*c_light/lam_w - A_wf\nK_max =',
@@ -1484,6 +1612,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'de-broglie', section: 'special',
+    plot2d: 'h_planck/(m_kg*x)',
     label: { ru: 'Волна де Бройля', en: 'de Broglie wavelength' },
     hint: { ru: 'λ = h/(m·v)', en: 'λ = h/(m·v)' },
     code: 'm_kg := 9.1*10^-31\nv_vel := 10^6\nlam_db := h_planck/(m_kg*v_vel)\nlam_db =',
@@ -1491,6 +1620,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'compton-shift', section: 'special',
+    plot2d: 'h_planck/(m_kg*c_light)*(1-cos(x))',
     label: { ru: 'Сдвиг Комптона', en: 'Compton shift' },
     hint: { ru: 'Δλ = (h/mc)(1−cosθ)', en: 'Δλ = (h/mc)(1−cosθ)' },
     code: 'm_kg := 9.1*10^-31\ntheta := pi/2\ndlam_c := h_planck/(m_kg*c_light)*(1 - cos(theta))\ndlam_c =',
@@ -1498,6 +1628,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'bohr-energy', section: 'special',
+    plot2d: '-13.6/x^2',
     label: { ru: 'Уровни Бора', en: 'Bohr levels' },
     hint: { ru: 'E_n = −13.6/n² (эВ)', en: 'E_n = −13.6/n² (eV)' },
     code: 'n_q := 2\nE_bohr := -13.6/n_q^2\nE_bohr =',
@@ -1505,6 +1636,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'bohr-radius', section: 'special',
+    plot2d: 'r1*x^2',
     label: { ru: 'Орбиты Бора', en: 'Bohr orbits' },
     hint: { ru: 'r_n = n²·r₁; r₁ = 0.529·10⁻¹⁰ м', en: 'r_n = n²·r₁; r₁ = 0.529·10⁻¹⁰ m' },
     code: 'n_q := 2\nr1 := 0.529*10^-10\nr_n := n_q^2*r1\nr_n =',
@@ -1512,6 +1644,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'decay-law', section: 'special',
+    plot2d: 'N0*exp(-lam_d*x)',
     label: { ru: 'Закон распада', en: 'Decay law' },
     hint: { ru: 'N = N₀·e^(−λt)', en: 'N = N₀·e^(−λt)' },
     code: 'N0 := 1000\nlam_d := 0.1\nt_s := 5\nN_left := N0*exp(-lam_d*t_s)\nN_left =',
@@ -1527,6 +1660,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'activity', section: 'special',
+    plot2d: 'lam_d*x',
     label: { ru: 'Активность', en: 'Activity' },
     hint: { ru: 'A = λ·N', en: 'A = λ·N' },
     code: 'lam_d := 0.0693\nN_at := 10^20\nA_act := lam_d*N_at\nA_act =',
@@ -1710,6 +1844,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'factorial-n', section: 'mathalgebra',
+    plot2d: 'factorial(x)',
     label: { ru: 'Факториал', en: 'Factorial' },
     hint: { ru: 'n! = 1·2·…·n', en: 'n! = 1·2·…·n' },
     code: 'factorial(5) =',
@@ -1739,6 +1874,7 @@ export const FORMULAS: Formula[] = [
   // ================= МАТЕМАТИКА · ТРИГОНОМЕТРИЯ =================
   {
     id: 'deg-to-rad', section: 'mathtrig',
+    plot2d: 'x*pi/180',
     label: { ru: 'Градусы в радианы', en: 'Degrees to radians' },
     hint: { ru: 'rad = deg·π/180', en: 'rad = deg·π/180' },
     code: 'deg := 30\nrad := deg*pi/180\nrad =',
@@ -1809,6 +1945,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'law-of-cosines', section: 'mathtrig',
+    plot2d: 'sqrt(a_s^2+b_s^2-2*a_s*b_s*cos(x))',
     label: { ru: 'Теорема косинусов', en: 'Law of cosines' },
     hint: { ru: 'c² = a² + b² − 2ab·cosC', en: 'c² = a² + b² − 2ab·cosC' },
     code: 'a_s := 3\nb_s := 4\nC_ang := pi/2\nc_s := sqrt(a_s^2 + b_s^2 - 2*a_s*b_s*cos(C_ang))\nc_s =',
@@ -1816,6 +1953,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'triangle-area-sin', section: 'mathtrig',
+    plot2d: 'a_s*x*sin(C_ang)/2',
     label: { ru: 'Площадь через две стороны', en: 'Area via two sides' },
     hint: { ru: 'S = a·b·sinC/2', en: 'S = a·b·sinC/2' },
     code: 'a_s := 5\nb_s := 7\nC_ang := pi/6\nS_tr := a_s*b_s*sin(C_ang)/2\nS_tr =',
@@ -1823,6 +1961,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'pythagoras', section: 'mathtrig',
+    plot2d: 'sqrt(x^2+b_s^2)',
     label: { ru: 'Теорема Пифагора', en: 'Pythagorean theorem' },
     hint: { ru: 'c = √(a²+b²)', en: 'c = √(a²+b²)' },
     code: 'a_s := 3\nb_s := 4\nc_hyp := sqrt(a_s^2 + b_s^2)\nc_hyp =',
@@ -1830,6 +1969,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'angle-from-sides', section: 'mathtrig',
+    plot2d: 'atan(a_s/x)',
     label: { ru: 'Угол по катетам', en: 'Angle from legs' },
     hint: { ru: 'α = atan(a/b)', en: 'α = atan(a/b)' },
     code: 'a_s := 3\nb_s := 4\nalpha := atan(a_s/b_s)\nalpha =',
@@ -1858,6 +1998,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'sin-period', section: 'mathtrig',
+    plot2d: 'sin(x)',
     label: { ru: 'Периодичность синуса', en: 'Sine periodicity' },
     hint: { ru: 'sin(x+2π) = sin x', en: 'sin(x+2π) = sin x' },
     code: 'x_v := 1\n[sin(x_v); sin(x_v + 2*pi)] =',
@@ -1886,6 +2027,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'sec-csc-cot', section: 'mathtrig',
+    plot2d: '1/cos(x); 1/sin(x); 1/tan(x)',
     label: { ru: 'sec, csc, cot', en: 'sec, csc, cot' },
     hint: { ru: 'sec = 1/cos; csc = 1/sin; cot = 1/tan', en: 'sec = 1/cos; csc = 1/sin; cot = 1/tan' },
     code: 'alpha := pi/6\nsec_a := 1/cos(alpha)\ncsc_a := 1/sin(alpha)\ncot_a := 1/tan(alpha)\n[sec_a; csc_a; cot_a] =',
@@ -1992,6 +2134,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'polyfit-demo', section: 'mathcalc',
+    plot2d: 'polyfit([0, 1, 2, 3], [1, 3, 7, 13], 2)',
     label: { ru: 'Аппроксимация (МНК)', en: 'Least-squares fit' },
     hint: { ru: 'полином 2-й степени', en: 'degree-2 polynomial' },
     code: 'polyfit([0, 1, 2, 3], [1, 3, 7, 13], 2) =',
@@ -2006,6 +2149,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'dft-spectrum', section: 'mathcalc',
+    plot2d: 'dftMag([0, 1, 0, -1])',
     label: { ru: 'Спектр (ДПФ)', en: 'Spectrum (DFT)' },
     hint: { ru: 'амплитуды гармоник', en: 'harmonic magnitudes' },
     code: 'dftMag([0, 1, 0, -1]) =',
@@ -2084,6 +2228,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'bayes-theorem', section: 'probability',
+    plot2d: '(P_h*x)/P_e',
     label: { ru: 'Формула Байеса', en: "Bayes' theorem" },
     hint: { ru: 'P(H|E) = P(E|H)P(H)/P(E)', en: 'P(H|E) = P(E|H)P(H)/P(E)' },
     code: 'P_eh := 0.9\nP_h := 0.01\nP_e := 0.05\nP_he := P_eh*P_h/P_e\nP_he =',
@@ -2098,6 +2243,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'bernoulli-pmf', section: 'probability',
+    plot2d: 'binomPmf(3, 10, x)',
     label: { ru: 'Схема Бернулли', en: 'Bernoulli trials' },
     hint: { ru: 'P(k) = C(n,k)p^k(1−p)^(n−k)', en: 'P(k) = C(n,k)p^k(1−p)^(n−k)' },
     code: 'binomPmf(3, 10, 0.5) =',
@@ -2105,6 +2251,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'poisson-pmf', section: 'probability',
+    plot2d: 'poissonPmf(2, x)',
     label: { ru: 'Распределение Пуассона', en: 'Poisson distribution' },
     hint: { ru: 'P(k) = λ^k e^(−λ)/k!', en: 'P(k) = λ^k e^(−λ)/k!' },
     code: 'poissonPmf(2, 3) =',
@@ -2112,6 +2259,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'binomial-moments', section: 'probability',
+    plot2d: 'x*p_p; x*p_p*(1-p_p)',
     label: { ru: 'Биномиальные среднее и дисперсия', en: 'Binomial mean and variance' },
     hint: { ru: 'μ = np; σ² = np(1−p)', en: 'μ = np; σ² = np(1−p)' },
     code: 'n_n := 10\np_p := 0.5\nmu_bn := n_n*p_p\nvar_bn := n_n*p_p*(1 - p_p)\n[mu_bn; var_bn] =',
@@ -2119,6 +2267,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'geometric-mean', section: 'probability',
+    plot2d: '1/x',
     label: { ru: 'Геометрическое ожидание', en: 'Geometric expectation' },
     hint: { ru: 'E = 1/p (до первого успеха)', en: 'E = 1/p (until first success)' },
     code: 'p_p := 0.2\nE_geo := 1/p_p\nE_geo =',
@@ -2140,6 +2289,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'normal-pdf', section: 'probability',
+    plot2d: 'normpdf(x)',
     label: { ru: 'Плотность нормального', en: 'Normal PDF' },
     hint: { ru: 'φ(x), стандартное', en: 'φ(x), standard' },
     code: 'normpdf(0) =',
@@ -2147,6 +2297,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'normal-cdf', section: 'probability',
+    plot2d: 'normcdf(x)',
     label: { ru: 'Функция нормального', en: 'Normal CDF' },
     hint: { ru: 'P(X ≤ x)', en: 'P(X ≤ x)' },
     code: 'normcdf(1.96) =',
@@ -2189,6 +2340,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'at-least-one', section: 'probability',
+    plot2d: '1-(1-p_p)^x',
     label: { ru: 'Хотя бы один успех', en: 'At least one success' },
     hint: { ru: 'P = 1 − (1−p)^n', en: 'P = 1 − (1−p)^n' },
     code: 'p_p := 0.1\nn_n := 5\nP_one := 1 - (1 - p_p)^n_n\nP_one =',
@@ -2204,6 +2356,7 @@ export const FORMULAS: Formula[] = [
   // ================= СТАТИСТИКА ДАННЫХ =================
   {
     id: 'sample-data', section: 'statistics',
+    plot2d: 'data',
     label: { ru: 'Выборка', en: 'Sample' },
     hint: { ru: 'вектор данных', en: 'data vector' },
     code: 'data := [2.3, 3.1, 2.8, 4, 3.5, 2.9]\ndata =',
@@ -2267,6 +2420,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'stat-zscore', section: 'statistics',
+    plot2d: 'zscore(data)',
     label: { ru: 'Стандартизация (zscore)', en: 'Standardization (zscore)' },
     hint: { ru: '(x − mean)/std', en: '(x − mean)/std' },
     code: 'data := [2.3, 3.1, 2.8, 4, 3.5, 2.9]\nzscore(data) =',
@@ -2323,6 +2477,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'stat-hist', section: 'statistics',
+    plot2d: 'histC(data, 4)',
     label: { ru: 'Гистограмма', en: 'Histogram' },
     hint: { ru: 'histC(data, bins)', en: 'histC(data, bins)' },
     code: 'data := [2.3, 3.1, 2.8, 4, 3.5, 2.9, 3.3, 3, 2.5, 3.8]\nhistC(data, 4) =',
@@ -2366,6 +2521,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'internal-energy-ideal', section: 'molecular',
+    plot2d: '1.5*n_mol*R_gas*x',
     label: { ru: 'Внутренняя энергия идеального газа', en: 'Ideal gas internal energy' },
     hint: { ru: 'U = (3/2)·n·R·T (одноатомный)', en: 'U = (3/2)·n·R·T (monatomic)' },
     code: 'n_mol := 2\nT_k := 300\nU_in := 1.5*n_mol*R_gas*T_k\nU_in =',
@@ -2373,6 +2529,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'charge-energy', section: 'electrostatics',
+    plot2d: 'x*U_v',
     label: { ru: 'Энергия заряда в поле', en: 'Charge energy in field' },
     hint: { ru: 'W = q·U', en: 'W = q·U' },
     code: 'q_mv := 1.6*10^-19\nU_v := 100\nW_q := q_mv*U_v\nW_q =',
@@ -2380,6 +2537,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'ohm-full', section: 'circuits',
+    plot2d: 'E_emf/(x+r_in)',
     label: { ru: 'Закон Ома для полной цепи', en: 'Ohm law for full circuit' },
     hint: { ru: 'I = E/(R+r)', en: 'I = E/(R+r)' },
     code: 'E_emf := 12\nR_ld := 10\nr_in := 0.5\nI_full := E_emf/(R_ld + r_in)\nI_full =',
@@ -2387,6 +2545,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'power-ac', section: 'circuits',
+    plot2d: 'U_v*I_c*cos(x)',
     label: { ru: 'Активная мощность (AC)', en: 'Active power (AC)' },
     hint: { ru: 'P = U·I·cosφ', en: 'P = U·I·cosφ' },
     code: 'U_v := 220\nI_c := 5\nphi_ac := pi/6\nP_ac := U_v*I_c*cos(phi_ac)\nP_ac =',
@@ -2458,6 +2617,7 @@ export const FORMULAS: Formula[] = [
   // ---- поправки на реальные свойства (аудит идеализаций) ----
   {
     id: 'power-force', section: 'dynamics',
+    plot2d: 'F_app*x',
     label: { ru: 'Мощность через силу', en: 'Power via force' },
     hint: { ru: 'P = F·v', en: 'P = F·v' },
     code: 'F_app := 30\nv_vel := 5\nP_fv := F_app*v_vel\nP_fv =',
@@ -2472,6 +2632,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'static-friction-limit', section: 'dynamics',
+    plot2d: 'x*m_kg*g_std',
     label: { ru: 'Трение покоя (максимум)', en: 'Static friction (max)' },
     hint: { ru: 'F_max = μs·N; μs зависит от материалов', en: 'F_max = μs·N; μs depends on materials' },
     code: 'm_kg := 5\nmu_s := 0.4\nF_max := mu_s*m_kg*g_std\nF_max =',
@@ -2479,6 +2640,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'van-der-waals', section: 'molecular',
+    plot2d: 'n_mol*R_gas*T_k/(x - n_mol*b_vdw) - a_vdw*(n_mol/x)^2',
     label: { ru: 'Реальный газ (Ван-дер-Ваальс)', en: 'Real gas (Van der Waals)' },
     hint: { ru: 'p = nRT/(V−nb) − a(n/V)²; a,b — газ', en: 'p = nRT/(V−nb) − a(n/V)²; a,b — gas-specific' },
     code: 'n_mol := 1\nT_k := 300\nV_v := 0.024\na_vdw := 0.14\nb_vdw := 3.9*10^-5\nP_vdw := n_mol*R_gas*T_k/(V_v - n_mol*b_vdw) - a_vdw*(n_mol/V_v)^2\nP_vdw =',
@@ -2493,6 +2655,7 @@ export const FORMULAS: Formula[] = [
   },
   {
     id: 'damped-period', section: 'oscillations',
+    plot2d: '2*pi/sqrt(w_0^2-x^2)',
     label: { ru: 'Период затухающих колебаний', en: 'Damped period' },
     hint: { ru: 'T = 2π/√(ω₀²−β²); β — трение', en: 'T = 2π/√(ω₀²−β²); β — damping' },
     code: 'w_0 := 10\nbeta_d := 1\nT_dmp := 2*pi/sqrt(w_0^2 - beta_d^2)\nT_dmp =',
