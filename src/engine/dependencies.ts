@@ -1,4 +1,4 @@
-import { createBaseScope, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, splitOffUnit, stripOnError, toLatex, valueToLatex, type Scope } from './mathEngine';
+import { createBaseScope, compilePlotExpr, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, preprocessJ, preprocessRanges, splitOffUnit, stripOnError, toLatex, valueToLatex, type Scope } from './mathEngine';
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
 import { parseSimDef, runSim, runSimAsync, isSimCancel, yieldSlice, type SimResult, type SimSolver, type SimMode } from './simEngine';
@@ -85,6 +85,13 @@ export interface MathBlockData {
   h?: number | null;
   /** Автографик: превью функции под формулой (f(x) := …, sin(x) = …) */
   plotPreview?: PlotSample | null;
+  /**
+   * Умная визуализация в один клик (когда автографик неприменим):
+   * surface — f(x,y) → 3D-поверхность; vector — числовой вектор → 2D-график
+   * по индексу; matrix — числовая матрица → 3D (точки N×3 / высоты M×N).
+   * expr — готовое выражение для plot/plot3d-блока.
+   */
+  visualize?: { kind: 'surface' | 'vector' | 'matrix'; expr: string } | null;
 }
 
 export interface RecalcResult {
@@ -503,6 +510,66 @@ export function recalculateAll(list: MathBlockData[]): RecalcResult {
   return finishRecalc(ctx);
 }
 
+/** Плоский массив чисел из значения (mathjs Matrix → toArray), иначе null. */
+function toNumberCells(value: unknown): { flat: number[]; rows: number; cols: number } | null {
+  let arr: unknown = value;
+  if (arr !== null && typeof arr === 'object' && 'toArray' in (arr as object)) {
+    try {
+      arr = (arr as { toArray: () => unknown }).toArray();
+    } catch {
+      return null;
+    }
+  }
+  if (!Array.isArray(arr)) return null;
+  const rows = arr.length;
+  if (!rows) return null;
+  const isRow = (r: unknown): r is number[] =>
+    Array.isArray(r) && r.every((v) => typeof v === 'number' && isFinite(v));
+  if ((arr as unknown[]).every((v) => typeof v === 'number' && isFinite(v))) {
+    return { flat: arr as number[], rows, cols: 1 };
+  }
+  if ((arr as unknown[]).every(isRow)) {
+    const cols = (arr as number[][]).every((r) => r.length === (arr as number[][])[0].length)
+      ? (arr as number[][])[0].length
+      : -1;
+    if (cols < 1) return null;
+    return { flat: (arr as number[][]).flat(), rows, cols };
+  }
+  return null;
+}
+
+/**
+ * Умная визуализация: f(x,y) → surface (только parse-проверка, сэмплит сам
+ * plot3d-блок); числовой вектор (включая N×1/1×N) → vector; прочая числовая
+ * матрица → matrix. Null — скаляры, строки, ошибки, блоки без переменной.
+ */
+function detectVisualize(
+  lastP: ReturnType<typeof parseLine> | null,
+  lastError: string | null,
+  definedVar: string | null,
+  lastValue: unknown,
+): { kind: 'surface' | 'vector' | 'matrix'; expr: string } | null {
+  if (lastP?.kind === 'assign' && lastP.isFunctionDef && lastP.fnParams.length === 2) {
+    const [px, py] = lastP.fnParams as [string, string];
+    const body = lastP.expr
+      .replace(new RegExp(`\\b${px}\\b`, 'g'), 'x')
+      .replace(new RegExp(`\\b${py}\\b`, 'g'), 'y');
+    try {
+      if (compilePlotExpr(preprocessRanges(`(${preprocessJ(body, false)})`))) {
+        return { kind: 'surface', expr: body };
+      }
+    } catch {
+      /* не парсится — кнопки не будет */
+    }
+    return null;
+  }
+  if (lastError !== null || !definedVar || lastValue == null) return null;
+  const cells = toNumberCells(lastValue);
+  if (!cells || cells.flat.length < 2) return null;
+  if (cells.cols === 1 || cells.rows === 1) return { kind: 'vector', expr: definedVar };
+  return { kind: 'matrix', expr: definedVar };
+}
+
 /** Один блок синхронно: все виды, sim — через runSim (#6: async-близнец computeSimAsync). */
 function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
   const { scope, out, cyclic, langTag, fpOf, reuseHit, snapBlock } = ctx;
@@ -520,6 +587,7 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
       cur.definedVar = null;
       cur.isOutput = false;
       cur.displayLatex = b.rawInput;
+      cur.visualize = null;
       snapBlock(cur, pkey);
       return;
     }
@@ -532,6 +600,7 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
       cur.dependencies = [];
       cur.definedVar = null;
       cur.isOutput = false;
+      cur.visualize = null;
       return;
     }
     const key = `${langTag}|${fpOf(b.id)}`;
@@ -656,6 +725,7 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
     cur.isOutput = lastKind === 'output' || lastKind === 'eval' || (lastP?.kind === 'assign' && lastP.show);
     cur.displayLatex = texParts.join(' \\\\ ');
     cur.plotPreview = null;
+    cur.visualize = detectVisualize(lastP, lastError, definedVar, lastValue);
 
     // ----- Автографик -----
     // 1) определение функции одной переменной: f(t) := t^2 → превью;

@@ -112,6 +112,7 @@ interface BlockSummary {
   error: string | null;
   result: string;
   hasPlot: boolean;
+  visualize: { kind: string; expr: string } | null;
 }
 
 function summarize(b: MathBlockData): BlockSummary {
@@ -126,6 +127,7 @@ function summarize(b: MathBlockData): BlockSummary {
     error: b.error,
     result: b.resultStr,
     hasPlot: b.kind === 'plot' || b.kind === 'plot3d' || !!b.plotPreview,
+    visualize: b.visualize ?? null,
   };
 }
 

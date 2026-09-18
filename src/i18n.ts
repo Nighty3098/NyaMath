@@ -178,6 +178,7 @@ const ru = {
   'm.expandTitle': 'Создать полноценный plot-блок с этой функцией',
   'm.copyTex': 'Скопировать LaTeX',
   'm.copied': 'Скопировано ✓',
+  'm.visualize': 'Визуализировать',
 
   'p2.fnLabel': 'Функции графика, несколько — через точку с запятой',
   'p2.options': 'Опции',
@@ -511,6 +512,7 @@ const en: Record<StrKey, string> = {
   'm.expandTitle': 'Create a full plot block with this function',
   'm.copyTex': 'Copy LaTeX',
   'm.copied': 'Copied ✓',
+  'm.visualize': 'Visualize',
 
   'p2.fnLabel': 'Plot functions, several — separated by semicolon',
   'p2.options': 'Options',

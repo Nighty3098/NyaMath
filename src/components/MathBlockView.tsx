@@ -4,7 +4,7 @@ import type { MathBlockData } from '../engine/dependencies';
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IGrip, ICopy, IWarn, IX } from './Icon';
+import { IGrip, ICopy, IPlot, IPlot3d, IWarn, IX } from './Icon';
 import MiniPlot from './MiniPlot';
 import { copyTextToClipboard } from '../lib/exportFiles';
 
@@ -21,7 +21,9 @@ interface Props {
 function MathBlockView({ block, scale }: Props) {
   const updateInput = useCanvasStore((s) => s.updateInput);
   const removeBlock = useCanvasStore((s) => s.removeBlock);
-  const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);  const select = useCanvasStore((s) => s.select);
+  const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
+  const select = useCanvasStore((s) => s.select);
+  const addPlot3dBlock = useCanvasStore((s) => s.addPlot3dBlock);
   const toggleSelect = useCanvasStore((s) => s.toggleSelect);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
   // подписка ради перерендера при смене языка
@@ -114,6 +116,14 @@ function MathBlockView({ block, scale }: Props) {
   const startEdit = () => {
     setDraft(block.rawInput);
     setEditing(true);
+  };
+
+  /** Умная визуализация: f(x,y) → 3D, вектор → 2D по индексу, матрица → 3D */
+  const doVisualize = () => {
+    const v = block.visualize;
+    if (!v || editing) return;
+    if (v.kind === 'vector') addPlotBlock(block.x, block.y + 260, v.expr);
+    else addPlot3dBlock(block.x, block.y + 420, v.expr);
   };
 
   /** Выход из редактирования: пустое значение = удалить блок */
@@ -211,6 +221,23 @@ function MathBlockView({ block, scale }: Props) {
             onPointerDown={(e) => e.stopPropagation()}
           >
             {copied ? <span className="text-[13px] leading-4 text-[var(--ok)]">✓</span> : <ICopy />}
+          </button>
+        )}
+        {/* визуализация результата: только когда автографик неприменим */}
+        {!editing && block.visualize && (
+          <button
+            type="button"
+            className={`absolute -right-7 ${copyAtBottom ? 'bottom-10' : 'top-20'} z-10 p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] opacity-0 group-hover:opacity-100 cursor-pointer`}
+            style={{ opacity: selected ? 1 : undefined }}
+            title={t('m.visualize')}
+            aria-label={t('m.visualize')}
+            onClick={(e) => {
+              e.stopPropagation();
+              doVisualize();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {block.visualize.kind === 'vector' ? <IPlot /> : <IPlot3d />}
           </button>
         )}
         {/* ручка ширины */}
