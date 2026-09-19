@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { useCanvasStore } from "../store/canvasStore";
-import { sortBlocksTopDown } from "../engine/dependencies";
+import { sortBlocksTopDown, findUseBeforeDef } from "../engine/dependencies";
 import { registerBlockFocus } from "../lib/focusBlock";
 import MathBlockView from "./MathBlockView";
 import PlotBlockView from "./PlotBlockView";
@@ -37,6 +37,7 @@ const clamp = (v: number, lo: number, hi: number) =>
 export default function Canvas() {
   const blocks = useCanvasStore((s) => s.blocks);
   const showGrid = useCanvasStore((s) => s.showGrid);
+  const gridSize = useCanvasStore((s) => s.gridSize);
   const addBlock = useCanvasStore((s) => s.addBlock);
   const recalc = useCanvasStore((s) => s.recalc);
   const removeSelected = useCanvasStore((s) => s.removeSelected);
@@ -617,6 +618,11 @@ export default function Canvas() {
     () => sortBlocksTopDown(Object.values(blocks)),
     [blocks],
   );
+  // Use-before-definition (Mathcad): зависимости, определённые ниже по листу
+  const lateDeps = useMemo(
+    () => findUseBeforeDef(Object.values(blocks)),
+    [blocks],
+  );
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
 
@@ -624,7 +630,8 @@ export default function Canvas() {
   const mod = (a: number, n: number) => ((a % n) + n) % n;
   const gridStyle: React.CSSProperties = showGrid
     ? (() => {
-        const s = 22 * view.k;
+        // Mathcad: Standard (крупная) / Fine (мелкая) сетка
+        const s = (gridSize === 'fine' ? 11 : 22) * view.k;
         return {
           backgroundImage:
             "radial-gradient(circle, var(--grid-dk) 1.2px, transparent 1.3px)",
@@ -722,13 +729,13 @@ export default function Canvas() {
               <Plot3dBlockView block={b} scale={view.k} />
             </Suspense>
           ) : b.kind === "program" ? (
-            <ProgramBlockView key={b.id} block={b} scale={view.k} />
+            <ProgramBlockView key={b.id} block={b} scale={view.k} lateDeps={lateDeps.get(b.id)} />
           ) : b.kind === "sim" ? (
             <SimBlockView key={b.id} block={b} scale={view.k} />
           ) : b.kind === "slider" ? (
             <SliderBlockView key={b.id} block={b} scale={view.k} />
           ) : (
-            <MathBlockView key={b.id} block={b} scale={view.k} />
+            <MathBlockView key={b.id} block={b} scale={view.k} lateDeps={lateDeps.get(b.id)} />
           ),
         )}
       </div>

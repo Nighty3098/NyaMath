@@ -11,6 +11,8 @@ import { IBug, IGrip, IWarn, IX } from './Icon';
 interface Props {
   block: MathBlockData;
   scale: number;
+  /** Use-before-definition (Mathcad): имена, определённые ниже по листу */
+  lateDeps?: string[];
 }
 
 /**
@@ -18,10 +20,11 @@ interface Props {
  * прозрачный фон, высота по содержимому, ширина — авто/вручную.
  * Пустой блок при выходе из редактирования удаляется.
  */
-function ProgramBlockView({ block, scale }: Props) {
+function ProgramBlockView({ block, scale, lateDeps }: Props) {
   const updateInput = useCanvasStore((s) => s.updateInput);
   const setExportName = useCanvasStore((s) => s.setExportName);
   const removeBlock = useCanvasStore((s) => s.removeBlock);
+  const toggleBlockDisabled = useCanvasStore((s) => s.toggleBlockDisabled);
   const select = useCanvasStore((s) => s.select);
   const toggleSelect = useCanvasStore((s) => s.toggleSelect);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
@@ -85,12 +88,15 @@ function ProgramBlockView({ block, scale }: Props) {
       <div
         ref={regionRef}
         data-block-id={block.id}
-        className={`nya-block relative rounded-xl pl-2.5 pr-1.5 py-1 border-l-[3px] group ${
+        className={`nya-block relative rounded-xl pl-2.5 pr-1.5 py-1 border-l-[3px] group ${block.disabled ? 'opacity-60 saturate-50' : ''} ${
           block.error
             ? 'border-[var(--danger)] bg-[var(--danger-bg)] outline outline-2 outline-[var(--danger)]'
-            : selected
-              ? 'border-[var(--ink)] outline outline-2 outline-[var(--accent-line)]'
-              : 'border-[var(--ink)]/60 hover:outline hover:outline-1 hover:outline-[var(--hover-line)]'
+            : editing
+              // Mathcad active region — пунктирная рамка (vs сплошная у выделенного)
+              ? 'border-[var(--ink)] outline outline-2 outline-dashed outline-[var(--accent-line)]'
+              : selected
+                ? 'border-[var(--ink)] outline outline-2 outline-[var(--accent-line)]'
+                : 'border-[var(--ink)]/60 hover:outline hover:outline-1 hover:outline-[var(--hover-line)]'
         }`}
         style={block.w ? { width: block.w } : undefined}
         onClick={(e) => {
@@ -157,6 +163,24 @@ function ProgramBlockView({ block, scale }: Props) {
             onPointerDown={(e) => e.stopPropagation()}
           >
             <IBug /> {t(showDebug ? 'g.debugHide' : 'g.debugShow')}
+          </button>
+          <button
+            type="button"
+            className={`inline-flex items-center px-1.5 min-h-[28px] text-[11px] rounded-md border cursor-pointer ${
+              block.disabled
+                ? 'border-[var(--accent-line)] text-[var(--accent-line)]'
+                : 'border-[var(--input-border)] text-[var(--faint)] hover:text-[var(--accent-line)] hover:border-[var(--accent-line)]'
+            }`}
+            title={block.disabled ? t('m.enable') : t('m.disable')}
+            aria-label={block.disabled ? t('m.enable') : t('m.disable')}
+            aria-pressed={block.disabled}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleBlockDisabled(block.id);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {block.disabled ? '▶' : '⏸'}
           </button>
           <button
             type="button"
@@ -244,6 +268,15 @@ function ProgramBlockView({ block, scale }: Props) {
             )}
           </div>
         ) : null}
+
+        {block.disabled && (
+          <div className="text-[11px] leading-5 text-[var(--faint)]">⏸ {t('m.disabled')}</div>
+        )}
+        {!block.disabled && lateDeps && lateDeps.length > 0 && (
+          <div className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--accent-line)]" role="note">
+            <IWarn /> {t('m.useBeforeDef', { names: lateDeps.join(', ') })}
+          </div>
+        )}
 
         {/* trace-лог операторов trace */}
         {block.programTrace && block.programTrace.length > 0 && (

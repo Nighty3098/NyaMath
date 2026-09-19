@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { saveDocument } from '../lib/saveDocument';
 import { printDocument } from '../lib/print';
@@ -58,8 +58,13 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const loadAdvancedDemo = useCanvasStore((s) => s.loadAdvancedDemo);
   const clear = useCanvasStore((s) => s.clear);
   const recalc = useCanvasStore((s) => s.recalc);
-  const toggleGrid = useCanvasStore((s) => s.toggleGrid);
   const showGrid = useCanvasStore((s) => s.showGrid);
+  const gridSize = useCanvasStore((s) => s.gridSize);
+  const setGridSize = useCanvasStore((s) => s.setGridSize);
+  const setGridVisible = useCanvasStore((s) => s.setGridVisible);
+  const separateRegions = useCanvasStore((s) => s.separateRegions);
+  const toggleSelectedDisabled = useCanvasStore((s) => s.toggleSelectedDisabled);
+  const selectedIds = useCanvasStore((s) => s.selectedIds);
   const paletteOpen = useCanvasStore((s) => s.paletteOpen);
   const togglePalette = useCanvasStore((s) => s.togglePalette);
   const formulaPaletteOpen = useCanvasStore((s) => s.formulaPaletteOpen);
@@ -77,6 +82,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const redo = useCanvasStore((s) => s.redo);
   const canUndo = useCanvasStore((s) => s.past.length > 0);
   const canRedo = useCanvasStore((s) => s.future.length > 0);
+  // Кружок состояния расчёта (Mathcad Status Bar): зелёный — чисто, красный — есть ошибки
+  const errCount = useMemo(() => Object.values(blocks).filter((b) => b.error).length, [blocks]);
 
   const [open, setOpen] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -206,7 +213,11 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
       id: 'view',
       label: t('menu.view'),
       items: [
-        { id: 'grid', icon: <IGrid />, label: t('menu.grid'), checked: showGrid, action: run(toggleGrid) },
+        { id: 'grid-std', icon: <IGrid />, label: t('menu.gridStandard'), checked: showGrid && gridSize === 'standard', action: run(() => setGridSize('standard')) },
+        { id: 'grid-fine', icon: <IGrid />, label: t('menu.gridFine'), checked: showGrid && gridSize === 'fine', action: run(() => setGridSize('fine')) },
+        { id: 'grid-off', icon: <IGrid />, label: t('menu.gridOff'), checked: !showGrid, action: run(() => setGridVisible(false)) },
+        { id: 'separate', icon: <IGrid />, label: t('menu.separate'), action: run(separateRegions) },
+        { id: 'dis-sel', icon: <IZap />, label: t('menu.toggleDisabled'), disabled: selectedIds.length === 0, action: run(toggleSelectedDisabled) },
         { id: 'palette', icon: <IFx />, label: t('menu.palette'), checked: paletteOpen, action: run(togglePalette) },
         { id: 'fpalette', icon: <IFormula />, label: t('menu.formulaPalette'), checked: formulaPaletteOpen, action: run(toggleFormulaPalette) },
         { id: 'cpalette', icon: <IConst />, label: t('menu.constPalette'), checked: constPaletteOpen, action: run(toggleConstPalette) },
@@ -319,8 +330,13 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
         <button type="button" className="nya-tbtn" onClick={redo} disabled={!canRedo} title={`${t('menu.redo')} · Ctrl+Shift+Z`} aria-label={t('menu.redo')}>
           <IRedo />
         </button>
-        <button type="button" className="nya-tbtn" onClick={recalc} title={`${t('menu.recalc')} · Ctrl+↵`} aria-label={t('menu.recalc')}>
+        <button type="button" className="nya-tbtn relative" onClick={recalc} title={`${t('menu.recalc')} · Ctrl+↵${errCount ? ` · ${t('calc.errors', { n: errCount })}` : ` · ${t('calc.ok')}`}`} aria-label={t('menu.recalc')}>
           <IRecalc />
+          <span
+            aria-hidden="true"
+            className="absolute right-1 top-1 inline-block w-1.5 h-1.5 rounded-full"
+            style={{ background: errCount ? 'var(--danger)' : 'var(--ok)' }}
+          />
         </button>
         <span className="w-px h-5 bg-[var(--chrome-line)] mx-1" aria-hidden="true" />
         <button

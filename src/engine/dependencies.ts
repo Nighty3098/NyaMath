@@ -20,6 +20,8 @@ export interface MathBlockData {
   /** true, если последняя строка блока — вывод (expr / expr =): результат показываем инлайн */
   isOutput: boolean;
   kind: 'math' | 'plot' | 'text' | 'program' | 'plot3d' | 'sim' | 'contour' | 'slider';
+  /** Disable Evaluation (Mathcad): регион не считается, его имена не видны ниже */
+  disabled?: boolean;
   /** Слайдер: имя переменной, диапазон, шаг и текущее значение */
   sliderVar?: string;
   sliderMin?: number;
@@ -143,6 +145,31 @@ export function getLastScope(): Scope {
 
 export function sortBlocksTopDown(blocks: MathBlockData[]): MathBlockData[] {
   return [...blocks].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
+}
+
+/**
+ * Use-before-definition (Mathcad: использование выше определения).
+ * Для каждого активного блока — зависимости, чьё ПЕРВОЕ определение
+ * находится ниже по листу. Встроенные имена (sin, pi, …) определений
+ * не имеют и сюда не попадают. Disabled-регионы не участвуют.
+ */
+export function findUseBeforeDef(list: MathBlockData[]): Map<string, string[]> {
+  const ordered = sortBlocksTopDown(list.filter((b) => !b.disabled));
+  const firstDef = new Map<string, number>();
+  ordered.forEach((b, i) => {
+    for (const d of blockDefs(b)) {
+      if (!firstDef.has(d)) firstDef.set(d, i);
+    }
+  });
+  const late = new Map<string, string[]>();
+  ordered.forEach((b, i) => {
+    const bad = [...new Set(blockDeps(b))].filter((d) => {
+      const f = firstDef.get(d);
+      return f !== undefined && f > i;
+    });
+    if (bad.length) late.set(b.id, bad);
+  });
+  return late;
 }
 
 /* ---------- кэши зависимостей/определений блоков (#7) ----------
@@ -378,12 +405,16 @@ interface RecalcCtx {
 /** Общая преамбула пересчёта: порядок, циклы, fingerprint-механика, scope. */
 function createRecalcCtx(list: MathBlockData[]): RecalcCtx {
   const ordered = sortBlocksTopDown(list);
-  const cyclic = detectCycles(ordered);
+  // Disable Evaluation (Mathcad): отключённые регионы не считаются,
+  // их имена не видны ниже — в циклах и цепочках определений не участвуют.
+  const active = ordered.filter((b) => !b.disabled);
+  const cyclic = detectCycles(active);
   const langTag = getLang();
   const byId = new Map(ordered.map((b) => [b.id, b]));
   // определители имён сверху вниз — точное соответствие threading scope
   const defLists = new Map<string, number[]>();
   ordered.forEach((b, i) => {
+    if (b.disabled) return;
     for (const d of blockDefs(b)) {
       const l = defLists.get(d);
       if (l) l.push(i);
@@ -449,6 +480,8 @@ function createRecalcCtx(list: MathBlockData[]): RecalcCtx {
       default:
         fp = `m:${b.rawInput}${ordTag}|${depTag}`;
     }
+    // переключение Disable меняет смысл блока при том же тексте
+    if (b.disabled) fp += '|dis';
     visiting.delete(id);
     fpMemo.set(id, fp);
     return fp;
@@ -578,7 +611,30 @@ function detectVisualize(
 function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
   const { scope, out, cyclic, langTag, fpOf, reuseHit, snapBlock } = ctx;
   const cur = out[b.id];
-    if (b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'text' || b.kind === 'contour') {
+  // Disable Evaluation (Mathcad): замороженный регион — формула видна,
+  // но не считается и ничего не пишет в scope (как pass-регионы).
+  if (b.disabled) {
+    const pkey = `${langTag}|${fpOf(b.id)}`;
+    const pprev = recalcCache.get(b.id);
+    if (pprev && pprev.fp === pkey) {
+      out[b.id] = reuseHit(b, pprev);
+      return;
+    }
+    ctx.allHit.v = false;
+    cur.error = null;
+    cur.dependencies = [];
+    cur.definedVar = null;
+    cur.isOutput = false;
+    cur.resultStr = '';
+    cur.resultLatex = '';
+    cur.resultValue = null;
+    cur.displayLatex = b.rawInput;
+    cur.visualize = null;
+    cur.programTrace = null;
+    snapBlock(cur, pkey);
+    return;
+  }
+  if (b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'text' || b.kind === 'contour') {
       const pkey = `${langTag}|${fpOf(b.id)}`;
       const pprev = recalcCache.get(b.id);
       if (pprev && pprev.fp === pkey) {
@@ -858,7 +914,7 @@ async function computeSimAsync(b: MathBlockData, ctx: RecalcCtx, key: string, ho
 
 /** Sim-блок с промахом кэша? Ключ для async-прогона, null — sync-путь (#6). */
 function simMissOf(b: MathBlockData, ctx: RecalcCtx): string | null {
-  if (b.kind !== 'sim' || ctx.cyclic.has(b.id)) return null;
+  if (b.kind !== 'sim' || b.disabled || ctx.cyclic.has(b.id)) return null;
   const key = `${ctx.langTag}|${ctx.fpOf(b.id)}`;
   const prev = recalcCache.get(b.id);
   if (prev && prev.fp === key) return null;

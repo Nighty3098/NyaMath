@@ -5,12 +5,14 @@ import { TEST_SCENARIO_LINES } from '../data/testScenario';
 import { ADVANCED_DEMO } from '../data/demoAdvanced';
 import { loadTheme, saveTheme, THEMES, type ThemeName } from '../theme';
 import { getSimModel, SIM_MODELS, simModelPatch } from '../engine/simEngine';
+import { separateBlocksVertically } from '../lib/canvasLayout';
 import { loadLang, setLangState, t, type Lang } from '../i18n';
 
 const STORAGE_KEY = 'nyamath-doc-v1';
 const STORAGE_KEY_LEGACY = 'wengineering-doc-v1';
 const GRID_KEY = 'nyamath-show-grid';
 const GRID_KEY_LEGACY = 'wengineering-show-grid';
+const GRID_SIZE_KEY = 'nyamath-grid-size';
 
 function loadGrid(): boolean {
   try {
@@ -23,6 +25,20 @@ function loadGrid(): boolean {
 function saveGrid(v: boolean) {
   try {
     localStorage.setItem(GRID_KEY, v ? '1' : '0');
+  } catch { /* ignore */ }
+}
+
+function loadGridSize(): 'standard' | 'fine' {
+  try {
+    return localStorage.getItem(GRID_SIZE_KEY) === 'fine' ? 'fine' : 'standard';
+  } catch {
+    return 'standard';
+  }
+}
+
+function saveGridSize(v: 'standard' | 'fine') {
+  try {
+    localStorage.setItem(GRID_SIZE_KEY, v);
   } catch { /* ignore */ }
 }
 
@@ -103,6 +119,16 @@ export interface CanvasState {
   selectMany: (ids: string[]) => void;
   toggleSelect: (id: string) => void;
   toggleGrid: () => void;
+  /** Шаг сетки (Mathcad: Standard/Fine); showGrid=false — сетка скрыта */
+  gridSize: 'standard' | 'fine';
+  setGridSize: (s: 'standard' | 'fine') => void;
+  setGridVisible: (v: boolean) => void;
+  /** Disable Evaluation (Mathcad): исключить/вернуть блок из расчёта */
+  toggleBlockDisabled: (id: string) => void;
+  /** Инверсия флага для всего выделения одним шагом истории */
+  toggleSelectedDisabled: () => void;
+  /** Separate Regions → Vertically (Mathcad): разнести наложенные блоки вниз */
+  separateRegions: () => void;
   recalc: () => void;
   clear: () => void;
   loadTestScenario: () => void;
@@ -188,6 +214,7 @@ function migrate(raw: unknown): MathBlockData | null {
     kind,
     resultLatex: b.resultLatex ?? '',
     isOutput: b.isOutput ?? false,
+    disabled: b.disabled === true,
     plotPreview: null,
     simResult: null,
     exportName: typeof b.exportName === 'string' ? b.exportName : undefined,
@@ -353,6 +380,7 @@ function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathB
       x.plotLogx !== y.plotLogx || x.plotXUnit !== y.plotXUnit || x.plotYUnit !== y.plotYUnit ||
       x.plotTitle !== y.plotTitle || x.plotXLabel !== y.plotXLabel || x.plotYLabel !== y.plotYLabel ||
       x.plotGrid !== y.plotGrid || x.plotLegend !== y.plotLegend ||
+      (x.disabled ?? false) !== (y.disabled ?? false) ||
       x.exportName !== y.exportName || x.w !== y.w || x.h !== y.h ||
       x.simModel !== y.simModel || x.simStates !== y.simStates || x.simDerivs !== y.simDerivs ||
       x.simAux !== y.simAux || x.simParams !== y.simParams || x.simInit !== y.simInit ||
@@ -438,6 +466,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   selectedIds: [],
   // чистый лист как в Mathcad — сетка по желанию (выбор хранится в localStorage)
   showGrid: loadGrid(),
+  gridSize: loadGridSize(),
   theme: loadTheme(),
   setTheme: (t) =>
     set(() => {
@@ -811,6 +840,51 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       saveGrid(showGrid);
       return { showGrid };
     }),
+
+  setGridSize: (size) => {
+    saveGridSize(size);
+    // выбор шага включает сетку (как Show Grid в Document tab)
+    if (!get().showGrid) saveGrid(true);
+    set({ gridSize: size, showGrid: true });
+  },
+
+  setGridVisible: (v) => {
+    saveGrid(v);
+    set({ showGrid: v });
+  },
+
+  toggleBlockDisabled: (id) => {
+    const cur = get().blocks[id];
+    if (!cur) return;
+    pushHistory(get, set as SetFn, true);
+    const next = withRecalc({ ...get().blocks, [id]: { ...cur, disabled: !cur.disabled } });
+    persist(next);
+    set((s) => ({ blocks: next, recalcCounter: s.recalcCounter + 1 }));
+  },
+
+  toggleSelectedDisabled: () => {
+    const st = get();
+    const ids = st.selectedIds.filter((id) => st.blocks[id]);
+    if (!ids.length) return;
+    // все уже отключены → включаем всех, иначе отключаем всех
+    const enable = ids.every((id) => st.blocks[id].disabled);
+    pushHistory(get, set as SetFn, true);
+    const next = { ...get().blocks };
+    for (const id of ids) next[id] = { ...next[id], disabled: !enable };
+    const rec = withRecalc(next);
+    persist(rec);
+    set((s) => ({ blocks: rec, recalcCounter: s.recalcCounter + 1 }));
+  },
+
+  separateRegions: () => {
+    const list = Object.values(get().blocks);
+    if (list.length < 2) return;
+    const pos = separateBlocksVertically(list);
+    const changed = list.some((b) => pos[b.id] && (pos[b.id].x !== b.x || pos[b.id].y !== b.y));
+    if (!changed) return;
+    pushHistory(get, set as SetFn, true);
+    get().dropBlocks(pos);
+  },
 
   recalc: () => {
     // явный пересчёт по кнопке — тоже неблокирующий (#6)
