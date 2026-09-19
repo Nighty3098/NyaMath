@@ -2221,6 +2221,13 @@ export const FORMULA_VARS: Record<string, FormulaVar[]> = {
   'telescoping-sum': [
     V('n_n', 'число членов', 'number of terms'),
   ],
+  'algebraic-sum': [
+    V('data', 'слагаемые со знаками', 'signed terms'),
+    V('S_alg', 'алгебраическая сумма', 'algebraic sum'),
+  ],
+  'sigma-expand': [
+    V('S_sig', 'значение суммы Σ', 'sigma sum value'),
+  ],
   'fourier-a1-x2': [
     V('a1', 'коэффициент a₁', 'coefficient a₁'),
   ],

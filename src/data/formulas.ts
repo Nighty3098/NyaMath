@@ -3710,6 +3710,20 @@ export const FORMULAS: Formula[] = [
     sources: [W2('Summation — Wikipedia', 'https://en.wikipedia.org/wiki/Summation')],
   },
   {
+    id: 'algebraic-sum', section: 'mathseries',
+    label: { ru: 'Алгебраическая сумма', en: 'Algebraic sum' },
+    hint: { ru: 'сумма со знаками: −4+7−2+5 = 6', en: 'signed sum: −4+7−2+5 = 6' },
+    code: 'data := [-4, 7, -2, 5]\nS_alg := sum(data)\nS_alg =',
+    sources: [W2('Summation — Wikipedia', 'https://en.wikipedia.org/wiki/Summation')],
+  },
+  {
+    id: 'sigma-expand', section: 'mathseries',
+    label: { ru: 'Знак суммы Σ: раскрытие', en: 'Sigma notation: expansion' },
+    hint: { ru: 'Σ(2k−1), k=1..4 → 1+3+5+7 = 16', en: 'Σ(2k−1), k=1..4 → 1+3+5+7 = 16' },
+    code: 'S_sig := numsum("2*k-1", "k", 1, 4)\nS_sig =',
+    sources: [W2('Summation — Wikipedia', 'https://en.wikipedia.org/wiki/Summation')],
+  },
+  {
     id: 'fourier-a1-x2', section: 'mathseries',
     label: { ru: 'Коэффициент Фурье a₁', en: 'Fourier coefficient a₁' },
     hint: { ru: 'f(x)=x²: a₁ = −4', en: 'f(x)=x²: a₁ = −4' },
