@@ -658,7 +658,6 @@ export default function Canvas() {
       onPointerCancel={endPointer}
       onDoubleClick={onDoubleClick}
       onContextMenu={(e) => e.preventDefault()}
-      title={`${t("c.title")} • ${t("c.crossHint")}`}
     >
       {/* рамка выделения */}
       {marquee && (
