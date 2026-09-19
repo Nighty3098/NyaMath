@@ -1,14 +1,14 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import katex from 'katex';
-import type { MathBlockData } from '../engine/dependencies';
-import { useCanvasStore } from '../store/canvasStore';
-import { t } from '../i18n';
-import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IGrip, ICopy, IPlot, IPlot3d, IWarn, IX } from './Icon';
-import MiniPlot from './MiniPlot';
-import { copyTextToClipboard } from '../lib/exportFiles';
-import { applyColonShortcut } from '../lib/canvasLayout';
-import { expandSelection, wrapSelection } from '../lib/mathEdit';
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import katex from "katex";
+import type { MathBlockData } from "../engine/dependencies";
+import { useCanvasStore } from "../store/canvasStore";
+import { t } from "../i18n";
+import { useRegionDrag, useRegionResize } from "./useRegionDrag";
+import { IGrip, ICopy, IPlot, IPlot3d, IWarn, IX } from "./Icon";
+import MiniPlot from "./MiniPlot";
+import { copyTextToClipboard } from "../lib/exportFiles";
+import { applyColonShortcut } from "../lib/canvasLayout";
+import { expandSelection, wrapSelection } from "../lib/mathEdit";
 
 interface Props {
   block: MathBlockData;
@@ -33,7 +33,9 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const selectedIds = useCanvasStore((s) => s.selectedIds);
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
-  const [editing, setEditing] = useState(block.rawInput === '' && block.kind === 'math');
+  const [editing, setEditing] = useState(
+    block.rawInput === "" && block.kind === "math",
+  );
   const [draft, setDraft] = useState(block.rawInput);
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,23 +43,16 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const regionRef = useRef<HTMLDivElement>(null);
 
-  const { onGripDown, onGripMove, onGripUp } = useRegionDrag(block.id, scale, editing);
-  const { onResizeDown, onResizeMove, onResizeUp } = useRegionResize(block.id, scale, regionRef);
-
-  // Реальная высота блока: кнопка копирования встаёт к низу, только если обе
-  // боковые кнопки (~34px с тач-паддингами) помещаются без наложения.
-  const [boxH, setBoxH] = useState<number | null>(null);
-  useEffect(() => {
-    const el = regionRef.current;
-    if (!el) return;
-    const measure = () => setBoxH(el.offsetHeight);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  const estShort = !block.error && !block.plotPreview && !block.rawInput.includes('\n');
-  const copyAtBottom = (boxH ?? (estShort ? 0 : 200)) >= 76;
+  const { onGripDown, onGripMove, onGripUp } = useRegionDrag(
+    block.id,
+    scale,
+    editing,
+  );
+  const { onResizeDown, onResizeMove, onResizeUp } = useRegionResize(
+    block.id,
+    scale,
+    regionRef,
+  );
 
   useEffect(() => {
     if (!editing) setDraft(block.rawInput);
@@ -65,7 +60,10 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
 
   useEffect(() => {
     if (editing) {
-      const el = (taRef.current ?? inputRef.current) as HTMLTextAreaElement | HTMLInputElement | null;
+      const el = (taRef.current ?? inputRef.current) as
+        | HTMLTextAreaElement
+        | HTMLInputElement
+        | null;
       el?.focus();
       const len = el?.value.length ?? 0;
       el?.setSelectionRange?.(len, len);
@@ -81,9 +79,12 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => () => {
-    if (copyTimer.current) clearTimeout(copyTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    },
+    [],
+  );
 
   /** Копировать формулу как LaTeX (результат — если есть) */
   const doCopyTex = () => {
@@ -99,24 +100,29 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
 
   // Инлайн-результат в стиле Mathcad: `expr = result` одной строкой KaTeX
   const tex = useMemo(() => {
-    if (!block.displayLatex) return '';
-    if (block.error || !block.isOutput || !block.resultLatex) return block.displayLatex;
-    const lhs = block.displayLatex.replace(/=\s*$/, '').trim();
+    if (!block.displayLatex) return "";
+    if (block.error || !block.isOutput || !block.resultLatex)
+      return block.displayLatex;
+    const lhs = block.displayLatex.replace(/=\s*$/, "").trim();
     return `${lhs} = ${block.resultLatex}`;
   }, [block.displayLatex, block.error, block.isOutput, block.resultLatex]);
 
   const html = useMemo(() => {
-    if (!tex) return '';
+    if (!tex) return "";
     try {
-      return katex.renderToString(tex, { throwOnError: false, displayMode: false, strict: false });
+      return katex.renderToString(tex, {
+        throwOnError: false,
+        displayMode: false,
+        strict: false,
+      });
     } catch {
-      return '';
+      return "";
     }
   }, [tex]);
 
   const selected = selectedIds.includes(block.id);
-  const isText = block.kind === 'text';
-  const comment = isText ? block.rawInput.replace(/^(\/\/|#)\s?/, '') : '';
+  const isText = block.kind === "text";
+  const comment = isText ? block.rawInput.replace(/^(\/\/|#)\s?/, "") : "";
 
   const startEdit = () => {
     setDraft(block.rawInput);
@@ -127,13 +133,13 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const doVisualize = () => {
     const v = block.visualize;
     if (!v || editing) return;
-    if (v.kind === 'vector') addPlotBlock(block.x, block.y + 260, v.expr);
+    if (v.kind === "vector") addPlotBlock(block.x, block.y + 260, v.expr);
     else addPlot3dBlock(block.x, block.y + 420, v.expr);
   };
 
   /** Выход из редактирования: пустое значение = удалить блок */
   const finishEdit = (value: string) => {
-    if (value.trim() === '') removeBlock(block.id);
+    if (value.trim() === "") removeBlock(block.id);
     else updateInput(block.id, value);
     setEditing(false);
   };
@@ -141,7 +147,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   /** Enter в редакторе: подтвердить и увести прицел строкой ниже (как в Mathcad) */
   const commitAndStepDown = (value: string) => {
     finishEdit(value);
-    if (value.trim() !== '') {
+    if (value.trim() !== "") {
       useCanvasStore.getState().setCross(block.x, block.y + 72);
     }
   };
@@ -156,19 +162,24 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   };
 
   return (
-    <div className="nya-region absolute z-10" style={{ left: block.x, top: block.y }}>
+    <div
+      className="nya-region absolute z-10"
+      style={{ left: block.x, top: block.y }}
+    >
       <div
         ref={regionRef}
         data-block-id={block.id}
-        className={`nya-block relative rounded-xl px-2 py-1 group ${block.disabled ? 'opacity-60 saturate-50' : ''} ${
+        className={`nya-block relative rounded-xl group ${block.disabled ? "opacity-60 saturate-50" : ""} ${
+          editing ? "p-3" : "px-2 py-1"
+        } ${
           block.error
-            ? 'outline outline-2 outline-[var(--danger)] bg-[var(--danger-bg)]'
+            ? "outline outline-2 outline-[var(--danger)] bg-[var(--danger-bg)]"
             : editing
-              // Mathcad active region — пунктирная рамка (vs сплошная у выделенного)
-              ? 'outline outline-2 outline-dashed outline-[var(--accent-line)]'
+              ? // Mathcad active region — пунктирная рамка + сплошной фон на весь блок
+                "bg-[var(--input-bg)] outline outline-2 outline-dashed outline-[var(--accent-line)]"
               : selected
-                ? 'outline outline-2 outline-[var(--accent-line)]'
-                : 'hover:outline hover:outline-1 hover:outline-[var(--hover-line)]'
+                ? "outline outline-2 outline-[var(--accent-line)]"
+                : "hover:outline hover:outline-1 hover:outline-[var(--hover-line)]"
         }`}
         style={block.w ? { width: block.w } : undefined}
         onClick={(e) => {
@@ -178,108 +189,116 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
         }}
         title={
           block.dependencies.length
-            ? `${block.rawInput}\n${t('m.depends')} ${block.dependencies.join(', ')}`
+            ? `${block.rawInput}\n${t("m.depends")} ${block.dependencies.join(", ")}`
             : block.rawInput
         }
       >
         {/* ручка перетаскивания */}
         {!editing && (
-        <span
-          className="absolute -left-6 top-1/2 -translate-y-1/2 p-1.5 text-[var(--faint)] cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 select-none"
-          style={{ opacity: selected ? 1 : undefined }}
-          title={t('ui.dragGrip')}
-          onPointerDown={onGripDown}
-          onPointerMove={onGripMove}
-          onPointerUp={onGripUp}
-          onPointerCancel={onGripUp}
-          onDoubleClick={(e) => e.stopPropagation()}
-        >
-          <IGrip />
-        </span>
-        )}
-        {/* удаление */}
-        {!editing && (
-        <button
-          type="button"
-          className="absolute -right-7 top-0 p-1.5 text-[var(--faint)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 cursor-pointer"
-          style={{ opacity: selected ? 1 : undefined }}
-          title={t('ui.delete')}
-          aria-label={t('m.deleteBlock')}
-          onClick={(e) => {
-            e.stopPropagation();
-            removeBlock(block.id);
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <IX />
-        </button>
-        )}
-        {/* disable evaluation (Mathcad): слот, свободный от delete/copy/visualize */}
-        {!editing && (
-          <button
-            type="button"
-            className={`absolute -right-7 ${copyAtBottom ? 'top-10' : 'bottom-0'} z-10 p-1.5 opacity-0 group-hover:opacity-100 cursor-pointer ${
-              block.disabled ? 'text-[var(--accent-line)]' : 'text-[var(--faint)] hover:text-[var(--accent-line)]'
-            }`}
-            style={{ opacity: selected || block.disabled ? 1 : undefined }}
-            title={block.disabled ? t('m.enable') : t('m.disable')}
-            aria-label={block.disabled ? t('m.enable') : t('m.disable')}
-            aria-pressed={block.disabled}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleBlockDisabled(block.id);
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <span className="text-[13px] leading-4" aria-hidden="true">{block.disabled ? '▶' : '⏸'}</span>
-          </button>
-        )}
-        {/* копировать LaTeX */}
-        {!editing && (
-          <button
-            type="button"
-            className={`absolute -right-7 ${copyAtBottom ? 'bottom-0' : 'top-10'} z-10 p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] opacity-0 group-hover:opacity-100 cursor-pointer`}
-            style={{ opacity: selected || copied ? 1 : undefined }}
-            title={copied ? t('m.copied') : t('m.copyTex')}
-            aria-label={t('m.copyTex')}
-            onClick={(e) => {
-              e.stopPropagation();
-              doCopyTex();
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            {copied ? <span className="text-[13px] leading-4 text-[var(--ok)]">✓</span> : <ICopy />}
-          </button>
-        )}
-        {/* визуализация результата: только когда автографик неприменим */}
-        {!editing && block.visualize && (
-          <button
-            type="button"
-            className={`absolute -right-7 ${copyAtBottom ? 'bottom-10' : 'top-20'} z-10 p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] opacity-0 group-hover:opacity-100 cursor-pointer`}
+          <span
+            className="absolute -left-6 top-1/2 -translate-y-1/2 p-1.5 text-[var(--faint)] cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 select-none"
             style={{ opacity: selected ? 1 : undefined }}
-            title={t('m.visualize')}
-            aria-label={t('m.visualize')}
-            onClick={(e) => {
-              e.stopPropagation();
-              doVisualize();
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
+            title={t("ui.dragGrip")}
+            onPointerDown={onGripDown}
+            onPointerMove={onGripMove}
+            onPointerUp={onGripUp}
+            onPointerCancel={onGripUp}
+            onDoubleClick={(e) => e.stopPropagation()}
           >
-            {block.visualize.kind === 'vector' ? <IPlot /> : <IPlot3d />}
-          </button>
+            <IGrip />
+          </span>
+        )}
+        {/* тулбар действий: ряд справа от блока, на его горизонтали.
+            min-width auto; кнопки идут слева направо, gap 10px */}
+        {!editing && (
+          <div
+            role="toolbar"
+            aria-label={t("m.actions")}
+            className="absolute left-full top-1/2 z-10 ml-[6px] flex min-w-auto -translate-y-1/2 flex-row items-center justify-start gap-[10px] opacity-0 group-hover:opacity-100"
+            style={{
+              minWidth: "auto",
+              opacity: selected || block.disabled || copied ? 1 : undefined,
+            }}
+          >
+            <button
+              type="button"
+              className="p-1 leading-none text-[var(--faint)] hover:text-[var(--danger)] cursor-pointer"
+              title={t("ui.delete")}
+              aria-label={t("m.deleteBlock")}
+              onClick={(e) => {
+                e.stopPropagation();
+                removeBlock(block.id);
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <IX />
+            </button>
+            <button
+              type="button"
+              className={`p-1 leading-none cursor-pointer ${
+                block.disabled
+                  ? "text-[var(--accent-line)]"
+                  : "text-[var(--faint)] hover:text-[var(--accent-line)]"
+              }`}
+              title={block.disabled ? t("m.enable") : t("m.disable")}
+              aria-label={block.disabled ? t("m.enable") : t("m.disable")}
+              aria-pressed={block.disabled}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleBlockDisabled(block.id);
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <span className="text-[13px] leading-4" aria-hidden="true">
+                {block.disabled ? "▶" : "⏸"}
+              </span>
+            </button>
+            <button
+              type="button"
+              className="p-1 leading-none text-[var(--faint)] hover:text-[var(--accent-line)] cursor-pointer"
+              title={copied ? t("m.copied") : t("m.copyTex")}
+              aria-label={t("m.copyTex")}
+              onClick={(e) => {
+                e.stopPropagation();
+                doCopyTex();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {copied ? (
+                <span className="text-[13px] leading-4 text-[var(--ok)]">✓</span>
+              ) : (
+                <ICopy />
+              )}
+            </button>
+            {block.visualize && (
+              <button
+                type="button"
+                className="p-1 leading-none text-[var(--faint)] hover:text-[var(--accent-line)] cursor-pointer"
+                title={t("m.visualize")}
+                aria-label={t("m.visualize")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  doVisualize();
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                {block.visualize.kind === "vector" ? <IPlot /> : <IPlot3d />}
+              </button>
+            )}
+          </div>
         )}
         {/* ручка ширины */}
         {!editing && (
-        <span
-          className="absolute -right-3 -bottom-3 w-7 h-7 cursor-nwse-resize touch-none select-none"
-          title={t('ui.resizeW')}
-          onPointerDown={onResizeDown}
-          onPointerMove={onResizeMove}
-          onPointerUp={onResizeUp}
-          onPointerCancel={onResizeUp}
-          onDoubleClick={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        />
+          <span
+            className="absolute -right-3 -bottom-3 w-7 h-7 cursor-nwse-resize touch-none select-none"
+            title={t("ui.resizeW")}
+            onPointerDown={onResizeDown}
+            onPointerMove={onResizeMove}
+            onPointerUp={onResizeUp}
+            onPointerCancel={onResizeUp}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          />
         )}
 
         {editing ? (
@@ -291,9 +310,9 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
               onChange={(e) => setDraft(e.target.value)}
               onBlur={() => finishEdit(draft)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') commitAndStepDown(draft);
-                if (e.key === 'Escape') {
-                  if (draft.trim() === '') removeBlock(block.id);
+                if (e.key === "Enter") commitAndStepDown(draft);
+                if (e.key === "Escape") {
+                  if (draft.trim() === "") removeBlock(block.id);
                   else {
                     setDraft(block.rawInput);
                     setEditing(false);
@@ -306,130 +325,181 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
             />
           ) : (
             <>
-            <textarea
-              ref={taRef}
-              rows={Math.min(8, Math.max(1, draft.split('\n').length))}
-              className="math-input nya-editor select-text"
-              value={draft}
-              onChange={(e) => {
-                setDraft(e.target.value);
-                updateInput(block.id, e.target.value);
-              }}
-              onBlur={() => finishEdit(draft)}
-              onKeyDown={(e) => {
-                const el = e.currentTarget;
-                const selS = el.selectionStart ?? draft.length;
-                const selE = el.selectionEnd ?? draft.length;
-                // Ctrl+Space — расширение выделения уровнями (Spacebar Mathcad, §07)
-                if (e.key === ' ' && e.ctrlKey && !e.metaKey && !e.altKey) {
-                  const r = expandSelection(draft, selS, selE);
-                  if (r) {
+              <textarea
+                ref={taRef}
+                rows={Math.min(8, Math.max(1, draft.split("\n").length))}
+                className="math-input nya-editor select-text"
+                value={draft}
+                onChange={(e) => {
+                  setDraft(e.target.value);
+                  updateInput(block.id, e.target.value);
+                }}
+                onBlur={() => finishEdit(draft)}
+                onKeyDown={(e) => {
+                  const el = e.currentTarget;
+                  const selS = el.selectionStart ?? draft.length;
+                  const selE = el.selectionEnd ?? draft.length;
+                  // Ctrl+Space — расширение выделения уровнями (Spacebar Mathcad, §07)
+                  if (e.key === " " && e.ctrlKey && !e.metaKey && !e.altKey) {
+                    const r = expandSelection(draft, selS, selE);
+                    if (r) {
+                      e.preventDefault();
+                      requestAnimationFrame(() => {
+                        el.setSelectionRange?.(r.start, r.end);
+                      });
+                    }
+                    e.stopPropagation();
+                    return;
+                  }
+                  // ( / ^ поверх выделения — оператор накрывает группу целиком (Mathcad)
+                  if (
+                    (e.key === "(" || e.key === "/" || e.key === "^") &&
+                    selE > selS &&
+                    !e.ctrlKey &&
+                    !e.metaKey &&
+                    !e.altKey
+                  ) {
+                    const kind =
+                      e.key === "("
+                        ? "parens"
+                        : e.key === "/"
+                          ? "fraction"
+                          : "power";
+                    const r = wrapSelection(draft, selS, selE, kind);
+                    if (r) {
+                      e.preventDefault();
+                      setDraft(r.value);
+                      updateInput(block.id, r.value);
+                      requestAnimationFrame(() => {
+                        el.setSelectionRange?.(r.start, r.end);
+                      });
+                      e.stopPropagation();
+                      return;
+                    }
+                  }
+                  // Mathcad: клавиша `:` сразу даёт оператор определения `:=`
+                  if (e.key === ":" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    const el = e.currentTarget;
+                    const r = applyColonShortcut(
+                      draft,
+                      el.selectionStart ?? draft.length,
+                      el.selectionEnd ?? draft.length,
+                    );
+                    if (r) {
+                      e.preventDefault();
+                      setDraft(r.value);
+                      updateInput(block.id, r.value);
+                      const cursor = r.cursor;
+                      requestAnimationFrame(() => {
+                        el.setSelectionRange?.(cursor, cursor);
+                      });
+                      e.stopPropagation();
+                      return;
+                    }
+                  }
+                  if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    requestAnimationFrame(() => { el.setSelectionRange?.(r.start, r.end); });
+                    commitAndStepDown(draft);
+                  }
+                  if (e.key === "Escape") {
+                    if (draft.trim() === "") removeBlock(block.id);
+                    else {
+                      setDraft(block.rawInput);
+                      setEditing(false);
+                    }
                   }
                   e.stopPropagation();
-                  return;
-                }
-                // ( / ^ поверх выделения — оператор накрывает группу целиком (Mathcad)
-                if ((e.key === '(' || e.key === '/' || e.key === '^') && selE > selS && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                  const kind = e.key === '(' ? 'parens' : e.key === '/' ? 'fraction' : 'power';
-                  const r = wrapSelection(draft, selS, selE, kind);
-                  if (r) {
-                    e.preventDefault();
-                    setDraft(r.value);
-                    updateInput(block.id, r.value);
-                    requestAnimationFrame(() => { el.setSelectionRange?.(r.start, r.end); });
-                    e.stopPropagation();
-                    return;
-                  }
-                }
-                // Mathcad: клавиша `:` сразу даёт оператор определения `:=`
-                if (e.key === ':' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                  const el = e.currentTarget;
-                  const r = applyColonShortcut(
-                    draft, el.selectionStart ?? draft.length, el.selectionEnd ?? draft.length,
-                  );
-                  if (r) {
-                    e.preventDefault();
-                    setDraft(r.value);
-                    updateInput(block.id, r.value);
-                    const cursor = r.cursor;
-                    requestAnimationFrame(() => { el.setSelectionRange?.(cursor, cursor); });
-                    e.stopPropagation();
-                    return;
-                  }
-                }
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  commitAndStepDown(draft);
-                }
-                if (e.key === 'Escape') {
-                  if (draft.trim() === '') removeBlock(block.id);
-                  else {
-                    setDraft(block.rawInput);
-                    setEditing(false);
-                  }
-                }
-                e.stopPropagation();
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-              placeholder="f := 10*10^9"
-              title={t('m.groupHint')}
-              aria-label={t('m.groupHint')}
-            />
-            {/* живой предпросмотр «как в книге» прямо при наборе (Mathcad WYSIWYG) */}
-            {draft.trim() !== '' && html !== '' && (
-              <div className="mt-1 opacity-70 pointer-events-none select-none" aria-hidden="true">
-                <div className="text-[17px] leading-8" dangerouslySetInnerHTML={{ __html: html }} />
-              </div>
-            )}
-          </>
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                placeholder="f := 10*10^9"
+                title={t("m.groupHint")}
+                aria-label={t("m.groupHint")}
+              />
+              {/* живой предпросмотр «как в книге» прямо при наборе (Mathcad WYSIWYG) */}
+              {draft.trim() !== "" && html !== "" && (
+                <div
+                  className="mt-1 opacity-70 pointer-events-none select-none"
+                  aria-hidden="true"
+                >
+                  <div
+                    className="text-[17px] leading-8"
+                    dangerouslySetInnerHTML={{ __html: html }}
+                  />
+                </div>
+              )}
+            </>
           )
         ) : isText ? (
           <div
             className="text-[14px] leading-6 text-[var(--ink)] cursor-text whitespace-pre-wrap break-words"
             onClick={onBodyClick}
-            title={t('ui.editHint')}
+            title={t("ui.editHint")}
           >
-            {comment || <span className="text-[var(--faint)]">{t('m.commentPh')}</span>}
+            {comment || (
+              <span className="text-[var(--faint)]">{t("m.commentPh")}</span>
+            )}
           </div>
         ) : (
-          <div className="cursor-text" onClick={onBodyClick} title={t('ui.editHint')}>
+          <div
+            className="cursor-text"
+            onClick={onBodyClick}
+            title={t("ui.editHint")}
+          >
             {html ? (
-              <div className="text-[17px] leading-8" dangerouslySetInnerHTML={{ __html: html }} />
+              <div
+                className="text-[17px] leading-8"
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
             ) : (
-              <div className="math-input text-[14px] text-[var(--ink)]">{block.rawInput || '—'}</div>
+              <div className="math-input text-[14px] text-[var(--ink)]">
+                {block.rawInput || "—"}
+              </div>
             )}
             {block.error && (
-              <div className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--danger)]" role="alert">
+              <div
+                className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--danger)]"
+                role="alert"
+              >
                 <IWarn /> {block.error}
               </div>
             )}
             {block.disabled && (
-              <div className="text-[11px] leading-5 text-[var(--faint)]">⏸ {t('m.disabled')}</div>
+              <div className="text-[11px] leading-5 text-[var(--faint)]">
+                ⏸ {t("m.disabled")}
+              </div>
             )}
             {!block.disabled && lateDeps && lateDeps.length > 0 && (
-              <div className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--accent-line)]" role="note">
-                <IWarn /> {t('m.useBeforeDef', { names: lateDeps.join(', ') })}
+              <div
+                className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--accent-line)]"
+                role="note"
+              >
+                <IWarn /> {t("m.useBeforeDef", { names: lateDeps.join(", ") })}
               </div>
             )}
             {block.plotPreview && !block.error && (
               <div className="mt-1" onClick={(e) => e.stopPropagation()}>
                 <MiniPlot sample={block.plotPreview} />
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[11px] text-[var(--faint)]">{t('m.autoplot')}</span>
+                  <span className="text-[11px] text-[var(--faint)]">
+                    {t("m.autoplot")}
+                  </span>
                   <button
                     type="button"
                     className="ml-auto text-[11px] px-2 min-h-[28px] rounded-lg border border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--accent-line)] hover:text-[var(--ink)] cursor-pointer"
-                    title={t('m.expandTitle')}
+                    title={t("m.expandTitle")}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (block.plotPreview) addPlotBlock(block.x, block.y + 260, block.plotPreview.expr);
+                      if (block.plotPreview)
+                        addPlotBlock(
+                          block.x,
+                          block.y + 260,
+                          block.plotPreview.expr,
+                        );
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
-                    {t('m.expandPlot')}
+                    {t("m.expandPlot")}
                   </button>
                 </div>
               </div>
