@@ -10,6 +10,16 @@ import { copyTextToClipboard } from "../lib/exportFiles";
 import { applyColonShortcut } from "../lib/canvasLayout";
 import { expandSelection, wrapSelection } from "../lib/mathEdit";
 import { lookupFuncDoc, wordAt } from "../lib/funcDoc";
+import AssistantPopup from "./AssistantPopup";
+import {
+  ASSIST_ALL_LIMIT,
+  ASSIST_LIMIT,
+  applyCompletion,
+  prefixAt,
+  queryAssistant,
+  type AssistItem,
+} from "../lib/assistant";
+import { collectScopeVars } from "../lib/scopeVars";
 
 interface Props {
   block: MathBlockData;
@@ -68,6 +78,12 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const [draft, setDraft] = useState(block.rawInput);
   const [curPos, setCurPos] = useState(0);
   const [copied, setCopied] = useState(false);
+  /** Dynamic Assistant: варианты под префиксом + активная строка */
+  const [assist, setAssist] = useState<{
+    items: AssistItem[];
+    total: number;
+    active: number;
+  } | null>(null);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -115,6 +131,49 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
     },
     [],
   );
+
+  /** Dynamic Assistant: пересчитать варианты под курсором (forceAll — F12, весь список) */
+  const refreshAssist = (value: string, pos: number, forceAll = false) => {
+    if (block.kind === "text") {
+      setAssist(null);
+      return;
+    }
+    const p = prefixAt(value, pos);
+    if (!p && !forceAll) {
+      setAssist(null);
+      return;
+    }
+    const vars = collectScopeVars(useCanvasStore.getState().blocks);
+    const q = queryAssistant(
+      p ? p.word : "",
+      vars,
+      lang,
+      forceAll ? ASSIST_ALL_LIMIT : ASSIST_LIMIT,
+    );
+    if (q.items.length === 0) {
+      setAssist(null);
+      return;
+    }
+    setAssist({ items: q.items, total: q.total, active: 0 });
+  };
+
+  /** Вставить активный вариант ассистента */
+  const acceptAssist = (index: number) => {
+    const el = taRef.current;
+    if (!el || !assist) return;
+    const pos = el.selectionStart ?? draft.length;
+    const item = assist.items[index];
+    if (!item) return;
+    const r = applyCompletion(draft, pos, item);
+    setDraft(r.value);
+    updateInput(block.id, r.value);
+    setCurPos(r.cursor);
+    setAssist(null);
+    requestAnimationFrame(() => {
+      el.setSelectionRange?.(r.cursor, r.cursor);
+      el.focus();
+    });
+  };
 
   /** Копировать формулу как LaTeX (результат — если есть) */
   const doCopyTex = () => {
@@ -181,6 +240,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const finishEdit = (value: string) => {
     if (value.trim() === "") removeBlock(block.id);
     else updateInput(block.id, value);
+    setAssist(null);
     setEditing(false);
   };
 
@@ -365,6 +425,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
             />
           ) : (
             <>
+              <div className="relative">
               <textarea
                 ref={taRef}
                 rows={Math.min(8, Math.max(1, draft.split("\n").length))}
@@ -372,14 +433,55 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                 value={draft}
                 onChange={(e) => {
                   setDraft(e.target.value);
-                  setCurPos(e.target.selectionStart ?? e.target.value.length);
+                  const pos = e.target.selectionStart ?? e.target.value.length;
+                  setCurPos(pos);
                   updateInput(block.id, e.target.value);
+                  refreshAssist(e.target.value, pos);
                 }}
                 onBlur={() => finishEdit(draft)}
                 onKeyDown={(e) => {
                   const el = e.currentTarget;
                   const selS = el.selectionStart ?? draft.length;
                   const selE = el.selectionEnd ?? draft.length;
+                  // F12 — Dynamic Assistant: весь список (переменные • функции • единицы)
+                  if (e.key === "F12") {
+                    e.preventDefault();
+                    refreshAssist(draft, selS, true);
+                    e.stopPropagation();
+                    return;
+                  }
+                  // Навигация по ассистенту имеет приоритет над редактированием
+                  if (assist && assist.items.length > 0) {
+                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                      e.preventDefault();
+                      const d = e.key === "ArrowDown" ? 1 : -1;
+                      const n = assist.items.length;
+                      setAssist({
+                        ...assist,
+                        active: (assist.active + d + n) % n,
+                      });
+                      e.stopPropagation();
+                      return;
+                    }
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      acceptAssist(assist.active);
+                      e.stopPropagation();
+                      return;
+                    }
+                    if (e.key === "Tab") {
+                      e.preventDefault();
+                      acceptAssist(assist.active);
+                      e.stopPropagation();
+                      return;
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      setAssist(null);
+                      e.stopPropagation();
+                      return;
+                    }
+                  }
                   // Ctrl+Space — расширение выделения уровнями (уровни группировки)
                   if (e.key === " " && e.ctrlKey && !e.metaKey && !e.altKey) {
                     const r = expandSelection(draft, selS, selE);
@@ -466,6 +568,20 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                 placeholder="f := 10*10^9"
                 aria-label={t("m.groupHint")}
               />
+              {editing && assist && assist.items.length > 0 && (
+                <AssistantPopup
+                  items={assist.items}
+                  total={assist.total}
+                  active={assist.active}
+                  onPick={acceptAssist}
+                  onHover={(i) =>
+                    setAssist((prev) =>
+                      prev && prev.active !== i ? { ...prev, active: i } : prev,
+                    )
+                  }
+                />
+              )}
+              </div>
               {/* документация по функции под курсором вместо статичной подсказки */}
               <FuncDocLine draft={draft} curPos={curPos} lang={lang} />
               {/* живой предпросмотр «как в книге» прямо при наборе */}

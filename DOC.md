@@ -288,7 +288,7 @@ Notebook/Web-Python: **15. Jupyter / JupyterLab / Google Colab / Kaggle**.
 ### A. МОЖНО (браузерный JS/TS, без бэкенда, силами 1–2 дев + MCP-агент)
 
 **A1. UX-мелочи с большим выхлопом (1–3 дня каждая)**
-- Dynamic Assistant как в SMath: autocomplete по scope + fuzzy + F12-подсказки единиц/функций (тех.: `scopeVars.ts` + `useDocScope.ts` уже дают scope; добавить trie + показ сигнатур из `funcDoc.ts`).
+- [x] Dynamic Assistant как в SMath: autocomplete по scope + fuzzy + F12-подсказки единиц/функций (тех.: `scopeVars.ts` + `useDocScope.ts` уже дают scope; добавить trie + показ сигнатур из `funcDoc.ts`). ✅ Готово 19.09.2026: `src/lib/assistant.ts` (префикс + fuzzy префикс>подстрока>subsequence, переменные→константы→функции→единицы incl. mm/kHz/GHz через валидацию `math.unit`, `listFuncDocs()` из `funcDoc.ts`), попап `AssistantPopup.tsx` (Tab/Enter — вставить, ↑↓ — выбор, Esc — закрыть, функциям добавляется `(`), F12 — весь список, `m.groupHint` + `da.*` ключи RU/EN, тесты `assistant.test.ts` (18 шт).
 - Significant digits vs fixed decimals + экспоненциальный порог + phasor-вид `|Z|∠φ` (тех.: опция `formatResult`, не трогает ядро).
 - Показ времени расчёта блока + общий индикатор «грязных» регионов (тех.: `performance.now()` вокруг `recalculateAll`, SMath-урок).
 - Сабскрипты в 1 кейстрок (`_`/`[]`), `;` для серий уже есть — добавить хоткеи из Prime-жалоб (припаркованные палитры, ribbon → keyboard-first).

@@ -72,6 +72,19 @@ export function lookupFuncDoc(name: string, lang: Lang): FuncDoc | null {
   return null;
 }
 
+/** Полный список функций со сигнатурами (для Dynamic Assistant). */
+export function listFuncDocs(lang: Lang): FuncDoc[] {
+  const out: FuncDoc[] = BUILTIN.map((b) => ({
+    name: b.name,
+    title: b.name,
+    syntax: lang === 'ru' ? b.ru : b.en,
+  }));
+  for (const [name, s] of snippetDocs) {
+    out.push({ name, title: s.title[lang], syntax: s.syntax });
+  }
+  return out;
+}
+
 /** Слово под курсором (имя функции/переменной) или null. */
 export function wordAt(text: string, pos: number): string | null {
   const p = Math.max(0, Math.min(pos, text.length));
