@@ -2,13 +2,14 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import katex from "katex";
 import type { MathBlockData } from "../engine/dependencies";
 import { useCanvasStore } from "../store/canvasStore";
-import { t } from "../i18n";
+import { t, type Lang } from "../i18n";
 import { useRegionDrag, useRegionResize } from "./useRegionDrag";
 import { IGrip, ICopy, IPlot, IPlot3d, IWarn, IX } from "./Icon";
 import MiniPlot from "./MiniPlot";
 import { copyTextToClipboard } from "../lib/exportFiles";
 import { applyColonShortcut } from "../lib/canvasLayout";
 import { expandSelection, wrapSelection } from "../lib/mathEdit";
+import { lookupFuncDoc, wordAt } from "../lib/funcDoc";
 
 interface Props {
   block: MathBlockData;
@@ -22,6 +23,35 @@ interface Props {
  * Присваивание `x := expr` — без результата, вывод — инлайн `expr = result`.
  * Пустой блок при выходе из редактирования (Enter/blur/Esc) удаляется.
  */
+
+/** Строка документации по функции под курсором (вместо статичной подсказки). */
+function FuncDocLine({
+  draft,
+  curPos,
+  lang,
+}: {
+  draft: string;
+  curPos: number;
+  lang: Lang;
+}) {
+  const doc = useMemo(() => {
+    const w = wordAt(draft, curPos);
+    return w ? lookupFuncDoc(w, lang) : null;
+  }, [draft, curPos, lang]);
+  if (!doc) return null;
+  return (
+    <div
+      className="math-input mt-1 truncate text-[11px] leading-4 text-[var(--faint)]"
+      aria-live="polite"
+    >
+      <span className="text-[var(--accent-line)]">{doc.name}</span>
+      {doc.title === doc.name
+        ? ` — ${doc.syntax}`
+        : ` — ${doc.title} · ${doc.syntax}`}
+    </div>
+  );
+}
+
 function MathBlockView({ block, scale, lateDeps }: Props) {
   const updateInput = useCanvasStore((s) => s.updateInput);
   const removeBlock = useCanvasStore((s) => s.removeBlock);
@@ -31,12 +61,12 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const addPlot3dBlock = useCanvasStore((s) => s.addPlot3dBlock);
   const toggleSelect = useCanvasStore((s) => s.toggleSelect);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
-  // подписка ради перерендера при смене языка
-  useCanvasStore((s) => s.lang);
+  const lang = useCanvasStore((s) => s.lang);
   const [editing, setEditing] = useState(
     block.rawInput === "" && block.kind === "math",
   );
   const [draft, setDraft] = useState(block.rawInput);
+  const [curPos, setCurPos] = useState(0);
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -332,6 +362,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                 value={draft}
                 onChange={(e) => {
                   setDraft(e.target.value);
+                  setCurPos(e.target.selectionStart ?? e.target.value.length);
                   updateInput(block.id, e.target.value);
                 }}
                 onBlur={() => finishEdit(draft)}
@@ -412,10 +443,21 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
+                onKeyUp={(e) =>
+                  setCurPos(
+                    e.currentTarget.selectionStart ?? draft.length,
+                  )
+                }
+                onSelect={(e) =>
+                  setCurPos(
+                    e.currentTarget.selectionStart ?? draft.length,
+                  )
+                }
                 placeholder="f := 10*10^9"
-                title={t("m.groupHint")}
                 aria-label={t("m.groupHint")}
               />
+              {/* документация по функции под курсором вместо статичной подсказки */}
+              <FuncDocLine draft={draft} curPos={curPos} lang={lang} />
               {/* живой предпросмотр «как в книге» прямо при наборе */}
               {draft.trim() !== "" && html !== "" && (
                 <div
