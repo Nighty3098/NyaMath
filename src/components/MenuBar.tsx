@@ -30,6 +30,12 @@ type Entry =
       checked?: boolean;
       disabled?: boolean;
       action: () => void;
+    }
+  | {
+      id: string;
+      icon?: React.ReactNode;
+      label: string;
+      children: Entry[];
     };
 
 /** Новая вставка — в точку курсора-прицела; прицел каскадом уходит вниз. */
@@ -89,8 +95,10 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const errCount = useMemo(() => Object.values(blocks).filter((b) => b.error).length, [blocks]);
 
   const [open, setOpen] = useState<string | null>(null);
+  const [subOpen, setSubOpen] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [toolbarW, setToolbarW] = useState(0);
 
   // Точное центрирование меню по окну: левый «отголосок» повторяет ширину
@@ -109,11 +117,13 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
     const onDown = (e: PointerEvent) => {
       if (!barRef.current?.contains(e.target as Node)) {
         setOpen(null);
+        setSubOpen(null);
       }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setOpen(null);
+        setSubOpen(null);
       }
     };
     document.addEventListener('pointerdown', onDown);
@@ -121,11 +131,16 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
     return () => {
       document.removeEventListener('pointerdown', onDown);
       document.removeEventListener('keydown', onKey);
+      if (closeTimer.current) {
+        clearTimeout(closeTimer.current);
+        closeTimer.current = null;
+      }
     };
   }, [open]);
 
   const run = (fn: () => void) => () => {
     setOpen(null);
+    setSubOpen(null);
     fn();
   };
 
@@ -217,10 +232,15 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
       id: 'view',
       label: t('menu.view'),
       items: [
-        { id: 'grid-std', icon: <IGrid />, label: t('menu.gridStandard'), checked: showGrid && gridSize === 'standard', action: run(() => setGridSize('standard')) },
-        { id: 'grid-fine', icon: <IGrid />, label: t('menu.gridFine'), checked: showGrid && gridSize === 'fine', action: run(() => setGridSize('fine')) },
-        { id: 'grid-off', icon: <IGrid />, label: t('menu.gridOff'), checked: !showGrid, action: run(() => setGridVisible(false)) },
-        { id: 'separate', icon: <IGrid />, label: t('menu.separate'), action: run(separateRegions) },
+        {
+          id: 'grid-sub', icon: <IGrid />, label: t('menu.grid'), children: [
+            { id: 'grid-std', icon: <IGrid />, label: t('menu.gridStandard'), checked: showGrid && gridSize === 'standard', action: run(() => setGridSize('standard')) },
+            { id: 'grid-fine', icon: <IGrid />, label: t('menu.gridFine'), checked: showGrid && gridSize === 'fine', action: run(() => setGridSize('fine')) },
+            { id: 'grid-off', icon: <IGrid />, label: t('menu.gridOff'), checked: !showGrid, action: run(() => setGridVisible(false)) },
+            { sep: true },
+            { id: 'separate', icon: <IGrid />, label: t('menu.separate'), action: run(separateRegions) },
+          ],
+        },
         { id: 'scopemon', icon: <ISignal />, label: t('menu.scopeMon'), hint: 'Ctrl+J', checked: scopeMonOpen, action: run(toggleScopeMon) },
         { id: 'dis-sel', icon: <IZap />, label: t('menu.toggleDisabled'), disabled: selectedIds.length === 0, action: run(toggleSelectedDisabled) },
         { id: 'palette', icon: <IFx />, label: t('menu.palette'), checked: paletteOpen, action: run(togglePalette) },
@@ -230,13 +250,18 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
         { id: 'recalc', icon: <IRecalc />, label: t('menu.recalc'), hint: 'Ctrl+↵', action: run(recalc) },
         { id: 'variables', icon: <IFx />, label: t('menu.variables'), hint: 'Ctrl+K', action: run(onOpenNavigator) },
         { sep: true },
-        ...THEMES.map((th) => ({
-          id: `theme-${th.id}`,
-          icon: (th.kind === 'light' ? <ISun /> : <IMoon />) as React.ReactNode,
-          label: themeLabel(th.id),
-          checked: theme === th.id,
-          action: run(() => setTheme(th.id)),
-        })),
+        {
+          id: 'theme-sub',
+          icon: (THEMES.find((x) => x.id === theme)?.kind === 'light' ? <ISun /> : <IMoon />) as React.ReactNode,
+          label: t('menu.theme'),
+          children: THEMES.map((th) => ({
+            id: `theme-${th.id}`,
+            icon: (th.kind === 'light' ? <ISun /> : <IMoon />) as React.ReactNode,
+            label: themeLabel(th.id),
+            checked: theme === th.id,
+            action: run(() => setTheme(th.id)),
+          })),
+        },
         { sep: true },
         langEntry('lang-ru', 'ru', 'Русский'),
         langEntry('lang-en', 'en', 'English'),
@@ -260,26 +285,87 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
     },
   ];
 
-  const renderItem = (it: Entry, i: number, onPick: () => void, tall = false) => {
+  const renderLeaf = (
+    it: Extract<Entry, { action: unknown }>,
+    _i: number | string,
+    onPick: () => void,
+    tall = false,
+  ) => (
+    <button
+      key={it.id}
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={it.checked ?? undefined}
+      disabled={it.disabled}
+      onClick={onPick}
+      className={`menu-item ${tall ? 'min-h-[44px]' : ''}`}
+    >
+      <span className="w-4 shrink-0 inline-flex justify-center" aria-hidden="true">
+        {it.checked ? <span className="text-[var(--accent)]">✓</span> : it.icon}
+      </span>
+      <span className={`flex-1 ${it.danger ? 'text-[var(--danger)]' : ''}`}>{it.label}</span>
+      {it.hint && <kbd>{it.hint}</kbd>}
+    </button>
+  );
+
+  const renderItem = (it: Entry, i: number | string, onPick: () => void, tall = false) => {
     if ('sep' in it) return <div key={`sep${i}`} className="menu-sep" role="separator" />;
     if ('head' in it) return <div key={`h${i}`} className="menu-head">{it.head}</div>;
-    return (
-      <button
-        key={it.id}
-        type="button"
-        role="menuitemcheckbox"
-        aria-checked={it.checked ?? undefined}
-        disabled={it.disabled}
-        onClick={onPick}
-        className={`menu-item ${tall ? 'min-h-[44px]' : ''}`}
-      >
-        <span className="w-4 shrink-0 inline-flex justify-center" aria-hidden="true">
-          {it.checked ? <span className="text-[var(--accent)]">✓</span> : it.icon}
-        </span>
-        <span className={`flex-1 ${it.danger ? 'text-[var(--danger)]' : ''}`}>{it.label}</span>
-        {it.hint && <kbd>{it.hint}</kbd>}
-      </button>
-    );
+    if ('children' in it) {
+      const expanded = subOpen === it.id;
+      return (
+        <div
+          key={it.id}
+          className="relative"
+          onMouseEnter={() => {
+            if (closeTimer.current) {
+              clearTimeout(closeTimer.current);
+              closeTimer.current = null;
+            }
+            setSubOpen(it.id);
+          }}
+          onMouseLeave={() => {
+            // пауза вместо мгновенного закрытия: курсор идёт через зазор к подменю
+            if (closeTimer.current) clearTimeout(closeTimer.current);
+            closeTimer.current = setTimeout(() => {
+              closeTimer.current = null;
+              setSubOpen((v) => (v === it.id ? null : v));
+            }, 180);
+          }}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            aria-haspopup="menu"
+            aria-expanded={expanded}
+            onClick={() => setSubOpen((v) => (v === it.id ? null : it.id))}
+            className="menu-item w-full"
+          >
+            <span className="w-4 shrink-0 inline-flex justify-center" aria-hidden="true">
+              {it.icon}
+            </span>
+            <span className="flex-1">{it.label}</span>
+            <span aria-hidden="true" className="text-[var(--faint)]">▸</span>
+          </button>
+          {expanded && (
+            // мост pl-1.5 вместо отступа ml: hover не рвётся между меню и подменю
+            <div className="absolute left-full top-0 z-30 pl-1.5">
+              <div
+                role="menu"
+                aria-label={it.label}
+                className="menu-drop min-w-60 border border-[var(--chrome-line)] bg-[var(--chrome)]"
+              >
+                {it.children.map((c, j) => {
+                  if ('sep' in c || 'head' in c || 'children' in c) return renderItem(c, `${i}-${j}`, () => {});
+                  return renderLeaf(c, `${i}-${j}`, c.action);
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+    return renderLeaf(it, i, onPick, tall);
   };
 
   const drop = (m: (typeof menus)[number]) => (
@@ -291,8 +377,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
       }`}
     >
       {m.items.map((it, i) => {
-        if ('sep' in it || 'head' in it) return renderItem(it, i, () => {});
-        return renderItem(it, i, it.action);
+        if ('sep' in it || 'head' in it || 'children' in it) return renderItem(it, i, () => {});
+        return renderLeaf(it, i, it.action);
       })}
     </div>
   );
@@ -318,6 +404,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
               onClick={() => setOpen((v) => (v === m.id ? null : m.id))}
               onMouseEnter={() => {
                 if (open !== null && open !== m.id) setOpen(m.id);
+                setSubOpen(null);
               }}
             >
               {m.label}
