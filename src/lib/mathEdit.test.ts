@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { expandSelection, wrapSelection } from './mathEdit';
 
-describe('mathcad editing: wrap selection with operator', () => {
+describe('editing: wrap selection with operator', () => {
   it('parens keep the selection on the group (chaining)', () => {
     expect(wrapSelection('19+52', 0, 5, 'parens')).toEqual({
       value: '(19+52)', start: 0, end: 7,
@@ -37,7 +37,7 @@ describe('mathcad editing: wrap selection with operator', () => {
   });
 });
 
-describe('mathcad editing: expand selection (Spacebar levels)', () => {
+describe('editing: expand selection (levels)', () => {
   it('collapsed cursor selects the token', () => {
     expect(expandSelection('19+52', 1, 1)).toEqual({ start: 0, end: 2 });
   });

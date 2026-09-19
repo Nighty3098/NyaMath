@@ -23,7 +23,7 @@ function recalc(list: MathBlockData[]) {
   return { out: list.map((b) => r.blocks[b.id]), scope: r.scope };
 }
 
-describe('mathcad canvas: disable evaluation', () => {
+describe('canvas regions: disable evaluation', () => {
   it('skips a disabled math block and hides its names below', () => {
     const a = block('math', 60, { rawInput: 'x := 5', disabled: true });
     const b = block('math', 124, { rawInput: 'y := x + 1 =' });
@@ -33,7 +33,7 @@ describe('mathcad canvas: disable evaluation', () => {
     expect(out[0].resultStr).toBe('');
     expect(out[0].definedVar).toBeNull();
     expect(scope['x']).toBeUndefined();
-    // ниже — как в Mathcad: имя не видно; движок даёт автографик вместо
+    // ниже — имя не видно; движок даёт автографик вместо
     // числа (lenient-режим), но числового результата нет
     expect(out[1].resultStr).toBe('');
     expect(scope['y']).toBeUndefined();
@@ -62,7 +62,7 @@ describe('mathcad canvas: disable evaluation', () => {
   });
 });
 
-describe('mathcad canvas: use-before-definition', () => {
+describe('canvas regions: use-before-definition', () => {
   it('flags names defined below the block', () => {
     const top = block('math', 60, { rawInput: 'y := x + 1 =' });
     const bottom = block('math', 200, { rawInput: 'x := 5' });
@@ -85,7 +85,7 @@ describe('mathcad canvas: use-before-definition', () => {
   });
 });
 
-describe('mathcad canvas: layout and typing helpers', () => {
+describe('canvas regions: layout and typing helpers', () => {
   it('separateBlocksVertically pushes overlaps down only', () => {
     const a = block('math', 60, { rawInput: 'x := 1' });
     const b = block('math', 70, { rawInput: 'y := 2' });

@@ -13,12 +13,12 @@ import { expandSelection, wrapSelection } from "../lib/mathEdit";
 interface Props {
   block: MathBlockData;
   scale: number;
-  /** Use-before-definition (Mathcad): имена, определённые ниже по листу */
+  /** Use-before-definition : имена, определённые ниже по листу */
   lateDeps?: string[];
 }
 
 /**
- * Регион Mathcad: прозрачный фон, высота по содержимому, ширина — авто/вручную.
+ * Регион: прозрачный фон, высота по содержимому, ширина — авто/вручную.
  * Присваивание `x := expr` — без результата, вывод — инлайн `expr = result`.
  * Пустой блок при выходе из редактирования (Enter/blur/Esc) удаляется.
  */
@@ -98,7 +98,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
     });
   };
 
-  // Инлайн-результат в стиле Mathcad: `expr = result` одной строкой KaTeX
+  // Инлайн-результат: `expr = result` одной строкой KaTeX
   const tex = useMemo(() => {
     if (!block.displayLatex) return "";
     if (block.error || !block.isOutput || !block.resultLatex)
@@ -144,7 +144,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
     setEditing(false);
   };
 
-  /** Enter в редакторе: подтвердить и увести прицел строкой ниже (как в Mathcad) */
+  /** Enter в редакторе: подтвердить и увести прицел строкой ниже */
   const commitAndStepDown = (value: string) => {
     finishEdit(value);
     if (value.trim() !== "") {
@@ -163,7 +163,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
 
   return (
     <div
-      className="nya-region absolute z-10"
+      className={`nya-region absolute ${editing ? "z-20" : "z-10"}`}
       style={{ left: block.x, top: block.y }}
     >
       <div
@@ -175,7 +175,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
           block.error
             ? "outline outline-2 outline-[var(--danger)] bg-[var(--danger-bg)]"
             : editing
-              ? // Mathcad active region — пунктирная рамка + сплошной фон на весь блок
+              ? // Active region — пунктирная рамка + сплошной фон на весь блок
                 "bg-[var(--input-bg)] outline outline-2 outline-dashed outline-[var(--accent-line)]"
               : selected
                 ? "outline outline-2 outline-[var(--accent-line)]"
@@ -339,7 +339,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                   const el = e.currentTarget;
                   const selS = el.selectionStart ?? draft.length;
                   const selE = el.selectionEnd ?? draft.length;
-                  // Ctrl+Space — расширение выделения уровнями (Spacebar Mathcad, §07)
+                  // Ctrl+Space — расширение выделения уровнями (уровни группировки)
                   if (e.key === " " && e.ctrlKey && !e.metaKey && !e.altKey) {
                     const r = expandSelection(draft, selS, selE);
                     if (r) {
@@ -351,7 +351,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                     e.stopPropagation();
                     return;
                   }
-                  // ( / ^ поверх выделения — оператор накрывает группу целиком (Mathcad)
+                  // ( / ^ поверх выделения — оператор накрывает группу целиком 
                   if (
                     (e.key === "(" || e.key === "/" || e.key === "^") &&
                     selE > selS &&
@@ -377,7 +377,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                       return;
                     }
                   }
-                  // Mathcad: клавиша `:` сразу даёт оператор определения `:=`
+                  // Клавиша `:` сразу даёт оператор определения `:=`
                   if (e.key === ":" && !e.ctrlKey && !e.metaKey && !e.altKey) {
                     const el = e.currentTarget;
                     const r = applyColonShortcut(
@@ -416,7 +416,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                 title={t("m.groupHint")}
                 aria-label={t("m.groupHint")}
               />
-              {/* живой предпросмотр «как в книге» прямо при наборе (Mathcad WYSIWYG) */}
+              {/* живой предпросмотр «как в книге» прямо при наборе */}
               {draft.trim() !== "" && html !== "" && (
                 <div
                   className="mt-1 opacity-70 pointer-events-none select-none"

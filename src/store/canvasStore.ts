@@ -119,15 +119,15 @@ export interface CanvasState {
   selectMany: (ids: string[]) => void;
   toggleSelect: (id: string) => void;
   toggleGrid: () => void;
-  /** Шаг сетки (Mathcad: Standard/Fine); showGrid=false — сетка скрыта */
+  /** Шаг сетки (Standard/Fine); showGrid=false — сетка скрыта */
   gridSize: 'standard' | 'fine';
   setGridSize: (s: 'standard' | 'fine') => void;
   setGridVisible: (v: boolean) => void;
-  /** Disable Evaluation (Mathcad): исключить/вернуть блок из расчёта */
+  /** Disable Evaluation: исключить/вернуть блок из расчёта */
   toggleBlockDisabled: (id: string) => void;
   /** Инверсия флага для всего выделения одним шагом истории */
   toggleSelectedDisabled: () => void;
-  /** Separate Regions → Vertically (Mathcad): разнести наложенные блоки вниз */
+  /** Separate Regions → Vertically : разнести наложенные блоки вниз */
   separateRegions: () => void;
   recalc: () => void;
   clear: () => void;
@@ -152,7 +152,7 @@ export interface CanvasState {
   redo: () => void;
   /** Снапшот перед жестом (драг/ресайз): вызывается на pointerdown */
   beginGesture: () => void;
-  /** Курсор-прицел в стиле Mathcad (мировые координаты листа) */
+  /** Курсор-прицел (мировые координаты листа) */
   cross: { x: number; y: number };
   setCross: (x: number, y: number) => void;
   nudgeCross: (dx: number, dy: number) => void;
@@ -464,7 +464,7 @@ async function runRecalcJob(): Promise<void> {
 export const useCanvasStore = create<CanvasState>((set, get) => ({
   blocks: restore(),
   selectedIds: [],
-  // чистый лист как в Mathcad — сетка по желанию (выбор хранится в localStorage)
+  // чистый лист — сетка по желанию (выбор хранится в localStorage)
   showGrid: loadGrid(),
   gridSize: loadGridSize(),
   theme: loadTheme(),

@@ -1,7 +1,7 @@
 /**
  * NyaMath Math Engine — кастомный evaluator на базе mathjs.
  *
- * Поддерживает Mathcad-синтаксис:
+ * Поддерживает синтаксис листа:
  *  - `a := expr`        — определение переменной / функции `f(x) := ...`
  *  - `expr =` / `x =`   — вывод результата ( trailing `=` )
  *  - `j` как мнимая единица (алиас `i`), включая `3+4j`, `4*j`
@@ -34,7 +34,7 @@ export const math: MathJsInstance = create(all, {});
   }
 }
 
-// --- Кастомные функции / алиасы в стиле Mathcad ---
+// --- Кастомные функции / короткие алиасы ---
 // mathjs из коробки: sin cos tan asin acos atan sqrt abs exp re im conj arg ...
 // Добавляем регистронезависимые Re/Im, инженерный ln/log.
 math.import(
@@ -52,7 +52,7 @@ math.import(
 );
 
 // Переопределяем log через import с override, чтобы работало внутри evaluate():
-// log(x) = lg (инженерный, как в Mathcad), log(x, base) — по основанию base.
+// log(x) = lg (инженерный), log(x, base) — по основанию base.
 math.import(
   {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -126,7 +126,7 @@ export function compileRawExpr(raw: string): EvalFunction | null {
   return getCompiledPre(preprocessRanges(preprocessJ(raw, false)));
 }
 
-/** Диапазоны Mathcad-стиля: `a..b` и `a,step..b` → seq(a,b,step). Только числовые литералы. */
+/** Диапазоны стиля листа: `a..b` и `a,step..b` → seq(a,b,step). Только числовые литералы. */
 export function preprocessRanges(expr: string): string {
   return expr
     .replace(
@@ -277,7 +277,7 @@ export function stripOnError(text: string): string {
 const UNIT_RHS_RE = /^[A-Za-z_µΩ°][A-Za-z_0-9µΩ°\s.*/()^*]*$/;
 
 /**
- * Отщепить суффикс перевода единиц `expr = unit` (Mathcad-стиль: `L = cm`,
+ * Отщепить суффикс перевода единиц `expr = unit` (стиль: `L = cm`,
  * `g := 10cm = m`). Возвращает [lhs, unit] или [text, null].
  * Чисто синтаксический разбор: `==`, `<=`, `>=`, `!=`, `:=` переводом не считаются.
  */
@@ -345,7 +345,7 @@ export function convertToUnit(value: unknown, unitStr: string, exprSlice: string
   throw new Error(t('e.unitConvert', { q: exprSlice.slice(0, 40), u: unitStr }));
 }
 
-/** Разобрать одну строку Mathcad-стиля. Многострочный ввод бьётся вызывающим кодом. */
+/** Разобрать одну строку. Многострочный ввод бьётся вызывающим кодом. */
 export function parseLine(rawInput: string): ParsedLine {
   const trimmed = rawInput.trim();
   if (trimmed.includes(':=')) {
@@ -369,7 +369,7 @@ export function parseLine(rawInput: string): ParsedLine {
     // убеждаемся, что это не `==`, `<=`, `>=`, `!=`
     const withoutTrailing = trimmed.replace(/=+\s*$/, '').trim();
     // если после обрезки остался `=` внутри (напр. `x = 2+2`), берём левую часть как запрос?
-    // Mathcad-семантика: `x =` показывает x. `2+2 =` показывает 6.
+    // Семантика: `x =` показывает x. `2+2 =` показывает 6.
     // Значит вычисляем именно левую часть до первого `=`.
     const firstEq = withoutTrailing.indexOf('=');
     const expr = firstEq >= 0 ? withoutTrailing.slice(0, firstEq).trim() || withoutTrailing : withoutTrailing;
@@ -667,7 +667,7 @@ function toLatexUncached(input: string): string {
   }
 }
 
-/** Греческие имена → буквы (Mathcad показывает α вместо alpha). */
+/** Греческие имена → буквы (показывает α вместо alpha). */
 const GREEK_TEX: Record<string, string> = {
   alpha: '\\alpha', beta: '\\beta', gamma: '\\gamma', delta: '\\delta',
   epsilon: '\\epsilon', zeta: '\\zeta', eta: '\\eta', theta: '\\theta',
@@ -681,18 +681,56 @@ const GREEK_TEX: Record<string, string> = {
   Nu: '\\Nu', Xi: '\\Xi', Pi: '\\Pi', Rho: '\\Rho', Sigma: '\\Sigma',
   Tau: '\\Tau', Upsilon: '\\Upsilon', Phi: '\\Phi', Chi: '\\Chi',
   Psi: '\\Psi', Omega: '\\Omega',
+  // короткие алиасы из конспектов и кода
+  eps: '\\epsilon', Eps: '\\Epsilon',
 };
+
+/** Отдельное греческое слово: eps → \epsilon (не трогаем \epsilon, eps_r, eps2). */
+const GREEK_WORD_RE = new RegExp(
+  `(?<![A-Za-z\\\\])(${Object.keys(GREEK_TEX).sort((a, b) => b.length - a.length).join('|')})(?![A-Za-z0-9_])`,
+  'g',
+);
+/** lambda0 → \lambda_{0}: греческое имя + цифровой хвост, без подчёркивания. */
+const GREEK_SUFFIX_RE = new RegExp(
+  `(?<![A-Za-z\\\\])(${Object.keys(GREEK_TEX).sort((a, b) => b.length - a.length).join('|')})([0-9]+)(?![A-Za-z0-9])`,
+  'g',
+);
+
+/** numsum("тело", "k", низ, верх) целиком — знак Σ с пределами. */
+const NUMSUM_RE = /^numsum\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"([A-Za-z][A-Za-z0-9]*)"\s*,\s*(.+?)\s*,\s*(.+?)\s*\)$/;
+
+function sigmaTex(expr: string): string | null {
+  const m = expr.trim().match(NUMSUM_RE);
+  if (!m) return null;
+  const [, body, v, lo, hi] = m;
+  return `\\sum_{${v}=${safeTex(lo.trim())}}^{${safeTex(hi.trim())}}{${safeTex(body.replace(/\\"/g, '"'))}}`;
+}
 
 function safeTex(expr: string): string {
   try {
+    const sig = sigmaTex(expr);
+    if (sig) return sig;
     const node = math.parse(expr);
     let tex = node.toTex();
     tex = tex.replace(/\\mathrm\{i\}/g, 'j');
-    // alpha_10 → \alpha_{10}, x_1 → x_{1}: суффикс после _ всегда индекс,
-    // как буквальный подстрочник в Mathcad (имя в scope не меняется)
+    // alpha_10 → \alpha_{10}, tg_delta → tg_{\delta}, x_1 → x_{1}:
+    // имя и суффикс после _ маппятся в греческие независимо
+    // (имя в scope не меняется)
     tex = tex.replace(
       /([A-Za-z]+)\\_([A-Za-z0-9]+)/g,
-      (_, name: string, sub: string) => `${GREEK_TEX[name] ?? name}_{${sub}}`,
+      (_, name: string, sub: string) =>
+        `${GREEK_TEX[name] ?? name}_{${GREEK_TEX[sub] ?? sub}}`,
+    );
+    // lambda0 → \lambda_{0}: греческое имя с цифровым хвостом без _.
+    // Только греческие (q1, v0, log10 не трогаем) и только целый хвост.
+    tex = tex.replace(
+      GREEK_SUFFIX_RE,
+      (_, name: string, sub: string) => `${GREEK_TEX[name]}_{${sub}}`,
+    );
+    // отдельное слово: eps → \epsilon (уже готовые \epsilon, eps_r, eps2 не трогаем)
+    tex = tex.replace(
+      GREEK_WORD_RE,
+      (_, name: string) => GREEK_TEX[name],
     );
     return tex;
   } catch {

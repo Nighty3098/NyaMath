@@ -20,7 +20,7 @@ export interface MathBlockData {
   /** true, если последняя строка блока — вывод (expr / expr =): результат показываем инлайн */
   isOutput: boolean;
   kind: 'math' | 'plot' | 'text' | 'program' | 'plot3d' | 'sim' | 'contour' | 'slider';
-  /** Disable Evaluation (Mathcad): регион не считается, его имена не видны ниже */
+  /** Disable Evaluation: регион не считается, его имена не видны ниже */
   disabled?: boolean;
   /** Слайдер: имя переменной, диапазон, шаг и текущее значение */
   sliderVar?: string;
@@ -148,7 +148,7 @@ export function sortBlocksTopDown(blocks: MathBlockData[]): MathBlockData[] {
 }
 
 /**
- * Use-before-definition (Mathcad: использование выше определения).
+ * Use-before-definition: использование выше определения.
  * Для каждого активного блока — зависимости, чьё ПЕРВОЕ определение
  * находится ниже по листу. Встроенные имена (sin, pi, …) определений
  * не имеют и сюда не попадают. Disabled-регионы не участвуют.
@@ -405,7 +405,7 @@ interface RecalcCtx {
 /** Общая преамбула пересчёта: порядок, циклы, fingerprint-механика, scope. */
 function createRecalcCtx(list: MathBlockData[]): RecalcCtx {
   const ordered = sortBlocksTopDown(list);
-  // Disable Evaluation (Mathcad): отключённые регионы не считаются,
+  // Disable Evaluation: отключённые регионы не считаются,
   // их имена не видны ниже — в циклах и цепочках определений не участвуют.
   const active = ordered.filter((b) => !b.disabled);
   const cyclic = detectCycles(active);
@@ -611,7 +611,7 @@ function detectVisualize(
 function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
   const { scope, out, cyclic, langTag, fpOf, reuseHit, snapBlock } = ctx;
   const cur = out[b.id];
-  // Disable Evaluation (Mathcad): замороженный регион — формула видна,
+  // Disable Evaluation: замороженный регион — формула видна,
   // но не считается и ничего не пишет в scope (как pass-регионы).
   if (b.disabled) {
     const pkey = `${langTag}|${fpOf(b.id)}`;

@@ -11,12 +11,12 @@ import { IBug, IGrip, IWarn, IX } from './Icon';
 interface Props {
   block: MathBlockData;
   scale: number;
-  /** Use-before-definition (Mathcad): имена, определённые ниже по листу */
+  /** Use-before-definition : имена, определённые ниже по листу */
   lateDeps?: string[];
 }
 
 /**
- * Программный регион в стиле Mathcad: вертикальная черта слева,
+ * Программный регион: вертикальная черта слева,
  * прозрачный фон, высота по содержимому, ширина — авто/вручную.
  * Пустой блок при выходе из редактирования удаляется.
  */
@@ -92,7 +92,7 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
           block.error
             ? 'border-[var(--danger)] bg-[var(--danger-bg)] outline outline-2 outline-[var(--danger)]'
             : editing
-              // Mathcad active region — пунктирная рамка (vs сплошная у выделенного)
+              // Active region — пунктирная рамка (vs сплошная у выделенного)
               ? 'border-[var(--ink)] outline outline-2 outline-dashed outline-[var(--accent-line)]'
               : selected
                 ? 'border-[var(--ink)] outline outline-2 outline-[var(--accent-line)]'

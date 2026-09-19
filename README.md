@@ -22,7 +22,7 @@ stdio и приложение через *View → Live sync* видят оди�
 
 ## Features
 
-- **Math blocks** in Mathcad style: `:=` definitions, trailing `=` output, `j` as the
+- **Math blocks** in worksheet style: `:=` definitions, trailing `=` output, `j` as the
   imaginary unit, matrices, ranges (`1..10`), lenient error messages (RU/EN).
 - **Evaluation strictly top-to-bottom** (by `y`), with dependencies and cycle detection.
 - **Plots**: multi-series 2D (`;`-separated), polar/bar/stem traces, contour and 3D

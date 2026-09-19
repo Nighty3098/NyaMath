@@ -82,7 +82,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const redo = useCanvasStore((s) => s.redo);
   const canUndo = useCanvasStore((s) => s.past.length > 0);
   const canRedo = useCanvasStore((s) => s.future.length > 0);
-  // Кружок состояния расчёта (Mathcad Status Bar): зелёный — чисто, красный — есть ошибки
+  // Кружок состояния расчёта: зелёный — чисто, красный — есть ошибки
   const errCount = useMemo(() => Object.values(blocks).filter((b) => b.error).length, [blocks]);
 
   const [open, setOpen] = useState<string | null>(null);

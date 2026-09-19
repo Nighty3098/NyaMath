@@ -378,7 +378,7 @@ body {
   background-size: 22px 22px;
 }
 
-/* Регион Mathcad: прозрачный, размер по содержимому */
+/* Регион: прозрачный, размер по содержимому */
 .nya-region {
   background: transparent;
   width: max-content;

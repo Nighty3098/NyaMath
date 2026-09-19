@@ -262,7 +262,7 @@ export default function Canvas() {
     },
     [applyView],
   );
-  // Курсор-прицел в стиле Mathcad
+  // Курсор-прицел
   const cross = useCanvasStore((s) => s.cross);
 
   const toLocal = (clientX: number, clientY: number) => {
@@ -618,7 +618,7 @@ export default function Canvas() {
     () => sortBlocksTopDown(Object.values(blocks)),
     [blocks],
   );
-  // Use-before-definition (Mathcad): зависимости, определённые ниже по листу
+  // Use-before-definition : зависимости, определённые ниже по листу
   const lateDeps = useMemo(
     () => findUseBeforeDef(Object.values(blocks)),
     [blocks],
@@ -630,7 +630,7 @@ export default function Canvas() {
   const mod = (a: number, n: number) => ((a % n) + n) % n;
   const gridStyle: React.CSSProperties = showGrid
     ? (() => {
-        // Mathcad: Standard (крупная) / Fine (мелкая) сетка
+        // Standard (крупная) / Fine (мелкая) сетка
         const s = (gridSize === 'fine' ? 11 : 22) * view.k;
         return {
           backgroundImage:
@@ -683,7 +683,7 @@ export default function Canvas() {
           transformOrigin: "0 0",
         }}
       >
-        {/* курсор-прицел в стиле Mathcad */}
+        {/* курсор-прицел */}
         <div
           className="absolute z-0 pointer-events-none print:hidden"
           style={{ left: cross.x, top: cross.y }}
