@@ -87,6 +87,26 @@ export interface CanvasState {
   setConstPaletteSize: (w: number, h: number) => void;
   constPaletteDockW: number;
   setConstPaletteDockW: (w: number) => void;
+  /** Единое окно палитр: активная вкладка + геометрия окна.
+   *  Флаги paletteOpen/formulaPaletteOpen/constPaletteOpen/scopeMonOpen —
+   *  какие вкладки включены; окно видно, пока включён хоть один источник. */
+  paletteTab: PaletteTab;
+  setPaletteTab: (t: PaletteTab) => void;
+  unifiedMode: PaletteMode;
+  setUnifiedMode: (m: PaletteMode) => void;
+  unifiedW: number;
+  unifiedH: number;
+  setUnifiedSize: (w: number, h: number) => void;
+  unifiedDockW: number;
+  setUnifiedDockW: (w: number) => void;
+  /** Вкладки, вытянутые в отдельные окна (tear-off).
+   *  Единое окно показывает только невынесенные; пусто — всё в одном окне. */
+  detachedTabs: PaletteTab[];
+  detachTab: (t: PaletteTab) => void;
+  attachTab: (t: PaletteTab) => void;
+  /** Сторона док-панели вынесенной вкладки (нет записи — плавающее окно). */
+  detachedSide: Partial<Record<PaletteTab, 'left' | 'right'>>;
+  setDetachedSide: (t: PaletteTab, side: 'left' | 'right' | 'float') => void;
   recalcCounter: number;
   /** Длительность последнего пересчёта, мс (телеметрия пульта) */
   calcMs: number;
@@ -303,8 +323,10 @@ function restore(): Record<string, MathBlockData> {
 
 /** Режим и размеры палитры (персист отдельно от документа).
  *  Док — универсально: left/right — на всю сторону (верх-низ).
- *  Палитры одного края стекаются друг над другом и делят общую ширину. */
+ *  Единое окно с вкладками: функции / формулы / константы / переменные. */
 export type PaletteMode = 'float' | 'left' | 'right';
+/** Активная вкладка единого окна палитр. */
+export type PaletteTab = 'functions' | 'formulas' | 'constants' | 'variables';
 
 const PAL_UI_KEY = 'nyamath-palette-ui';
 const PAL_UI_KEY_LEGACY = 'wengineering-palette-ui';
@@ -353,6 +375,112 @@ function loadPaletteUi(variant: 'functions' | 'formulas' | 'constants' = 'functi
 const initialPaletteUi = loadPaletteUi();
 const initialFormulaPaletteUi = loadPaletteUi('formulas');
 const initialConstPaletteUi = loadPaletteUi('constants');
+
+/** Единое окно палитр: режим/размеры/вкладка (персист отдельно от документа).
+ *  Миграция со старых раздельных палитр: если unified-ключа ещё нет —
+ *  забираем геометрию палитры функций, режим — первый пристыкованный
+ *  среди старых, открытость — если хоть одна старая палитра открыта,
+ *  вкладка — первая открытая. */
+const UNIFIED_UI_KEY = 'nyamath-unified-palette-ui';
+
+interface UnifiedUi {
+  mode: PaletteMode;
+  w: number;
+  h: number;
+  dockW: number;
+  open: boolean;
+  tab: PaletteTab;
+}
+
+const DEFAULT_UNIFIED_UI: UnifiedUi = { mode: 'float', w: 400, h: 560, dockW: 400, open: false, tab: 'functions' };
+
+function loadUnifiedUi(): UnifiedUi {
+  const num = (v: unknown, lo: number, hi: number, fb: number): number =>
+    typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fb;
+  try {
+    const raw = localStorage.getItem(UNIFIED_UI_KEY);
+    if (raw) {
+      const p = JSON.parse(raw) as Partial<UnifiedUi>;
+      const m = p.mode as unknown;
+      const mode: PaletteMode = m === 'left' ? 'left' : m === 'right' ? 'right' : 'float';
+      const tab: PaletteTab =
+        p.tab === 'formulas' || p.tab === 'constants' || p.tab === 'variables' ? p.tab : 'functions';
+      return {
+        mode,
+        w: num(p.w, 320, 720, DEFAULT_UNIFIED_UI.w),
+        h: num(p.h, 320, 1200, DEFAULT_UNIFIED_UI.h),
+        dockW: num(p.dockW, 280, 640, DEFAULT_UNIFIED_UI.dockW),
+        open: p.open === true,
+        tab,
+      };
+    }
+  } catch { /* ignore — упадём в миграцию ниже */ }
+  // миграция: ни разу не сохраняли unified — смотрим старые ключи
+  const anyOpen = initialPaletteUi.open || initialFormulaPaletteUi.open || initialConstPaletteUi.open;
+  if (!anyOpen) return DEFAULT_UNIFIED_UI;
+  const mode: PaletteMode =
+    initialPaletteUi.mode !== 'float' ? initialPaletteUi.mode
+    : initialFormulaPaletteUi.mode !== 'float' ? initialFormulaPaletteUi.mode
+    : initialConstPaletteUi.mode;
+  const tab: PaletteTab =
+    initialPaletteUi.open ? 'functions'
+    : initialFormulaPaletteUi.open ? 'formulas'
+    : initialConstPaletteUi.open ? 'constants'
+    : 'functions';
+  return {
+    mode,
+    w: num(initialPaletteUi.w, 320, 720, DEFAULT_UNIFIED_UI.w),
+    h: num(initialPaletteUi.h, 320, 1200, DEFAULT_UNIFIED_UI.h),
+    dockW: Math.max(
+      initialPaletteUi.open ? initialPaletteUi.dockW : 0,
+      initialFormulaPaletteUi.open ? initialFormulaPaletteUi.dockW : 0,
+      initialConstPaletteUi.open ? initialConstPaletteUi.dockW : 0,
+      DEFAULT_UNIFIED_UI.dockW,
+    ),
+    open: true,
+    tab,
+  };
+}
+
+const initialUnifiedUi = loadUnifiedUi();
+
+/** Вынесенные в отдельные окна вкладки (персист отдельно от документа). */
+const DETACHED_KEY = 'nyamath-palette-detached';
+const ALL_TABS: PaletteTab[] = ['functions', 'formulas', 'constants', 'variables'];
+
+function loadDetachedTabs(): PaletteTab[] {
+  try {
+    const raw = localStorage.getItem(DETACHED_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return [];
+    return arr.filter((x): x is PaletteTab => ALL_TABS.includes(x as PaletteTab));
+  } catch {
+    return [];
+  }
+}
+
+const initialDetachedTabs = loadDetachedTabs();
+
+/** Стороны док-панелей вынесенных вкладок (персист отдельно от документа). */
+const DETACHED_SIDE_KEY = 'nyamath-detached-side';
+
+function loadDetachedSide(): Partial<Record<PaletteTab, 'left' | 'right'>> {
+  try {
+    const raw = localStorage.getItem(DETACHED_SIDE_KEY);
+    if (!raw) return {};
+    const p = JSON.parse(raw) as Partial<Record<PaletteTab, unknown>>;
+    const out: Partial<Record<PaletteTab, 'left' | 'right'>> = {};
+    for (const k of ALL_TABS) {
+      if (p[k] === 'left' || p[k] === 'right') out[k] = p[k];
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+const initialDetachedSide = loadDetachedSide();
 
 /** История: лимит глубины и троттлинг снапшотов при печати (leading edge). */
 const HISTORY_LIMIT = 100;
@@ -499,12 +627,25 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   lang: loadLang(),
   paletteOpen: initialPaletteUi.open,
   setPaletteOpen: (v) => {
-    set({ paletteOpen: v });
+    set((s) => ({
+      paletteOpen: v,
+      paletteTab: v ? 'functions' : s.paletteTab,
+      detachedTabs: v ? s.detachedTabs : s.detachedTabs.filter((x) => x !== 'functions'),
+    }));
     savePaletteUi();
+    saveUnifiedUi();
+    if (!v) saveDetachedTabs();
   },
   togglePalette: () => {
-    set((s) => ({ paletteOpen: !s.paletteOpen }));
+    const open = !get().paletteOpen;
+    set((s) => ({
+      paletteOpen: open,
+      paletteTab: open ? 'functions' : s.paletteTab,
+      detachedTabs: open ? s.detachedTabs : s.detachedTabs.filter((x) => x !== 'functions'),
+    }));
     savePaletteUi();
+    saveUnifiedUi();
+    if (!open) saveDetachedTabs();
   },
   paletteMode: initialPaletteUi.mode,
   setPaletteMode: (m) => {
@@ -523,12 +664,25 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set({ paletteDockW: Math.min(640, Math.max(280, Math.round(w))) }),
   formulaPaletteOpen: initialFormulaPaletteUi.open,
   setFormulaPaletteOpen: (v) => {
-    set({ formulaPaletteOpen: v });
+    set((s) => ({
+      formulaPaletteOpen: v,
+      paletteTab: v ? 'formulas' : s.paletteTab,
+      detachedTabs: v ? s.detachedTabs : s.detachedTabs.filter((x) => x !== 'formulas'),
+    }));
     savePaletteUi('formulas');
+    saveUnifiedUi();
+    if (!v) saveDetachedTabs();
   },
   toggleFormulaPalette: () => {
-    set((s) => ({ formulaPaletteOpen: !s.formulaPaletteOpen }));
+    const open = !get().formulaPaletteOpen;
+    set((s) => ({
+      formulaPaletteOpen: open,
+      paletteTab: open ? 'formulas' : s.paletteTab,
+      detachedTabs: open ? s.detachedTabs : s.detachedTabs.filter((x) => x !== 'formulas'),
+    }));
     savePaletteUi('formulas');
+    saveUnifiedUi();
+    if (!open) saveDetachedTabs();
   },
   formulaPaletteMode: initialFormulaPaletteUi.mode,
   setFormulaPaletteMode: (m) => {
@@ -547,12 +701,25 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set({ formulaPaletteDockW: Math.min(640, Math.max(280, Math.round(w))) }),
   constPaletteOpen: initialConstPaletteUi.open,
   setConstPaletteOpen: (v) => {
-    set({ constPaletteOpen: v });
+    set((s) => ({
+      constPaletteOpen: v,
+      paletteTab: v ? 'constants' : s.paletteTab,
+      detachedTabs: v ? s.detachedTabs : s.detachedTabs.filter((x) => x !== 'constants'),
+    }));
     savePaletteUi('constants');
+    saveUnifiedUi();
+    if (!v) saveDetachedTabs();
   },
   toggleConstPalette: () => {
-    set((s) => ({ constPaletteOpen: !s.constPaletteOpen }));
+    const open = !get().constPaletteOpen;
+    set((s) => ({
+      constPaletteOpen: open,
+      paletteTab: open ? 'constants' : s.paletteTab,
+      detachedTabs: open ? s.detachedTabs : s.detachedTabs.filter((x) => x !== 'constants'),
+    }));
     savePaletteUi('constants');
+    saveUnifiedUi();
+    if (!open) saveDetachedTabs();
   },
   constPaletteMode: initialConstPaletteUi.mode,
   setConstPaletteMode: (m) => {
@@ -569,6 +736,55 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   constPaletteDockW: initialConstPaletteUi.dockW,
   setConstPaletteDockW: (w) =>
     set({ constPaletteDockW: Math.min(640, Math.max(280, Math.round(w))) }),
+  paletteTab: initialUnifiedUi.tab,
+  setPaletteTab: (t) => {
+    set({ paletteTab: t });
+    saveUnifiedUi();
+  },
+  unifiedMode: initialUnifiedUi.mode,
+  setUnifiedMode: (m) => {
+    set({ unifiedMode: m });
+    saveUnifiedUi();
+  },
+  unifiedW: initialUnifiedUi.w,
+  unifiedH: initialUnifiedUi.h,
+  setUnifiedSize: (w, h) =>
+    set({
+      unifiedW: Math.min(720, Math.max(320, Math.round(w))),
+      unifiedH: Math.min(1200, Math.max(320, Math.round(h))),
+    }),
+  unifiedDockW: initialUnifiedUi.dockW,
+  setUnifiedDockW: (w) =>
+    set({ unifiedDockW: Math.min(640, Math.max(280, Math.round(w))) }),
+  detachedTabs: initialDetachedTabs,
+  detachTab: (t) => {
+    // вынос — всегда плавающим окном в точке дропа (сторону сбрасываем)
+    set((s) => {
+      const next = { ...s.detachedSide };
+      delete next[t];
+      return {
+        detachedTabs: s.detachedTabs.includes(t) ? s.detachedTabs : [...s.detachedTabs, t],
+        detachedSide: next,
+      };
+    });
+    saveDetachedTabs();
+    saveDetachedSide();
+  },
+  attachTab: (t) => {
+    set((s) => ({ detachedTabs: s.detachedTabs.filter((x) => x !== t), paletteTab: t }));
+    saveDetachedTabs();
+    saveUnifiedUi();
+  },
+  detachedSide: initialDetachedSide,
+  setDetachedSide: (t, side) => {
+    set((s) => {
+      const next = { ...s.detachedSide };
+      if (side === 'float') delete next[t];
+      else next[t] = side;
+      return { detachedSide: next };
+    });
+    saveDetachedSide();
+  },
   setLang: (l) =>
     set((s) => {
       setLangState(l);
@@ -657,7 +873,16 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   scopeMonOpen: false,
-  toggleScopeMon: () => set((s) => ({ scopeMonOpen: !s.scopeMonOpen })),
+  toggleScopeMon: () => {
+    const open = !get().scopeMonOpen;
+    set((s) => ({
+      scopeMonOpen: open,
+      paletteTab: open ? 'variables' : s.paletteTab,
+      detachedTabs: open ? s.detachedTabs : s.detachedTabs.filter((x) => x !== 'variables'),
+    }));
+    saveUnifiedUi();
+    if (!open) saveDetachedTabs();
+  },
 
   addBlocks: (lines, x, y, dy = 64) => {
     const clean = lines.map((l) => l.trim()).filter((l) => l.length > 0);
@@ -1045,5 +1270,43 @@ export function savePaletteUi(variant: 'functions' | 'formulas' | 'constants' = 
       variant === 'formulas' ? FORMULA_PAL_UI_KEY : variant === 'constants' ? CONST_PAL_UI_KEY : PAL_UI_KEY,
       JSON.stringify(ui),
     );
+  } catch { /* ignore */ }
+}
+
+/** Сохранить вынесенные вкладки (по окончании tear-off/attach/закрытия). */
+export function saveDetachedTabs() {
+  try {
+    localStorage.setItem(DETACHED_KEY, JSON.stringify(useCanvasStore.getState().detachedTabs));
+  } catch { /* ignore */ }
+}
+
+/** Сохранить стороны док-панелей вынесенных вкладок. */
+export function saveDetachedSide() {
+  try {
+    localStorage.setItem(DETACHED_SIDE_KEY, JSON.stringify(useCanvasStore.getState().detachedSide));
+  } catch { /* ignore */ }
+}
+export function isUnifiedPaletteOpen(s: {
+  paletteOpen: boolean;
+  formulaPaletteOpen: boolean;
+  constPaletteOpen: boolean;
+  scopeMonOpen: boolean;
+}): boolean {
+  return s.paletteOpen || s.formulaPaletteOpen || s.constPaletteOpen || s.scopeMonOpen;
+}
+
+/** Сохранить геометрию и вкладку единого окна (по окончании жеста + при смене вкладок). */
+export function saveUnifiedUi() {
+  try {
+    const s = useCanvasStore.getState();
+    const ui: UnifiedUi = {
+      mode: s.unifiedMode,
+      w: s.unifiedW,
+      h: s.unifiedH,
+      dockW: s.unifiedDockW,
+      open: isUnifiedPaletteOpen(s),
+      tab: s.paletteTab,
+    };
+    localStorage.setItem(UNIFIED_UI_KEY, JSON.stringify(ui));
   } catch { /* ignore */ }
 }

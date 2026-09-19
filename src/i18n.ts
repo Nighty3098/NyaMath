@@ -193,6 +193,15 @@ const ru = {
   'constPal.close': 'Закрыть палитру констант',
   'constPal.empty': 'Ничего не найдено',
 
+  'palTab.aria': 'Палитры: функции, формулы, константы, переменные',
+  'palTab.functions': 'Функции',
+  'palTab.formulas': 'Формулы',
+  'palTab.constants': 'Константы',
+  'palTab.variables': 'Переменные',
+  'palTab.closeAll': 'Закрыть палитры',
+  'palTab.tearHint': 'Потяните вкладку наружу — отдельное окно',
+  'detached.backHint': 'Вернуть обратно: бросьте на палитры или двойной клик по шапке',
+
   'c.aria': 'Бесконечный рабочий лист: двойной клик создаёт блок, перетаскивание с зажатой кнопкой выделяет',
   'c.title': 'ЛКМ-drag — выделение • Space/MMB/RMB — панорама • колесо — панорама • Ctrl+колесо — зум • двойной клик — новый блок',
   'c.emptyNew': 'Двойной клик — новый блок',
@@ -594,6 +603,15 @@ const en: Record<StrKey, string> = {
   'constPal.searchPh': 'search: speed of light, Planck, eps_0…',
   'constPal.close': 'Close constants palette',
   'constPal.empty': 'Nothing found',
+
+  'palTab.aria': 'Palettes: functions, formulas, constants, variables',
+  'palTab.functions': 'Functions',
+  'palTab.formulas': 'Formulas',
+  'palTab.constants': 'Constants',
+  'palTab.variables': 'Variables',
+  'palTab.closeAll': 'Close palettes',
+  'palTab.tearHint': 'Drag the tab out for a separate window',
+  'detached.backHint': 'Dock back: drop onto the palette or double-click the header',
 
   'c.aria': 'Infinite worksheet: double-click creates a block, dragging with a pressed button selects',
   'c.title': 'LMB-drag — select • Space/MMB/RMB — pan • wheel — pan • Ctrl+wheel — zoom • double-click — new block',

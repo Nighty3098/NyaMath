@@ -222,10 +222,6 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
         { id: 'ins-prog', icon: <IProgram />, label: t('menu.insProg'), action: run(insertAt((x, y) => addProgramBlock(x, y))) },
         { id: 'ins-slider', icon: <ISignal />, label: t('menu.insSlider'), action: run(insertAt((x, y) => addSliderBlock(x, y))) },
         { id: 'ins-sim', icon: <ISim />, label: t('menu.insSim'), action: run(insertAt((x, y) => addSimBlock(x, y))) },
-        { sep: true },
-        { id: 'ins-pal', icon: <IFx />, label: t('menu.insPal'), hint: 'ƒx', action: run(togglePalette) },
-        { id: 'ins-fpal', icon: <IFormula />, label: t('menu.insFormulaPal'), hint: '∑', action: run(toggleFormulaPalette) },
-        { id: 'ins-cpal', icon: <IConst />, label: t('menu.insConstPal'), hint: '∞', action: run(toggleConstPalette) },
       ],
     },
     {
