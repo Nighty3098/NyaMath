@@ -88,6 +88,8 @@ export interface CanvasState {
   constPaletteDockW: number;
   setConstPaletteDockW: (w: number) => void;
   recalcCounter: number;
+  /** Длительность последнего пересчёта, мс (телеметрия пульта) */
+  calcMs: number;
   /** Асинхронный пересчёт (#6): идёт ли джоба, прогресс симуляции, её блок */
   computeActive: boolean;
   /** 0..1 — детерминированный прогресс, null — идёт, но total неизвестен (rk45) */
@@ -129,6 +131,11 @@ export interface CanvasState {
   toggleSelectedDisabled: () => void;
   /** Separate Regions → Vertically : разнести наложенные блоки вниз */
   separateRegions: () => void;
+  /** Текстовый блок в точке прицела */
+  addTextBlock: (x: number, y: number) => void;
+  /** Панель телеметрии переменных */
+  scopeMonOpen: boolean;
+  toggleScopeMon: () => void;
   recalc: () => void;
   clear: () => void;
   loadTestScenario: () => void;
@@ -179,8 +186,16 @@ function fitViewportWidth(def: number): number {
   return Math.max(280, Math.min(def, window.innerWidth - 24));
 }
 
+/** Замер последнего синхронного пересчёта для телеметрии пульта (мс). */
+export let lastCalcMs = 0;
+/** Стор готов принимать замеры (restore при создании не замеряем). */
+let storeReady = false;
+
 function withRecalc(blocks: Record<string, MathBlockData>): Record<string, MathBlockData> {
+  const t0 = performance.now();
   const { blocks: out } = recalculateAll(Object.values(blocks));
+  lastCalcMs = performance.now() - t0;
+  if (storeReady) useCanvasStore.setState({ calcMs: lastCalcMs });
   return out;
 }
 
@@ -430,6 +445,7 @@ async function runRecalcJob(): Promise<void> {
       const rev = ++recalcRev;
       const list = Object.values(useCanvasStore.getState().blocks);
       useCanvasStore.setState({ computeActive: true });
+      const t0 = performance.now();
       const outcome = await recalculateAllAsync(list, {
         shouldCancel: () => rev !== recalcRev || rerunRequested,
         onSimProgress: (id, done, total) => {
@@ -448,7 +464,7 @@ async function runRecalcJob(): Promise<void> {
       if (outcome.result.changed) {
         persist(outcome.result.blocks);
         const s = useCanvasStore.getState();
-        useCanvasStore.setState({ blocks: outcome.result.blocks, recalcCounter: s.recalcCounter + 1 });
+        useCanvasStore.setState({ blocks: outcome.result.blocks, recalcCounter: s.recalcCounter + 1, calcMs: performance.now() - t0 });
       }
       if (!rerunRequested) break;
     }
@@ -562,6 +578,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       return { lang: l, blocks: next, recalcCounter: s.recalcCounter + 1 };
     }),
   recalcCounter: 0,
+  calcMs: 0,
   computeActive: false,
   computeProgress: null,
   computeSimId: null,
@@ -630,6 +647,17 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     persist(next);
     set({ blocks: next, selectedIds: [id], pendingEditId: edit ? id : get().pendingEditId });
   },
+
+  addTextBlock: (x, y) => {
+    pushHistory(get, set as SetFn, true);
+    const id = uuid();
+    const next = withRecalc({ ...get().blocks, [id]: { ...blank(id, x, y), kind: 'text', rawInput: '// ' } });
+    persist(next);
+    set({ blocks: next, selectedIds: [id], pendingEditId: id });
+  },
+
+  scopeMonOpen: false,
+  toggleScopeMon: () => set((s) => ({ scopeMonOpen: !s.scopeMonOpen })),
 
   addBlocks: (lines, x, y, dy = 64) => {
     const clean = lines.map((l) => l.trim()).filter((l) => l.length > 0);
@@ -1001,6 +1029,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set({ blocks: next });
   },
 }));
+
+storeReady = true;
 
 /** Сохранить режим/размеры/показ палитры (вызывать по окончании жеста ресайза/дока). */
 export function savePaletteUi(variant: 'functions' | 'formulas' | 'constants' = 'functions') {

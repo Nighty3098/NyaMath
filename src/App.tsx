@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import MenuBar from './components/MenuBar';
 import Canvas from './components/Canvas';
+import StatusBar from './components/StatusBar';
+import ScopeMonitor from './components/ScopeMonitor';
 import WelcomeModal from './components/WelcomeModal';
 import FunctionPalette from './components/FunctionPalette';
 import VariableNavigator from './components/VariableNavigator';
@@ -128,6 +130,7 @@ export default function App() {
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const [welcomeForced, setWelcomeForced] = useState(false);
   const [navigatorOpen, setNavigatorOpen] = useState(false);
+  const scopeMonOpen = useCanvasStore((s) => s.scopeMonOpen);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Смена темы без «смазывания»: глушим транзишены на один кадр
@@ -179,6 +182,11 @@ export default function App() {
         e.preventDefault();
         if (e.repeat) return;
         setNavigatorOpen((v) => !v);
+      } else if (e.code === 'KeyJ') {
+        // Ctrl+J — телеметрия переменных (пульт)
+        e.preventDefault();
+        if (e.repeat) return;
+        useCanvasStore.getState().toggleScopeMon();
       }
     };
     window.addEventListener('keydown', onKey, true);
@@ -298,8 +306,10 @@ export default function App() {
         <div className="flex-1 relative flex flex-col min-h-0 min-w-0">
           <Canvas />
         </div>
+        {scopeMonOpen && <ScopeMonitor />}
         <DockZone side="right" />
       </div>
+      <StatusBar />
       {/* плавающие палитры — окна поверх всего, не часть canvas */}
       {paletteOpen && paletteMode === 'float' && <FunctionPalette />}
       {formulaPaletteOpen && formulaPaletteMode === 'float' && <FunctionPalette variant="formulas" />}

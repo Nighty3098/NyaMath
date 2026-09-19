@@ -65,6 +65,9 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const separateRegions = useCanvasStore((s) => s.separateRegions);
   const toggleSelectedDisabled = useCanvasStore((s) => s.toggleSelectedDisabled);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
+  const addTextBlock = useCanvasStore((s) => s.addTextBlock);
+  const scopeMonOpen = useCanvasStore((s) => s.scopeMonOpen);
+  const toggleScopeMon = useCanvasStore((s) => s.toggleScopeMon);
   const paletteOpen = useCanvasStore((s) => s.paletteOpen);
   const togglePalette = useCanvasStore((s) => s.togglePalette);
   const formulaPaletteOpen = useCanvasStore((s) => s.formulaPaletteOpen);
@@ -197,6 +200,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
       label: t('menu.insert'),
       items: [
         { id: 'ins-math', icon: <IFormula />, label: t('menu.insMath'), action: run(insertAt((x, y) => addBlock(x, y))) },
+        { id: 'ins-text', icon: <IFormula />, label: t('menu.insText'), action: run(insertAt((x, y) => addTextBlock(x, y))) },
         { id: 'ins-plot', icon: <IPlot />, label: t('menu.insPlot'), action: run(insertAt((x, y) => addPlotBlock(x, y))) },
         { id: 'ins-contour', icon: <IPlot />, label: t('menu.insContour'), action: run(insertAt((x, y) => addContourBlock(x, y))) },
         { id: 'ins-3d', icon: <IPlot3d />, label: t('menu.ins3d'), action: run(insertAt((x, y) => addPlot3dBlock(x, y))) },
@@ -217,6 +221,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
         { id: 'grid-fine', icon: <IGrid />, label: t('menu.gridFine'), checked: showGrid && gridSize === 'fine', action: run(() => setGridSize('fine')) },
         { id: 'grid-off', icon: <IGrid />, label: t('menu.gridOff'), checked: !showGrid, action: run(() => setGridVisible(false)) },
         { id: 'separate', icon: <IGrid />, label: t('menu.separate'), action: run(separateRegions) },
+        { id: 'scopemon', icon: <ISignal />, label: t('menu.scopeMon'), hint: 'Ctrl+J', checked: scopeMonOpen, action: run(toggleScopeMon) },
         { id: 'dis-sel', icon: <IZap />, label: t('menu.toggleDisabled'), disabled: selectedIds.length === 0, action: run(toggleSelectedDisabled) },
         { id: 'palette', icon: <IFx />, label: t('menu.palette'), checked: paletteOpen, action: run(togglePalette) },
         { id: 'fpalette', icon: <IFormula />, label: t('menu.formulaPalette'), checked: formulaPaletteOpen, action: run(toggleFormulaPalette) },
@@ -324,10 +329,10 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
 
       {/* частые действия — всегда под рукой */}
       <div ref={toolbarRef} className="flex items-center gap-0.5 shrink-0" role="toolbar" aria-label={t('menu.edit')}>
-        <button type="button" className="nya-tbtn" onClick={undo} disabled={!canUndo} title={`${t('menu.undo')} · Ctrl+Z`} aria-label={t('menu.undo')}>
+        <button type="button" className="nya-tbtn nya-tbtn-big" onClick={undo} disabled={!canUndo} title={`${t('menu.undo')} · Ctrl+Z`} aria-label={t('menu.undo')}>
           <IUndo />
         </button>
-        <button type="button" className="nya-tbtn" onClick={redo} disabled={!canRedo} title={`${t('menu.redo')} · Ctrl+Shift+Z`} aria-label={t('menu.redo')}>
+        <button type="button" className="nya-tbtn nya-tbtn-big" onClick={redo} disabled={!canRedo} title={`${t('menu.redo')} · Ctrl+Shift+Z`} aria-label={t('menu.redo')}>
           <IRedo />
         </button>
         <button type="button" className="nya-tbtn relative" onClick={recalc} title={`${t('menu.recalc')} · Ctrl+↵${errCount ? ` · ${t('calc.errors', { n: errCount })}` : ` · ${t('calc.ok')}`}`} aria-label={t('menu.recalc')}>
@@ -341,7 +346,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
         <span className="w-px h-5 bg-[var(--chrome-line)] mx-1" aria-hidden="true" />
         <button
           type="button"
-          className={`nya-tbtn ${paletteOpen ? 'is-on' : ''}`}
+          className={`nya-tbtn nya-tbtn-big ${paletteOpen ? 'is-on' : ''}`}
           onClick={togglePalette}
           title={t('menu.palette')}
           aria-label={t('menu.palette')}
@@ -351,7 +356,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
         </button>
         <button
           type="button"
-          className={`nya-tbtn ${formulaPaletteOpen ? 'is-on' : ''}`}
+          className={`nya-tbtn nya-tbtn-big ${formulaPaletteOpen ? 'is-on' : ''}`}
           onClick={toggleFormulaPalette}
           title={t('menu.formulaPalette')}
           aria-label={t('menu.formulaPalette')}
@@ -361,7 +366,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
         </button>
         <button
           type="button"
-          className={`nya-tbtn ${constPaletteOpen ? 'is-on' : ''}`}
+          className={`nya-tbtn nya-tbtn-big ${constPaletteOpen ? 'is-on' : ''}`}
           onClick={toggleConstPalette}
           title={t('menu.constPalette')}
           aria-label={t('menu.constPalette')}
@@ -371,7 +376,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
         </button>
         <button
           type="button"
-          className={`nya-tbtn ${liveConnected ? 'is-on' : ''}`}
+          className={`nya-tbtn nya-tbtn-big ${liveConnected ? 'is-on' : ''}`}
           onClick={toggleLive}
           title={liveConnected ? t('live.on') : (liveError ?? t('live.off'))}
           aria-label={t('menu.liveSync')}
@@ -383,7 +388,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
             style={{ background: liveConnected ? 'var(--ok)' : 'var(--faint)' }}
           />
         </button>
-        <button type="button" className="nya-tbtn" onClick={toggleTheme} title={theme} aria-label={theme}>
+        <button type="button" className="nya-tbtn nya-tbtn-big" onClick={toggleTheme} title={theme} aria-label={theme}>
           {THEMES.find((x) => x.id === theme)?.kind === 'light' ? <IMoon /> : <ISun />}
         </button>
       </div>

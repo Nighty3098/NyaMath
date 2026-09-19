@@ -659,6 +659,29 @@ export default function Canvas() {
       onDoubleClick={onDoubleClick}
       onContextMenu={(e) => e.preventDefault()}
     >
+      {/* направляющие прицела через весь экран (САПР-стиль) */}
+      <div
+        aria-hidden="true"
+        className="absolute left-0 right-0 top-0 pointer-events-none print:hidden"
+        style={{
+          transform: `translateY(${cross.y * view.k + view.y}px)`,
+          height: 1,
+          background:
+            "linear-gradient(to right, transparent, var(--accent-line) 12%, var(--accent-line) 88%, transparent)",
+          opacity: 0.28,
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute top-0 bottom-0 left-0 pointer-events-none print:hidden"
+        style={{
+          transform: `translateX(${cross.x * view.k + view.x}px)`,
+          width: 1,
+          background:
+            "linear-gradient(to bottom, transparent, var(--accent-line) 12%, var(--accent-line) 88%, transparent)",
+          opacity: 0.28,
+        }}
+      />
       {/* рамка выделения */}
       {marquee && (
         <div
@@ -753,7 +776,7 @@ export default function Canvas() {
         </ZoomBtn>
         <button
           type="button"
-          className="text-[12px] math-input tabular-nums text-[var(--chrome-soft)] hover:text-[var(--chrome-ink)] min-w-13 min-h-[32px] px-2 rounded-full transition-colors"
+          className="text-[13px] math-input tabular-nums text-[var(--chrome-soft)] hover:text-[var(--chrome-ink)] min-w-13 min-h-[40px] px-2 rounded-full transition-colors"
           onClick={() => {
             const n = { x: 80, y: 40, k: 1 };
             targetRef.current = n;
@@ -785,7 +808,7 @@ function ZoomBtn({
     <button
       type="button"
       aria-label={label}
-      className="nya-tbtn w-8 h-8 text-[15px]"
+      className="nya-tbtn nya-tbtn-big w-10 h-10 text-[17px]"
       onClick={(e) => {
         e.stopPropagation();
         onClick();

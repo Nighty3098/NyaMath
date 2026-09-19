@@ -18,7 +18,9 @@ export type ThemeName =
   | 'osaka-solarized'
   | 'nightfly'
   | 'github-dark'
-  | 'github-light';
+  | 'github-light'
+  | 'blueprint'
+  | 'graph';
 
 export interface ThemeMeta {
   id: ThemeName;
@@ -36,9 +38,11 @@ export const THEMES: ThemeMeta[] = [
   { id: 'nightfly', kind: 'dark' },
   { id: 'github-dark', kind: 'dark' },
   { id: 'github-light', kind: 'light' },
+  { id: 'blueprint', kind: 'dark' },
+  { id: 'graph', kind: 'light' },
 ];
 
-const LIGHT: ReadonlySet<ThemeName> = new Set(['gruvbox-light', 'nord-light', 'github-light']);
+const LIGHT: ReadonlySet<ThemeName> = new Set(['gruvbox-light', 'nord-light', 'github-light', 'graph']);
 
 /** Светлая ли тема (для сетки Canvas и прочих ветвлений «светлое/тёмное»). */
 export function isLightTheme(t: ThemeName): boolean {
@@ -147,6 +151,26 @@ export const plotPalettes: Record<ThemeName, PlotPalette> = {
     legend: '#1f1e1d',
     series: ['#c15f3c', '#3e7c43', '#1c6fb8', '#b7791f', '#2a7f7f', '#7c5cbf', '#c44b7a'],
   },
+  blueprint: {
+    svgBg: '#14325c',
+    grid: '#f4f7fb',
+    gridOpacity: 0.16,
+    tick: '#c9d6e8',
+    axis: '#5b7bab',
+    frame: '#0e2547',
+    legend: '#f4f7fb',
+    series: ['#ffffff', '#ffb020', '#5fd0ff', '#7fd08a', '#ff7a6b', '#c9a6ff', '#ffd97a'],
+  },
+  graph: {
+    svgBg: '#ffffff',
+    grid: '#1e6c3c',
+    gridOpacity: 0.12,
+    tick: '#3f5a52',
+    axis: '#9db8ad',
+    frame: '#d7e2dc',
+    legend: '#1c3d5a',
+    series: ['#1c3d5a', '#c0392b', '#1e7c43', '#8a5a00', '#0e6e6e', '#6a3fb5', '#b5477a'],
+  },
 };
 
 const KEY = 'nyamath-theme';
@@ -163,10 +187,10 @@ export function loadTheme(): ThemeName {
     // миграция со старых имён
     if (v === 'gruvbox' || v === 'dark') return 'github-dark';
     if (v === 'light') return 'github-light';
-    // по умолчанию — тёмная инженерная тема
-    return 'github-dark';
+    // по умолчанию — инженерная синька
+    return 'blueprint';
   } catch {
-    return 'github-dark';
+    return 'blueprint';
   }
 }
 

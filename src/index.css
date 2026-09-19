@@ -237,6 +237,58 @@
   --grid-dk: rgba(237, 233, 226, 0.13);
 }
 
+/* --- blueprint: инженерная синька — белый чертёж по синему полю --- */
+[data-theme="blueprint"] {
+  --chrome: #0e2547;
+  --chrome-ink: #f4f7fb;
+  --chrome-soft: #9db4d4;
+  --chrome-line: #24467a;
+  --canvas: #12315a;
+  --sheet: #14325c;
+  --ink: #f4f7fb;
+  --ink-soft: #d3dfee;
+  --faint: #7e97bd;
+  --line: #24467a;
+  --hover-line: #35619f;
+  --accent: #ffb020;
+  --accent-ink: #ffc95e;
+  --accent-line: #ffb020;
+  --accent-soft: rgba(255, 176, 32, 0.14);
+  --danger: #ff7a6b;
+  --danger-bg: rgba(255, 122, 107, 0.1);
+  --ok: #7fd08a;
+  --input-bg: #0e2547;
+  --input-border: #35619f;
+  --grid-lt: rgba(244, 247, 251, 0.07);
+  --grid-dk: rgba(244, 247, 251, 0.16);
+}
+
+/* --- graph: инженерная миллиметровка — тёмно-синие чернила по белому --- */
+[data-theme="graph"] {
+  --chrome: #eef2ee;
+  --chrome-ink: #1c3d5a;
+  --chrome-soft: #4a6a86;
+  --chrome-line: #cfdccf;
+  --canvas: #e2e9e2;
+  --sheet: #ffffff;
+  --ink: #1c3d5a;
+  --ink-soft: #2e5378;
+  --faint: #7d99ad;
+  --line: #cfdccf;
+  --hover-line: #a9c2b2;
+  --accent: #c0392b;
+  --accent-ink: #a93226;
+  --accent-line: #c0392b;
+  --accent-soft: rgba(192, 57, 43, 0.08);
+  --danger: #b03a2e;
+  --danger-bg: rgba(176, 58, 46, 0.06);
+  --ok: #1e7c43;
+  --input-bg: #ffffff;
+  --input-border: #b9cfbd;
+  --grid-lt: rgba(30, 108, 60, 0.07);
+  --grid-dk: rgba(30, 108, 60, 0.15);
+}
+
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -471,6 +523,14 @@ body {
 }
 .nya-tbtn:active { transform: scale(0.94); }
 .nya-tbtn:disabled { opacity: 0.35; pointer-events: none; }
+
+/* Пульт инженера: крупные контролы под палец */
+.nya-tbtn-big {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 8px;
+  font-size: 17px;
+}
 .nya-tbtn.is-on {
   color: var(--accent-ink);
   background: var(--accent-soft);
