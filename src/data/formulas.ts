@@ -3889,6 +3889,112 @@ export const FORMULAS: Formula[] = [
     code: 'x_p := 1\ny_p := 2\nslope := x_p + y_p\nslope =',
     sources: [W2('Ordinary differential equation — Wikipedia', 'https://en.wikipedia.org/wiki/Ordinary_differential_equation')],
   },
+  // ================= ДОБРАНО ИЗ КОНСПЕКТОВ 9-UNIVERSITY =================
+  // ЭМП: граничные условия, непрерывность заряда, циркуляция H (1-е ур. Максвелла)
+  {
+    id: 'em-boundary-dn', section: 'emfields',
+    label: { ru: 'Граница: скачок нормальной D', en: 'Boundary: normal D jump' },
+    hint: { ru: 'D1n − D2n = σ; скачок равен поверхностному заряду', en: 'D1n − D2n = σ; jump equals surface charge' },
+    code: 'D1n := 5*10^-6\nD2n := 2*10^-6\nrho_s := D1n - D2n\nrho_s =',
+    sources: [W2('Interface conditions for electromagnetic fields — Wikipedia', 'https://en.wikipedia.org/wiki/Interface_conditions_for_electromagnetic_fields')],
+  },
+  {
+    id: 'em-boundary-ht', section: 'emfields',
+    label: { ru: 'Граница: скачок касательной H', en: 'Boundary: tangential H jump' },
+    hint: { ru: 'H1t − H2t = Js; скачок равен поверхностному току', en: 'H1t − H2t = Js; jump equals surface current' },
+    code: 'H1t := 10\nH2t := 4\nJs := H1t - H2t\nJs =',
+    sources: [W2('Interface conditions for electromagnetic fields — Wikipedia', 'https://en.wikipedia.org/wiki/Interface_conditions_for_electromagnetic_fields')],
+  },
+  {
+    id: 'em-continuity', section: 'emfields',
+    label: { ru: 'Непрерывность заряда', en: 'Charge continuity' },
+    hint: { ru: 'I = −dQ/dt; ток из объёма = убыль заряда', en: 'I = −dQ/dt; outflow equals charge decay' },
+    code: 'Q0 := 10*10^-6\nQ1 := 6*10^-6\ndt_t := 2\nI_cc := (Q0 - Q1)/dt_t\nI_cc =',
+    sources: [W2('Continuity equation — Wikipedia', 'https://en.wikipedia.org/wiki/Continuity_equation')],
+  },
+  {
+    id: 'maxwell-circ', section: 'emfields',
+    label: { ru: 'Максвелл: циркуляция H', en: 'Maxwell: H circulation' },
+    hint: { ru: 'H·L = Iпр + Iсм; 1-е уравнение Максвелла', en: 'H·L = Icond + Idisp; 1st Maxwell equation' },
+    code: 'I_cond := 5\nI_disp := 0.5\nL_cont := 0.314\nH_circ := (I_cond + I_disp)/L_cont\nH_circ =',
+    sources: [W2("Maxwell's equations — Wikipedia", 'https://en.wikipedia.org/wiki/Maxwell%27s_equations')],
+  },
+  // ТЭЦ: эквивалентный генератор и звезда–треугольник (из лекций/слайдов)
+  {
+    id: 'thevenin-r', section: 'circuits',
+    label: { ru: 'Эквивалентный генератор: R', en: 'Thevenin resistance' },
+    hint: { ru: 'Rг = Uxx/Iкз', en: 'Rth = Uoc/Isc' },
+    code: 'Uxx := 12\nIkz := 3\nR_th := Uxx/Ikz\nR_th =',
+    sources: [W2("Thévenin's theorem — Wikipedia", 'https://en.wikipedia.org/wiki/Th%C3%A9venin%27s_theorem')],
+  },
+  {
+    id: 'delta-star', section: 'circuits',
+    label: { ru: 'Треугольник → звезда', en: 'Delta to star' },
+    hint: { ru: 'R1 = R12·R31/(R12+R23+R31)', en: 'R1 = R12·R31/(R12+R23+R31)' },
+    code: 'R12 := 30\nR23 := 20\nR31 := 10\nR1 := R12*R31/(R12 + R23 + R31)\nR1 =',
+    sources: [W2('Y-Δ transform — Wikipedia', 'https://en.wikipedia.org/wiki/Y-%CE%94_transform')],
+  },
+  // МКТ: барометрия и длина свободного пробега (из формул МКТ)
+  {
+    id: 'barometric-height', section: 'molecular',
+    label: { ru: 'Барометрическая формула', en: 'Barometric formula' },
+    hint: { ru: 'p = p₀·exp(−Mgh/RT); давление падает с высотой', en: 'p = p₀·exp(−Mgh/RT); pressure drops with height' },
+    code: 'p0 := 101325\nM_mol := 0.029\nh_m := 1000\nT_k := 288\np_h := p0*exp(-M_mol*g_std*h_m/(R_gas*T_k))\np_h =',
+    sources: [W2('Barometric formula — Wikipedia', 'https://en.wikipedia.org/wiki/Barometric_formula')],
+  },
+  {
+    id: 'mean-free-path', section: 'molecular',
+    label: { ru: 'Длина свободного пробега', en: 'Mean free path' },
+    hint: { ru: 'l = 1/(√2·π·d²·n)', en: 'l = 1/(√2·π·d²·n)' },
+    code: 'd_mol := 3*10^-10\nn_m3 := 2.7*10^25\nl_mfp := 1/(sqrt(2)*pi*d_mol^2*n_m3)\nl_mfp =',
+    sources: [W2('Mean free path — Wikipedia', 'https://en.wikipedia.org/wiki/Mean_free_path')],
+  },
+  // Математика: касательная и Герон (из базовых формул и C++)
+  {
+    id: 'tangent-line', section: 'mathcalc',
+    label: { ru: 'Касательная к графику', en: 'Tangent line' },
+    hint: { ru: 'y = f(a)+f′(a)(x−a); пример f=x²', en: 'y = f(a)+f′(a)(x−a); example f=x²' },
+    code: 'a_pt := 1\nf_a := a_pt^2\ndf_a := 2*a_pt\nx_p := 2\ny_tan := f_a + df_a*(x_p - a_pt)\ny_tan =',
+    sources: [W2('Tangent — Wikipedia', 'https://en.wikipedia.org/wiki/Tangent')],
+  },
+  {
+    id: 'triangle-area-heron', section: 'mathtrig',
+    label: { ru: 'Площадь треугольника (Герон)', en: 'Triangle area (Heron)' },
+    hint: { ru: 'p=(a+b+c)/2; S=√(p(p−a)(p−b)(p−c))', en: 'p=(a+b+c)/2; S=√(p(p−a)(p−b)(p−c))' },
+    code: 'a_h := 3\nb_h := 4\nc_h := 5\np_h := (a_h + b_h + c_h)/2\nS_hr := sqrt(p_h*(p_h - a_h)*(p_h - b_h)*(p_h - c_h))\nS_hr =',
+    sources: [W2("Heron's formula — Wikipedia", 'https://en.wikipedia.org/wiki/Heron%27s_formula')],
+  },
+  // Оптика: зона Френеля (из волновой оптики)
+  {
+    id: 'fresnel-zone', section: 'optics',
+    label: { ru: 'Радиус зоны Френеля', en: 'Fresnel zone radius' },
+    hint: { ru: 'r = √(m·λ·a·b/(a+b))', en: 'r = √(m·λ·a·b/(a+b))' },
+    code: 'm_z := 1\nlam_w := 550*10^-9\na_z := 0.5\nb_z := 0.5\nr_fr := sqrt(m_z*lam_w*a_z*b_z/(a_z + b_z))\nr_fr =',
+    sources: [W2('Fresnel zone — Wikipedia', 'https://en.wikipedia.org/wiki/Fresnel_zone')],
+  },
+  // Кванты: граница тормозного рентгена и частица в яме (из квантовых конспектов)
+  {
+    id: 'xray-cutoff', section: 'special',
+    label: { ru: 'Граница тормозного рентгена', en: 'X-ray cutoff' },
+    hint: { ru: 'λmin = h·c/(e·U)', en: 'λmin = h·c/(e·U)' },
+    code: 'U_v := 50000\nlam_min := h_planck*c_light/(q_e*U_v)\nlam_min =',
+    sources: [W2('Bremsstrahlung — Wikipedia', 'https://en.wikipedia.org/wiki/Bremsstrahlung')],
+  },
+  {
+    id: 'particle-box', section: 'special',
+    label: { ru: 'Частица в яме', en: 'Particle in a box' },
+    hint: { ru: 'E = n²·π²·ℏ²/(2·m·l²)', en: 'E = n²·π²·ℏ²/(2·m·l²)' },
+    code: 'n_q := 1\nl_box := 10^-9\nm_kg := 9.1*10^-31\nE_box := n_q^2*pi^2*hbar^2/(2*m_kg*l_box^2)\nE_box =',
+    sources: [W2('Particle in a box — Wikipedia', 'https://en.wikipedia.org/wiki/Particle_in_a_box')],
+  },
+  // Логика/биты: режим chmod (из конспектов ОС)
+  {
+    id: 'chmod-mode', section: 'logic',
+    label: { ru: 'Права chmod (восьмеричные)', en: 'chmod mode (octal)' },
+    hint: { ru: 'r=4,w=2,x=1; 754 = rwxr-xr--', en: 'r=4,w=2,x=1; 754 = rwxr-xr--' },
+    code: 'Ur := 1\nUw := 1\nUx := 1\nGr := 1\nGw := 0\nGx := 1\nOr := 1\nOw := 0\nOx := 0\nU_d := 4*Ur + 2*Uw + Ux\nG_d := 4*Gr + 2*Gw + Gx\nO_d := 4*Or + 2*Ow + Ox\nMode := U_d*100 + G_d*10 + O_d\nMode =',
+    sources: [W2('Chmod — Wikipedia', 'https://en.wikipedia.org/wiki/Chmod')],
+  },
 ];
 
 // Легенда переменных из formulaVars.ts — чтобы в палитре было видно,
