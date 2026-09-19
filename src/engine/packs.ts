@@ -125,8 +125,17 @@ export function buildPackScope(math: MathJsInstance): Scope {
   /** Вычислитель числового выражения (#A): компиляция один раз + переиспользуемый scope.
    * Заменяет parse+spread на каждый вызов в циклах (nsum/nint/Ньютон/Нелдер–Мид).
    * Экзотика (присваивания внутри) идёт медленным путём в копии scope — как раньше. */
+  /** Вставленный из рендера LaTeX-мусор: \textasciicircum → ^ и т.п. */
+  const unlatexExpr = (s: string): string =>
+    s
+      .replace(/\\textasciicircum\{\}/g, '^')
+      .replace(/\\textasciicircum(?![A-Za-z])/g, '^')
+      .replace(/\\\^\{\}/g, '^')
+      // mathjs съедает \t из вставки: TAB + extasciicircum → ^
+      .replace(/[\t ]extasciicircum(\{\})?/g, '^');
+
   const numEvaluator = (expr: string, scope: Scope): ((bind: Record<string, number>) => number) => {
-    const pre = preprocessRanges(preprocessJ(expr, false));
+    const pre = preprocessRanges(preprocessJ(unlatexExpr(expr), false));
     const code = getCompiledPre(pre);
     const flat: Scope = { ...plainScope(scope) };
     return (bind) => {
@@ -1171,28 +1180,56 @@ export function buildPackScope(math: MathJsInstance): Scope {
         throw new Error(t('e.calcArgs'));
       }
     }),
-    // nint("sin(x)", "x", 0, pi) — адаптивный Симпсон
+    // nint("sin(x)", "x", 0, pi) — адаптивный Симпсон;
+    // пределы можно менять местами: ∫ₐᵇ = −∫ᵦₐ, при a == b ответ 0
     nint: raw((args, _m, scope) => {
       const expr = needStr(evNode(args[0], scope));
       const v = needStr(evNode(args[1], scope));
       const a = needNum(evNode(args[2], scope));
       const b = needNum(evNode(args[3], scope));
-      if (!/^[A-Za-z_]\w*$/.test(v) || !(b > a)) throw new Error(t('e.calcArgs'));
+      if (!/^[A-Za-z_]\w*$/.test(v)) throw new Error(t('e.calcArgs'));
+      if (a === b) return 0;
+      const lo = Math.min(a, b);
+      const hi = Math.max(a, b);
+      const sign = a < b ? 1 : -1;
       const ev = numEvaluator(expr, scope);
       const f = (x: number): number => ev({ [v]: x });
       try {
-        return adaptiveSimpson(f, a, b);
+        return sign * adaptiveSimpson(f, lo, hi);
       } catch {
         throw new Error(t('e.calcNoConv'));
       }
     }),
-    // nsum("k^2", "k", 1, 100), nprod — целочисленные суммы/произведения
+    // nsum("k^2", "k", 1, 100), nprod — целочисленные суммы/произведения;
+    // nsum держит и бесконечный предел: суммирует до малости члена
     nsum: raw((args, _m, scope) => {
-      const [expr, v, a, b] = sumProdArgs(args, scope);
+      const [expr, v, a, b] = sumProdArgs(args, scope, true);
       const ev = numEvaluator(expr, scope);
+      if (Number.isFinite(a) && Number.isFinite(b)) {
+        let s = 0;
+        for (let k = a; k <= b; k++) s += ev({ [v]: k });
+        return s;
+      }
+      // Σ до ±∞: стоп по малости члена, иначе — честная несходимость
+      const MAX = 1000000;
+      const TOL = 1e-9;
       let s = 0;
-      for (let k = a; k <= b; k++) s += ev({ [v]: k });
-      return s;
+      if (!Number.isFinite(b)) {
+        for (let k = a, n = 0; n < MAX; k++, n++) {
+          const term = ev({ [v]: k });
+          if (typeof term !== 'number' || !isFinite(term)) throw new Error(t('e.sumNoConv'));
+          s += term;
+          if (n > 10 && Math.abs(term) <= TOL * (1 + Math.abs(s))) return s;
+        }
+      } else {
+        for (let k = b, n = 0; n < MAX; k--, n++) {
+          const term = ev({ [v]: k });
+          if (typeof term !== 'number' || !isFinite(term)) throw new Error(t('e.sumNoConv'));
+          s += term;
+          if (n > 10 && Math.abs(term) <= TOL * (1 + Math.abs(s))) return s;
+        }
+      }
+      throw new Error(t('e.sumNoConv'));
     }),
     nprod: raw((args, _m, scope) => {
       const [expr, v, a, b] = sumProdArgs(args, scope);
@@ -1462,28 +1499,118 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const ev = numEvaluator(expr, scope);
       const f = (x: number): number => ev({ [v]: x });
       const sc = Math.max(1, Math.abs(a));
-      const probe = (h: number, side: number): number => f(a + side * h * sc);
-      const sides = dir === 0 ? [-1, 1] : [dir];
-      let cand = 0;
-      for (const side of sides) {
-        const vals: number[] = [];
-        for (let k = 1; k <= 12; k++) {
-          const h = 10 ** -k;
-          let y: number;
-          try {
-            y = probe(h, side);
-          } catch {
-            throw new Error(t('e.calcNoConv'));
-          }
-          if (!isFinite(y)) throw new Error(t('e.calcNoConv'));
-          vals.push(y);
+      const probe = (fn: (x: number) => number, h: number, side: number): number => fn(a + side * h * sc);
+      const converge = (fn: (x: number) => number): number => {
+        try {
+          return convergeGrid(fn);
+        } catch {
+          return convergeRichardson(fn);
         }
-        const tail = vals.slice(-4);
-        const mx = Math.max(...tail.map(Math.abs), 1);
-        if (Math.max(...tail) - Math.min(...tail) > 1e-6 * mx) throw new Error(t('e.calcNoConv'));
-        cand = side === sides[0] ? tail[3] : (cand + tail[3]) / 2;
+      };
+      const convergeGrid = (fn: (x: number) => number): number => {
+        const sides = dir === 0 ? [-1, 1] : [dir];
+        let cand = 0;
+        for (const side of sides) {
+          const vals: number[] = [];
+          for (let k = 1; k <= 12; k++) {
+            const h = 10 ** -k;
+            let y: number;
+            try {
+              y = probe(fn, h, side);
+            } catch {
+              throw new Error(t('e.calcNoConv'));
+            }
+            if (!isFinite(y)) throw new Error(t('e.calcNoConv'));
+            vals.push(y);
+          }
+          const tail = vals.slice(-4);
+          const mx = Math.max(...tail.map(Math.abs), 1);
+          if (Math.max(...tail) - Math.min(...tail) > 1e-6 * mx) throw new Error(t('e.calcNoConv'));
+          // хвост из точных нулей при ненулевом начале — схлопывание точности,
+          // а не предел: отдать на Ричардсона/Лопиталя
+          if (tail[3] === 0 && vals.some((y) => y !== 0)) throw new Error(t('e.calcNoConv'));
+          cand = side === sides[0] ? tail[3] : (cand + tail[3]) / 2;
+        }
+        return cand;
+      };
+      // Мелкая сетка утонула в погрешности (0/0 высокого порядка):
+      // экстраполяция Ричардсона по умеренным h (ошибка чётна по h)
+      const convergeRichardson = (fn: (x: number) => number): number => {
+        const sides = dir === 0 ? [-1, 1] : [dir];
+        let cand = 0;
+        for (const side of sides) {
+          const hs = [0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625];
+          const vals: number[] = [];
+          for (const h of hs) {
+            let y: number;
+            try {
+              y = probe(fn, h, side);
+            } catch {
+              throw new Error(t('e.calcNoConv'));
+            }
+            if (!isFinite(y)) throw new Error(t('e.calcNoConv'));
+            vals.push(y);
+          }
+          const t1 = vals.slice(0, -1).map((r, k) => (4 * vals[k + 1] - r) / 3);
+          const t2 = t1.slice(0, -1).map((r, k) => (16 * t1[k + 1] - r) / 15);
+          const last = t2[t2.length - 1];
+          const prev = t2[t2.length - 2];
+          if (Math.abs(last - prev) > 1e-3 * (1 + Math.abs(last))) throw new Error(t('e.calcNoConv'));
+          // субпикоскоп — честный ноль, а не шум экстраполяции
+          const snapped = Math.abs(last) < 1e-12 ? 0 : last;
+          cand = side === sides[0] ? snapped : (cand + snapped) / 2;
+        }
+        return cand;
+      };
+      try {
+        return converge(f);
+      } catch {
+        // 0/0: правило Лопиталя символьным дифференцированием (до 4 уровней)
+        let num = '';
+        let den = '';
+        try {
+          const root = math.parse(expr) as unknown as { type?: string; op?: string; args?: unknown[] };
+          if (root?.type !== 'OperatorNode' || root.op !== '/' || root.args?.length !== 2) throw new Error('no');
+          num = String(root.args[0]);
+          den = String(root.args[1]);
+        } catch {
+          throw new Error(t('e.calcNoConv'));
+        }
+        for (let level = 0; level < 4; level++) {
+          let f0 = NaN;
+          let g0 = NaN;
+          try {
+            f0 = numEvaluator(num, scope)({ [v]: a });
+            g0 = numEvaluator(den, scope)({ [v]: a });
+          } catch {
+            break;
+          }
+          // NaN в точке — тоже след 0/0; выходим, только если точно не 0/0
+          const fZero = Number.isNaN(f0) || Math.abs(f0) <= 1e-9;
+          const gZero = Number.isNaN(g0) || Math.abs(g0) <= 1e-9;
+          if (!fZero || !gZero) break;
+          try {
+            // math.derivative знает log, а не ln
+            num = String(math.derivative(num.replace(/\bln\(/g, 'log('), v));
+            den = String(math.derivative(den.replace(/\bln\(/g, 'log('), v));
+          } catch {
+            break;
+          }
+          const fl = numEvaluator(num, scope);
+          const gl = numEvaluator(den, scope);
+          const h = (x: number): number => {
+            const gv = gl({ [v]: x });
+            if (gv === 0) throw new Error(t('e.calcNoConv'));
+            return fl({ [v]: x }) / gv;
+          };
+          try {
+            return converge(h);
+          } catch {
+            continue;
+          }
+        }
+        throw new Error(t('e.calcNoConv'));
       }
-      return cand;
     }),
     // numgrad("x^2+y^2", ["x","y"], [1,2]) → [2, 4]
     numgrad: raw((args, _m, scope) => {
@@ -2357,12 +2484,29 @@ export function buildPackScope(math: MathJsInstance): Scope {
     return [v];
   }
 
-  function sumProdArgs(args: MathNode[], scope: Scope): [string, string, number, number] {
+  function sumProdArgs(args: MathNode[], scope: Scope, allowInf = false): [string, string, number, number] {
     const expr = needStr(evNode(args[0], scope));
     const v = needStr(evNode(args[1], scope));
-    const a = needNum(evNode(args[2], scope));
-    const b = needNum(evNode(args[3], scope));
-    if (!/^[A-Za-z_]\w*$/.test(v) || !Number.isInteger(a) || !Number.isInteger(b) || !(b >= a) || b - a > 1000000) {
+    const numOrInf = (u: unknown): number => {
+      if (typeof u === 'boolean') throw new Error(t('e.calcArgs'));
+      const n = Number(u);
+      if (Number.isNaN(n)) throw new Error(t('e.calcArgs'));
+      return n;
+    };
+    const a = allowInf ? numOrInf(evNode(args[2], scope)) : needNum(evNode(args[2], scope));
+    const b = allowInf ? numOrInf(evNode(args[3], scope)) : needNum(evNode(args[3], scope));
+    const aOk = Number.isInteger(a) || (allowInf && a === -Infinity);
+    const bOk = Number.isInteger(b) || (allowInf && b === Infinity);
+    if (!/^[A-Za-z_]\w*$/.test(v) || !aOk || !bOk || !(b >= a)) {
+      throw new Error(t('e.calcIntRange'));
+    }
+    if (!allowInf && b - a > 1000000) {
+      throw new Error(t('e.calcIntRange'));
+    }
+    if (allowInf && Number.isFinite(a) && Number.isFinite(b) && b - a > 1000000) {
+      throw new Error(t('e.calcIntRange'));
+    }
+    if (!Number.isFinite(a) && !Number.isFinite(b)) {
       throw new Error(t('e.calcIntRange'));
     }
     return [expr, v, a, b];
@@ -2537,7 +2681,7 @@ export const SNIPPETS: Snippet[] = [
   { pack: 'calc', label: { ru: 'Интеграл (симв.)', en: 'Integral (sym.)' }, hint: { ru: 'табличный интеграл', en: 'table integral' }, doc: 'sint("f", "x") =', code: 'sint("x^2", "x") =', kind: 'math' },
   { pack: 'calc', label: { ru: 'Производная (числ.)', en: 'Derivative (num.)' }, hint: { ru: 'd/dx в точке', en: 'd/dx at a point' }, doc: 'numdiff("f", "x", точка) =', code: 'numdiff("sin(x)", "x", 1) =', kind: 'math', plot2d: 'numdiff("sin(t)", "t", x)' },
   { pack: 'calc', label: { ru: 'Интеграл (числ.)', en: 'Integral (num.)' }, hint: { ru: '∫ на отрезке', en: '∫ over an interval' }, doc: 'numint("f", "x", a, b) =', code: 'numint("sin(x)", "x", 0, 3.14159) =', kind: 'math', plot2d: 'numint("sin(t)", "t", 0, x)' },
-  { pack: 'calc', label: { ru: 'Сумма ряда', en: 'Series sum' }, hint: { ru: 'Σ по целым', en: 'Σ over integers' }, doc: 'numsum("f", "k", a, b) =', code: 'numsum("k^2", "k", 1, 100) =', kind: 'math' },
+  { pack: 'calc', label: { ru: 'Сумма ряда', en: 'Series sum' }, hint: { ru: 'Σ по целым', en: 'Σ over integers' }, doc: 'numsum("f", "k", a, b) = — предел ∞ тоже можно', code: 'numsum("k^2", "k", 1, 100) =', kind: 'math' },
   { pack: 'calc', label: { ru: 'Раскрытие Σ', en: 'Sigma expansion' }, hint: { ru: 'Σ(2k−1), k=1..4 → 16', en: 'Σ(2k−1), k=1..4 → 16' }, doc: 'numsum("2*k-1", "k", 1, 4) =', code: 'numsum("2*k-1", "k", 1, 4) =', kind: 'math' },
   { pack: 'calc', label: { ru: 'Корень (Брент)', en: 'Root (Brent)' }, hint: { ru: 'на отрезке [a, b]', en: 'on [a, b]' }, doc: 'root("f", "x", a, b) =', code: 'root("x^3 - 2", "x", 0, 2) =', kind: 'math' },
   { pack: 'calc', label: { ru: 'Система (find)', en: 'System (find)' }, hint: { ru: 'Ньютон для системы', en: 'Newton for a system' }, doc: 'find(["f1","f2"], ["x","y"], [x0,y0]) =', code: 'find(["x^2+y^2-4", "x-y-1"], ["x", "y"], [1, 0]) =', kind: 'math' },

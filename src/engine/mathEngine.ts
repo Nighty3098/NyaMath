@@ -699,6 +699,16 @@ const GREEK_SUFFIX_RE = new RegExp(
 /** numsum("тело", "k", низ, верх) целиком — знак Σ с пределами. */
 const NUMSUM_RE = /^numsum\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"([A-Za-z][A-Za-z0-9]*)"\s*,\s*(.+?)\s*,\s*(.+?)\s*\)$/;
 
+/** Первый строковый аргумент численных функций — тело выражения: рисуем
+ * настоящей математикой, а не печатным \mathtt (иначе ^2 там плоское). */
+const MATH_STR_FUNCS = [
+  'limit', 'numint', 'numdiff', 'numprod', 'root', 'taylor',
+  'sderiv', 'sint', 'expand', 'sfactor', 'bvp', 'minimize', 'find', 'numgrad',
+];
+const MATH_STR_ARG_RE = new RegExp(
+  `\\\\mathrm\\{(${MATH_STR_FUNCS.join('|')})\\}\\\\left\\(\\\\mathtt\\{"((?:[^"\\\\]|\\\\.)*)"\\}`,
+);
+
 function sigmaTex(expr: string): string | null {
   const m = expr.trim().match(NUMSUM_RE);
   if (!m) return null;
@@ -706,13 +716,50 @@ function sigmaTex(expr: string): string | null {
   return `\\sum_{${v}=${safeTex(lo.trim())}}^{${safeTex(hi.trim())}}{${safeTex(body.replace(/\\"/g, '"'))}}`;
 }
 
+/** numint("тело", "x", a, b) целиком — знак ∫ с пределами. */
+const NUMINT_RE = /^numint\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"([A-Za-z][A-Za-z0-9]*)"\s*,\s*(.+?)\s*,\s*(.+?)\s*\)$/;
+
+function intTex(expr: string): string | null {
+  const m = expr.trim().match(NUMINT_RE);
+  if (!m) return null;
+  const [, body, v, lo, hi] = m;
+  return `\\int_{${safeTex(lo.trim()).trim()}}^{${safeTex(hi.trim()).trim()}}{${safeTex(body.replace(/\\"/g, '"'))}}\\,d${v}`;
+}
+
+/** limit("тело", "x", a[, dir]) целиком — lim с переходом. */
+const LIMIT_RE = /^limit\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"([A-Za-z][A-Za-z0-9]*)"\s*,\s*(.+?)\s*(?:,\s*[^()]+\s*)?\)$/;
+
+function limitTex(expr: string): string | null {
+  const m = expr.trim().match(LIMIT_RE);
+  if (!m) return null;
+  const [, body, v, to] = m;
+  return `\\lim_{${v} \\to ${safeTex(to.trim())}}{${safeTex(body.replace(/\\"/g, '"'))}}`;
+}
+
 function safeTex(expr: string): string {
   try {
     const sig = sigmaTex(expr);
     if (sig) return sig;
+    const int = intTex(expr);
+    if (int) return int;
+    const lim = limitTex(expr);
+    if (lim) return lim;
     const node = math.parse(expr);
     let tex = node.toTex();
     tex = tex.replace(/\\mathrm\{i\}/g, 'j');
+    // тело выражения в строковом аргументе — настоящей математикой
+    tex = tex.replace(MATH_STR_ARG_RE, (_, fn: string, inner: string) => {
+      try {
+        // mathjs уже превратил ^ в \textasciicircum{} внутри \mathtt — вернуть назад
+        const clean = inner
+          .replace(/\\"/g, '"')
+          .replace(/\\textasciicircum\{\}/g, '^')
+          .replace(/\\textasciitilde\{\}/g, '');
+        return `\\mathrm{${fn}}\\left(${safeTex(clean)}`;
+      } catch {
+        return _;
+      }
+    });
     // alpha_10 → \alpha_{10}, tg_delta → tg_{\delta}, x_1 → x_{1}:
     // имя и суффикс после _ маппятся в греческие независимо
     // (имя в scope не меняется)
@@ -732,6 +779,15 @@ function safeTex(expr: string): string {
       GREEK_WORD_RE,
       (_, name: string) => GREEK_TEX[name],
     );
+    // сырой ^ внутри \text{...} (строковые аргументы limit/nsum) — экранировать,
+    // иначе KaTeX падает с textasciicircum
+    tex = tex.replace(
+      /\\text\{([^{}]*)\}/g,
+      (_, inner: string) => `\\text{${escapeLatex(inner)}}`,
+    );
+    // mathjs сам кладёт \textasciicircum{}/\textasciitilde{} внутрь \mathtt{...} —
+    // старый KaTeX их не знает, меняем на \^ / \~
+    tex = tex.replace(/\\textasciicircum\{\}/g, '\\^{}').replace(/\\textasciitilde\{\}/g, '\\~{}');
     return tex;
   } catch {
     return escapeLatex(expr);
@@ -739,7 +795,11 @@ function safeTex(expr: string): string {
 }
 
 function escapeLatex(s: string): string {
-  return s.replace(/([&%$#_{}])/g, '\\$1');
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/([&%$#_{}])/g, '\\$1')
+    .replace(/\^/g, '\\^{}')
+    .replace(/~/g, '\\~{}');
 }
 
 /* ---------------- LaTeX для РЕЗУЛЬТАТОВ (матрицы, векторы, комплексные) ---------------- */

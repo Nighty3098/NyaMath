@@ -19,10 +19,27 @@ describe('latex names', () => {
     expect(toLatex('alpha_beta =')).toContain('\\alpha_{\\beta}');
   });
 
+  it('escapes ^ inside text fallback (no textasciicircum error)', () => {
+    const tex = toLatex('^^');
+    expect(tex).toContain('\\^{}');
+    expect(tex).not.toMatch(/\{[^}]*\^[^}]*\}/);
+  });
+
+  it('renders expression string args as real math (limit)', () => {
+    const tex = toLatex('v := limit("ln((sin(x)/x)+((x^2)/6))", "x", 0) =');
+    expect(tex).not.toContain('textasciicircum');
+    expect(tex).toContain('{ x}^{2}');
+  });
   it('renders numsum calls as Σ with limits', () => {
     expect(toLatex('numsum("2*k-1", "k", 1, 4) =')).toContain('\\sum_{k=1}^{4}');
     expect(toLatex('S_sig := numsum("2*k-1", "k", 1, 4)')).toContain('\\sum_{k=1}^{4}');
     expect(toLatex('numsum("1/k^2", "k", 1, 100) =')).toContain('\\sum_{k=1}^{100}');
+    expect(toLatex('numsum("1/k^2", "k", 1, Infinity) =')).toContain('\\sum_{k=1}^{\\infty}');
+  });
+
+  it('renders numint as ∫ and limit as lim with transition', () => {
+    expect(toLatex('numint("(ln(1 + x)/(1 + x^2))", "x", v, d) =')).toContain('\\int_{v}^{d}');
+    expect(toLatex('v := limit("ln((sin(x)/x)+((x^2)/6))", "x", 0) =')).toContain('\\lim_{x \\to 0}');
   });
   it('supports the eps shorthand', () => {
     expect(toLatex('eps_r := 1')).toContain('\\epsilon_{r}');
