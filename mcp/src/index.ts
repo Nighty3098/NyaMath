@@ -111,6 +111,8 @@ interface BlockSummary {
   dependencies: string[];
   error: string | null;
   result: string;
+  /** Подстановка значений Calcpad-стиля (`m*a` → `2 * 5`), '' = нет */
+  subst: string;
   hasPlot: boolean;
   visualize: { kind: string; expr: string } | null;
 }
@@ -126,6 +128,7 @@ function summarize(b: MathBlockData): BlockSummary {
     dependencies: b.dependencies,
     error: b.error,
     result: b.resultStr,
+    subst: b.substStr ?? '',
     hasPlot: b.kind === 'plot' || b.kind === 'plot3d' || !!b.plotPreview,
     visualize: b.visualize ?? null,
   };

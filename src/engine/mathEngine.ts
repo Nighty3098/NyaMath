@@ -8,7 +8,7 @@
  *  - константы pi, e; функции sqrt/sin/cos/atan/Re/Im/abs/log/ln
  *  - порядок вычислений строго сверху-вниз по Y (см. dependencies.ts)
  */
-import { create, all, type EvalFunction, type MathJsInstance, type Unit } from 'mathjs';
+import { create, all, type EvalFunction, type MathJsInstance, type MathNode, type Unit } from 'mathjs';
 import { buildPackScope, PACK_NAMES } from './packs';
 
 import { t } from '../i18n';
@@ -736,6 +736,53 @@ function limitTex(expr: string): string | null {
   return `\\lim_{${v} \\to ${safeTex(to.trim())}}{${safeTex(body.replace(/\\"/g, '"'))}}`;
 }
 
+/** Постобработка toTex: i→j, греческие имена, экранирование \text. Общая для safeTex и подстановок. */
+function postprocessTex(tex: string): string {
+  tex = tex.replace(/\\mathrm\{i\}/g, 'j');
+  // тело выражения в строковом аргументе — настоящей математикой
+  tex = tex.replace(MATH_STR_ARG_RE, (_, fn: string, inner: string) => {
+    try {
+      // mathjs уже превратил ^ в \textasciicircum{} внутри \mathtt — вернуть назад
+      const clean = inner
+        .replace(/\\"/g, '"')
+        .replace(/\\textasciicircum\{\}/g, '^')
+        .replace(/\\textasciitilde\{\}/g, '');
+      return `\\mathrm{${fn}}\\left(${safeTex(clean)}`;
+    } catch {
+      return _;
+    }
+  });
+  // alpha_10 → \alpha_{10}, tg_delta → tg_{\delta}, x_1 → x_{1}:
+  // имя и суффикс после _ маппятся в греческие независимо
+  // (имя в scope не меняется)
+  tex = tex.replace(
+    /([A-Za-z]+)\\_([A-Za-z0-9]+)/g,
+    (_, name: string, sub: string) =>
+      `${GREEK_TEX[name] ?? name}_{${GREEK_TEX[sub] ?? sub}}`,
+  );
+  // lambda0 → \lambda_{0}: греческое имя с цифровым хвостом без _.
+  // Только греческие (q1, v0, log10 не трогаем) и только целый хвост.
+  tex = tex.replace(
+    GREEK_SUFFIX_RE,
+    (_, name: string, sub: string) => `${GREEK_TEX[name]}_{${sub}}`,
+  );
+  // отдельное слово: eps → \epsilon (уже готовые \epsilon, eps_r, eps2 не трогаем)
+  tex = tex.replace(
+    GREEK_WORD_RE,
+    (_, name: string) => GREEK_TEX[name],
+  );
+  // сырой ^ внутри \text{...} (строковые аргументы limit/nsum) — экранировать,
+  // иначе KaTeX падает с textasciicircum
+  tex = tex.replace(
+    /\\text\{([^{}]*)\}/g,
+    (_, inner: string) => `\\text{${escapeLatex(inner)}}`,
+  );
+  // mathjs сам кладёт \textasciicircum{}/\textasciitilde{} внутрь \mathtt{...} —
+  // старый KaTeX их не знает, меняем на \^ / \~
+  tex = tex.replace(/\\textasciicircum\{\}/g, '\\^{}').replace(/\\textasciitilde\{\}/g, '\\~{}');
+  return tex;
+}
+
 function safeTex(expr: string): string {
   try {
     const sig = sigmaTex(expr);
@@ -745,50 +792,7 @@ function safeTex(expr: string): string {
     const lim = limitTex(expr);
     if (lim) return lim;
     const node = math.parse(expr);
-    let tex = node.toTex();
-    tex = tex.replace(/\\mathrm\{i\}/g, 'j');
-    // тело выражения в строковом аргументе — настоящей математикой
-    tex = tex.replace(MATH_STR_ARG_RE, (_, fn: string, inner: string) => {
-      try {
-        // mathjs уже превратил ^ в \textasciicircum{} внутри \mathtt — вернуть назад
-        const clean = inner
-          .replace(/\\"/g, '"')
-          .replace(/\\textasciicircum\{\}/g, '^')
-          .replace(/\\textasciitilde\{\}/g, '');
-        return `\\mathrm{${fn}}\\left(${safeTex(clean)}`;
-      } catch {
-        return _;
-      }
-    });
-    // alpha_10 → \alpha_{10}, tg_delta → tg_{\delta}, x_1 → x_{1}:
-    // имя и суффикс после _ маппятся в греческие независимо
-    // (имя в scope не меняется)
-    tex = tex.replace(
-      /([A-Za-z]+)\\_([A-Za-z0-9]+)/g,
-      (_, name: string, sub: string) =>
-        `${GREEK_TEX[name] ?? name}_{${GREEK_TEX[sub] ?? sub}}`,
-    );
-    // lambda0 → \lambda_{0}: греческое имя с цифровым хвостом без _.
-    // Только греческие (q1, v0, log10 не трогаем) и только целый хвост.
-    tex = tex.replace(
-      GREEK_SUFFIX_RE,
-      (_, name: string, sub: string) => `${GREEK_TEX[name]}_{${sub}}`,
-    );
-    // отдельное слово: eps → \epsilon (уже готовые \epsilon, eps_r, eps2 не трогаем)
-    tex = tex.replace(
-      GREEK_WORD_RE,
-      (_, name: string) => GREEK_TEX[name],
-    );
-    // сырой ^ внутри \text{...} (строковые аргументы limit/nsum) — экранировать,
-    // иначе KaTeX падает с textasciicircum
-    tex = tex.replace(
-      /\\text\{([^{}]*)\}/g,
-      (_, inner: string) => `\\text{${escapeLatex(inner)}}`,
-    );
-    // mathjs сам кладёт \textasciicircum{}/\textasciitilde{} внутрь \mathtt{...} —
-    // старый KaTeX их не знает, меняем на \^ / \~
-    tex = tex.replace(/\\textasciicircum\{\}/g, '\\^{}').replace(/\\textasciitilde\{\}/g, '\\~{}');
-    return tex;
+    return postprocessTex(node.toTex());
   } catch {
     return escapeLatex(expr);
   }
@@ -888,4 +892,157 @@ export function valueToLatex(value: unknown): string {
     return complexLatex(Number(c.re), Number(c.im));
   }
   return `\\text{${escapeLatex(String(value)).slice(0, 120)}}`;
+}
+
+/* ---------------- Подстановка значений (Calcpad-стиль) ----------------
+ * `m*a` при m=2, a=5 → `2 * 5`: AST-трансформация SymbolNode → константа.
+ * Строковые аргументы ("x^2" в numint) не трогаем — это ConstantNode, а не
+ * символы; имена функций (sin, пользовательские f в f(x)) пропускаем через
+ * проверку parent.fn. Матрицы/векторы/функции не подставляем (только скаляры:
+ * число/bool/Unit/Complex), иначе вывод раздувается.
+ */
+
+/** Подстановка значений переменных в выражение. */
+export interface Substitution {
+  /** текстовая форма замещённого выражения (`2 * 5`) */
+  text: string;
+  /** LaTeX замещённого выражения (`2\cdot 5`) */
+  latex: string;
+  /** имена подставленных переменных */
+  names: string[];
+}
+
+/** Скаляр scope → ASCII-строка для повторного парса mathjs. null = не подставляем. */
+function substScalar(v: unknown): string | null {
+  if (typeof v === 'number') {
+    if (!isFinite(v)) return null;
+    return String(v);
+  }
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (v !== null && typeof v === 'object') {
+    if (math.isUnit(v)) {
+      try {
+        return math.format(v, { precision: 6 }) as string;
+      } catch {
+        return null;
+      }
+    }
+    if (math.isComplex(v)) {
+      const c = v as { re: number; im: number };
+      if (Math.abs(c.im) < 1e-12) return String(c.re);
+      const imA = Math.abs(c.im);
+      const core = Math.abs(c.re) < 1e-12
+        ? `${imA}i`
+        : `${c.re}${c.im >= 0 ? '+' : '-'}${imA}i`;
+      return `(${core})`;
+    }
+  }
+  return null;
+}
+
+/** Нужны ли скобки вокруг подставленного литерала (`-3`, `5 kg`, `a+b`). */
+function substParens(s: string): boolean {
+  if (s.startsWith('(') && s.endsWith(')')) return false;
+  const t = s.replace(/[eE][+-]\d+$/, '');
+  return /^[+-]/.test(t) || /[\s+\-*/^]/.test(t);
+}
+
+/** Совпадение контрольного значения (страховка от кривых замен). */
+function substSame(a: unknown, b: unknown): boolean {
+  if (typeof a === 'number' && typeof b === 'number') {
+    if (!isFinite(a) || !isFinite(b)) return a === b;
+    const tol = 1e-9 * Math.max(1, Math.abs(a), Math.abs(b));
+    return Math.abs(a - b) <= tol;
+  }
+  try {
+    return formatResult(a) === formatResult(b);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Построить подстановку для выражения последней (выводимой) строки блока.
+ * scope — значения ДО этой строки (снимок вызывающего кода).
+ * expected — уже посчитанный результат строки: замещённое выражение обязано
+ * дать то же значение, иначе null (fail-safe вместо неверных чисел).
+ * null = подстановка не нужна/невозможна (одиночная переменная, перевод единиц,
+ * только константы, матрицы, ошибка парса).
+ */
+export function buildSubstitution(
+  rawExpr: string,
+  scope: Scope,
+  fnParams: string[] = [],
+  expected?: unknown,
+): Substitution | null {
+  const expr = stripOnError(rawExpr).replace(/=+\s*$/, '').trim();
+  if (!expr || expr.includes('=')) return null;
+  if (/^[A-Za-z_]\w*$/.test(expr)) return null;
+  const excluded = new Set([...BUILTINS, ...fnParams]);
+  let node;
+  try {
+    node = math.parse(preprocessRanges(preprocessJ(expr, false)));
+  } catch {
+    return null;
+  }
+  const repl = new Map<string, string>();
+  try {
+    node.traverse((n: unknown) => {
+      const nn = n as { isSymbolNode?: boolean; name?: string };
+      if (!nn.isSymbolNode) return;
+      const name = String(nn.name ?? '');
+      if (!name || excluded.has(name) || repl.has(name)) return;
+      const v = (scope as Record<string, unknown>)[name];
+      if (v === undefined || typeof v === 'function') return;
+      const s = substScalar(v);
+      if (s === null) return;
+      repl.set(name, s);
+    });
+  } catch {
+    return null;
+  }
+  if (repl.size === 0) return null;
+  let out: MathNode;
+  try {
+    out = node.transform((n: unknown, _path: unknown, parent: unknown): MathNode => {
+      const nn = n as { isSymbolNode?: boolean; name?: string };
+      if (nn.isSymbolNode) {
+        const p = parent as { isFunctionNode?: boolean; fn?: unknown } | null | undefined;
+        if (p && p.isFunctionNode && p.fn === n) return n as unknown as MathNode;
+        const s = repl.get(String(nn.name ?? ''));
+        if (s === undefined) return n as unknown as MathNode;
+        const wrapped = substParens(s) ? `(${s})` : s;
+        try {
+          return math.parse(wrapped);
+        } catch {
+          return n as unknown as MathNode;
+        }
+      }
+      return n as unknown as MathNode;
+    });
+  } catch {
+    return null;
+  }
+  let text: string;
+  try {
+    text = out.toString();
+  } catch {
+    return null;
+  }
+  if (expected !== undefined) {
+    try {
+      const v2 = math.evaluate(preprocessRanges(preprocessJ(text, false)), scope);
+      if (!substSame(v2, expected)) return null;
+    } catch {
+      return null;
+    }
+  }
+  let latex: string;
+  try {
+    latex =
+      sigmaTex(text) ?? intTex(text) ?? limitTex(text) ?? postprocessTex(out.toTex());
+  } catch {
+    return null;
+  }
+  return { text, latex, names: [...repl.keys()] };
 }

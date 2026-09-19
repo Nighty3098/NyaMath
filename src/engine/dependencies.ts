@@ -1,4 +1,4 @@
-import { createBaseScope, compilePlotExpr, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, preprocessJ, preprocessRanges, splitOffUnit, stripOnError, toLatex, valueToLatex, type Scope } from './mathEngine';
+import { buildSubstitution, createBaseScope, compilePlotExpr, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, preprocessJ, preprocessRanges, splitOffUnit, stripOnError, toLatex, valueToLatex, type Scope } from './mathEngine';
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
 import { parseSimDef, runSim, runSimAsync, isSimCancel, yieldSlice, type SimResult, type SimSolver, type SimMode } from './simEngine';
@@ -13,6 +13,10 @@ export interface MathBlockData {
   resultStr: string;
   /** LaTeX результата (матрицы/bmatrix, комплексные) — рендерится через KaTeX */
   resultLatex: string;
+  /** Подстановка значений Calcpad-стиля (`m*a` → `2 * 5`): текст ... */
+  substStr?: string | null;
+  /** ... и LaTeX подстановки. null/'' = нет подстановки */
+  substLatex?: string | null;
   resultValue: unknown;
   error: string | null;
   dependencies: string[];
@@ -611,6 +615,9 @@ function detectVisualize(
 function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
   const { scope, out, cyclic, langTag, fpOf, reuseHit, snapBlock } = ctx;
   const cur = out[b.id];
+  // подстановка пересчитывается только для выводимых мат-строк ниже
+  cur.substStr = null;
+  cur.substLatex = null;
   // Disable Evaluation: замороженный регион — формула видна,
   // но не считается и ничего не пишет в scope (как pass-регионы).
   if (b.disabled) {
@@ -750,6 +757,13 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
 
     // ---------- обычный мат-блок ----------
     const lines = b.rawInput.split('\n');
+    // индекс последней содержательной строки: scope ДО неё — для подстановки значений
+    let lastIdx = -1;
+    lines.forEach((ln, i) => {
+      const tt = ln.trim();
+      if (tt !== '' && !tt.startsWith('//') && !tt.startsWith('#')) lastIdx = i;
+    });
+    let scopeBeforeLast: Scope | null = null;
     let lastValue: unknown = null;
     let lastError: string | null = null;
     let lastOk = true;
@@ -758,9 +772,11 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
     let lastKind: 'assign' | 'output' | 'eval' = 'eval';
     let lastP: ReturnType<typeof parseLine> | null = null;
     const texParts: string[] = [];
-    for (const line of lines) {
+    for (let li = 0; li < lines.length; li++) {
+      const line = lines[li];
       const t = line.trim();
       if (t === '' || t.startsWith('//') || t.startsWith('#')) continue;
+      if (li === lastIdx) scopeBeforeLast = { ...scope };
       try {
         const p = parseLine(t);
         for (const d of extractDependencies(p.expr, p.fnParams)) allDeps.add(d);
@@ -827,6 +843,15 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
       cur.resultValue = lastValue;
       cur.resultStr = formatResult(lastValue);
       cur.resultLatex = valueToLatex(lastValue);
+      // подстановка Calcpad-стиля для выводимой последней строки
+      // (`F := m*a =` → `2 * 5`); определения функций и молчаливые присваивания пропускаем
+      if (cur.isOutput && lastP && !lastP.isFunctionDef && scopeBeforeLast) {
+        const sub = buildSubstitution(lastP.expr, scopeBeforeLast, lastP.fnParams ?? [], lastValue);
+        if (sub) {
+          cur.substStr = sub.text;
+          cur.substLatex = sub.latex;
+        }
+      }
     }
     snapBlock(cur, key);
 }

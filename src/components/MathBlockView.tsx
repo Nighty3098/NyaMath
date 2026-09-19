@@ -128,14 +128,24 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
     });
   };
 
-  // Инлайн-результат: `expr = result` одной строкой KaTeX
+  // Инлайн-результат Calcpad-стиля: `expr = subst = result` одной строкой KaTeX
   const tex = useMemo(() => {
     if (!block.displayLatex) return "";
     if (block.error || !block.isOutput || !block.resultLatex)
       return block.displayLatex;
     const lhs = block.displayLatex.replace(/=\s*$/, "").trim();
+    const subst =
+      block.kind === "math" ? (block.substLatex ?? "").trim() : "";
+    if (subst) return `${lhs} = ${subst} = ${block.resultLatex}`;
     return `${lhs} = ${block.resultLatex}`;
-  }, [block.displayLatex, block.error, block.isOutput, block.resultLatex]);
+  }, [
+    block.displayLatex,
+    block.error,
+    block.isOutput,
+    block.resultLatex,
+    block.kind,
+    block.substLatex,
+  ]);
 
   const html = useMemo(() => {
     if (!tex) return "";
@@ -490,7 +500,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
           >
             {html ? (
               <div
-                className="text-[17px] leading-8"
+                className="text-[17px] leading-8 max-w-full overflow-x-auto"
                 dangerouslySetInnerHTML={{ __html: html }}
               />
             ) : (
