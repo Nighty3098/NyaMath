@@ -667,11 +667,33 @@ function toLatexUncached(input: string): string {
   }
 }
 
+/** Греческие имена → буквы (Mathcad показывает α вместо alpha). */
+const GREEK_TEX: Record<string, string> = {
+  alpha: '\\alpha', beta: '\\beta', gamma: '\\gamma', delta: '\\delta',
+  epsilon: '\\epsilon', zeta: '\\zeta', eta: '\\eta', theta: '\\theta',
+  iota: '\\iota', kappa: '\\kappa', lambda: '\\lambda', mu: '\\mu',
+  nu: '\\nu', xi: '\\xi', pi: '\\pi', rho: '\\rho', sigma: '\\sigma',
+  tau: '\\tau', upsilon: '\\upsilon', phi: '\\phi', chi: '\\chi',
+  psi: '\\psi', omega: '\\omega',
+  Alpha: '\\Alpha', Beta: '\\Beta', Gamma: '\\Gamma', Delta: '\\Delta',
+  Epsilon: '\\Epsilon', Zeta: '\\Zeta', Eta: '\\Eta', Theta: '\\Theta',
+  Iota: '\\Iota', Kappa: '\\Kappa', Lambda: '\\Lambda', Mu: '\\Mu',
+  Nu: '\\Nu', Xi: '\\Xi', Pi: '\\Pi', Rho: '\\Rho', Sigma: '\\Sigma',
+  Tau: '\\Tau', Upsilon: '\\Upsilon', Phi: '\\Phi', Chi: '\\Chi',
+  Psi: '\\Psi', Omega: '\\Omega',
+};
+
 function safeTex(expr: string): string {
   try {
     const node = math.parse(expr);
     let tex = node.toTex();
     tex = tex.replace(/\\mathrm\{i\}/g, 'j');
+    // alpha_10 → \alpha_{10}, x_1 → x_{1}: суффикс после _ всегда индекс,
+    // как буквальный подстрочник в Mathcad (имя в scope не меняется)
+    tex = tex.replace(
+      /([A-Za-z]+)\\_([A-Za-z0-9]+)/g,
+      (_, name: string, sub: string) => `${GREEK_TEX[name] ?? name}_{${sub}}`,
+    );
     return tex;
   } catch {
     return escapeLatex(expr);
