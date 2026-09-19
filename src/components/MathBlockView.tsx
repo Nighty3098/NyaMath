@@ -7,10 +7,14 @@ import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IGrip, ICopy, IPlot, IPlot3d, IWarn, IX } from './Icon';
 import MiniPlot from './MiniPlot';
 import { copyTextToClipboard } from '../lib/exportFiles';
+import { applyColonShortcut } from '../lib/canvasLayout';
+import { expandSelection, wrapSelection } from '../lib/mathEdit';
 
 interface Props {
   block: MathBlockData;
   scale: number;
+  /** Use-before-definition (Mathcad): имена, определённые ниже по листу */
+  lateDeps?: string[];
 }
 
 /**
@@ -18,9 +22,10 @@ interface Props {
  * Присваивание `x := expr` — без результата, вывод — инлайн `expr = result`.
  * Пустой блок при выходе из редактирования (Enter/blur/Esc) удаляется.
  */
-function MathBlockView({ block, scale }: Props) {
+function MathBlockView({ block, scale, lateDeps }: Props) {
   const updateInput = useCanvasStore((s) => s.updateInput);
   const removeBlock = useCanvasStore((s) => s.removeBlock);
+  const toggleBlockDisabled = useCanvasStore((s) => s.toggleBlockDisabled);
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
   const select = useCanvasStore((s) => s.select);
   const addPlot3dBlock = useCanvasStore((s) => s.addPlot3dBlock);
@@ -155,12 +160,15 @@ function MathBlockView({ block, scale }: Props) {
       <div
         ref={regionRef}
         data-block-id={block.id}
-        className={`nya-block relative rounded-xl px-2 py-1 group ${
+        className={`nya-block relative rounded-xl px-2 py-1 group ${block.disabled ? 'opacity-60 saturate-50' : ''} ${
           block.error
             ? 'outline outline-2 outline-[var(--danger)] bg-[var(--danger-bg)]'
-            : selected
-              ? 'outline outline-2 outline-[var(--accent-line)]'
-              : 'hover:outline hover:outline-1 hover:outline-[var(--hover-line)]'
+            : editing
+              // Mathcad active region — пунктирная рамка (vs сплошная у выделенного)
+              ? 'outline outline-2 outline-dashed outline-[var(--accent-line)]'
+              : selected
+                ? 'outline outline-2 outline-[var(--accent-line)]'
+                : 'hover:outline hover:outline-1 hover:outline-[var(--hover-line)]'
         }`}
         style={block.w ? { width: block.w } : undefined}
         onClick={(e) => {
@@ -205,6 +213,26 @@ function MathBlockView({ block, scale }: Props) {
         >
           <IX />
         </button>
+        )}
+        {/* disable evaluation (Mathcad): слот, свободный от delete/copy/visualize */}
+        {!editing && (
+          <button
+            type="button"
+            className={`absolute -right-7 ${copyAtBottom ? 'top-10' : 'bottom-0'} z-10 p-1.5 opacity-0 group-hover:opacity-100 cursor-pointer ${
+              block.disabled ? 'text-[var(--accent-line)]' : 'text-[var(--faint)] hover:text-[var(--accent-line)]'
+            }`}
+            style={{ opacity: selected || block.disabled ? 1 : undefined }}
+            title={block.disabled ? t('m.enable') : t('m.disable')}
+            aria-label={block.disabled ? t('m.enable') : t('m.disable')}
+            aria-pressed={block.disabled}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleBlockDisabled(block.id);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <span className="text-[13px] leading-4" aria-hidden="true">{block.disabled ? '▶' : '⏸'}</span>
+          </button>
         )}
         {/* копировать LaTeX */}
         {!editing && (
@@ -277,6 +305,7 @@ function MathBlockView({ block, scale }: Props) {
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
+            <>
             <textarea
               ref={taRef}
               rows={Math.min(8, Math.max(1, draft.split('\n').length))}
@@ -288,6 +317,48 @@ function MathBlockView({ block, scale }: Props) {
               }}
               onBlur={() => finishEdit(draft)}
               onKeyDown={(e) => {
+                const el = e.currentTarget;
+                const selS = el.selectionStart ?? draft.length;
+                const selE = el.selectionEnd ?? draft.length;
+                // Ctrl+Space — расширение выделения уровнями (Spacebar Mathcad, §07)
+                if (e.key === ' ' && e.ctrlKey && !e.metaKey && !e.altKey) {
+                  const r = expandSelection(draft, selS, selE);
+                  if (r) {
+                    e.preventDefault();
+                    requestAnimationFrame(() => { el.setSelectionRange?.(r.start, r.end); });
+                  }
+                  e.stopPropagation();
+                  return;
+                }
+                // ( / ^ поверх выделения — оператор накрывает группу целиком (Mathcad)
+                if ((e.key === '(' || e.key === '/' || e.key === '^') && selE > selS && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                  const kind = e.key === '(' ? 'parens' : e.key === '/' ? 'fraction' : 'power';
+                  const r = wrapSelection(draft, selS, selE, kind);
+                  if (r) {
+                    e.preventDefault();
+                    setDraft(r.value);
+                    updateInput(block.id, r.value);
+                    requestAnimationFrame(() => { el.setSelectionRange?.(r.start, r.end); });
+                    e.stopPropagation();
+                    return;
+                  }
+                }
+                // Mathcad: клавиша `:` сразу даёт оператор определения `:=`
+                if (e.key === ':' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                  const el = e.currentTarget;
+                  const r = applyColonShortcut(
+                    draft, el.selectionStart ?? draft.length, el.selectionEnd ?? draft.length,
+                  );
+                  if (r) {
+                    e.preventDefault();
+                    setDraft(r.value);
+                    updateInput(block.id, r.value);
+                    const cursor = r.cursor;
+                    requestAnimationFrame(() => { el.setSelectionRange?.(cursor, cursor); });
+                    e.stopPropagation();
+                    return;
+                  }
+                }
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   commitAndStepDown(draft);
@@ -304,7 +375,16 @@ function MathBlockView({ block, scale }: Props) {
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               placeholder="f := 10*10^9"
+              title={t('m.groupHint')}
+              aria-label={t('m.groupHint')}
             />
+            {/* живой предпросмотр «как в книге» прямо при наборе (Mathcad WYSIWYG) */}
+            {draft.trim() !== '' && html !== '' && (
+              <div className="mt-1 opacity-70 pointer-events-none select-none" aria-hidden="true">
+                <div className="text-[17px] leading-8" dangerouslySetInnerHTML={{ __html: html }} />
+              </div>
+            )}
+          </>
           )
         ) : isText ? (
           <div
@@ -324,6 +404,14 @@ function MathBlockView({ block, scale }: Props) {
             {block.error && (
               <div className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--danger)]" role="alert">
                 <IWarn /> {block.error}
+              </div>
+            )}
+            {block.disabled && (
+              <div className="text-[11px] leading-5 text-[var(--faint)]">⏸ {t('m.disabled')}</div>
+            )}
+            {!block.disabled && lateDeps && lateDeps.length > 0 && (
+              <div className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--accent-line)]" role="note">
+                <IWarn /> {t('m.useBeforeDef', { names: lateDeps.join(', ') })}
               </div>
             )}
             {block.plotPreview && !block.error && (
