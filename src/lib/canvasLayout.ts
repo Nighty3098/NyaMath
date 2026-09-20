@@ -1,5 +1,19 @@
 import type { MathBlockData } from '../engine/dependencies';
 
+/** Шаг сетки в мировых координатах — тот же, что рисует Canvas
+ *  (Canvas.tsx: `s = (gridSize === 'fine' ? 11 : 22) * view.k`). */
+export const GRID_STEP_STANDARD = 22;
+export const GRID_STEP_FINE = 11;
+
+/**
+ * Привязка точки к сетке (мировые координаты): ближайший узел.
+ * 0 и отрицательные координаты ложатся на узлы симметрично (Math.round).
+ */
+export function snapToGrid(x: number, y: number, step: number): { x: number; y: number } {
+  if (!(step > 0) || !isFinite(x) || !isFinite(y)) return { x, y };
+  return { x: Math.round(x / step) * step, y: Math.round(y / step) * step };
+}
+
 /**
  * Разнос регионов по вертикали (Separation).
  * Проходит блоки сверху вниз и сдвигает ВНИЗ те, что стоят ближе

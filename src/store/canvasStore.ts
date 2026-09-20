@@ -4,7 +4,7 @@ import type { MathBlockData } from '../engine/dependencies';
 import { getDemoItems, getDemoLines } from '../lib/db';
 import { loadTheme, saveTheme, THEMES, type ThemeName } from '../theme';
 import { getSimModel, listSimModels, simModelPatch } from '../engine/simEngine';
-import { separateBlocksVertically } from '../lib/canvasLayout';
+import { separateBlocksVertically, snapToGrid, GRID_STEP_FINE, GRID_STEP_STANDARD } from '../lib/canvasLayout';
 import { getLang, loadLang, setLangState, t, type Lang } from '../i18n';
 import { RECALC_TIMEOUT_MS, recalcInWorker } from '../lib/recalcWorker';
 import { engineMismatch, parseDocFile } from '../lib/docFile';
@@ -1146,22 +1146,32 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   moveBlock: (id, x, y) => {
     const cur = get().blocks[id];
     if (!cur) return;
+    // привязка к сетке, когда она видима (шаг — как в отрисовке Canvas)
+    const s = get();
+    const p = s.showGrid
+      ? snapToGrid(x, y, s.gridSize === 'fine' ? GRID_STEP_FINE : GRID_STEP_STANDARD)
+      : { x, y };
     pushHistory(get, set as SetFn, true);
-    set({ blocks: { ...get().blocks, [id]: { ...cur, x, y } } });
+    set({ blocks: { ...get().blocks, [id]: { ...cur, x: p.x, y: p.y } } });
     // порядок сверху-вниз зависит от Y → пересчёт после перемещения
   scheduleRecalcAsync(250);
   },
 
   /** Финал перетаскивания тени: разом ставим координаты, один пересчёт + persist.
-   * История уже снята в beginGesture на pointerdown — сюда без push. */
+   * История уже снята в beginGesture на pointerdown — сюда без push.
+   * Координаты привязываются к сетке, когда она видима. */
   dropBlocks: (positions: Record<string, { x: number; y: number }>) => {
     const cur = get().blocks;
+    const s = get();
+    const step = s.showGrid ? (s.gridSize === 'fine' ? GRID_STEP_FINE : GRID_STEP_STANDARD) : 0;
     let changed = false;
     const next = { ...cur };
     for (const [gid, p] of Object.entries(positions)) {
       const b = next[gid];
-      if (b && (b.x !== p.x || b.y !== p.y)) {
-        next[gid] = { ...b, x: p.x, y: p.y };
+      if (!b) continue;
+      const q = step ? snapToGrid(p.x, p.y, step) : p;
+      if (b.x !== q.x || b.y !== q.y) {
+        next[gid] = { ...b, x: q.x, y: q.y };
         changed = true;
       }
     }
