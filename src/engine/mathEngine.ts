@@ -539,22 +539,77 @@ function evaluateMain(input: string, scope: Scope): EvalResult {
     const value = evalPre(exprPre, scope);
     return { value, error: null };
   } catch (err) {
-    return { value: null, error: humanizeMathError(err) };
+    return { value: null, error: humanizeMathError(err, Object.keys(scope)) };
   }
 }
 
-/** Человекочитаемые сообщения об ошибках mathjs (локализованы через i18n). */
-export function humanizeMathError(err: unknown): string {
+/** Человекочитаемые сообщения об ошибках mathjs (локализованы через i18n).
+ *  scopeNames — имена из scope для подсказки «возможно, имелось в виду?» при опечатке. */
+export function humanizeMathError(err: unknown, scopeNames?: string[]): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (/Undefined symbol/i.test(msg)) {
     const m = msg.match(/Undefined symbol\s+(\S+)/i);
-    return m ? t('e.undefVar', { name: m[1] }) : t('e.undef');
+    const name = m?.[1]?.replace(/[^\wа-яё]+/gi, '');
+    const sug = name ? suggestName(name, scopeNames ?? []) : null;
+    const base = name ? t('e.undefVar', { name }) : t('e.undef');
+    return sug ? base + t('e.didYouMean', { suggest: sug }) : base;
   }
   if (/Division by zero/i.test(msg)) return t('e.divZero');
   if (/Units do not match/i.test(msg)) return t('e.unitsMismatch', { msg: msg.slice(0, 160) });
   if (/Cannot convert|Unexpected|Value expected|Parenthesis|Syntax/i.test(msg)) return t('e.syntax', { msg });
   if (/cyclic|recursion|stack/i.test(msg)) return t('e.cyclic');
   return msg.slice(0, 220);
+}
+
+/** Расстояние Левенштейна (для подсказки имени при опечатке). */
+function editDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const prev: number[] = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    let diag = prev[0];
+    prev[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const up = prev[j];
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      prev[j] = Math.min(up + 1, prev[j - 1] + 1, diag + cost);
+      diag = up;
+    }
+  }
+  return prev[n];
+}
+
+/**
+ * Похожее имя из scope для опечатки: точное совпадение без учёта регистра,
+ * иначе ближайший по Левенштейну (порог — треть длины, минимум 1).
+ * null = ничего похожего нет, подсказку не показываем.
+ */
+export function suggestName(name: string, candidates: string[]): string | null {
+  const n = name.toLowerCase();
+  if (n.length < 2) return null;
+  const CAPPED = candidates.length > 500 ? candidates.slice(0, 500) : candidates;
+  for (const c of CAPPED) {
+    if (c.toLowerCase() === n && c !== name) return c;
+  }
+  const maxD = Math.max(2, Math.floor(name.length / 3));
+  let best: string | null = null;
+  let bestD = maxD + 1;
+  for (const c of CAPPED) {
+    if (c === name || c.length < 2) continue;
+    if (!/^[A-Za-z_а-яёА-ЯЁ][\wа-яёА-ЯЁ]*$/.test(c)) continue;
+    const d = editDistance(n, c.toLowerCase());
+    if (d < bestD || (d === bestD && best !== null && c.length < best.length)) {
+      best = c;
+      bestD = d;
+    }
+  }
+  if (best && bestD <= maxD) return best;
+  // запасной вариант: префикс (alp → alpha)
+  const pref = CAPPED.filter((c) => c.toLowerCase().startsWith(n) && c !== name)
+    .sort((a, b) => a.length - b.length)[0];
+  return pref ?? null;
 }
 
 /** Форматирование результата для отображения (числа, комплексные, матрицы). */
