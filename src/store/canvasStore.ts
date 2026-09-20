@@ -212,6 +212,12 @@ export interface CanvasState {
   pendingEditId: string | null;
   requestEdit: (id: string) => void;
   consumePendingEdit: (id: string) => boolean;
+  /** Блок с открытым редактором (для вставки с экранной клавиатуры) */
+  editingId: string | null;
+  setEditingId: (id: string | null) => void;
+  /** Очередь вставки с экранной клавиатуры: потребитель — открытый редактор */
+  kbInsert: { id: string; text: string; seq: number } | null;
+  pushKbInsert: (id: string, text: string) => void;
 }
 
 function blank(id: string, x: number, y: number): MathBlockData {
@@ -969,6 +975,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set((s) => ({ cross: { x: Math.round(s.cross.x + dx), y: Math.round(s.cross.y + dy) } })),
   pendingEditId: null,
   requestEdit: (id) => set({ pendingEditId: id }),
+  editingId: null,
+  setEditingId: (id) => {
+    if (get().editingId !== id) set({ editingId: id });
+  },
+  kbInsert: null,
+  pushKbInsert: (id, text) =>
+    set((s) => ({ kbInsert: { id, text, seq: (s.kbInsert?.seq ?? 0) + 1 } })),
   consumePendingEdit: (id) => {
     if (get().pendingEditId !== id) return false;
     set({ pendingEditId: null });
@@ -1288,7 +1301,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   clear: () => {
     pushHistory(get, set as SetFn, true);
     persist({});
-    set({ blocks: {}, selectedIds: [], hoveredVar: null, staleIds: [] });
+    set({ blocks: {}, selectedIds: [], hoveredVar: null, editingId: null, kbInsert: null, staleIds: [] });
   },
 
   loadTestScenario: () => {
@@ -1309,7 +1322,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       ...blank(pid, 560, 120), rawInput: 'plot', kind: 'plot', plotFn: 'sin(x)', plotXmin: -10, plotXmax: 10,
     };
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
+    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, editingId: null, kbInsert: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
     scheduleRecalcAsync(60);
   },
 
@@ -1333,7 +1346,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       plotFn: 'sin(w*x); cos(x)', plotXmin: -10, plotXmax: 10,
     };
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
+    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, editingId: null, kbInsert: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
     scheduleRecalcAsync(60);
   },
 
@@ -1355,7 +1368,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     if (!Object.keys(rec).length) return { ok: false, message: t('doc.noBlocks') };
     pushHistory(get, set as SetFn, true);
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
+    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, editingId: null, kbInsert: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
     scheduleRecalcAsync(60);
     // major-расхождение — предупреждение; minor — тихая пометка версии файла
     const mismatch = engineMismatch(parsed.engine);

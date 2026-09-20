@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expandSelection, wrapSelection } from './mathEdit';
+import { expandSelection, insertSnippet, wrapSelection } from './mathEdit';
 
 describe('editing: wrap selection with operator', () => {
   it('parens keep the selection on the group (chaining)', () => {
@@ -58,5 +58,23 @@ describe('editing: expand selection (levels)', () => {
   it('ends at the line and then stops', () => {
     expect(expandSelection('19+52', 0, 5)).toBeNull();
     expect(expandSelection('x := 19+52', 5, 7)).toEqual({ start: 0, end: 10 });
+  });
+});
+
+describe('editing: insert snippet from on-screen keyboard', () => {
+  it('вставляет в позицию курсора', () => {
+    expect(insertSnippet('x+2', 1, 1, 'π')).toEqual({ value: 'xπ+2', cursor: 2 });
+  });
+
+  it('заменяет выделение', () => {
+    expect(insertSnippet('x+2', 0, 1, 'sin(')).toEqual({ value: 'sin(+2', cursor: 4 });
+  });
+
+  it('перевёрнутые границы нормализуются', () => {
+    expect(insertSnippet('ab', 2, 0, ':=')).toEqual({ value: ':=', cursor: 2 });
+  });
+
+  it('выход за длину обрезается', () => {
+    expect(insertSnippet('ab', 99, 99, '²')).toEqual({ value: 'ab²', cursor: 3 });
   });
 });

@@ -19,6 +19,7 @@ const Plot3dBlockView = lazy(() => import("./Plot3dBlockView"));
 import ProgramBlockView from "./ProgramBlockView";
 import SimBlockView from "./SimBlockView";
 import SliderBlockView from "./SliderBlockView";
+import MathKeyboard from "./MathKeyboard";
 import { t } from "../i18n";
 
 const MIN_SCALE = 0.25;
@@ -827,6 +828,9 @@ export default function Canvas() {
 
       {/* пустое состояние — в экранных координатах */}
       {/* (без иконки и названия приложения) */}
+
+      {/* экранная мат-клавиатура слева внизу */}
+      <MathKeyboard />
 
       {/* controls зума */}
       <div

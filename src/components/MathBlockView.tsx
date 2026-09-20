@@ -11,7 +11,7 @@ import StaleChip from "./StaleChip";
 import { copyTextToClipboard } from "../lib/exportFiles";
 import { applyColonShortcut } from "../lib/canvasLayout";
 import { hoverNameOf, isVarRelated } from "../lib/varHighlight";
-import { expandSelection, wrapSelection } from "../lib/mathEdit";
+import { expandSelection, insertSnippet, wrapSelection } from "../lib/mathEdit";
 import { lookupFuncDoc, wordAt } from "../lib/funcDoc";
 import AssistantPopup from "./AssistantPopup";
 import {
@@ -77,6 +77,8 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const selectedIds = useCanvasStore((s) => s.selectedIds);
   const hoveredVar = useCanvasStore((s) => s.hoveredVar);
   const setHoveredVar = useCanvasStore((s) => s.setHoveredVar);
+  const setEditingId = useCanvasStore((s) => s.setEditingId);
+  const kbInsert = useCanvasStore((s) => s.kbInsert);
   const lang = useCanvasStore((s) => s.lang);
   const [editing, setEditing] = useState(
     block.rawInput === "" && block.kind === "math",
@@ -136,6 +138,39 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Экранная клавиатура: регистрируем открытый редактор как приёмник вставки
+  useEffect(() => {
+    if (!editing) return;
+    setEditingId(block.id);
+    return () => {
+      const st = useCanvasStore.getState();
+      if (st.editingId === block.id) st.setEditingId(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, block.id]);
+
+  // Вставка с экранной клавиатуры в позицию курсора открытого редактора
+  const kbSeq = kbInsert?.seq ?? 0;
+  useEffect(() => {
+    if (!editing || !kbInsert || kbInsert.id !== block.id) return;
+    const el = (taRef.current ?? inputRef.current) as
+      | HTMLTextAreaElement
+      | HTMLInputElement
+      | null;
+    const s = el?.selectionStart ?? draft.length;
+    const e = el?.selectionEnd ?? s;
+    const r = insertSnippet(draft, s, e, kbInsert.text);
+    setDraft(r.value);
+    updateInput(block.id, r.value);
+    setCurPos(r.cursor);
+    refreshAssist(r.value, r.cursor);
+    requestAnimationFrame(() => {
+      el?.setSelectionRange?.(r.cursor, r.cursor);
+      el?.focus();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kbSeq]);
 
   useEffect(
     () => () => {

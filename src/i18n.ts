@@ -256,6 +256,10 @@ const ru = {
   'm.actions': 'Действия с блоком',
   'm.ctxEdit': 'Редактировать',
   'm.ctxInsertBelow': 'Вставить блок ниже',
+
+  'kb.title': 'Математическая клавиатура',
+  'kb.open': 'Показать клавиатуру',
+  'kb.close': 'Скрыть клавиатуру',
   'm.groupHint': 'Выделите и нажмите ( / ^ • Ctrl+Space — расширить выделение • : — это := • F12 — ассистент' ,
   'm.disable': 'Отключить из расчёта',
   'm.enable': 'Вернуть в расчёт',
@@ -690,6 +694,10 @@ const en: Record<StrKey, string> = {
   'm.actions': 'Block actions',
   'm.ctxEdit': 'Edit',
   'm.ctxInsertBelow': 'Insert block below',
+
+  'kb.title': 'Math keyboard',
+  'kb.open': 'Show keyboard',
+  'kb.close': 'Hide keyboard',
   'm.groupHint': 'Select and press ( / ^ • Ctrl+Space — expand selection • : means := • F12 — assistant' ,
   'm.disable': 'Disable evaluation',
   'm.enable': 'Enable evaluation',

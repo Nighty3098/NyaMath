@@ -11,6 +11,29 @@ export interface WrapResult {
   end: number;
 }
 
+export interface InsertResult {
+  value: string;
+  /** позиция курсора после вставки */
+  cursor: number;
+}
+
+/**
+ * Вставка сниппета экранной клавиатуры в позицию курсора с заменой
+ * выделения (если есть). Чистая функция — UI ставит курсор сам.
+ */
+export function insertSnippet(
+  value: string,
+  start: number,
+  end: number,
+  snippet: string,
+): InsertResult {
+  const len = value.length;
+  const s = Math.max(0, Math.min(start, end, len));
+  const e = Math.max(0, Math.min(Math.max(start, end), len));
+  const next = value.slice(0, s) + snippet + value.slice(e);
+  return { value: next, cursor: s + snippet.length };
+}
+
 export type WrapKind = 'parens' | 'fraction' | 'power' | 'sqrt';
 
 /**
