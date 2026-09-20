@@ -35,6 +35,7 @@ export type RecalcJobOutcome =
     blocks: Record<string, MathBlockData>;
     scope: Scope;
     changed: boolean;
+    staleIds: string[];
     calcMs: number;
   }
   | { status: 'cancelled' }
@@ -47,6 +48,8 @@ export interface RecalcJobOpts {
   signal?: AbortSignal;
   onProgress?: (done: number, total: number) => void;
   onSimProgress?: (id: string, done: number, total: number | null) => void;
+  /** Calculate Now: только эти + upstream (пусто/нет = полный пересчёт) */
+  only?: string[];
 }
 
 type WorkerFactory = () => Worker;
@@ -103,12 +106,13 @@ function applyResult(
   defHint: MathBlockData[],
   calcMs: number,
   changed: boolean,
+  staleIds: string[],
 ): Extract<RecalcJobOutcome, { status: 'done' }> {
   const out: Record<string, MathBlockData> = {};
   for (const wb of blocks) out[wb.id] = reviveBlock(wb);
   const scope = rebuildMainScope(serScope, collectDefLines(defHint));
   setLastScope(scope);
-  return { status: 'done', blocks: out, scope, changed, calcMs };
+  return { status: 'done', blocks: out, scope, changed, staleIds, calcMs };
 }
 
 /** Фолбэк без Worker: тот же API поверх main-thread recalculateAllAsync. */
@@ -127,6 +131,8 @@ async function fallbackMain(
       shouldCancel: () => timedOut || opts.signal?.aborted === true,
       onBlock: opts.onProgress,
       onSimProgress: opts.onSimProgress,
+    }, {
+      only: opts.only?.length ? new Set(opts.only) : undefined,
     });
     if (outcome.cancelled) {
       return timedOut ? { status: 'timeout' } : { status: 'cancelled' };
@@ -136,6 +142,7 @@ async function fallbackMain(
       blocks: outcome.result.blocks,
       scope: outcome.result.scope,
       changed: outcome.result.changed,
+      staleIds: outcome.result.staleIds,
       calcMs: performance.now() - t0,
     };
   } catch (e) {
@@ -160,7 +167,7 @@ export async function recalcInWorker(
   const w = worker;
   const slim = blocks.map(slimWorkerInput);
   const jobId = ++jobSeq;
-  const req: WorkerReq = { jobId, lang: opts.lang, blocks: slim };
+  const req: WorkerReq = { jobId, lang: opts.lang, blocks: slim, only: opts.only };
 
   return new Promise<RecalcJobOutcome>((resolve) => {
     let done = false;
@@ -196,7 +203,7 @@ export async function recalcInWorker(
         void fallbackMain(blocks, opts, timeoutMs).then(finish);
         return;
       }
-      finish(applyResult(m.blocks, m.scope, blocks, m.calcMs, m.changed));
+      finish(applyResult(m.blocks, m.scope, blocks, m.calcMs, m.changed, m.staleIds));
     };
     w.onerror = () => {
       // воркер не стартовал (бандл/CSP) — фолбэк вместо красного экрана

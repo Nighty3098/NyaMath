@@ -249,6 +249,8 @@ export interface WorkerReq {
   jobId: number;
   lang: Lang;
   blocks: SlimBlock[];
+  /** Calculate Now: только эти + upstream (пусто/нет = полный пересчёт) */
+  only?: string[];
 }
 
 /** Блок назад: всё кроме resultValue (классы!) + serValue. */
@@ -274,5 +276,6 @@ export type WorkerMsgToMain =
     scope: Record<string, SerVal | null>;
     changed: boolean;
     calcMs: number;
+    staleIds: string[];
   }
   | { type: 'result'; jobId: number; ok: false; error: string };

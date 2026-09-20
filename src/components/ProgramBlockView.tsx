@@ -7,6 +7,7 @@ import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IBug, IGrip, IWarn, IX } from './Icon';
+import StaleChip from './StaleChip';
 
 interface Props {
   block: MathBlockData;
@@ -277,6 +278,7 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
             <IWarn /> {t('m.useBeforeDef', { names: lateDeps.join(', ') })}
           </div>
         )}
+        <StaleChip id={block.id} />
 
         {/* trace-лог операторов trace */}
         {block.programTrace && block.programTrace.length > 0 && (

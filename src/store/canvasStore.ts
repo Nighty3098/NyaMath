@@ -123,6 +123,21 @@ export interface CanvasState {
   /** Прервать текущий пересчёт (убивает воркер) */
   cancelRecalc: () => void;
   clearComputeError: () => void;
+  /** Режим пересчёта: auto — как раньше, manual — только по Calculate Now */
+  calcMode: 'auto' | 'manual';
+  setCalcMode: (m: 'auto' | 'manual') => void;
+  /** Блоки в вьюпорте (пишет Canvas, троттлинг): область Calculate Now */
+  visibleIds: string[];
+  setVisibleIds: (ids: string[]) => void;
+  /** Вне области последнего пересчёта со старыми результатами */
+  staleIds: string[];
+  /** В ручном режиме были правки после последнего пересчёта */
+  calcStale: boolean;
+  /** Calculate Now: пересчитать видимые + их upstream */
+  recalcNow: () => void;
+  /** Печать: виртуализация выключена, рендерим всё */
+  printing: boolean;
+  setPrinting: (v: boolean) => void;
   addBlock: (x: number, y: number, raw?: string, edit?: boolean) => void;
   /** Пакетная вставка построчно: каждая строка — отдельный мат-блок лесенкой вниз (один undo-шаг). */
   addBlocks: (lines: string[], x: number, y: number, dy?: number) => void;
@@ -562,6 +577,12 @@ function scheduleRecalcAsync(ms: number) {
   if (recalcTimer) clearTimeout(recalcTimer);
   recalcTimer = setTimeout(() => {
     recalcTimer = null;
+    // ручной режим (Calculate Now): джобы не едут, входы сохраняем, ставим флаг
+    if (useCanvasStore.getState().calcMode === 'manual') {
+      persist(useCanvasStore.getState().blocks);
+      useCanvasStore.setState({ calcStale: true });
+      return;
+    }
     void runRecalcJob();
   }, ms);
 }
@@ -572,7 +593,7 @@ function stampMs(t0: number): number {
   return lastCalcMs;
 }
 
-async function runRecalcJob(): Promise<void> {
+async function runRecalcJob(only?: Set<string>): Promise<void> {
   if (jobRunning) {
     rerunRequested = true;
     return;
@@ -582,7 +603,10 @@ async function runRecalcJob(): Promise<void> {
     for (;;) {
       rerunRequested = false;
       const rev = ++recalcRev;
-      const list = Object.values(useCanvasStore.getState().blocks);
+      const st0 = useCanvasStore.getState();
+      const list = Object.values(st0.blocks);
+      // only фиксируем на входе попытки (видимость могла уже сдвинуться)
+      const attemptOnly = only && only.size > 0 ? new Set(only) : undefined;
       useCanvasStore.setState({ computeActive: true, computeError: null });
       const t0 = performance.now();
       const ctrl = new AbortController();
@@ -591,6 +615,7 @@ async function runRecalcJob(): Promise<void> {
         lang: getLang(),
         timeoutMs: RECALC_TIMEOUT_MS,
         signal: ctrl.signal,
+        only: attemptOnly ? [...attemptOnly] : undefined,
         onSimProgress: (id, done, total) => {
           if (rev !== recalcRev) return;
           useCanvasStore.setState({
@@ -622,6 +647,16 @@ async function runRecalcJob(): Promise<void> {
         persist(outcome.blocks);
         const s = useCanvasStore.getState();
         useCanvasStore.setState({ blocks: outcome.blocks, recalcCounter: s.recalcCounter + 1, calcMs: stampMs(t0) });
+      }
+      // staleIds — всегда (даже при changed=false: видимое свежо, вне экрана старо),
+      // но без лишнего ре-рендера при том же наборе
+      {
+        const sNow = useCanvasStore.getState();
+        const same = sNow.staleIds.length === outcome.staleIds.length &&
+          sNow.staleIds.every((id, i) => id === outcome.staleIds[i]);
+        if (!same || sNow.calcStale) {
+          useCanvasStore.setState({ staleIds: outcome.staleIds, calcStale: false });
+        }
       }
       if (!rerunRequested) break;
     }
@@ -854,6 +889,28 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     }
   },
   clearComputeError: () => set({ computeError: null }),
+  calcMode: 'auto',
+  setCalcMode: (m) => {
+    set({ calcMode: m, calcStale: false });
+    // переход в auto — сразу дотянуть всё; в manual правки ждут Calculate Now
+    if (m === 'auto') scheduleRecalcAsync(60);
+  },
+  visibleIds: [],
+  setVisibleIds: (ids) => {
+    const prev = get().visibleIds;
+    if (prev.length === ids.length && prev.every((id, i) => id === ids[i])) return;
+    set({ visibleIds: ids });
+  },
+  staleIds: [],
+  calcStale: false,
+  recalcNow: () => {
+    const vis = get().visibleIds;
+    void runRecalcJob(vis.length ? new Set(vis) : undefined);
+  },
+  printing: false,
+  setPrinting: (v) => {
+    if (get().printing !== v) set({ printing: v });
+  },
   past: [],
   future: [],
 
@@ -877,6 +934,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       future: [cur, ...s.future].slice(0, HISTORY_LIMIT),
       recalcCounter: s.recalcCounter + 1,
       selectedIds: s.selectedIds.filter((id) => target[id]),
+      staleIds: [],
     }));
     scheduleRecalcAsync(60);
   },
@@ -893,6 +951,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       future,
       recalcCounter: s.recalcCounter + 1,
       selectedIds: s.selectedIds.filter((id) => target[id]),
+      staleIds: [],
     }));
     scheduleRecalcAsync(60);
   },
@@ -1213,7 +1272,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   clear: () => {
     pushHistory(get, set as SetFn, true);
     persist({});
-    set({ blocks: {}, selectedIds: [] });
+    set({ blocks: {}, selectedIds: [], staleIds: [] });
   },
 
   loadTestScenario: () => {
@@ -1234,7 +1293,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       ...blank(pid, 560, 120), rawInput: 'plot', kind: 'plot', plotFn: 'sin(x)', plotXmin: -10, plotXmax: 10,
     };
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
+    set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1, staleIds: [] }));
     scheduleRecalcAsync(60);
   },
 
@@ -1258,7 +1317,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       plotFn: 'sin(w*x); cos(x)', plotXmin: -10, plotXmax: 10,
     };
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
+    set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1, staleIds: [] }));
     scheduleRecalcAsync(60);
   },
 
@@ -1280,7 +1339,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     if (!Object.keys(rec).length) return { ok: false, message: t('doc.noBlocks') };
     pushHistory(get, set as SetFn, true);
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
+    set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1, staleIds: [] }));
     scheduleRecalcAsync(60);
     // major-расхождение — предупреждение; minor — тихая пометка версии файла
     const mismatch = engineMismatch(parsed.engine);
@@ -1316,6 +1375,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       blocks: rec,
       selectedIds: s.selectedIds.filter((id) => rec[id]),
       recalcCounter: s.recalcCounter + 1,
+      staleIds: [],
     }));
     scheduleRecalcAsync(60);
     return { ok: true, count: Object.keys(rec).length };

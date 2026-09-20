@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useCanvasStore } from "../store/canvasStore";
 import { sortBlocksTopDown, findUseBeforeDef } from "../engine/dependencies";
+import { viewportRect, visibleIdsOf, VIRTUALIZE_AT } from "../lib/viewport";
 import { registerBlockFocus } from "../lib/focusBlock";
 import MathBlockView from "./MathBlockView";
 import PlotBlockView from "./PlotBlockView";
@@ -55,6 +56,33 @@ export default function Canvas() {
   const [panning, setPanning] = useState(false);
   const [spaceDown, setSpaceDown] = useState(false);
   const spaceRef = useRef(false);
+  // размер контейнера (мир. координаты вьюпорта)
+  const [size, setSize] = useState({ w: 1200, h: 800 });
+  // печать: виртуализация выключена (флаг в сторе — printDocument греет заранее)
+  const printing = useCanvasStore((s) => s.printing);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      setSize({ w: el.clientWidth, h: el.clientHeight });
+    });
+    setSize({ w: el.clientWidth, h: el.clientHeight });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    // Ctrl+P в обход меню: тоже гасим виртуализацию (printDocument — заранее)
+    const on = () => useCanvasStore.getState().setPrinting(true);
+    const off = () => useCanvasStore.getState().setPrinting(false);
+    window.addEventListener("beforeprint", on);
+    window.addEventListener("afterprint", off);
+    return () => {
+      window.removeEventListener("beforeprint", on);
+      window.removeEventListener("afterprint", off);
+    };
+  }, []);
 
   // Плавное догоняние цели (только зум/панорама от колеса и кнопок).
   // При prefers-reduced-motion — мгновенно, без анимации.
@@ -626,6 +654,41 @@ export default function Canvas() {
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
 
+  // Виртуализация: вне вьюпорта (+overscan) DOM не монтируем. Выключается
+  // при печати (иначе нечего печатать), на маленьких листах и пока активна
+  // рамка выделения (marquee меряет DOM-геометрию через querySelectorAll).
+  // Черновик редактора при размонтировании не теряется: ввод сразу в сторе.
+  const marqueeActive = marquee !== null;
+  const virtualize = !printing && list.length >= VIRTUALIZE_AT && !marqueeActive;
+  const visList = useMemo(() => {
+    if (!virtualize) return list;
+    const rect = viewportRect(
+      { x: viewRef.current.x, y: viewRef.current.y, k: viewRef.current.k },
+      size,
+    );
+    const vis = new Set(visibleIdsOf(list, rect));
+    return list.filter((b) => vis.has(b.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list, view, size, printing, marqueeActive]);
+
+  // Видимые id — в стор (область Calculate Now), троттлинг интервалом:
+  // рендер идёт каждый кадр панорамы, стор дёргаем редко.
+  const dataRef = useRef({ list, view, size });
+  dataRef.current = { list, view, size };
+  useEffect(() => {
+    const push = () => {
+      const d = dataRef.current;
+      const rect = viewportRect(
+        { x: d.view.x, y: d.view.y, k: d.view.k },
+        d.size,
+      );
+      useCanvasStore.getState().setVisibleIds(visibleIdsOf(d.list, rect));
+    };
+    push();
+    const t = setInterval(push, 500);
+    return () => clearInterval(t);
+  }, []);
+
   // Точечная сетка в экранных координатах (Notion-стиль): шаг следует за камерой
   const mod = (a: number, n: number) => ((a % n) + n) % n;
   const gridStyle: React.CSSProperties = showGrid
@@ -732,7 +795,7 @@ export default function Canvas() {
             }}
           />
         </div>
-        {list.map((b) =>
+        {visList.map((b) =>
           b.kind === "plot" ? (
             <PlotBlockView key={b.id} block={b} scale={view.k} />
           ) : b.kind === "contour" ? (

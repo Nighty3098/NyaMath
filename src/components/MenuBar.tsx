@@ -64,6 +64,12 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const loadAdvancedDemo = useCanvasStore((s) => s.loadAdvancedDemo);
   const clear = useCanvasStore((s) => s.clear);
   const recalc = useCanvasStore((s) => s.recalc);
+  const calcMode = useCanvasStore((s) => s.calcMode);
+  const setCalcMode = useCanvasStore((s) => s.setCalcMode);
+  const recalcNow = useCanvasStore((s) => s.recalcNow);
+  const staleIds = useCanvasStore((s) => s.staleIds);
+  const calcStale = useCanvasStore((s) => s.calcStale);
+  const computeActive = useCanvasStore((s) => s.computeActive);
   const showGrid = useCanvasStore((s) => s.showGrid);
   const gridSize = useCanvasStore((s) => s.gridSize);
   const setGridSize = useCanvasStore((s) => s.setGridSize);
@@ -426,6 +432,44 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
             style={{ background: errCount ? 'var(--danger)' : 'var(--ok)' }}
           />
         </button>
+        <button
+          type="button"
+          className={`nya-tbtn relative${calcMode === 'manual' ? ' is-on' : ''}`}
+          onClick={() => setCalcMode(calcMode === 'manual' ? 'auto' : 'manual')}
+          title={calcMode === 'manual' ? t('menu.calcManual') : t('menu.calcAuto')}
+          aria-label={calcMode === 'manual' ? t('menu.calcManual') : t('menu.calcAuto')}
+          aria-pressed={calcMode === 'manual'}
+        >
+          {calcMode === 'manual' ? 'M' : 'A'}
+          {(staleIds.length > 0 || calcStale) && (
+            <span
+              aria-hidden="true"
+              className="absolute right-1 top-1 inline-block w-1.5 h-1.5 rounded-full"
+              style={{ background: 'var(--warn, #b45309)' }}
+            />
+          )}
+        </button>
+        {calcMode === 'manual' && (
+          <button
+            type="button"
+            className="nya-tbtn relative"
+            onClick={recalcNow}
+            disabled={computeActive}
+            title={`${t('menu.calcNowTitle')}${staleIds.length ? ` · ${t('menu.calcStale', { n: staleIds.length })}` : ''}`}
+            aria-label={t('menu.calcNow')}
+          >
+            ⏵
+            {staleIds.length > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute -right-1 -top-1 inline-block min-w-4 rounded-full px-1 text-center text-[10px] leading-4"
+                style={{ background: 'var(--warn, #b45309)', color: '#fff' }}
+              >
+                {staleIds.length > 99 ? '99+' : staleIds.length}
+              </span>
+            )}
+          </button>
+        )}
         <span className="w-px h-5 bg-[var(--chrome-line)] mx-1" aria-hidden="true" />
         <button
           type="button"

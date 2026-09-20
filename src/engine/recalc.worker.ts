@@ -51,11 +51,13 @@ export async function runWorkerJob(
           simId: id, simDone: done, simTotal: total,
         });
       },
+    }, {
+      only: req.only?.length ? new Set(req.only) : undefined,
     });
     if (outcome.cancelled) {
       return { type: 'result', jobId: req.jobId, ok: false, error: 'cancelled' };
     }
-    const { blocks, scope, changed } = outcome.result;
+    const { blocks, scope, changed, staleIds } = outcome.result;
     const out: WorkerOutBlock[] = Object.values(blocks).map((b) => {
       const { resultValue, ...rest } = b;
       return { ...rest, serValue: serializeScopeValue(resultValue) ?? null };
@@ -66,7 +68,7 @@ export async function runWorkerJob(
     }
     return {
       type: 'result', jobId: req.jobId, ok: true,
-      blocks: out, scope: serScope, changed, calcMs: performance.now() - t0,
+      blocks: out, scope: serScope, changed, staleIds, calcMs: performance.now() - t0,
     };
   } catch (e) {
     return {

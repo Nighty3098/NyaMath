@@ -9,11 +9,21 @@ export type PrintMode = 'color' | 'bw';
  * `@page { margin: 0 }` убирает белые поля и штатные колонтитулы
  * браузера (URL, дата, номера страниц живут в полях страницы).
  */
+import { useCanvasStore } from '../store/canvasStore';
+
 export function printDocument(mode: PrintMode = 'color'): void {
   try {
     document.documentElement.dataset.print = mode;
   } catch { /* ignore */ }
-  // Даём браузеру кадр на применение data-print перед открытием диалога печати
+  // Гасим виртуализацию ЗАРАНЕЕ: полный рендер успевает закоммититься
+  // за два кадра (иначе в печать попадут только видимые блоки).
+  try {
+    useCanvasStore.getState().setPrinting(true);
+  } catch {
+    /* стор недоступен — печать как есть */
+  }
+  // Даём браузеру кадры на применение data-print и полный рендер
+  // перед открытием диалога печати
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       window.print();
@@ -23,6 +33,14 @@ export function printDocument(mode: PrintMode = 'color'): void {
 
 /** Сброс режима печати после закрытия диалога (beforeprint/afterprint). */
 export function installPrintCleanup(): () => void {
+  const cleanupPrint = () => {
+    try {
+      delete document.documentElement.dataset.print;
+    } catch { /* ignore */ }
+    try {
+      useCanvasStore.getState().setPrinting(false);
+    } catch { /* ignore */ }
+  };
   const commit = () => {
     // Коммитим открытый редактор, иначе печатается пустой textarea
     (document.activeElement as HTMLElement | null)?.blur?.();
@@ -33,15 +51,10 @@ export function installPrintCleanup(): () => void {
       }
     } catch { /* ignore */ }
   };
-  const cleanup = () => {
-    try {
-      delete document.documentElement.dataset.print;
-    } catch { /* ignore */ }
-  };
   window.addEventListener('beforeprint', commit);
-  window.addEventListener('afterprint', cleanup);
+  window.addEventListener('afterprint', cleanupPrint);
   return () => {
     window.removeEventListener('beforeprint', commit);
-    window.removeEventListener('afterprint', cleanup);
+    window.removeEventListener('afterprint', cleanupPrint);
   };
 }

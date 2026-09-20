@@ -3,6 +3,7 @@ import type { MathBlockData } from '../engine/dependencies';
 import { useCanvasStore } from '../store/canvasStore';
 import { useRegionDrag } from './useRegionDrag';
 import { IGrip, IWarn, IX } from './Icon';
+import StaleChip from './StaleChip';
 import { t } from '../i18n';
 
 interface Props {
@@ -232,6 +233,7 @@ function SliderBlockView({ block, scale }: Props) {
             <IWarn /> {block.error}
           </div>
         )}
+        <StaleChip id={block.id} />
       </div>
     </div>
   );

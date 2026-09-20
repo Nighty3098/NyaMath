@@ -112,6 +112,18 @@ export interface RecalcResult {
   scope: Scope;
   /** false — ни один блок не пересчитывался; blocks — та же ссылка, что в прошлом прогоне */
   changed: boolean;
+  /** Вне области Calculate Now со старыми результатами (пусто при полном пересчёте) */
+  staleIds: string[];
+}
+
+/**
+ * Опции пересчёта (Calculate Now из Prime 11).
+ * only: пересчитать только эти блоки + их транзитивный upstream;
+ * остальные — reuse из кэша, при расхождении отпечатка — старые результаты
+ * + staleIds. Пустой/undefined = полный пересчёт. Циклические — всегда свежие.
+ */
+export interface RecalcOpts {
+  only?: Set<string>;
 }
 
 /* ---------- инкрементальный пересчёт: fingerprint-кэш ----------
@@ -416,10 +428,15 @@ interface RecalcCtx {
   simConfigFp: (b: MathBlockData) => string;
   reuseHit: (b: MathBlockData, prev: CachedBlock) => MathBlockData;
   snapBlock: (c: MathBlockData, key: string) => void;
+  /** null = полный пересчёт; иначе только эти свежие (остальные — reuse/stale) */
+  fresh: Set<string> | null;
+  stale: string[];
+  /** reuse кэша вне fresh-множества (true = блок пропущен, scope протянут из кэша) */
+  reuseStale: (b: MathBlockData) => boolean;
 }
 
 /** Общая преамбула пересчёта: порядок, циклы, fingerprint-механика, scope. */
-function createRecalcCtx(list: MathBlockData[]): RecalcCtx {
+function createRecalcCtx(list: MathBlockData[], opts?: RecalcOpts): RecalcCtx {
   const ordered = sortBlocksTopDown(list);
   // Disable Evaluation: отключённые регионы не считаются,
   // их имена не видны ниже — в циклах и цепочках определений не участвуют.
@@ -502,6 +519,47 @@ function createRecalcCtx(list: MathBlockData[]): RecalcCtx {
     fpMemo.set(id, fp);
     return fp;
   };
+  // fresh-множество для Calculate Now: only + транзитивный upstream.
+  // Upstream намеренно over-approximate (ВСЕ определители имён, не только
+  // видимый сверху): лишнее посчитаем, но свежее никогда не возьмёт значение
+  // из пропущенного — множество пропущенных downstream-замкнуто.
+  let fresh: Set<string> | null = null;
+  if (opts?.only && opts.only.size > 0) {
+    fresh = new Set<string>();
+    for (const id of opts.only) {
+      if (byId.has(id)) fresh.add(id);
+    }
+    for (const id of cyclic) fresh.add(id);
+    const nameToIds = new Map<string, Set<string>>();
+    ordered.forEach((b) => {
+      if (b.disabled) return;
+      for (const d of blockDefs(b)) {
+        let s = nameToIds.get(d);
+        if (!s) {
+          s = new Set<string>();
+          nameToIds.set(d, s);
+        }
+        s.add(b.id);
+      }
+    });
+    const queue = [...fresh];
+    while (queue.length > 0) {
+      const id = queue.pop() as string;
+      const b = byId.get(id);
+      if (!b) continue;
+      for (const dep of blockDeps(b)) {
+        const definers = nameToIds.get(dep);
+        if (!definers) continue;
+        for (const did of definers) {
+          if (!fresh.has(did)) {
+            fresh.add(did);
+            queue.push(did);
+          }
+        }
+      }
+    }
+  }
+  const stale: string[] = [];
   const scope: Scope = createBaseScope();
   const out: Record<string, MathBlockData> = {};
   for (const b of list) out[b.id] = { ...b };
@@ -533,7 +591,23 @@ function createRecalcCtx(list: MathBlockData[]): RecalcCtx {
     }
     recalcCache.set(c.id, { fp: key, block: c, writes });
   };
-  return { ordered, cyclic, langTag, scope, out, allHit, fpOf, simConfigFp, reuseHit, snapBlock };
+  /**
+   * Пропуск вне fresh-множества: reuse кэша + протяжка scope, при расхождении
+   * отпечатка — старые результаты и запись в stale. Без кэша — false
+   * (вызывающий код считает как обычно: показать нечего).
+   * НЕ снимает snap (не врём кэшу свежим отпечатком со старым содержимым).
+   */
+  const reuseStale = (b: MathBlockData): boolean => {
+    if (!fresh || fresh.has(b.id)) return false;
+    const prev = recalcCache.get(b.id);
+    if (!prev) return false;
+    const key = `${langTag}|${fpOf(b.id)}`;
+    out[b.id] = reuseHit(b, prev);
+    for (const [k, v] of Object.entries(prev.writes)) scope[k] = v;
+    if (prev.fp !== key) stale.push(b.id);
+    return true;
+  };
+  return { ordered, cyclic, langTag, scope, out, allHit, fpOf, simConfigFp, reuseHit, snapBlock, fresh, stale, reuseStale };
 }
 
 /** Финал пересчёта: чистка кэша, ссылка на прошлый прогон при полном hit, lastScope. */
@@ -554,11 +628,11 @@ function finishRecalc(ctx: RecalcCtx): RecalcResult {
   lastRecord = record;
   lastIdsKey = idsKey;
   lastScope = ctx.scope;
-  return { blocks: record, scope: ctx.scope, changed };
+  return { blocks: record, scope: ctx.scope, changed, staleIds: [...ctx.stale] };
 }
 
-export function recalculateAll(list: MathBlockData[]): RecalcResult {
-  const ctx = createRecalcCtx(list);
+export function recalculateAll(list: MathBlockData[], opts?: RecalcOpts): RecalcResult {
+  const ctx = createRecalcCtx(list, opts);
   for (const b of ctx.ordered) computeBlockSync(b, ctx);
   return finishRecalc(ctx);
 }
@@ -625,7 +699,9 @@ function detectVisualize(
 
 /** Один блок синхронно: все виды, sim — через runSim (#6: async-близнец computeSimAsync). */
 function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
-  const { scope, out, cyclic, langTag, fpOf, reuseHit, snapBlock } = ctx;
+  const { scope, out, cyclic, langTag, fpOf, reuseHit, snapBlock, reuseStale } = ctx;
+  // вне области Calculate Now — старые результаты из кэша (scope протянут)
+  if (reuseStale(b)) return;
   const cur = out[b.id];
   // подстановка и лог решателей пересчитываются ниже (мат/program-ветки)
   cur.substStr = null;
@@ -946,6 +1022,7 @@ function simApply(cur: MathBlockData, ctx: RecalcCtx, r: SimResult): void {
 
 /** Один sim-блок асинхронно: чанки runSimAsync + прогресс (#6). */
 async function computeSimAsync(b: MathBlockData, ctx: RecalcCtx, key: string, hooks: RecalcHooks): Promise<void> {
+  if (ctx.reuseStale(b)) return;
   const cur = ctx.out[b.id];
   cur.solverTrace = null;
   const parsed = parseSimInput(b);
@@ -983,8 +1060,9 @@ function simMissOf(b: MathBlockData, ctx: RecalcCtx): string | null {
 export async function recalculateAllAsync(
   list: MathBlockData[],
   hooks: RecalcHooks = {},
+  opts?: RecalcOpts,
 ): Promise<RecalcAsyncOutcome> {
-  const ctx = createRecalcCtx(list);
+  const ctx = createRecalcCtx(list, opts);
   const total = ctx.ordered.length;
   try {
     let i = 0;

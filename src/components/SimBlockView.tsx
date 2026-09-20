@@ -5,6 +5,7 @@ import { SIM_DOMAINS, SIM_MODELS, SIM_SOLVERS, getSimModel, simModelPatch, type 
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IGrip, IWarn, IX } from './Icon';
+import StaleChip from './StaleChip';
 import { lx, simDomainName, simSolverName, t } from '../i18n';
 
 const W = 560;
@@ -418,6 +419,7 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
           )}
         </div>
 
+        <StaleChip id={block.id} />
         {/* график + плеер */}
         {block.error ? (
           <div ref={footRef} className="flex items-center gap-1.5 text-[var(--danger)] text-[12px] mb-1" role="alert"><IWarn /> {block.error}</div>

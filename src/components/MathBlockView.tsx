@@ -6,6 +6,7 @@ import { t, type Lang } from "../i18n";
 import { useRegionDrag, useRegionResize } from "./useRegionDrag";
 import { IGrip, ICopy, IPlot, IPlot3d, IWarn, IX } from "./Icon";
 import MiniPlot from "./MiniPlot";
+import StaleChip from "./StaleChip";
 import { copyTextToClipboard } from "../lib/exportFiles";
 import { applyColonShortcut } from "../lib/canvasLayout";
 import { expandSelection, wrapSelection } from "../lib/mathEdit";
@@ -643,6 +644,23 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                 role="note"
               >
                 <IWarn /> {t("m.useBeforeDef", { names: lateDeps.join(", ") })}
+              </div>
+            )}
+            <StaleChip id={block.id} />
+            {/* шаговый лог решателей (nlsolve/root/nint/…) — и при ошибке сходимости */}
+            {block.solverTrace && block.solverTrace.length > 0 && (
+              <div className="mt-1 rounded-lg border border-[var(--line)] bg-[var(--input-bg)] px-1.5 py-1">
+                <div className="text-[10px] uppercase tracking-wider text-[var(--faint)]">
+                  {t("m.solveTrace")}
+                </div>
+                {block.solverTrace.map((line, k) => (
+                  <div
+                    key={k}
+                    className="math-input text-[12px] text-[var(--ink-soft)] whitespace-pre-wrap break-words"
+                  >
+                    {line}
+                  </div>
+                ))}
               </div>
             )}
             {block.plotPreview && !block.error && (
