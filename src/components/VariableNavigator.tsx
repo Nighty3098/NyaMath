@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { blockDefs, blockDeps, type MathBlockData } from '../engine/dependencies';
 import { focusBlock } from '../lib/focusBlock';
+import { filterCommands, varScore, type CmdId, type RankedCmd } from '../lib/cmdPalette';
 import { t, type StrKey } from '../i18n';
-import { IChip, IFormula, IGrid, IPlot, IPlot3d, IProgram, ISignal, ISim, IX } from './Icon';
+import { IChip, IContour, IDemo, IFormula, IGrid, IMoon, IPlot, IPlot3d, IProgram, IRecalc, ISignal, ISim, IX, IZap } from './Icon';
 
 interface NavBlock {
   id: string;
@@ -33,12 +34,61 @@ const KIND_ICON: Record<MathBlockData['kind'], () => React.JSX.Element> = {
   math: IFormula,
   plot: IPlot,
   plot3d: IPlot3d,
-  contour: IGrid,
+  contour: IContour,
   program: IProgram,
   sim: ISim,
   slider: ISignal,
   text: IChip,
 };
+
+const CMD_ICON: Record<CmdId, () => React.JSX.Element> = {
+  'ins-math': IFormula,
+  'ins-text': IChip,
+  'ins-plot': IPlot,
+  'ins-contour': IContour,
+  'ins-3d': IPlot3d,
+  'ins-prog': IProgram,
+  'ins-sim': ISim,
+  'ins-slider': ISignal,
+  recalc: IRecalc,
+  'calc-now': IZap,
+  'scope-mon': ISignal,
+  ex20: IZap,
+  'ex-advanced': IDemo,
+  theme: IMoon,
+  grid: IGrid,
+};
+
+/** Выполнить команду палитры: вставка — в точку прицела, как из меню. */
+function runCmd(id: CmdId): void {
+  const st = useCanvasStore.getState();
+  const atCross = (): { x: number; y: number } => {
+    const p = { x: st.cross.x, y: st.cross.y };
+    st.nudgeCross(0, 140);
+    return p;
+  };
+  const put = (fn: (x: number, y: number) => void) => {
+    const p = atCross();
+    fn(p.x, p.y);
+  };
+  switch (id) {
+    case 'ins-math': put((x, y) => st.addBlock(x, y)); break;
+    case 'ins-text': put((x, y) => st.addTextBlock(x, y)); break;
+    case 'ins-plot': put((x, y) => st.addPlotBlock(x, y)); break;
+    case 'ins-contour': put((x, y) => st.addContourBlock(x, y)); break;
+    case 'ins-3d': put((x, y) => st.addPlot3dBlock(x, y)); break;
+    case 'ins-prog': put((x, y) => st.addProgramBlock(x, y)); break;
+    case 'ins-sim': put((x, y) => st.addSimBlock(x, y)); break;
+    case 'ins-slider': put((x, y) => st.addSliderBlock(x, y)); break;
+    case 'recalc': st.recalc(); break;
+    case 'calc-now': st.recalcNow(); break;
+    case 'scope-mon': st.toggleScopeMon(); break;
+    case 'ex20': st.loadTestScenario(); break;
+    case 'ex-advanced': st.loadAdvancedDemo(); break;
+    case 'theme': st.toggleTheme(); break;
+    case 'grid': st.toggleGrid(); break;
+  }
+}
 
 const SHORT = (s: string, n = 46) => {
   const line = s.split('\n')[0]?.trim() ?? '';
@@ -77,10 +127,10 @@ interface Props {
   onClose: () => void;
 }
 
-/** Ctrl+K: навигатор переменных листа — где определено, где используется. */
+/** Ctrl+K: Command Palette — команды + переменные листа с fuzzy-поиском. */
 export default function VariableNavigator({ onClose }: Props) {
   const blocks = useCanvasStore((s) => s.blocks);
-  useCanvasStore((s) => s.lang);
+  const lang = useCanvasStore((s) => s.lang);
 
   const entries = useMemo<NavEntry[]>(() => {
     const map = new Map<string, NavEntry>();
@@ -103,12 +153,38 @@ export default function VariableNavigator({ onClose }: Props) {
   const [sel, setSel] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // команды — fuzzy по подписи + синонимам (DESIGN.md: direct-match — провал)
+  const cmds = useMemo<RankedCmd[]>(() => filterCommands(q, lang), [q, lang]);
+
   const filtered = useMemo(() => {
     const nq = q.trim().toLowerCase();
     if (!nq) return entries;
-    return entries.filter((e) => e.name.toLowerCase().includes(nq) || e.defs.some((d) => d.snippet.toLowerCase().includes(nq)));
+    return entries
+      .map((e) => {
+        let best = 0;
+        for (const d of e.defs) {
+          const s = varScore(nq, e.name, d.snippet);
+          if (s > best) best = s;
+        }
+        if (best <= 0) {
+          for (const u of e.uses) {
+            const s = varScore(nq, e.name, u.snippet);
+            if (s > best) best = s;
+          }
+        }
+        return { e, best };
+      })
+      .filter((r) => r.best > 0)
+      .sort((a, b) => b.best - a.best || (a.e.name < b.e.name ? -1 : 1))
+      .map((r) => r.e);
   }, [entries, q]);
-  const safeSel = filtered.length ? Math.min(sel, filtered.length - 1) : -1;
+
+  type Row = { t: 'cmd'; cmd: RankedCmd } | { t: 'var'; entry: NavEntry };
+  const rows = useMemo<Row[]>(() => [
+    ...cmds.map((cmd): Row => ({ t: 'cmd', cmd })),
+    ...filtered.map((entry): Row => ({ t: 'var', entry })),
+  ], [cmds, filtered]);
+  const safeSel = rows.length ? Math.min(sel, rows.length - 1) : -1;
 
   const scrollToSel = useCallback((i: number) => {
     const el = listRef.current;
@@ -126,29 +202,39 @@ export default function VariableNavigator({ onClose }: Props) {
       }
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSel((v) => (v + 1) % Math.max(1, filtered.length));
+        setSel((v) => (v + 1) % Math.max(1, rows.length));
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSel((v) => (v - 1 + filtered.length) % Math.max(1, filtered.length));
+        setSel((v) => (v - 1 + rows.length) % Math.max(1, rows.length));
         return;
       }
       if (e.key === 'Enter') {
         e.preventDefault();
-        const hit = safeSel >= 0 ? filtered[safeSel] : undefined;
-        if (hit?.defs[0]) focusBlock(hit.defs[0].id);
+        const hit = safeSel >= 0 ? rows[safeSel] : undefined;
+        if (!hit) return;
+        if (hit.t === 'cmd') {
+          runCmd(hit.cmd.spec.id);
+          onClose();
+        } else if (hit.entry.defs[0]) {
+          focusBlock(hit.entry.defs[0].id);
+          onClose();
+        }
       }
     };
     document.addEventListener('keydown', onKey, true);
     return () => document.removeEventListener('keydown', onKey, true);
-  }, [filtered, safeSel, onClose]);
+  }, [rows, safeSel, onClose]);
 
   useEffect(() => {
     scrollToSel(safeSel);
   }, [safeSel, scrollToSel]);
 
-  const cur = safeSel >= 0 ? filtered[safeSel] : undefined;
+  const cur = safeSel >= 0 ? rows[safeSel] : undefined;
+  const curVar = cur?.t === 'var' ? cur.entry : undefined;
+
+  const rowActive = (i: number) => i === safeSel;
 
   return (
     <div
@@ -178,20 +264,58 @@ export default function VariableNavigator({ onClose }: Props) {
             spellCheck={false}
             aria-label={t('nv.search')}
           />
-          <span className="text-[11px] text-[var(--faint)] whitespace-nowrap">{filtered.length}</span>
+          <span className="text-[11px] text-[var(--faint)] whitespace-nowrap">{rows.length}</span>
         </div>
-        {entries.length === 0 ? (
+        {entries.length === 0 && cmds.length === 0 ? (
           <div className="flex-1 flex items-center justify-center text-[13px] text-[var(--faint)] px-6 text-center">
             {t('nv.none')}
           </div>
         ) : (
           <div className="flex-1 min-h-0 flex flex-row">
-            {/* список переменных */}
+            {/* список: команды + переменные */}
             <div ref={listRef} className="w-[240px] border-r border-[var(--line)] overflow-y-auto py-1">
-              {filtered.length === 0 ? (
+              {rows.length === 0 ? (
                 <div className="px-3 py-4 text-[12px] text-[var(--faint)]">{t('nv.empty')}</div>
               ) : (
-                filtered.map((e, i) => {
+                <>
+                  {cmds.length > 0 && (
+                    <div className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-[var(--faint)]">
+                      {t('nv.commands')}
+                    </div>
+                  )}
+                  {cmds.map((c, i) => {
+                    const Icon = CMD_ICON[c.spec.id];
+                    const active = rowActive(i);
+                    return (
+                      <button
+                        key={c.spec.id}
+                        type="button"
+                        className={`w-full text-left px-3 py-1.5 flex items-center gap-2 cursor-pointer ${
+                          active ? 'bg-[var(--accent-line)]/15' : 'hover:bg-[var(--accent-line)]/10'
+                        }`}
+                        onClick={() => {
+                          runCmd(c.spec.id);
+                          onClose();
+                        }}
+                        onMouseEnter={() => setSel(i)}
+                      >
+                        <span className="text-[var(--faint)] inline-flex shrink-0">
+                          <Icon />
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[13px] text-[var(--ink)] font-medium truncate">{c.label}</span>
+                        </span>
+                        <span className="text-[11px] text-[var(--accent-line)] opacity-0 group-hover:opacity-100 shrink-0" style={{ opacity: active ? 1 : undefined }}>⏎</span>
+                      </button>
+                    );
+                  })}
+                  {filtered.length > 0 && (
+                    <div className="px-3 pt-1.5 pb-0.5 text-[10px] uppercase tracking-wider text-[var(--faint)]">
+                      {t('nv.variables')}
+                    </div>
+                  )}
+                  {filtered.map((e, j) => {
+                    const i = cmds.length + j;
                   const Icon = KIND_ICON[e.defs[0]?.kind ?? 'math'];
                   const active = i === safeSel;
                   return (
@@ -218,38 +342,53 @@ export default function VariableNavigator({ onClose }: Props) {
                       )}
                     </button>
                   );
-                })
+                })}
+                </>
               )}
             </div>
-            {/* детали: определения и использования */}
+            {/* детали: команда или определения/использования */}
             <div className="flex-1 min-w-0 overflow-y-auto p-3">
               {!cur ? (
                 <div className="text-[13px] text-[var(--faint)]">{t('nv.empty')}</div>
-              ) : (
+              ) : cur.t === 'cmd' ? (
                 <>
-                  <div className="text-[15px] font-semibold text-[var(--ink)] mb-2 break-all">{cur.name}</div>
+                  <div className="text-[15px] font-semibold text-[var(--ink)] mb-2 break-all">{cur.cmd.label}</div>
+                  <button
+                    type="button"
+                    className="text-[12px] px-3 min-h-[34px] rounded-lg border border-[var(--accent-line)]/50 bg-[var(--accent-line)]/10 text-[var(--ink)] hover:bg-[var(--accent-line)]/20 cursor-pointer"
+                    onClick={() => {
+                      runCmd(cur.cmd.spec.id);
+                      onClose();
+                    }}
+                  >
+                    {t('nv.run')}
+                  </button>
+                </>
+              ) : curVar ? (
+                <>
+                  <div className="text-[15px] font-semibold text-[var(--ink)] mb-2 break-all">{curVar.name}</div>
                   <div className="text-[11px] uppercase tracking-wider text-[var(--faint)] mb-1">{t('nv.defs')}</div>
-                  {cur.defs.length === 0 ? (
+                  {curVar.defs.length === 0 ? (
                     <div className="text-[12px] text-[var(--faint)] mb-3">—</div>
                   ) : (
                     <ul className="space-y-1 mb-3">
-                      {cur.defs.map((d, i) => (
-                        <BlockRow key={d.id} b={d} label={t(KIND_LABEL[d.kind])} onGo={() => focusBlock(d.id)} emphasize={i === cur.defs.length - 1} />
+                      {curVar.defs.map((d, i) => (
+                        <BlockRow key={d.id} b={d} label={t(KIND_LABEL[d.kind])} onGo={() => focusBlock(d.id)} emphasize={i === curVar.defs.length - 1} />
                       ))}
                     </ul>
                   )}
                   <div className="text-[11px] uppercase tracking-wider text-[var(--faint)] mb-1">{t('nv.uses')}</div>
-                  {cur.uses.length === 0 ? (
+                  {curVar.uses.length === 0 ? (
                     <div className="text-[12px] text-[var(--faint)]">—</div>
                   ) : (
                     <ul className="space-y-1">
-                      {cur.uses.map((u) => (
+                      {curVar.uses.map((u) => (
                         <BlockRow key={u.id} b={u} label={t(KIND_LABEL[u.kind])} onGo={() => focusBlock(u.id)} />
                       ))}
                     </ul>
                   )}
                 </>
-              )}
+              ) : null}
             </div>
           </div>
         )}
