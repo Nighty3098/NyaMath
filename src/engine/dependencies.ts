@@ -508,7 +508,13 @@ function createRecalcCtx(list: MathBlockData[], opts?: RecalcOpts): RecalcCtx {
       case 'plot3d':
       case 'contour':
       case 'text':
-        fp = `pass:${b.kind}${ordTag}`;
+        // pass-блоки не пишут в scope, но их СОДЕРЖИМОЕ — часть результата
+        // (displayLatex/plotFn). Без него правка текста/формулы графика даёт
+        // тот же fingerprint → cache-hit возвращает stale-объект и правка
+        // молча откатывается (видно через MCP/sync: пуш принят, rev вырос,
+        // а контент старый). Геометрия (x/y/w/h) по-прежнему не входит —
+        // её переносит reuseHit.
+        fp = `pass:${b.kind}:${b.rawInput}|${b.plotFn ?? ''}|${b.plotXmin ?? ''}|${b.plotXmax ?? ''}|${b.plotYmin ?? ''}|${b.plotYmax ?? ''}|${b.plotMode ?? ''}|${b.plotResolution ?? ''}|${b.plotTitle ?? ''}|${b.plotXLabel ?? ''}|${b.plotYLabel ?? ''}${ordTag}`;
         break;
       default:
         fp = `m:${b.rawInput}${ordTag}|${depTag}`;
