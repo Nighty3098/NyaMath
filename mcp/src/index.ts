@@ -27,13 +27,13 @@ import {
 import { samplePlotBlock } from '../../src/engine/plotSample.js';
 import { samplePlot3d } from '../../src/engine/plot3dSample.js';
 import { resetSolverTrace, takeSolverTrace } from '../../src/engine/numeric.js';
+import { pullSnapshot, pushSnapshot, resolveSyncUrl, type SyncSnapshot } from './syncClient.js';
 import { ENGINE_VERSION } from '../../src/engine/version.js';
 import { engineMismatch, parseDocFile, serializeDocFile } from '../../src/lib/docFile.js';
 import { slimText, unifiedDiff } from '../../src/lib/slimDiff.js';
 import { parseCpd, parseSmXml, type ImportBlock } from '../../src/lib/importDoc.js';
 import { startSyncServer } from './syncServer.js';
-import { TEST_SCENARIO_LINES } from '../../src/data/testScenario.js';
-import { ADVANCED_DEMO } from '../../src/data/demoAdvanced.js';
+import { getDemoItems, getDemoLines } from '../../src/lib/db.js';
 
 /* ---------------- состояние документа ---------------- */
 
@@ -663,6 +663,61 @@ server.tool(
     refresh();
     const errors = blocks.filter((b) => b.error).map((b) => ({ id: b.id, rawInput: b.rawInput.split('\n')[0], error: b.error }));
     return ok({ blocks: blocks.length, errorCount: errors.length, errors });
+  },
+);
+
+server.tool(
+  'nya_sync_pull',
+  'Забрать холст с sync-сервиса (то, что видит пользователь в браузере) в эту сессию. Заменяет блоки, пересчёт автоматический',
+  {
+    url: z.string().optional().describe('Sync-сервис (по умолчанию NYAMATH_SYNC_URL или http://localhost:3777)'),
+  },
+  async ({ url }): Promise<CallToolResult> => {
+    let base: string;
+    try {
+      base = resolveSyncUrl(url);
+    } catch (e) {
+      return fail(e instanceof Error ? e.message : String(e));
+    }
+    let snap: SyncSnapshot;
+    try {
+      snap = await pullSnapshot(base);
+    } catch (e) {
+      return fail(e instanceof Error ? e.message : String(e));
+    }
+    const rec: MathBlockData[] = [];
+    let bad = 0;
+    for (const item of snap.blocks) {
+      const b = validateBlock(item);
+      if (b) rec.push(b);
+      else bad++;
+    }
+    blocks = rec;
+    refresh();
+    const errs = blocks.filter((b) => b.error).length;
+    return ok({ ok: true, url: base, rev: snap.rev, blocks: blocks.length, skipped: bad, errors: errs });
+  },
+);
+
+server.tool(
+  'nya_sync_push',
+  'Отправить холст этой сессии на sync-сервис — пользователь мгновенно увидит изменения в браузере (там пересчёт + рассылка)',
+  {
+    url: z.string().optional().describe('Sync-сервис (по умолчанию NYAMATH_SYNC_URL или http://localhost:3777)'),
+  },
+  async ({ url }): Promise<CallToolResult> => {
+    let base: string;
+    try {
+      base = resolveSyncUrl(url);
+    } catch (e) {
+      return fail(e instanceof Error ? e.message : String(e));
+    }
+    try {
+      const rev = await pushSnapshot(base, slimBlocks());
+      return ok({ ok: true, url: base, rev, blocks: blocks.length });
+    } catch (e) {
+      return fail(e instanceof Error ? e.message : String(e));
+    }
   },
 );
 

@@ -100,7 +100,7 @@ formulas and programs).
 }
 ```
 
-### Tools (19)
+### Tools (21)
 
 | Tool | What it does |
 |---|---|
@@ -119,6 +119,7 @@ formulas and programs).
 | `nya_open` / `nya_save` | Project file with engine-version header (validation, migration, legacy arrays) |
 | `nya_load_example` | `variant20` (electrodynamics) or `advanced` (matrices/programs) |
 | `nya_recalc` | Force recalculation |
+| `nya_sync_pull` / `nya_sync_push` | Pull the canvas the user sees into this session / push it back live to the browser |
 | `nya_diff` | Git-friendly slim diff (canonical JSONL + unified hunks vs file/empty) |
 | `nya_import` | Import SMath `.sm` (XML/RPN) or Calcpad `.cpd`/`.txt` worksheets |
 | `nya_ask` / `nya_answer` | Ask the user a question (with optional answer `options`), record the reply. `var` writes the answer into the document scope (`var := answer`, numeric when it parses as a number) |
