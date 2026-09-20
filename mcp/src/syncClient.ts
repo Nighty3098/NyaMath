@@ -47,21 +47,41 @@ export async function pullSnapshot(url: string, timeoutMs = 10000): Promise<Sync
   return { rev: typeof d.rev === 'number' ? d.rev : -1, blocks: d.blocks };
 }
 
-/** Отправить холст на sync-сервис (там пересчёт + рассылка в браузер). Возвращает rev. */
-export async function pushSnapshot(url: string, blocks: unknown[], timeoutMs = 15000): Promise<number> {
-  let data: unknown;
+/** Отправить холст на sync-сервис (там пересчёт + рассылка в браузер). Возвращает rev.
+ *  baseRev — optimistic concurrency: если задан и сервер ушёл вперёд — кинет CONFLICT. */
+export async function pushSnapshot(url: string, blocks: unknown[], baseRev?: number, timeoutMs = 15000): Promise<number> {
+  let res: Response;
   try {
-    data = await fetchJson(
-      `${url}/push`,
-      {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      res = await fetch(`${url}/push`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blocks }),
-      },
-      timeoutMs,
-    );
+        body: JSON.stringify(baseRev === undefined ? { blocks } : { blocks, baseRev }),
+        signal: ctrl.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
   } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') throw new Error('timeout');
     throw new Error(`sync-сервис недоступен (${url}): ${e instanceof Error ? e.message : String(e)}`);
+  }
+  let data: unknown = null;
+  try {
+    data = (await res.json()) as unknown;
+  } catch {
+    /* не-JSON ответ */
+  }
+  if (res.status === 409) {
+    const err = (data as { error?: unknown })?.error;
+    const rev = (data as { rev?: unknown })?.rev;
+    throw new Error(typeof err === 'string' ? err : `CONFLICT: сервер новее (rev=${typeof rev === 'number' ? rev : '?'})`);
+  }
+  if (!res.ok) {
+    const err = (data as { error?: unknown })?.error;
+    throw new Error(typeof err === 'string' ? err : `HTTP ${res.status}`);
   }
   if (!data || typeof data !== 'object' || (data as { ok?: unknown }).ok !== true) {
     const err = (data as { error?: unknown })?.error;

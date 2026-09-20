@@ -25,6 +25,8 @@ let sendTimer: ReturnType<typeof setTimeout> | null = null;
 let applying = false;
 /** Последний согласованный JSON — подавляет эхо туда-обратно. */
 let lastSyncedJson = '';
+/** Ревизия сервера, на которой основан lastSyncedJson (-1 — ещё не видели снапшот). */
+let lastRev = -1;
 
 export function getLiveUrl(): string {
   try {
@@ -84,13 +86,60 @@ async function sendNow(): Promise<void> {
     const res = await fetch(`${st.liveUrl.replace(/\/$/, '')}/push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ blocks: slim }),
+      body: JSON.stringify(lastRev >= 0 ? { blocks: slim, baseRev: lastRev } : { blocks: slim }),
     });
+    if (res.status === 409) {
+      // Конфликт ревизий. Два случая:
+      // - сервер впереди (агент запушил первым): не затираем, тянем снапшот;
+      // - сервер позади (рестарт, память сброшена): восстанавливаем его force-пушем.
+      try {
+        const base = st.liveUrl.replace(/\/$/, '');
+        const snap = (await (await fetch(`${base}/snapshot`)).json()) as { rev?: unknown; blocks?: unknown };
+        const snapRev = typeof snap.rev === 'number' ? snap.rev : -1;
+        if (snapRev >= 0 && snapRev < lastRev) {
+          const force = await fetch(`${base}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blocks: slim }),
+          });
+          if (force.ok) {
+            const fdata = (await force.json()) as { rev?: unknown };
+            if (typeof fdata.rev === 'number') lastRev = fdata.rev;
+            lastSyncedJson = json;
+          }
+        } else if (snap && Array.isArray(snap.blocks)) {
+          applySnapshot(snapRev, snap.blocks);
+        }
+      } catch {
+        /* следующий кадр SSE или правка повторит */
+      }
+      return;
+    }
     if (!res.ok) return;
+    const data = (await res.json()) as { rev?: unknown };
+    if (typeof data.rev === 'number') lastRev = data.rev;
     lastSyncedJson = json;
   } catch {
     /* офлайн — следующий снапшот или правка повторит */
   }
+}
+
+/** Применить входящий снапшот: только вперёд по rev, lastSyncedJson — уже
+ *  нормализованный (после migrate), иначе migrate-добавки вроде
+ *  disabled:false дают вечный ping-pong. */
+function applySnapshot(rev: number, incoming: unknown): void {
+  if (typeof rev === 'number' && rev >= 0 && rev <= lastRev) return;
+  applying = true;
+  try {
+    useCanvasStore.getState().applyRemoteBlocks(incoming);
+  } finally {
+    applying = false;
+  }
+  const s = useCanvasStore.getState();
+  lastSyncedJson = JSON.stringify(slimBlocks(s.blocks));
+  if (typeof rev === 'number' && rev >= 0) lastRev = rev;
+  s.setLiveConnected(true);
+  s.setLiveError(null);
 }
 
 /**
@@ -103,9 +152,19 @@ export function connectLive(): () => void {
   st.setLiveError(null);
   // отмечаем текущее состояние согласованным, чтобы не залить его поверх сервиса
   lastSyncedJson = JSON.stringify(slimBlocks(st.blocks));
+  lastRev = -1;
   openStream(st.liveUrl.replace(/\/$/, ''), false);
-  unsubscribe = useCanvasStore.subscribe(() => {
-    if (es === null || applying) return;
+  // Только блоки: клики/панорама/селект/телеметрия пересчёта не должны
+  // пушить документ (иначе любое движение мышью затирает правки агента).
+  // ( plain zustand без subscribeWithSelector — сравниваем ссылку вручную.)
+  let prevBlocks: unknown = st.blocks;
+  unsubscribe = useCanvasStore.subscribe((s) => {
+    if (es === null || applying) {
+      prevBlocks = s.blocks;
+      return;
+    }
+    if (s.blocks === prevBlocks) return;
+    prevBlocks = s.blocks;
     scheduleSend();
   });
   return disconnectLive;
@@ -127,17 +186,7 @@ function openStream(base: string, isFallback: boolean): void {
     try {
       const data = JSON.parse((ev as MessageEvent).data) as { rev?: number; blocks?: unknown };
       if (!data || !Array.isArray(data.blocks)) return;
-      const json = JSON.stringify(data.blocks);
-      lastSyncedJson = json;
-      applying = true;
-      try {
-        useCanvasStore.getState().applyRemoteBlocks(data.blocks);
-      } finally {
-        applying = false;
-      }
-      const s = useCanvasStore.getState();
-      s.setLiveConnected(true);
-      s.setLiveError(null);
+      applySnapshot(typeof data.rev === 'number' ? data.rev : -1, data.blocks);
     } catch {
       /* битый кадр — ждём следующий */
     }
@@ -158,7 +207,12 @@ function openStream(base: string, isFallback: boolean): void {
         }
         // маленькая пауза, чтобы не долбить синхронно
         setTimeout(() => {
-          if (es === source) openStream(alt, true);
+          if (es === source) {
+            // SSE и push должны ходить на один хост, иначе сплит:
+            // снапшоты слушаем на alt, а пушим на исходный.
+            setLiveUrl(alt);
+            openStream(alt, true);
+          }
         }, 500);
         return;
       }

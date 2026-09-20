@@ -19,8 +19,9 @@ export interface SyncSnapshot {
 
 interface SyncHandlers {
   getSnapshot: () => SyncSnapshot;
-  /** Принять документ от клиента; вернуть новую ревизию. Бросает Error при битых данных. */
-  applyPush: (blocks: unknown[]) => number;
+  /** Принять документ от клиента; вернуть новую ревизию. Бросает Error при битых данных.
+   *  baseRev — optimistic concurrency: если задан и не равен текущей rev — кинуть 409. */
+  applyPush: (blocks: unknown[], baseRev?: number) => number;
   getStatus: () => Record<string, unknown>;
 }
 
@@ -124,13 +125,20 @@ export function startSyncServer(
             res.end(JSON.stringify({ ok: false, error: 'Ожидается {blocks: [...]}' }));
             return;
           }
-          const rev = handlers.applyPush((data as { blocks: unknown[] }).blocks);
+          const rawBaseRev = (data as { baseRev?: unknown }).baseRev;
+          const baseRev = typeof rawBaseRev === 'number' && Number.isFinite(rawBaseRev) ? rawBaseRev : undefined;
+          const inBlocks = (data as { blocks: unknown[] }).blocks;
+          const rev = handlers.applyPush(inBlocks, baseRev);
           broadcast();
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true, rev }));
         } catch (e) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, error: e instanceof Error ? e.message : String(e) }));
+          const status = typeof (e as { status?: unknown })?.status === 'number'
+            ? (e as { status: number }).status
+            : 400;
+          const current = handlers.getStatus() as { rev?: unknown };
+          res.writeHead(status, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: e instanceof Error ? e.message : String(e), rev: current.rev }));
         }
         return;
       }

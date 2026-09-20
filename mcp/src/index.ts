@@ -44,6 +44,12 @@ let lastScope: Scope = createBaseScope();
 let rev = 0;
 /** Рассылка снапшота подписанным UI-клиентам (null — sync-сервер выключен). */
 let broadcastSync: (() => void) | null = null;
+/**
+ * Базовая ревизия sync-сервиса для bridge-режима (nya_sync_pull/push):
+ * rev, на котором основан локальный холст. null — pull ещё не делали,
+ * пуш идёт без проверки (last-writer-wins, как раньше).
+ */
+let syncBaseRev: number | null = null;
 
 function blank(id: string, x: number, y: number, kind: MathBlockData['kind'] = 'math'): MathBlockData {
   return {
@@ -88,6 +94,9 @@ function validateBlock(raw: unknown): MathBlockData | null {
     id, kind,
     resultLatex: b['resultLatex'] ?? '',
     isOutput: b['isOutput'] ?? false,
+    // Как браузерный migrate: всегда boolean, иначе JSON-эхо
+    // (slim без disabled vs slim с disabled:false) даёт вечный push-loop.
+    disabled: (b as { disabled?: unknown })['disabled'] === true,
     plotPreview: null,
     exportName: typeof b['exportName'] === 'string' ? b['exportName'] : undefined,
     plotMode: b['plotMode'] === 'surface' || b['plotMode'] === 'points' || b['plotMode'] === 'matrix' ? b['plotMode'] : undefined,
@@ -349,6 +358,10 @@ server.tool(
     if (!b) return fail(`Блок ${id} не найден`);
     if (w !== undefined) b.w = w;
     if (h !== undefined) b.h = h;
+    // Размер не влияет на расчёт, но это изменение документа:
+    // bump rev + рассылка, иначе Live-клиент его не увидит.
+    rev += 1;
+    broadcastSync?.();
     return ok(summarize(b));
   },
 );
@@ -614,8 +627,11 @@ server.tool(
     const target = p ?? docPath ?? path.resolve(process.cwd(), 'nyamath-doc.json');
     try {
       const slim = blocks.map((b) => {
-        const { plotPreview: _pp, ...rest } = b;
+        const { plotPreview: _pp, simResult: _sr, ...rest } = b as MathBlockData & {
+          simResult?: unknown;
+        };
         void _pp;
+        void _sr;
         return rest;
       });
       fs.writeFileSync(target, JSON.stringify(serializeDocFile(slim), null, 2), 'utf-8');
@@ -694,6 +710,7 @@ server.tool(
     }
     blocks = rec;
     refresh();
+    syncBaseRev = typeof snap.rev === 'number' ? snap.rev : null;
     const errs = blocks.filter((b) => b.error).length;
     return ok({ ok: true, url: base, rev: snap.rev, blocks: blocks.length, skipped: bad, errors: errs });
   },
@@ -704,8 +721,9 @@ server.tool(
   'Отправить холст этой сессии на sync-сервис — пользователь мгновенно увидит изменения в браузере (там пересчёт + рассылка)',
   {
     url: z.string().optional().describe('Sync-сервис (по умолчанию NYAMATH_SYNC_URL или http://localhost:3777)'),
+    force: z.boolean().optional().describe('true — перезаписать даже при конфликте ревизий (по умолчанию пуш отклоняется, если холст на сервисе новее pull)'),
   },
-  async ({ url }): Promise<CallToolResult> => {
+  async ({ url, force }): Promise<CallToolResult> => {
     let base: string;
     try {
       base = resolveSyncUrl(url);
@@ -713,10 +731,17 @@ server.tool(
       return fail(e instanceof Error ? e.message : String(e));
     }
     try {
-      const rev = await pushSnapshot(base, slimBlocks());
+      const rev = await pushSnapshot(base, slimBlocks(), force ? undefined : (syncBaseRev ?? undefined));
+      syncBaseRev = rev;
       return ok({ ok: true, url: base, rev, blocks: blocks.length });
     } catch (e) {
-      return fail(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      // Конфликт optimistic concurrency: сервер новее нашего pull —
+      // не затираем молча, просим pull + повтор.
+      if (/CONFLICT|baseRev/i.test(msg)) {
+        return fail(`${msg}. Сделайте nya_sync_pull и повторите правку поверх свежего холста (или push с force:true).`);
+      }
+      return fail(msg);
     }
   },
 );
@@ -881,7 +906,12 @@ async function main(): Promise<void> {
   if (portRaw && Number.isInteger(port) && port >= 0 && port <= 65535) {
     const sync = startSyncServer(port, {
       getSnapshot: () => ({ rev, blocks: slimBlocks() }),
-      applyPush: (raw) => {
+      applyPush: (raw, baseRev) => {
+        if (typeof baseRev === 'number' && baseRev !== rev) {
+          const err = new Error(`CONFLICT: baseRev=${baseRev}, server rev=${rev}`);
+          (err as { status?: number }).status = 409;
+          throw err;
+        }
         if (raw.length > 5000) throw new Error('Слишком много блоков (>5000)');
         const rec: MathBlockData[] = [];
         for (const item of raw) {
@@ -895,6 +925,9 @@ async function main(): Promise<void> {
       },
       getStatus: () => ({ rev, blocks: blocks.length, docPath }),
     });
+    // Связываем пересчёт с SSE-рассылкой: прямые правки через MCP-инструменты
+    // той же сессии (nya_add/update/move/...) сразу уходят подписанным UI.
+    broadcastSync = sync.broadcast;
     // Важно: в stdout только MCP-протокол, служебное — в stderr.
     console.error(`[nyamath] sync on http://localhost:${sync.port} (SSE /events, POST /push)`);
   }
