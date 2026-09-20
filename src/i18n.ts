@@ -122,8 +122,9 @@ const ru = {
   'doc.notArray': 'Файл не похож на проект NyaMath (ожидается массив блоков)',
   'doc.tooMany': 'Слишком много блоков (>5000)',
   'doc.noBlocks': 'В файле нет корректных блоков',
-  'doc.loaded': 'Загружено блоков: {n}{bad}',
+  'doc.loaded': 'Загружено блоков: {n}{bad}{warn}',
   'doc.loadedBad': ' (пропущено битых: {bad})',
+  'doc.engineWarn': ' (движок файла: {v})',
   'save.hint':
     'Ваш браузер не даёт сайтам выбирать папку (например, Firefox).\n' +
     'Чтобы выбирать путь и имя при сохранении, включите в настройках браузера:\n' +
@@ -545,8 +546,9 @@ const en: Record<StrKey, string> = {
   'doc.notArray': 'File does not look like a NyaMath project (expected an array of blocks)',
   'doc.tooMany': 'Too many blocks (>5000)',
   'doc.noBlocks': 'No valid blocks in the file',
-  'doc.loaded': 'Loaded blocks: {n}{bad}',
+  'doc.loaded': 'Loaded blocks: {n}{bad}{warn}',
   'doc.loadedBad': ' (skipped broken: {bad})',
+  'doc.engineWarn': ' (file engine: {v})',
   'save.hint':
     'Your browser does not let sites choose a folder (e.g. Firefox).\n' +
     'To pick a path and name on save, enable in browser settings:\n' +

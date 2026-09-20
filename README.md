@@ -95,7 +95,7 @@ formulas and programs).
 }
 ```
 
-### Tools (17)
+### Tools (19)
 
 | Tool | What it does |
 |---|---|
@@ -107,13 +107,15 @@ formulas and programs).
 | `nya_move_block` / `nya_move_blocks` | Positions (affect evaluation order!) |
 | `nya_resize_block` | Manual size `w`/`h` |
 | `nya_remove_block` / `nya_clear` | Removal (clear requires `confirm: true`) |
-| `nya_evaluate` | Evaluate an expression in the live scope (read-only) |
+| `nya_evaluate` | Evaluate an expression in the live scope (read-only) + solver-step trace |
 | `nya_get_scope` | All variables → values (solution check) |
 | `nya_get_plot_data` | Point series of a 2D plot or auto-plot (`max_points`, downsampling) |
 | `nya_get_plot3d_data` | Surface grid / points of a 3D block (`max_points`, downsampling) |
-| `nya_open` / `nya_save` | Project file (validation, migration) |
+| `nya_open` / `nya_save` | Project file with engine-version header (validation, migration, legacy arrays) |
 | `nya_load_example` | `variant20` (electrodynamics) or `advanced` (matrices/programs) |
 | `nya_recalc` | Force recalculation |
+| `nya_diff` | Git-friendly slim diff (canonical JSONL + unified hunks vs file/empty) |
+| `nya_import` | Import SMath `.sm` (XML/RPN) or Calcpad `.cpd`/`.txt` worksheets |
 | `nya_ask` / `nya_answer` | Ask the user a question (with optional answer `options`), record the reply. `var` writes the answer into the document scope (`var := answer`, numeric when it parses as a number) |
 
 Resource `nya://document` — JSON summary of the document.

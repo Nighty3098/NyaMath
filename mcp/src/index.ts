@@ -26,6 +26,10 @@ import {
 import { samplePlotBlock } from '../../src/engine/plotSample.js';
 import { samplePlot3d } from '../../src/engine/plot3dSample.js';
 import { resetSolverTrace, takeSolverTrace } from '../../src/engine/numeric.js';
+import { ENGINE_VERSION } from '../../src/engine/version.js';
+import { engineMismatch, parseDocFile, serializeDocFile } from '../../src/lib/docFile.js';
+import { slimText, unifiedDiff } from '../../src/lib/slimDiff.js';
+import { parseCpd, parseSmXml, type ImportBlock } from '../../src/lib/importDoc.js';
 import { startSyncServer } from './syncServer.js';
 import { TEST_SCENARIO_LINES } from '../../src/data/testScenario.js';
 import { ADVANCED_DEMO } from '../../src/data/demoAdvanced.js';
@@ -75,7 +79,7 @@ function validateBlock(raw: unknown): MathBlockData | null {
   if (typeof b['x'] !== 'number' || typeof b['y'] !== 'number' || typeof b['rawInput'] !== 'string') return null;
   const id = typeof b['id'] === 'string' && b['id'] ? b['id'] : uuid();
   const kind: MathBlockData['kind'] =
-    b['kind'] === 'plot' || b['kind'] === 'plot3d' || b['kind'] === 'program' || b['kind'] === 'text' || b['kind'] === 'slider' ? b['kind'] : 'math';
+    b['kind'] === 'plot' || b['kind'] === 'plot3d' || b['kind'] === 'program' || b['kind'] === 'text' || b['kind'] === 'slider' || b['kind'] === 'sim' || b['kind'] === 'contour' ? b['kind'] : 'math';
   const numOrUndef = (v: unknown): number | undefined => (typeof v === 'number' && isFinite(v) ? v : undefined);
   return {
     ...blank(id, b['x'], b['y'], kind),
@@ -163,7 +167,7 @@ server.tool(
   async (): Promise<CallToolResult> => {
     const errors = blocks.filter((b) => b.error).map((b) => ({ id: b.id, rawInput: b.rawInput.split('\n')[0], error: b.error }));
     const vars = Object.keys(lastScope).filter((k) => !['i', 'j'].includes(k));
-    return ok({ blocks: blocks.length, errors, errorCount: errors.length, variables: vars.length, pendingAsks: pendingAsks.size, docPath });
+    return ok({ blocks: blocks.length, errors, errorCount: errors.length, variables: vars.length, pendingAsks: pendingAsks.size, docPath, engine: ENGINE_VERSION });
   },
 );
 
@@ -576,10 +580,15 @@ server.tool(
   async ({ path: p }): Promise<CallToolResult> => {
     try {
       const raw = JSON.parse(fs.readFileSync(p, 'utf-8')) as unknown;
-      if (!Array.isArray(raw)) return fail('Файл не похож на проект (ожидается массив блоков)');
+      let parsed;
+      try {
+        parsed = parseDocFile(raw);
+      } catch {
+        return fail('Файл не похож на проект (ожидается массив блоков или {engine, blocks})');
+      }
       const rec: MathBlockData[] = [];
       let bad = 0;
-      for (const item of raw) {
+      for (const item of parsed.blocks) {
         const b = validateBlock(item);
         if (b) rec.push(b);
         else bad++;
@@ -588,7 +597,8 @@ server.tool(
       blocks = rec;
       docPath = p;
       refresh();
-      return ok({ ok: true, blocks: blocks.length, skipped: bad, docPath });
+      const mismatch = engineMismatch(parsed.engine);
+      return ok({ ok: true, blocks: blocks.length, skipped: bad, docPath, engine: parsed.engine, legacy: parsed.legacy, engineMismatch: mismatch });
     } catch (e) {
       return fail(`Не удалось открыть: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -607,9 +617,9 @@ server.tool(
         void _pp;
         return rest;
       });
-      fs.writeFileSync(target, JSON.stringify(slim, null, 2), 'utf-8');
+      fs.writeFileSync(target, JSON.stringify(serializeDocFile(slim), null, 2), 'utf-8');
       docPath = target;
-      return ok({ ok: true, blocks: blocks.length, docPath: target });
+      return ok({ ok: true, blocks: blocks.length, docPath: target, engine: ENGINE_VERSION });
     } catch (e) {
       return fail(`Не удалось сохранить: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -655,6 +665,124 @@ server.tool(
   },
 );
 
+server.tool(
+  'nya_diff',
+  'Git-friendly diff документа: канонический slim-текст (блок = строка) + unified diff против файла или пустого',
+  {
+    against: z.enum(['file', 'empty']).default('file').describe('С чем сравнить: file — сохранённый файл, empty — весь документ как добавления'),
+    path: z.string().optional().describe('Файл для сравнения (по умолчанию текущий docPath)'),
+  },
+  async ({ against, path: p }): Promise<CallToolResult> => {
+    const cur = slimText(blocks);
+    if (against === 'empty') {
+      const d = unifiedDiff([], cur);
+      return ok({ base: 'empty', current: `${blocks.length} blocks`, additions: d.additions, deletions: d.deletions, truncated: d.truncated, diff: d.text || '(no changes)' });
+    }
+    const target = p ?? docPath;
+    if (!target) return fail('Нет файла для сравнения: укажите path или сохраните документ');
+    let raw: unknown;
+    try {
+      raw = JSON.parse(fs.readFileSync(target, 'utf-8'));
+    } catch (e) {
+      return fail(`Не могу прочитать ${target}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    let parsed;
+    try {
+      parsed = parseDocFile(raw);
+    } catch {
+      return fail(`Файл ${target} не похож на проект`);
+    }
+    const rec: MathBlockData[] = [];
+    for (const item of parsed.blocks) {
+      const b = validateBlock(item);
+      if (b) rec.push(b);
+    }
+    const d = unifiedDiff(slimText(rec), cur);
+    return ok({
+      base: target, engine: parsed.engine, baseBlocks: rec.length, currentBlocks: blocks.length,
+      additions: d.additions, deletions: d.deletions, truncated: d.truncated,
+      diff: d.text || '(no changes)',
+    });
+  },
+);
+
+/** ImportBlock → полные блоки документа (многострочный текст режем построчно). */
+function importBlocks(items: ImportBlock[], y0: number, dy: number): MathBlockData[] {
+  const rec: MathBlockData[] = [];
+  let k = 0;
+  const place = (): { x: number; y: number } => ({ x: 80, y: y0 + k++ * dy });
+  for (const ib of items) {
+    if (ib.kind === 'text' && ib.body.includes('\n')) {
+      for (const line of ib.body.split('\n')) {
+        const id = uuid();
+        const p = place();
+        rec.push({ ...blank(id, ib.x || p.x, p.y), kind: 'text', rawInput: line });
+      }
+      continue;
+    }
+    const id = uuid();
+    const p = place();
+    if (ib.kind === 'math') {
+      rec.push({ ...blank(id, ib.x || p.x, p.y), kind: 'math', rawInput: ib.body });
+    } else if (ib.kind === 'text') {
+      rec.push({ ...blank(id, ib.x || p.x, p.y), kind: 'text', rawInput: ib.body });
+    } else if (ib.kind === 'plot') {
+      rec.push({
+        ...blank(id, ib.x || p.x, p.y), kind: 'plot', rawInput: 'plot', plotFn: ib.body,
+        plotXmin: ib.plotXmin ?? -10, plotXmax: ib.plotXmax ?? 10,
+      });
+    } else {
+      rec.push({
+        ...blank(id, ib.x || p.x, p.y), kind: 'contour', rawInput: 'contour', plotFn: ib.body,
+        plotXmin: ib.plotXmin ?? -5, plotXmax: ib.plotXmax ?? 5,
+        plotYmin: ib.plotYmin ?? -5, plotYmax: ib.plotYmax ?? 5, plotResolution: 48,
+      });
+    }
+  }
+  return rec;
+}
+
+server.tool(
+  'nya_import',
+  'Импорт чужого листа: SMath .sm (XML/RPN) или Calcpad .cpd/.txt. Блоки дописываются ниже, отчёт — в notes',
+  {
+    path: z.string().describe('Путь к .sm/.cpd/.txt файлу'),
+    format: z.enum(['auto', 'sm', 'cpd']).default('auto').describe('Формат (auto — по расширению)'),
+    y0: z.number().optional().describe('Верх вставки (по умолчанию — ниже всех блоков)'),
+    dy: z.number().int().min(24).max(500).default(72).describe('Шаг по Y между блоками'),
+  },
+  async ({ path: p, format, y0, dy }): Promise<CallToolResult> => {
+    let text: string;
+    try {
+      const st = fs.statSync(p);
+      if (st.size > 1024 * 1024) return fail('Файл больше 1 МБ — импорт не поддерживается');
+      text = fs.readFileSync(p, 'utf-8');
+    } catch (e) {
+      return fail(`Не могу прочитать ${p}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    if (text.startsWith('PK\x03\x04')) return fail('.smz (zip) не поддерживается — распакуйте в .sm');
+    const ext = path.extname(p).toLowerCase();
+    const fmt = format === 'auto' ? (ext === '.sm' ? 'sm' : 'cpd') : format;
+    const parsed = fmt === 'sm' ? parseSmXml(text) : parseCpd(text);
+    if (!parsed.blocks.length) {
+      return fail(`Нечего импортировать: ${parsed.notes.join('; ') || 'пустой файл'}`);
+    }
+    if (parsed.blocks.length > 500) return fail(`Слишком много блоков (${parsed.blocks.length} > 500)`);
+    const startY = y0 ?? (blocks.length ? Math.max(...blocks.map((b) => b.y)) + 72 : 60);
+    const rec = importBlocks(parsed.blocks, startY, dy);
+    blocks.push(...rec);
+    refresh();
+    let errors = 0;
+    for (const b of rec) {
+      if (find(b.id)?.error) errors++;
+    }
+    return ok({
+      imported: rec.length, errors, notes: parsed.notes, format: parsed.format, y0: startY,
+      hint: errors ? 'Часть блоков с ошибками — проверьте nya_get_block по первым строкам' : undefined,
+    });
+  },
+);
+
 server.resource(
   'document',
   new ResourceTemplate('nya://document', { list: undefined }),
@@ -672,17 +800,18 @@ server.resource(
 );
 
 async function main(): Promise<void> {
-  // Автозагрузка: $NYAMATH_DOC, если файл существует
+  // Автозагрузка: $NYAMATH_DOC, если файл существует (новый формат с header и legacy-массив)
   if (docPath && fs.existsSync(docPath)) {
     try {
       const raw = JSON.parse(fs.readFileSync(docPath, 'utf-8')) as unknown;
-      if (Array.isArray(raw)) {
-        for (const item of raw) {
-          const b = validateBlock(item);
-          if (b) blocks.push(b);
-        }
-        refresh();
+      const parsed = parseDocFile(raw);
+      for (const item of parsed.blocks) {
+        const b = validateBlock(item);
+        if (b) blocks.push(b);
       }
+      if (blocks.length) refresh();
+      const mismatch = engineMismatch(parsed.engine);
+      if (mismatch) console.error(`[nyamath] ${mismatch}`);
     } catch {
       /* стартуем с пустым документом */
     }

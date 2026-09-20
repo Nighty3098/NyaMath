@@ -1,4 +1,5 @@
 import type { MathBlockData } from '../engine/dependencies';
+import { serializeDocFile } from './docFile';
 import { t } from '../i18n';
 
 /**
@@ -8,7 +9,8 @@ import { t } from '../i18n';
  * (с разовой подсказкой про настройку браузера «всегда спрашивать»).
  */
 export async function saveDocument(blocks: Record<string, MathBlockData>): Promise<void> {
-  const payload = JSON.stringify(Object.values(blocks), null, 2);
+  // заголовок с пином версии движка (воспроизводимость; читается и legacy-массив)
+  const payload = JSON.stringify(serializeDocFile(Object.values(blocks)), null, 2);
   if (window.showSaveFilePicker) {
     try {
       const handle = await window.showSaveFilePicker({

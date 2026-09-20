@@ -8,6 +8,8 @@ import { getSimModel, SIM_MODELS, simModelPatch } from '../engine/simEngine';
 import { separateBlocksVertically } from '../lib/canvasLayout';
 import { getLang, loadLang, setLangState, t, type Lang } from '../i18n';
 import { RECALC_TIMEOUT_MS, recalcInWorker } from '../lib/recalcWorker';
+import { engineMismatch, parseDocFile } from '../lib/docFile';
+import { ENGINE_VERSION } from '../engine/version';
 
 const STORAGE_KEY = 'nyamath-doc-v1';
 const STORAGE_KEY_LEGACY = 'wengineering-doc-v1';
@@ -1261,11 +1263,16 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   loadDocument: (data) => {
-    if (!Array.isArray(data)) return { ok: false, message: t('doc.notArray') };
-    if (data.length > 5000) return { ok: false, message: t('doc.tooMany') };
+    let parsed;
+    try {
+      parsed = parseDocFile(data);
+    } catch {
+      return { ok: false, message: t('doc.notArray') };
+    }
+    if (parsed.blocks.length > 5000) return { ok: false, message: t('doc.tooMany') };
     const rec: Record<string, MathBlockData> = {};
     let bad = 0;
-    for (const item of data) {
+    for (const item of parsed.blocks) {
       const b = migrate(item);
       if (b) rec[b.id] = b;
       else bad++;
@@ -1275,7 +1282,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     persist(rec);
     set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
     scheduleRecalcAsync(60);
-    return { ok: true, message: t('doc.loaded', { n: Object.keys(rec).length, bad: bad ? t('doc.loadedBad', { bad }) : '' }) };
+    // major-расхождение — предупреждение; minor — тихая пометка версии файла
+    const mismatch = engineMismatch(parsed.engine);
+    const warn = mismatch ?? (parsed.engine && parsed.engine !== ENGINE_VERSION
+      ? t('doc.engineWarn', { v: parsed.engine })
+      : '');
+    return { ok: true, message: t('doc.loaded', { n: Object.keys(rec).length, bad: bad ? t('doc.loadedBad', { bad }) : '', warn }) };
   },
 
   liveConnected: false,

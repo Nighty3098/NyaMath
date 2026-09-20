@@ -309,7 +309,7 @@ Notebook/Web-Python: **15. Jupyter / JupyterLab / Google Colab / Kaggle**.
 
 **A4. Коллаборация и агент (наш козырь vs CalcTree/CoCalc)**
 - Yjs-CRDT поверх Live Sync (сейчас LWW `rev`) + курс-режим (раздача `#t=` + сбор решений через `nya_get_scope`) (тех.: `yjs` + существующие `/events|/push`; offline-first сохраняется).
-- MCP-доработки: `nya_diff` (git-friendly diff slim-JSON), `nya_import` (вставка `.sm/.cpd`), пин версии движка в документе для reproducibility (Pluto-урок manifest в header).
+- [x] MCP-доработки: `nya_diff` (git-friendly diff slim-JSON), `nya_import` (вставка `.sm/.cpd`), пин версии движка в документе для reproducibility (Pluto-урок manifest в header). ✅ Готово 19.09.2026: `nya_diff` (канонический JSONL `slimDiff.ts` + unified hunks против файла/пустого), `nya_import` (`importDoc.ts`: SMath `.sm` XML/RPN→infix со скобками по приоритетам, Calcpad `.cpd` с маппингом `=`→`:=`, `|unit`, `$Plot/$Map`, `?`-форм; починен validateBlock для sim/contour), пин `ENGINE_VERSION` в заголовке файлов (`docFile.ts`, читается и legacy-массив; `nya_status`/`nya_open`/`nya_save` + save/open приложения), smoke 27→37 чеков.
 - Библиотека шаблонов по ГОСТ/курсам (балки, цепи, допуски) как fxSolver-library, но версионированная в git (тех.: `src/data/formulas.ts` + share-ссылки).
 
 **A5. Плоты и мобильность (по 1–2 недели)**

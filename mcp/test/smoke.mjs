@@ -4,6 +4,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { strict as assert } from 'node:assert';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import fs from 'node:fs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const serverPath = path.resolve(here, '../dist/index.js');
@@ -112,6 +113,49 @@ check(r.data.variables['Vcc'] === '12', `Vcc in scope = ${r.data.variables['Vcc'
 r = await call('nya_ask', { question: 'Замечание к расчёту?', var: 'note' });
 const note = await call('nya_answer', { id: r.data.id, answer: 'проверить допуски' });
 check(note.data.var.value === 'проверить допуски', `string var in scope: ${note.data.var?.value}`);
+
+// 14. engine pin в статусе
+r = await call('nya_status');
+check(typeof r.data.engine === 'string' && /^\d+\.\d+\.\d+$/.test(r.data.engine), `engine pinned: ${r.data.engine}`);
+
+// 15. save пишет заголовок {engine, blocks}
+r = await call('nya_save', { path: tmp });
+const saved = JSON.parse(fs.readFileSync(tmp, 'utf-8'));
+check(saved.engine === r.data.engine && Array.isArray(saved.blocks) && saved.blocks.length > 30, `save header engine=${saved.engine}, blocks=${saved.blocks.length}`);
+
+// 16. diff против свежесохранённого — чисто
+r = await call('nya_diff', { against: 'file', path: tmp });
+check(r.data.additions === 0 && r.data.deletions === 0 && r.data.diff === '(no changes)', 'diff clean after save');
+
+// 17. правка → diff показывает добавление
+const tmpBlock = await call('nya_add_block', { kind: 'math', x: 80, y: 9000, rawInput: 'zz_tmp := 1' });
+r = await call('nya_diff', { against: 'file', path: tmp });
+check(r.data.additions >= 1 && r.data.diff.includes('zz_tmp'), `diff shows addition:\n${r.data.diff.split('\n').slice(0, 6).join('\n')}`);
+await call('nya_remove_block', { id: tmpBlock.data.id });
+
+// 18. import Calcpad .cpd: блоки + пересчёт + scope
+const cpdPath = '/tmp/opencode/nya-smoke.cpd';
+fs.writeFileSync(cpdPath, `"Beam"\n'input\nL = 3*m\nq = 4*kN/m ?\nF = q*L/2|kN\n$Plot { sin(x) @ x = 0 : 6.28 }\n`);
+r = await call('nya_import', { path: cpdPath });
+check(r.data.imported === 6 && r.data.format === 'cpd', `cpd imported: ${r.data.imported}, notes=${r.data.notes.length}`);
+check(r.data.notes.some((n) => n.includes('input-форма')), `cpd notes mention input-form: ${r.data.notes.join('; ')}`);
+r = await call('nya_get_scope');
+check(r.data.variables['F']?.startsWith('6'), `imported F = ${r.data.variables['F']}`);
+
+// 19. import SMath .sm (RPN): текст + L := 3*m
+const smPath = '/tmp/opencode/nya-smoke.sm';
+fs.writeFileSync(smPath, `<?xml version="1.0"?><regions>
+<region left="80" top="9500"><text><p>SM section</p></text></region>
+<region left="80" top="9564"><math><input><e type="operand">L2</e><e type="operand">3</e><e type="operand" style="unit">m</e><e type="operator" args="2">*</e><e type="operator" args="2">:</e></input></math></region>
+</regions>`);
+r = await call('nya_import', { path: smPath });
+check(r.data.imported === 2 && r.data.format === 'sm', `sm imported: ${r.data.imported}`);
+r = await call('nya_get_scope');
+check(r.data.variables['L2']?.startsWith('3'), `imported L2 = ${r.data.variables['L2']}`);
+
+// 20. open нового формата возвращает engine
+r = await call('nya_open', { path: tmp });
+check(r.data.engine === saved.engine && r.data.legacy === false, `open header engine=${r.data.engine}`);
 
 console.log(`\nSMOKE PASS: ${pass} checks`);
 await client.close();
