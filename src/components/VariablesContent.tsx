@@ -13,6 +13,8 @@ export default function VariablesContent({ onOpenNavigator }: { onOpenNavigator?
   const blocks = useCanvasStore((s) => s.blocks);
   const calcMs = useCanvasStore((s) => s.calcMs);
   const [q, setQ] = useState('');
+  const computeError = useCanvasStore((s) => s.computeError);
+  const clearComputeError = useCanvasStore((s) => s.clearComputeError);
   const vars = useMemo(() => collectScopeVars(blocks), [blocks]);
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -65,6 +67,22 @@ export default function VariablesContent({ onOpenNavigator }: { onOpenNavigator?
           </button>
         ))}
       </div>
+      {computeError && (
+        <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-t border-[var(--chrome-line)]" role="alert">
+          <span className="math-input flex-1 text-[11px] leading-4 text-[var(--danger)]">
+            {computeError}
+          </span>
+          <button
+            type="button"
+            className="shrink-0 text-[11px] px-2 min-h-[28px] rounded-lg border border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--accent-line)] hover:text-[var(--ink)] cursor-pointer"
+            title={t('job.dismiss')}
+            aria-label={t('job.dismiss')}
+            onClick={clearComputeError}
+          >
+            ✕
+          </button>
+        </div>
+      )}
       <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-t border-[var(--chrome-line)]">
         <span className="math-input text-[10.5px] text-[var(--faint)] tabular-nums">
           {t('sb.calcMs')}: {calcMs.toFixed(1)} {t('sb.ms')}

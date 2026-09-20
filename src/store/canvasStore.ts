@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { v4 as uuid } from 'uuid';
-import { recalculateAll, recalculateAllAsync, type MathBlockData } from '../engine/dependencies';
+import type { MathBlockData } from '../engine/dependencies';
 import { TEST_SCENARIO_LINES } from '../data/testScenario';
 import { ADVANCED_DEMO } from '../data/demoAdvanced';
 import { loadTheme, saveTheme, THEMES, type ThemeName } from '../theme';
 import { getSimModel, SIM_MODELS, simModelPatch } from '../engine/simEngine';
 import { separateBlocksVertically } from '../lib/canvasLayout';
-import { loadLang, setLangState, t, type Lang } from '../i18n';
+import { getLang, loadLang, setLangState, t, type Lang } from '../i18n';
+import { RECALC_TIMEOUT_MS, recalcInWorker } from '../lib/recalcWorker';
 
 const STORAGE_KEY = 'nyamath-doc-v1';
 const STORAGE_KEY_LEGACY = 'wengineering-doc-v1';
@@ -115,6 +116,11 @@ export interface CanvasState {
   /** 0..1 — детерминированный прогресс, null — идёт, но total неизвестен (rk45) */
   computeProgress: number | null;
   computeSimId: string | null;
+  /** Ошибка фоновой джобы (timeout/failed): прошлые результаты сохранены */
+  computeError: string | null;
+  /** Прервать текущий пересчёт (убивает воркер) */
+  cancelRecalc: () => void;
+  clearComputeError: () => void;
   addBlock: (x: number, y: number, raw?: string, edit?: boolean) => void;
   /** Пакетная вставка построчно: каждая строка — отдельный мат-блок лесенкой вниз (один undo-шаг). */
   addBlocks: (lines: string[], x: number, y: number, dy?: number) => void;
@@ -206,18 +212,8 @@ function fitViewportWidth(def: number): number {
   return Math.max(280, Math.min(def, window.innerWidth - 24));
 }
 
-/** Замер последнего синхронного пересчёта для телеметрии пульта (мс). */
+/** Замер последнего пересчёта для телеметрии пульта (мс, пишет runRecalcJob). */
 export let lastCalcMs = 0;
-/** Стор готов принимать замеры (restore при создании не замеряем). */
-let storeReady = false;
-
-function withRecalc(blocks: Record<string, MathBlockData>): Record<string, MathBlockData> {
-  const t0 = performance.now();
-  const { blocks: out } = recalculateAll(Object.values(blocks));
-  lastCalcMs = performance.now() - t0;
-  if (storeReady) useCanvasStore.setState({ calcMs: lastCalcMs });
-  return out;
-}
 
 function persist(blocks: Record<string, MathBlockData>) {
   try {
@@ -315,7 +311,9 @@ function restore(): Record<string, MathBlockData> {
       const b = migrate(item);
       if (b) rec[b.id] = b;
     }
-    return withRecalc(rec);
+    // стартовый пересчёт — тоже в воркере: restore обязан вернуться синхронно
+    scheduleRecalcAsync(30);
+    return rec;
   } catch {
     return {};
   }
@@ -541,17 +539,22 @@ function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathB
   return true;
 }
 
-/* ---------- асинхронный конвейер пересчёта (#6) ----------
- * Дебаунснутые пути (печать, слайдер, правка sim) считают через
- * recalculateAllAsync чанками: UI не фризит, длинные симуляции отменяются
- * следующим изменением (rev/rerun), прогресс виден в SimBlockView.
- * Джобы сериализованы (jobRunning/rerunRequested): перекрытия нет, stale-
- * результаты не применяются и не портят lastScope внутри движка.
+/* ---------- асинхронный конвейер пересчёта (worker) ----------
+ * Все мутации идут оптимистично (set + persist входов), тяжёлый пересчёт —
+ * в Web Worker через recalcInWorker: UI-поток не фризит даже на одном
+ * зависшем блоке (чему чанки #6 не помогали). Джоба убивается terminate()
+ * по AbortController (отмена следующим изменением/rev или кнопкой) и по
+ * таймауту RECALC_TIMEOUT_MS — прошлые результаты сохраняются, ошибка —
+ * в computeError. Джобы сериализованы (jobRunning/rerunRequested):
+ * перекрытия нет, stale-результаты не применяются. Нет Worker (node-тесты,
+ * старые браузеры) — честный фолбэк на main-thread recalculateAllAsync.
  */
 let recalcTimer: ReturnType<typeof setTimeout> | null = null;
 let jobRunning = false;
 let rerunRequested = false;
 let recalcRev = 0;
+/** Контроллер текущей джобы: cancelRecalc убивает даже зависший воркер. */
+let currentAbort: AbortController | null = null;
 
 function scheduleRecalcAsync(ms: number) {
   if (recalcTimer) clearTimeout(recalcTimer);
@@ -559,6 +562,12 @@ function scheduleRecalcAsync(ms: number) {
     recalcTimer = null;
     void runRecalcJob();
   }, ms);
+}
+
+/** Замер джобы в state + модуль для обратной совместимости телеметрии. */
+function stampMs(t0: number): number {
+  lastCalcMs = performance.now() - t0;
+  return lastCalcMs;
 }
 
 async function runRecalcJob(): Promise<void> {
@@ -572,10 +581,14 @@ async function runRecalcJob(): Promise<void> {
       rerunRequested = false;
       const rev = ++recalcRev;
       const list = Object.values(useCanvasStore.getState().blocks);
-      useCanvasStore.setState({ computeActive: true });
+      useCanvasStore.setState({ computeActive: true, computeError: null });
       const t0 = performance.now();
-      const outcome = await recalculateAllAsync(list, {
-        shouldCancel: () => rev !== recalcRev || rerunRequested,
+      const ctrl = new AbortController();
+      currentAbort = ctrl;
+      const outcome = await recalcInWorker(list, {
+        lang: getLang(),
+        timeoutMs: RECALC_TIMEOUT_MS,
+        signal: ctrl.signal,
         onSimProgress: (id, done, total) => {
           if (rev !== recalcRev) return;
           useCanvasStore.setState({
@@ -584,15 +597,29 @@ async function runRecalcJob(): Promise<void> {
           });
         },
       });
-      if (outcome.cancelled) {
+      if (currentAbort === ctrl) currentAbort = null;
+      if (outcome.status === 'cancelled') {
         if (!rerunRequested && rev === recalcRev) break;
         continue;
       }
       if (rev !== recalcRev) continue;
-      if (outcome.result.changed) {
-        persist(outcome.result.blocks);
+      if (outcome.status === 'timeout') {
+        useCanvasStore.setState({
+          computeError: t('job.timeout', { s: Math.round(RECALC_TIMEOUT_MS / 1000) }),
+          calcMs: stampMs(t0),
+        });
+        if (!rerunRequested) break;
+        continue;
+      }
+      if (outcome.status === 'failed') {
+        useCanvasStore.setState({ computeError: outcome.error, calcMs: stampMs(t0) });
+        if (!rerunRequested) break;
+        continue;
+      }
+      if (outcome.changed) {
+        persist(outcome.blocks);
         const s = useCanvasStore.getState();
-        useCanvasStore.setState({ blocks: outcome.result.blocks, recalcCounter: s.recalcCounter + 1, calcMs: performance.now() - t0 });
+        useCanvasStore.setState({ blocks: outcome.blocks, recalcCounter: s.recalcCounter + 1, calcMs: stampMs(t0) });
       }
       if (!rerunRequested) break;
     }
@@ -602,6 +629,24 @@ async function runRecalcJob(): Promise<void> {
     if (st.computeActive) {
       useCanvasStore.setState({ computeActive: false, computeProgress: null, computeSimId: null });
     }
+  }
+}
+
+/**
+ * Дождаться тишины конвейера (тесты; стор при этом дёргают напрямую).
+ * Сбрасывает pending-дебаунс и прогоняет джобу до конца.
+ */
+export async function flushRecalc(): Promise<void> {
+  if (recalcTimer) {
+    clearTimeout(recalcTimer);
+    recalcTimer = null;
+  }
+  for (let k = 0; k < 500; k++) {
+    if (!jobRunning) {
+      await runRecalcJob();
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 10));
   }
 }
 
@@ -785,19 +830,28 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     });
     saveDetachedSide();
   },
-  setLang: (l) =>
-    set((s) => {
-      setLangState(l);
-      // ошибки движка хранятся готовыми строками — пересчитать на новом языке
-      const next = withRecalc(get().blocks);
-      persist(next);
-      return { lang: l, blocks: next, recalcCounter: s.recalcCounter + 1 };
-    }),
+  setLang: (l) => {
+    setLangState(l);
+    // ошибки движка хранятся готовыми строками — пересчитать на новом языке в воркере
+    set({ lang: l });
+    scheduleRecalcAsync(60);
+  },
   recalcCounter: 0,
   calcMs: 0,
   computeActive: false,
   computeProgress: null,
   computeSimId: null,
+  computeError: null,
+  cancelRecalc: () => {
+    // rev гасит кооперативные проверки, abort — убивает зависший воркер сразу
+    recalcRev++;
+    currentAbort?.abort();
+    if (recalcTimer) {
+      clearTimeout(recalcTimer);
+      recalcTimer = null;
+    }
+  },
+  clearComputeError: () => set({ computeError: null }),
   past: [],
   future: [],
 
@@ -813,15 +867,16 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       set({ past: [] });
       return;
     }
-    const next = withRecalc(target);
-    persist(next);
+    // снапшот истории уже с результатами — показываем сразу, свежесть дотянет джоба
+    persist(target);
     set((s) => ({
-      blocks: next,
+      blocks: target,
       past,
       future: [cur, ...s.future].slice(0, HISTORY_LIMIT),
       recalcCounter: s.recalcCounter + 1,
-      selectedIds: s.selectedIds.filter((id) => next[id]),
+      selectedIds: s.selectedIds.filter((id) => target[id]),
     }));
+    scheduleRecalcAsync(60);
   },
 
   redo: () => {
@@ -829,15 +884,15 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     if (!st.future.length) return;
     const cur = st.blocks;
     const [target, ...future] = st.future;
-    const next = withRecalc(target);
-    persist(next);
+    persist(target);
     set((s) => ({
-      blocks: next,
+      blocks: target,
       past: [...s.past, cur].slice(-HISTORY_LIMIT),
       future,
       recalcCounter: s.recalcCounter + 1,
-      selectedIds: s.selectedIds.filter((id) => next[id]),
+      selectedIds: s.selectedIds.filter((id) => target[id]),
     }));
+    scheduleRecalcAsync(60);
   },
 
   beginGesture: () => {
@@ -859,17 +914,19 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   addBlock: (x, y, raw = '', edit = false) => {
     pushHistory(get, set as SetFn, true);
     const id = uuid();
-    const next = withRecalc({ ...get().blocks, [id]: { ...blank(id, x, y), rawInput: raw } });
+    const next = { ...get().blocks, [id]: { ...blank(id, x, y), rawInput: raw } };
     persist(next);
     set({ blocks: next, selectedIds: [id], pendingEditId: edit ? id : get().pendingEditId });
+    scheduleRecalcAsync(60);
   },
 
   addTextBlock: (x, y) => {
     pushHistory(get, set as SetFn, true);
     const id = uuid();
-    const next = withRecalc({ ...get().blocks, [id]: { ...blank(id, x, y), kind: 'text', rawInput: '// ' } });
+    const next: Record<string, MathBlockData> = { ...get().blocks, [id]: { ...blank(id, x, y), kind: 'text', rawInput: '// ' } };
     persist(next);
     set({ blocks: next, selectedIds: [id], pendingEditId: id });
+    scheduleRecalcAsync(60);
   },
 
   scopeMonOpen: false,
@@ -895,9 +952,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       ids.push(id);
       next[id] = { ...blank(id, x, y + k * dy), rawInput: raw };
     });
-    const rec = withRecalc(next);
-    persist(rec);
-    set({ blocks: rec, selectedIds: ids });
+    persist(next);
+    set({ blocks: next, selectedIds: ids });
+    scheduleRecalcAsync(60);
   },
 
   addPlotBlock: (x, y, fn = 'sin(x)', patch) => {
@@ -908,9 +965,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       w: fitViewportWidth(460),
       ...patch,
     };
-    const next = withRecalc({ ...get().blocks, [id]: b });
+    const next = { ...get().blocks, [id]: b };
     persist(next);
     set({ blocks: next, selectedIds: [id] });
+    scheduleRecalcAsync(60);
   },
 
   addContourBlock: (x, y, fn = 'sin(sqrt(x^2+y^2))') => {
@@ -921,9 +979,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       plotXmin: -5, plotXmax: 5, plotYmin: -5, plotYmax: 5, plotResolution: 48,
       w: fitViewportWidth(460),
     };
-    const next = withRecalc({ ...get().blocks, [id]: b });
+    const next = { ...get().blocks, [id]: b };
     persist(next);
     set({ blocks: next, selectedIds: [id] });
+    scheduleRecalcAsync(60);
   },
 
   addPlot3dBlock: (x, y, fn = 'sin(sqrt(x^2+y^2))') => {
@@ -935,9 +994,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       plotMode: 'auto', plotResolution: 48, plotWireframe: false,
       w: fitViewportWidth(560),
     };
-    const next = withRecalc({ ...get().blocks, [id]: b });
+    const next = { ...get().blocks, [id]: b };
     persist(next);
     set({ blocks: next, selectedIds: [id] });
+    scheduleRecalcAsync(60);
   },
 
   addProgramBlock: (x, y, raw = 's := 0\nfor i in 1..n\n  s := s + i\nend\ns', exportName = '') => {
@@ -946,9 +1006,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const b: MathBlockData = {
       ...blank(id, x, y), rawInput: raw, kind: 'program', exportName,
     };
-    const next = withRecalc({ ...get().blocks, [id]: b });
+    const next = { ...get().blocks, [id]: b };
     persist(next);
     set({ blocks: next, selectedIds: [id] });
+    scheduleRecalcAsync(60);
   },
 
   addSimBlock: (x, y, modelId = 'pendulum') => {
@@ -960,9 +1021,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       w: fitViewportWidth(560),
       ...simModelPatch(m),
     };
-    const next = withRecalc({ ...get().blocks, [id]: b });
+    const next = { ...get().blocks, [id]: b };
     persist(next);
     set({ blocks: next, selectedIds: [id] });
+    scheduleRecalcAsync(60);
   },
 
   updateSim: (id, patch) => {
@@ -981,9 +1043,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       ...blank(id, x, y), rawInput: 'slider', kind: 'slider',
       sliderVar: 'k', sliderMin: 0, sliderMax: 10, sliderStep: 0.5, sliderVal: 5,
     };
-    const next = withRecalc({ ...get().blocks, [id]: b });
+    const next = { ...get().blocks, [id]: b };
     persist(next);
     set({ blocks: next, selectedIds: [id] });
+    scheduleRecalcAsync(60);
   },
 
   /** Живое движение ползунка: без истории (история — один снапшот на жест, см. beginGesture). */
@@ -1043,10 +1106,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       }
     }
     if (!changed) return;
-    // порядок сверху-вниз зависит от Y → пересчёт сразу (телепорт без задержки)
-    const rec = withRecalc(next);
-    persist(rec);
-    set((s) => ({ blocks: rec, recalcCounter: s.recalcCounter + 1 }));
+    // порядок сверху-вниз зависит от Y → пересчёт в воркере без задержки
+    persist(next);
+    set((s) => ({ blocks: next, recalcCounter: s.recalcCounter + 1 }));
+    scheduleRecalcAsync(60);
   },
 
   commitDrag: () => {
@@ -1064,9 +1127,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn, true);
     const next = { ...get().blocks };
     delete next[id];
-    const rec = withRecalc(next);
-    persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: s.selectedIds.filter((s2) => s2 !== id) }));
+    persist(next);
+    set((s) => ({ blocks: next, selectedIds: s.selectedIds.filter((s2) => s2 !== id) }));
+    scheduleRecalcAsync(60);
   },
 
   removeSelected: () => {
@@ -1075,9 +1138,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn, true);
     const next = { ...get().blocks };
     for (const id of sel) delete next[id];
-    const rec = withRecalc(next);
-    persist(rec);
-    set({ blocks: rec, selectedIds: [] });
+    persist(next);
+    set({ blocks: next, selectedIds: [] });
+    scheduleRecalcAsync(60);
   },
 
   select: (id) => set({ selectedIds: id ? [id] : [] }),
@@ -1110,9 +1173,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const cur = get().blocks[id];
     if (!cur) return;
     pushHistory(get, set as SetFn, true);
-    const next = withRecalc({ ...get().blocks, [id]: { ...cur, disabled: !cur.disabled } });
+    const next = { ...get().blocks, [id]: { ...cur, disabled: !cur.disabled } };
     persist(next);
     set((s) => ({ blocks: next, recalcCounter: s.recalcCounter + 1 }));
+    scheduleRecalcAsync(60);
   },
 
   toggleSelectedDisabled: () => {
@@ -1124,9 +1188,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn, true);
     const next = { ...get().blocks };
     for (const id of ids) next[id] = { ...next[id], disabled: !enable };
-    const rec = withRecalc(next);
-    persist(rec);
-    set((s) => ({ blocks: rec, recalcCounter: s.recalcCounter + 1 }));
+    persist(next);
+    set((s) => ({ blocks: next, recalcCounter: s.recalcCounter + 1 }));
+    scheduleRecalcAsync(60);
   },
 
   separateRegions: () => {
@@ -1167,9 +1231,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     rec[pid] = {
       ...blank(pid, 560, 120), rawInput: 'plot', kind: 'plot', plotFn: 'sin(x)', plotXmin: -10, plotXmax: 10,
     };
-    const next = withRecalc(rec);
-    persist(next);
-    set((s) => ({ blocks: next, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
+    persist(rec);
+    set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
+    scheduleRecalcAsync(60);
   },
 
   loadAdvancedDemo: () => {
@@ -1191,9 +1255,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       ...blank(pid, 560, 140), rawInput: 'plot', kind: 'plot',
       plotFn: 'sin(w*x); cos(x)', plotXmin: -10, plotXmax: 10,
     };
-    const next = withRecalc(rec);
-    persist(next);
-    set((s) => ({ blocks: next, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
+    persist(rec);
+    set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
+    scheduleRecalcAsync(60);
   },
 
   loadDocument: (data) => {
@@ -1208,9 +1272,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     }
     if (!Object.keys(rec).length) return { ok: false, message: t('doc.noBlocks') };
     pushHistory(get, set as SetFn, true);
-    const next = withRecalc(rec);
-    persist(next);
-    set((s) => ({ blocks: next, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
+    persist(rec);
+    set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1 }));
+    scheduleRecalcAsync(60);
     return { ok: true, message: t('doc.loaded', { n: Object.keys(rec).length, bad: bad ? t('doc.loadedBad', { bad }) : '' }) };
   },
 
@@ -1235,13 +1299,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       const b = migrate(item);
       if (b) rec[b.id] = b;
     }
-    const next = withRecalc(rec);
-    persist(next);
+    persist(rec);
     set((s) => ({
-      blocks: next,
-      selectedIds: s.selectedIds.filter((id) => next[id]),
+      blocks: rec,
+      selectedIds: s.selectedIds.filter((id) => rec[id]),
       recalcCounter: s.recalcCounter + 1,
     }));
+    scheduleRecalcAsync(60);
     return { ok: true, count: Object.keys(rec).length };
   },
 
@@ -1255,7 +1319,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 }));
 
-storeReady = true;
+// Стартовый пересчёт восстановленного документа — тоже в воркере:
+// restore обязан вернуться синхронно, сохранённые результаты видны сразу,
+// джоба дотягивает свежесть следом.
+scheduleRecalcAsync(30);
 
 /** Сохранить режим/размеры/показ палитры (вызывать по окончании жеста ресайза/дока). */
 export function savePaletteUi(variant: 'functions' | 'formulas' | 'constants' = 'functions') {

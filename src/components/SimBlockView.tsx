@@ -204,19 +204,34 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
               <IX />
             </button>
           </div>
-          {/* прогресс фонового пересчёта (#6) */}
+          {/* прогресс фонового пересчёта (воркер) + отмена зависшей джобы */}
           {showProgress && (
-            <div
-              className="h-[3px] mb-1 rounded-full bg-[var(--line)] overflow-hidden"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={computeProgress === null ? undefined : Math.round(computeProgress * 100)}
-            >
+            <div className="mb-1 flex items-center gap-2">
               <div
-                className={`h-full rounded-full bg-[var(--accent-line)] ${computeProgress === null ? 'animate-pulse w-full' : ''}`}
-                style={computeProgress === null ? undefined : { width: `${Math.round(computeProgress * 100)}%` }}
-              />
+                className="h-[3px] flex-1 rounded-full bg-[var(--line)] overflow-hidden"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={computeProgress === null ? undefined : Math.round(computeProgress * 100)}
+              >
+                <div
+                  className={`h-full rounded-full bg-[var(--accent-line)] ${computeProgress === null ? 'animate-pulse w-full' : ''}`}
+                  style={computeProgress === null ? undefined : { width: `${Math.round(computeProgress * 100)}%` }}
+                />
+              </div>
+              <button
+                type="button"
+                className="shrink-0 text-[11px] px-2 min-h-[28px] rounded-lg border border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--danger)] hover:text-[var(--danger)] cursor-pointer"
+                title={t('job.cancel')}
+                aria-label={t('job.cancel')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  useCanvasStore.getState().cancelRecalc();
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                ✕
+              </button>
             </div>
           )}
 

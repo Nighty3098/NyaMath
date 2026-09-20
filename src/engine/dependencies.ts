@@ -147,6 +147,15 @@ export function getLastScope(): Scope {
   return lastScope;
 }
 
+/**
+ * Подменить lastScope снаружи (клиент Web Worker пересобирает scope
+ * главного потока из сериализованного снапшота — плоты/отладчик/MCP-скоуп
+ * продолжают видеть живые значения без локального пересчёта).
+ */
+export function setLastScope(scope: Scope): void {
+  lastScope = scope;
+}
+
 export function sortBlocksTopDown(blocks: MathBlockData[]): MathBlockData[] {
   return [...blocks].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
 }

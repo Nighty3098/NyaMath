@@ -296,7 +296,7 @@ Notebook/Web-Python: **15. Jupyter / JupyterLab / Google Colab / Kaggle**.
 - Видимость `#pre/#post/#hide/#show` + режим «Отчёт» (чистый вывод без кода) для экспертизы (тех.: флаг на блоке + print-CSS фильтр; Calcpad-урок).
 
 **A2. Ядро и надёжность (1–2 недели)**
-- Web Worker + cancel/timeout + async-пересчёт (тех.: `recalculateAllAsync` уже начат + `recalcAsync.test.ts`; вынести mathjs в `Worker`, `AbortController` как ответ Maple-зависаниям на `permute(55)`).
+- [x] Web Worker + cancel/timeout + async-пересчёт (тех.: `recalculateAllAsync` уже начат + `recalcAsync.test.ts`; вынести mathjs в `Worker`, `AbortController` как ответ Maple-зависаниям на `permute(55)`). ✅ Готово 19.09.2026: `recalc.worker.ts` (отдельный чанк, `runWorkerJob` + прогресс), протокол `workerProtocol.ts` (slim-входы, serde Complex/Unit/Matrix, def-строки `f(t):=`/`defunit` для пересборки scope), клиент `recalcWorker.ts` (timeout 30 c + AbortController через terminate, фолбэк на main-thread), стор полностью на оптимистичных мутациях + воркер-джоба (`cancelRecalc`, `computeError`, `flushRecalc`), scope главного потока пересобирается (`setLastScope`) — плоты/отладчик работают; тесты `workerProtocol` + `recalcWorker` (17 шт), весь сьют 214 зелёный.
 - Инкрементальный dirty-recalc: пересчитывать только зависимых ниже + видимые (Calculate Now из Prime 11) (тех.: DAG уже есть — добавить dirty-флаги + `IntersectionObserver` видимости; виртуализация canvas для 10MB-листов).
 - Автосейв-снапшоты/TimeTravel (тех.: стек JSON-снапшотов поверх undo/redo + localStorage ротация; ответ Mathematica no-autosave и Maple-corrupt).
 - Пресеты unit-систем SI/US/CGS + строгий размерный контроль с понятными ошибками (тех.: словарь поверх mathjs units; Prime 11-урок).
