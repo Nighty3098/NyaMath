@@ -103,20 +103,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const [open, setOpen] = useState<string | null>(null);
   const [subOpen, setSubOpen] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
-  const toolbarRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [toolbarW, setToolbarW] = useState(0);
-
-  // Точное центрирование меню по окну: левый «отголосок» повторяет ширину
-  // правого блока (быстрые действия), чтобы меню стояло строго по центру.
-  useEffect(() => {
-    const el = toolbarRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setToolbarW(el.offsetWidth));
-    ro.observe(el);
-    setToolbarW(el.offsetWidth);
-    return () => ro.disconnect();
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -392,9 +379,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
       role="menubar"
       aria-label={t('menu.main')}
     >
-      {/* левый «отголосок» ширины правого блока: меню строго по центру окна */}
-      <div style={{ width: toolbarW }} className="shrink-0" aria-hidden="true" />
-      <div className="flex-1 flex justify-center min-w-0">
+      {/* меню слева, частые действия — справа */}
+      <div className="flex items-center min-w-0 shrink-0">
         {menus.map((m) => (
           <div key={m.id} className="relative hidden md:block">
             <button
@@ -415,9 +401,10 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
           </div>
         ))}
       </div>
+      <div className="flex-1" aria-hidden="true" />
 
       {/* частые действия — всегда под рукой */}
-      <div ref={toolbarRef} className="flex items-center gap-0.5 shrink-0" role="toolbar" aria-label={t('menu.edit')}>
+      <div className="flex items-center gap-0.5 shrink-0" role="toolbar" aria-label={t('menu.edit')}>
         <button type="button" className="nya-tbtn nya-tbtn-big" onClick={undo} disabled={!canUndo} title={`${t('menu.undo')} · Ctrl+Z`} aria-label={t('menu.undo')}>
           <IUndo />
         </button>
