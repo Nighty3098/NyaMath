@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import MenuBar from './components/MenuBar';
 import Canvas from './components/Canvas';
+import StatusBar from './components/StatusBar';
 import WelcomeModal from './components/WelcomeModal';
 import UnifiedPalette from './components/UnifiedPalette';
 import DetachedTabWindow from './components/DetachedTabWindow';
@@ -220,6 +221,7 @@ export default function App() {
           <DetachedTabWindow key={tab} tab={tab} onOpenNavigator={() => setNavigatorOpen(true)} />
         ))}
       </div>
+      <StatusBar />
       {/* вынесенные вкладки — отдельные окна поверх всего */}
       {floatDetached.map((tab) => (
         <DetachedTabWindow key={tab} tab={tab} onOpenNavigator={() => setNavigatorOpen(true)} />
