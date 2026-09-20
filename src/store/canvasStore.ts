@@ -48,6 +48,9 @@ export interface CanvasState {
   blocks: Record<string, MathBlockData>;
   /** Мультивыделение (рамкой, Shift+клик) */
   selectedIds: string[];
+  /** Переменная под курсором: подсветка определений/использований по листу */
+  hoveredVar: string | null;
+  setHoveredVar: (name: string | null) => void;
   showGrid: boolean;
   theme: ThemeName;
   setTheme: (t: ThemeName) => void;
@@ -689,6 +692,7 @@ export async function flushRecalc(): Promise<void> {
 export const useCanvasStore = create<CanvasState>((set, get) => ({
   blocks: restore(),
   selectedIds: [],
+  hoveredVar: null,
   // чистый лист — сетка по желанию (выбор хранится в localStorage)
   showGrid: loadGrid(),
   gridSize: loadGridSize(),
@@ -1214,6 +1218,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   select: (id) => set({ selectedIds: id ? [id] : [] }),
+  setHoveredVar: (name) => {
+    if (get().hoveredVar !== name) set({ hoveredVar: name });
+  },
   selectMany: (ids) => set({ selectedIds: [...new Set(ids)].filter((id) => get().blocks[id]) }),
   toggleSelect: (id) =>
     set((s) => ({
@@ -1281,7 +1288,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   clear: () => {
     pushHistory(get, set as SetFn, true);
     persist({});
-    set({ blocks: {}, selectedIds: [], staleIds: [] });
+    set({ blocks: {}, selectedIds: [], hoveredVar: null, staleIds: [] });
   },
 
   loadTestScenario: () => {
@@ -1302,7 +1309,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       ...blank(pid, 560, 120), rawInput: 'plot', kind: 'plot', plotFn: 'sin(x)', plotXmin: -10, plotXmax: 10,
     };
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1, staleIds: [] }));
+    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
     scheduleRecalcAsync(60);
   },
 
@@ -1326,7 +1333,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       plotFn: 'sin(w*x); cos(x)', plotXmin: -10, plotXmax: 10,
     };
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1, staleIds: [] }));
+    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
     scheduleRecalcAsync(60);
   },
 
@@ -1348,7 +1355,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     if (!Object.keys(rec).length) return { ok: false, message: t('doc.noBlocks') };
     pushHistory(get, set as SetFn, true);
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], recalcCounter: s.recalcCounter + 1, staleIds: [] }));
+    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
     scheduleRecalcAsync(60);
     // major-расхождение — предупреждение; minor — тихая пометка версии файла
     const mismatch = engineMismatch(parsed.engine);

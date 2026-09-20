@@ -9,6 +9,7 @@ import MiniPlot from "./MiniPlot";
 import StaleChip from "./StaleChip";
 import { copyTextToClipboard } from "../lib/exportFiles";
 import { applyColonShortcut } from "../lib/canvasLayout";
+import { hoverNameOf, isVarRelated } from "../lib/varHighlight";
 import { expandSelection, wrapSelection } from "../lib/mathEdit";
 import { lookupFuncDoc, wordAt } from "../lib/funcDoc";
 import AssistantPopup from "./AssistantPopup";
@@ -72,6 +73,8 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const addPlot3dBlock = useCanvasStore((s) => s.addPlot3dBlock);
   const toggleSelect = useCanvasStore((s) => s.toggleSelect);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
+  const hoveredVar = useCanvasStore((s) => s.hoveredVar);
+  const setHoveredVar = useCanvasStore((s) => s.setHoveredVar);
   const lang = useCanvasStore((s) => s.lang);
   const [editing, setEditing] = useState(
     block.rawInput === "" && block.kind === "math",
@@ -266,6 +269,10 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
     <div
       className={`nya-region absolute ${editing ? "z-20" : "z-10"}`}
       style={{ left: block.x, top: block.y }}
+      onMouseEnter={() => {
+        if (!editing) setHoveredVar(hoverNameOf(block));
+      }}
+      onMouseLeave={() => setHoveredVar(null)}
     >
       <div
         ref={regionRef}
@@ -280,7 +287,10 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                 "bg-[var(--input-bg)] outline outline-2 outline-dashed outline-[var(--accent-line)]"
               : selected
                 ? "outline outline-2 outline-[var(--accent-line)]"
-                : "hover:outline hover:outline-1 hover:outline-[var(--hover-line)]"
+                : isVarRelated(block, hoveredVar)
+                  ? // та же переменная под курсором — подсветка по всему листу
+                    "outline outline-2 outline-[var(--accent-line)] bg-[var(--accent-soft)]/40"
+                  : "hover:outline hover:outline-1 hover:outline-[var(--hover-line)]"
         }`}
         style={block.w ? { width: block.w } : undefined}
         onClick={(e) => {
