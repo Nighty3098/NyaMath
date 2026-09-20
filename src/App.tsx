@@ -190,6 +190,11 @@ export default function App() {
 
   return (
     <div className="nya-app h-screen w-screen flex flex-col overflow-hidden">
+      {/* шапка печатного отчёта: на экране скрыта, заполняется в beforeprint */}
+      <div id="nya-print-head" className="nya-print-head" aria-hidden="true">
+        <div data-ph="title" className="nya-print-title" />
+        <div data-ph="sub" className="nya-print-sub" />
+      </div>
       <MenuBar
         onOpenFile={() => fileRef.current?.click()}
         onShowWelcome={() => setWelcomeForced(true)}

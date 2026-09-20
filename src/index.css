@@ -717,6 +717,10 @@ textarea.nya-editor { resize: none; }
    @page margin 0: убирает белые поля вокруг тёмной темы и штатные
    колонтитулы браузера (URL, дата, «4 of 5» живут в полях страницы).
    Внутренние поля задаём отступом .nya-sheet, фон — цветом темы. */
+/* Шапка отчёта: на экране скрыта, в печати — название + дата + счётчики */
+.nya-print-head {
+  display: none;
+}
 @page {
   size: A4;
   margin: 0;
@@ -769,6 +773,24 @@ textarea.nya-editor { resize: none; }
     padding: 10mm !important;
     background: var(--canvas) !important;
     box-sizing: border-box !important;
+  }
+  /* шапка отчёта первой страницей сверху */
+  .nya-print-head {
+    display: block !important;
+    padding: 10mm 10mm 4mm !important;
+    background: var(--canvas) !important;
+  }
+  .nya-print-title {
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    color: var(--ink) !important;
+  }
+  .nya-print-sub {
+    margin-top: 2mm !important;
+    font-size: 11px !important;
+    color: var(--faint) !important;
+    border-bottom: 0.5mm solid var(--line) !important;
+    padding-bottom: 3mm !important;
   }
   /* каждый блок — карточка в потоке поверх инлайновых left/top/width/height */
   .nya-sheet > .nya-region,

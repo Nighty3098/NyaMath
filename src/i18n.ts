@@ -260,6 +260,9 @@ const ru = {
   'kb.title': 'Математическая клавиатура',
   'kb.open': 'Показать клавиатуру',
   'kb.close': 'Скрыть клавиатуру',
+
+  'print.head': 'NyaMath · расчёт от {date}',
+  'print.sub': 'блоков: {n} · ошибок: {e}',
   'm.groupHint': 'Выделите и нажмите ( / ^ • Ctrl+Space — расширить выделение • : — это := • F12 — ассистент' ,
   'm.disable': 'Отключить из расчёта',
   'm.enable': 'Вернуть в расчёт',
@@ -698,6 +701,9 @@ const en: Record<StrKey, string> = {
   'kb.title': 'Math keyboard',
   'kb.open': 'Show keyboard',
   'kb.close': 'Hide keyboard',
+
+  'print.head': 'NyaMath · sheet of {date}',
+  'print.sub': 'blocks: {n} · errors: {e}',
   'm.groupHint': 'Select and press ( / ^ • Ctrl+Space — expand selection • : means := • F12 — assistant' ,
   'm.disable': 'Disable evaluation',
   'm.enable': 'Enable evaluation',

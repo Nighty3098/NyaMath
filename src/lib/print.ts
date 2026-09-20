@@ -10,6 +10,23 @@ export type PrintMode = 'color' | 'bw';
  * браузера (URL, дата, номера страниц живут в полях страницы).
  */
 import { useCanvasStore } from '../store/canvasStore';
+import { getLang, t } from '../i18n';
+
+/** Заполнить шапку печатного отчёта (название + дата + счётчики). */
+export function fillPrintHead(): void {
+  try {
+    const el = document.getElementById('nya-print-head');
+    if (!el) return;
+    const st = useCanvasStore.getState();
+    const blocks = Object.values(st.blocks);
+    const errs = blocks.filter((b) => b.error).length;
+    const date = new Date().toLocaleDateString(getLang() === 'ru' ? 'ru-RU' : 'en-US');
+    const title = el.querySelector('[data-ph="title"]');
+    const sub = el.querySelector('[data-ph="sub"]');
+    if (title) title.textContent = t('print.head', { date });
+    if (sub) sub.textContent = t('print.sub', { n: blocks.length, e: errs });
+  } catch { /* ignore */ }
+}
 
 export function printDocument(mode: PrintMode = 'color'): void {
   try {
@@ -44,6 +61,7 @@ export function installPrintCleanup(): () => void {
   const commit = () => {
     // Коммитим открытый редактор, иначе печатается пустой textarea
     (document.activeElement as HTMLElement | null)?.blur?.();
+    fillPrintHead();
     // Ctrl+P / системная печать в обход меню: по умолчанию — цвет текущей темы
     try {
       if (!document.documentElement.dataset.print) {
