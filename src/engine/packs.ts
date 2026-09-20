@@ -7,7 +7,10 @@ import { t, type LText, type PackId } from '../i18n';
 import { SI_CONSTANTS, CODATA2022 } from './constants';
 import { MATERIALS, MAT_PROP_KEYS, MAT_PROP_NAMES, findMaterial, type MatPropKey } from './materials';
 import { getCompiledPre, preprocessJ, preprocessRanges } from './mathEngine';
-import { adaptiveSimpson, brent, nelderMead, newtonSystem, rk4Step } from './numeric';
+import {
+  adaptiveSimpson, brent, compactTrace, fmtTrace, nelderMead, newtonSystem,
+  pushSolverTrace, rk4Step, vecTrace,
+} from './numeric';
 
 export type Scope = Record<string, unknown>;
 
@@ -151,7 +154,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
     };
   };
   // (разовые вычисления — напрямую через numEvaluator в местах вызова)
-  /** Ньютон для системы строк; strict=false → minerr (вернуть последнее). */
+  /** Ньютон для системы строк; strict=false → minerr (вернуть последнее). Лог — в scope. */
   const solveEqs = (eqs: string[], vars: string[], guess: number[], scope: Scope, strict: boolean): number[] => {
     if (!eqs.length || eqs.length !== vars.length || guess.length !== vars.length) throw new Error(t('e.calcArgs'));
     if (vars.some((v) => !/^[A-Za-z_]\w*$/.test(v))) throw new Error(t('e.calcArgs'));
@@ -163,19 +166,44 @@ export function buildPackScope(math: MathJsInstance): Scope {
       });
       return evs.map((ev) => ev(bind));
     };
-    try {
-      return newtonSystem(F, guess).x;
-    } catch {
-      if (!strict) {
-        // minerr: приближённый ответ вместо ошибки
-        try {
-          return newtonSystem(F, guess, 30, 1e-4).x;
-        } catch {
-          return guess.slice();
-        }
+    const residual = (x: number[]): number => {
+      try {
+        const r = F(x);
+        return Math.sqrt(r.reduce((s, v) => s + v * v, 0));
+      } catch {
+        return NaN;
       }
-      throw new Error(t('e.calcNoConv'));
+    };
+    const head = `solve [${vars.join(', ')}] from ${vecTrace(guess)}`;
+    const attempt = (maxIter: number, tol: number): { ok: boolean; x: number[]; iters: number; lines: string[] } => {
+      const lines: string[] = [];
+      try {
+        const r = newtonSystem(F, guess, maxIter, tol, (l) => lines.push(l));
+        return { ok: true, x: r.x, iters: r.iters, lines };
+      } catch {
+        return { ok: false, x: guess.slice(), iters: maxIter, lines };
+      }
+    };
+    const pub = (label: string, lines: string[]): void => {
+      pushSolverTrace(scope, { label, lines: compactTrace(lines) });
+    };
+    const a = attempt(100, 1e-10);
+    if (a.ok) {
+      pub(`${head}: ${a.iters} iters, |F|=${fmtTrace(residual(a.x))}`, a.lines);
+      return a.x;
     }
+    if (!strict) {
+      // minerr: приближённый ответ вместо ошибки
+      const b = attempt(30, 1e-4);
+      if (b.ok) {
+        pub(`${head} (minerr): ${b.iters} iters, |F|=${fmtTrace(residual(b.x))}`, b.lines);
+        return b.x;
+      }
+      pub(`${head} (minerr): fallback to guess`, b.lines);
+      return guess.slice();
+    }
+    pub(`${head}: no convergence`, a.lines);
+    throw new Error(t('e.calcNoConv'));
   };
 
   /* ----- символьное разложение на множители: целочисленные корни + синтетика ----- */
@@ -1041,9 +1069,21 @@ export function buildPackScope(math: MathJsInstance): Scope {
         });
         return ev(bind);
       };
+      const lines: string[] = [];
       try {
-        return math.matrix(nelderMead(f, guess).x);
+        const r = nelderMead(f, guess, 500, 1e-8, (l) => lines.push(l));
+        pushSolverTrace(scope, {
+          label: `minimize "${expr}" from ${vecTrace(guess)}: ${r.iters} iters, f=${fmtTrace(r.fx)}`,
+          lines: compactTrace(lines),
+        });
+        return math.matrix(r.x);
       } catch {
+        if (lines.length) {
+          pushSolverTrace(scope, {
+            label: `minimize "${expr}": no convergence`,
+            lines: compactTrace(lines),
+          });
+        }
         throw new Error(t('e.calcNoConv'));
       }
     }),
@@ -1060,9 +1100,21 @@ export function buildPackScope(math: MathJsInstance): Scope {
         });
         return -ev(bind);
       };
+      const lines: string[] = [];
       try {
-        return math.matrix(nelderMead(f, guess).x);
+        const r = nelderMead(f, guess, 500, 1e-8, (l) => lines.push(l));
+        pushSolverTrace(scope, {
+          label: `maximize "${expr}" from ${vecTrace(guess)}: ${r.iters} iters, f=${fmtTrace(-r.fx)}`,
+          lines: compactTrace(lines),
+        });
+        return math.matrix(r.x);
       } catch {
+        if (lines.length) {
+          pushSolverTrace(scope, {
+            label: `maximize "${expr}": no convergence`,
+            lines: compactTrace(lines),
+          });
+        }
         throw new Error(t('e.calcNoConv'));
       }
     }),
@@ -1073,27 +1125,41 @@ export function buildPackScope(math: MathJsInstance): Scope {
       if (!/^[A-Za-z_]\w*$/.test(v)) throw new Error(t('e.calcArgs'));
       const ev = numEvaluator(expr, scope);
       const f = (x: number): number => ev({ [v]: x });
+      const lines: string[] = [];
+      const pub = (label: string): void => {
+        pushSolverTrace(scope, { label, lines: compactTrace(lines) });
+      };
       try {
         if (args.length >= 4) {
           const a = needNum(evNode(args[2], scope));
           const b = needNum(evNode(args[3], scope));
           if (!(a < b)) throw new Error(t('e.calcArgs'));
-          return brent(f, a, b);
+          const head = `root "${expr}" ${v} ∈ [${fmtTrace(a)}, ${fmtTrace(b)}]`;
+          const r = brent(f, a, b, 1e-12, 100, (l) => lines.push(l));
+          pub(`${head}: f=${fmtTrace(f(r))}`);
+          return r;
         }
         const g0 = needNum(evNode(args[2], scope));
         // скалярный Ньютон с численной производной
+        const head = `root "${expr}" ${v} from ${fmtTrace(g0)}`;
         let x = g0;
         for (let k = 0; k < 100; k++) {
           const fx = f(x);
+          lines.push(`k=${k} x=${fmtTrace(x)} f=${fmtTrace(fx)}`);
           const h = 1e-8 * Math.max(1, Math.abs(x));
           const d = (f(x + h) - f(x - h)) / (2 * h);
           if (!isFinite(d) || d === 0) throw new Error(t('e.calcNoConv'));
           const nx = x - fx / d;
-          if (Math.abs(nx - x) < 1e-12) return nx;
+          if (Math.abs(nx - x) < 1e-12) {
+            pub(`${head}: f=${fmtTrace(f(nx))}`);
+            return nx;
+          }
           x = nx;
         }
         throw new Error(t('e.calcNoConv'));
       } catch (e) {
+        // лог только если итерации реально были (не ошибка аргументов)
+        if (lines.length) pub(`root "${expr}" ${v}: no convergence`);
         if (e instanceof Error && /bracket/i.test(e.message)) throw new Error(t('e.calcBracket'));
         if (e instanceof Error && e.message.startsWith('Симуляция:')) throw e;
         throw new Error(t('e.calcNoConv'));
@@ -1126,14 +1192,22 @@ export function buildPackScope(math: MathJsInstance): Scope {
         }
         return y[0] - yb;
       };
+      const lines: string[] = [];
+      const pubBvp = (label: string): void => {
+        pushSolverTrace(scope, { label, lines: compactTrace(lines) });
+      };
       try {
         let x0 = s0;
         let x1 = s0 * 1.001 + 1e-6;
         let f0 = shoot(x0);
         if (!isFinite(f0)) throw new Error(t('e.calcNoConv'));
+        lines.push(`s0=${fmtTrace(x0)} miss=${fmtTrace(f0)}`);
+        let iters = 0;
         for (let k = 0; k < 60; k++) {
           const f1 = shoot(x1);
           if (!isFinite(f1)) throw new Error(t('e.calcNoConv'));
+          lines.push(`k=${k} s=${fmtTrace(x1)} miss=${fmtTrace(f1)}`);
+          iters = k + 1;
           if (Math.abs(f1) < 1e-9) {
             x0 = x1;
             break;
@@ -1145,6 +1219,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
           f0 = f1;
           x1 = x2;
         }
+        pubBvp(`bvp "${expr}": secant ${iters} iters, s=${fmtTrace(x0)}`);
         // финальный прогон с сеткой для графика
         const h = (b - a) / (NPTS - 1);
         let y = [ya, x0];
@@ -1157,6 +1232,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
         }
         return math.matrix(rows);
       } catch (e) {
+        if (lines.length) pubBvp(`bvp "${expr}": no convergence`);
         if (e instanceof Error && e.message.startsWith('Симуляция:')) throw e;
         throw new Error(t('e.calcNoConv'));
       }
@@ -1194,9 +1270,21 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const sign = a < b ? 1 : -1;
       const ev = numEvaluator(expr, scope);
       const f = (x: number): number => ev({ [v]: x });
+      const lines: string[] = [];
       try {
-        return sign * adaptiveSimpson(f, lo, hi);
+        const r = sign * adaptiveSimpson(f, lo, hi, 1e-10, 20, (l) => lines.push(l));
+        pushSolverTrace(scope, {
+          label: `∫ "${expr}" d${v} [${fmtTrace(a)}, ${fmtTrace(b)}]: I=${fmtTrace(r)}`,
+          lines: compactTrace(lines),
+        });
+        return r;
       } catch {
+        if (lines.length) {
+          pushSolverTrace(scope, {
+            label: `∫ "${expr}" d${v}: no convergence`,
+            lines: compactTrace(lines),
+          });
+        }
         throw new Error(t('e.calcNoConv'));
       }
     }),

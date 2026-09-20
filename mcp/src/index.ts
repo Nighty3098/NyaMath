@@ -25,6 +25,7 @@ import {
 } from '../../src/engine/mathEngine.js';
 import { samplePlotBlock } from '../../src/engine/plotSample.js';
 import { samplePlot3d } from '../../src/engine/plot3dSample.js';
+import { resetSolverTrace, takeSolverTrace } from '../../src/engine/numeric.js';
 import { startSyncServer } from './syncServer.js';
 import { TEST_SCENARIO_LINES } from '../../src/data/testScenario.js';
 import { ADVANCED_DEMO } from '../../src/data/demoAdvanced.js';
@@ -373,12 +374,16 @@ server.tool(
 
 server.tool(
   'nya_evaluate',
-  'Вычислить выражение в текущем scope документа (только чтение, scope не меняется). Пример: "sqrt(Re(Z_c)^2 + Im(Z_c)^2)"',
+  'Вычислить выражение в текущем scope документа (только чтение, scope не меняется). Возвращает trace шагов решателей. Пример: "sqrt(Re(Z_c)^2 + Im(Z_c)^2)"',
   { expression: z.string() },
   async ({ expression }): Promise<CallToolResult> => {
-    const r = evaluateLine(expression, { ...lastScope });
-    if (r.error) return ok({ result: null, formatted: '', latex: '', error: r.error });
-    return ok({ result: formatResult(r.value), formatted: formatResult(r.value), latex: valueToLatex(r.value), error: null });
+    const scope = { ...lastScope };
+    resetSolverTrace(scope);
+    const r = evaluateLine(expression, scope);
+    // шаговый лог решателей — агент видит итерации бесплатно (ответ Symbolab)
+    const trace = takeSolverTrace(scope);
+    if (r.error) return ok({ result: null, formatted: '', latex: '', error: r.error, trace });
+    return ok({ result: formatResult(r.value), formatted: formatResult(r.value), latex: valueToLatex(r.value), error: null, trace });
   },
 );
 

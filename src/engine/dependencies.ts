@@ -1,4 +1,5 @@
 import { buildSubstitution, createBaseScope, compilePlotExpr, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, preprocessJ, preprocessRanges, splitOffUnit, stripOnError, toLatex, valueToLatex, type Scope } from './mathEngine';
+import { resetSolverTrace, takeSolverTrace } from './numeric';
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
 import { parseSimDef, runSim, runSimAsync, isSimCancel, yieldSlice, type SimResult, type SimSolver, type SimMode } from './simEngine';
@@ -17,6 +18,8 @@ export interface MathBlockData {
   substStr?: string | null;
   /** ... и LaTeX подстановки. null/'' = нет подстановки */
   substLatex?: string | null;
+  /** Шаговый лог решателей (nlsolve/root/nint/…) — Symbolab-стиль, у нас free */
+  solverTrace?: string[] | null;
   resultValue: unknown;
   error: string | null;
   dependencies: string[];
@@ -624,9 +627,10 @@ function detectVisualize(
 function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
   const { scope, out, cyclic, langTag, fpOf, reuseHit, snapBlock } = ctx;
   const cur = out[b.id];
-  // подстановка пересчитывается только для выводимых мат-строк ниже
+  // подстановка и лог решателей пересчитываются ниже (мат/program-ветки)
   cur.substStr = null;
   cur.substLatex = null;
+  cur.solverTrace = null;
   // Disable Evaluation: замороженный регион — формула видна,
   // но не считается и ничего не пишет в scope (как pass-регионы).
   if (b.disabled) {
@@ -727,7 +731,10 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
     // ---------- программный блок ----------
     if (b.kind === 'program') {
       const analysis = analyzeProgram(b.rawInput);
+      resetSolverTrace(scope);
       const r = runProgram(b.rawInput, scope);
+      const st = takeSolverTrace(scope);
+      cur.solverTrace = st.length ? st : null;
       cur.dependencies = analysis.dependencies;
       cur.isOutput = true;
       cur.programTrace = r.trace ?? null;
@@ -757,7 +764,10 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
       if (parsed.error || !parsed.def) {
         simFail(cur, parsed.error);
       } else {
+        resetSolverTrace(scope);
         simApply(cur, ctx, runSim(parsed.def, scope));
+        const sst = takeSolverTrace(scope);
+        cur.solverTrace = sst.length ? sst : null;
       }
       cur.displayLatex = '';
       snapBlock(cur, key);
@@ -766,6 +776,8 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
 
     // ---------- обычный мат-блок ----------
     const lines = b.rawInput.split('\n');
+    // канал лога решателей на этот блок (общий массив в scope — см. numeric.ts)
+    resetSolverTrace(scope);
     // индекс последней содержательной строки: scope ДО неё — для подстановки значений
     let lastIdx = -1;
     lines.forEach((ln, i) => {
@@ -841,6 +853,10 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
     if (sampledParam) {
       cur.dependencies = cur.dependencies.filter((d) => d !== sampledParam && d !== 'x');
     }
+    // лог решателей блока — ПОСЛЕ автографика: сэмплинг тоже считает в этом scope.
+    // Забираем и при ошибке сходимости (диагностика вместо тишины).
+    const str = takeSolverTrace(scope);
+    cur.solverTrace = str.length ? str : null;
 
     if (lastError) {
       cur.error = lastError;
@@ -931,16 +947,20 @@ function simApply(cur: MathBlockData, ctx: RecalcCtx, r: SimResult): void {
 /** Один sim-блок асинхронно: чанки runSimAsync + прогресс (#6). */
 async function computeSimAsync(b: MathBlockData, ctx: RecalcCtx, key: string, hooks: RecalcHooks): Promise<void> {
   const cur = ctx.out[b.id];
+  cur.solverTrace = null;
   const parsed = parseSimInput(b);
   simHead(b, cur);
   if (parsed.error || !parsed.def) {
     simFail(cur, parsed.error);
   } else {
+    resetSolverTrace(ctx.scope);
     const r = await runSimAsync(parsed.def, ctx.scope, {
       shouldCancel: hooks.shouldCancel,
       onProgress: (done, total) => hooks.onSimProgress?.(b.id, done, total),
     });
     simApply(cur, ctx, r);
+    const sst = takeSolverTrace(ctx.scope);
+    cur.solverTrace = sst.length ? sst : null;
   }
   cur.displayLatex = '';
   ctx.snapBlock(cur, key);

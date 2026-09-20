@@ -11,12 +11,104 @@ export interface NewtonResult {
   iters: number;
 }
 
+/* ---------- шаговый лог решателей (Symbolab-стиль, у нас free) ----------
+ * trace?: приёмник строк итераций. Вызывающий код (паки) собирает строки
+ * в подпись блока через pushSolverTrace(scope, ...). Формат компактный,
+ * без LaTeX — как programTrace. Густоту режем compactTrace (первые+последние).
+ */
+
+/** Приёмник строк итераций решателя. */
+export type TraceFn = (line: string) => void;
+
+/**
+ * Ключ лога в scope документа. Строка, а не символ: raw-функции паков
+ * получают от mathjs не сам scope, а PartitionedMap-обёртку (записи туда
+ * снаружи не видны), а вот ЧТЕНИЕ делегируется — поэтому канал это ОБЩИЙ
+ * массив: движок кладёт [], решатели push'ат, забор сбрасывает в [].
+ * Имя с даблами подчёркиваниями — пользовательские переменные так не зовут.
+ */
+export const SOLVER_TRACE_KEY = '__nya_trace__';
+
+export interface SolverTraceEntry {
+  label: string;
+  lines: string[];
+}
+
+interface MapLike {
+  get?: (k: string) => unknown;
+  set?: (k: string, v: unknown) => void;
+}
+
+/** Прочитать канал: PartitionedMap mathjs — через .get, плоский scope — скобками. */
+function chanGet(scope: Record<string, unknown>): unknown[] | undefined {
+  const m = scope as Record<string, unknown> & MapLike;
+  try {
+    const v = typeof m.get === 'function' ? m.get(SOLVER_TRACE_KEY) : m[SOLVER_TRACE_KEY];
+    return Array.isArray(v) ? v : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Подготовить канал перед оценкой блока (иначе решатели молчат). */
+export function resetSolverTrace(scope: Record<string, unknown>): void {
+  const m = scope as Record<string, unknown> & MapLike;
+  try {
+    if (typeof m.set === 'function') m.set(SOLVER_TRACE_KEY, []);
+    else m[SOLVER_TRACE_KEY] = [];
+  } catch {
+    /* scope только для чтения — решатели промолчат */
+  }
+}
+
+/** Опубликовать лог одного вызова решателя (нет канала — молча пропускаем). */
+export function pushSolverTrace(scope: Record<string, unknown>, entry: SolverTraceEntry): void {
+  const arr = chanGet(scope);
+  if (arr) arr.push(entry);
+}
+
+/** Забрать лог блока плоским списком строк (и очистить — не течёт ниже/в плоты). */
+export function takeSolverTrace(scope: Record<string, unknown>, maxLines = 40): string[] {
+  const arr = chanGet(scope);
+  resetSolverTrace(scope);
+  if (!arr) return [];
+  const out: string[] = [];
+  for (const e of arr as SolverTraceEntry[]) {
+    if (!e || typeof e.label !== 'string') continue;
+    out.push(e.label);
+    if (Array.isArray(e.lines)) out.push(...e.lines);
+    if (out.length >= maxLines) break;
+  }
+  return out.slice(0, maxLines);
+}
+
+/** Компактный формат числа для лога. */
+export function fmtTrace(n: number): string {
+  if (!isFinite(n)) return String(n);
+  if (n === 0) return '0';
+  const a = Math.abs(n);
+  if (a >= 1e-3 && a < 1e6) return String(Number(n.toPrecision(6)));
+  return n.toExponential(2);
+}
+
+/** Вектор для лога. */
+export function vecTrace(x: number[]): string {
+  return `[${x.map(fmtTrace).join(', ')}]`;
+}
+
+/** Первые 5 + «…N» + последние 6 (итераций бывает сотни). */
+export function compactTrace(lines: string[], keep = 12): string[] {
+  if (lines.length <= keep) return lines;
+  return [...lines.slice(0, 5), `… ${lines.length - 11} more`, ...lines.slice(-6)];
+}
+
 /** Ньютон для системы F(x)=0 с численной якобианой и демпфированием. */
 export function newtonSystem(
   F: (x: number[]) => number[],
   x0: number[],
   maxIter = 100,
   tol = 1e-10,
+  trace?: TraceFn,
 ): NewtonResult {
   const n = x0.length;
   let x = x0.slice();
@@ -24,6 +116,7 @@ export function newtonSystem(
   checkVec(r, n);
   for (let k = 0; k < maxIter; k++) {
     const norm = Math.sqrt(r.reduce((s, v) => s + v * v, 0));
+    trace?.(`k=${k} x=${vecTrace(x)} |F|=${fmtTrace(norm)}`);
     if (norm < tol) return { x, converged: true, iters: k };
     // численная якобиана
     const J: number[][] = [];
@@ -88,7 +181,11 @@ export function solveLinear(J: number[][], b: number[]): number[] {
 }
 
 /** Брент на [a,b], нужна смена знака. */
-export function brent(f: (x: number) => number, a: number, b: number, tol = 1e-12, maxIter = 100): number {
+export function brent(
+  f: (x: number) => number,
+  a: number, b: number, tol = 1e-12, maxIter = 100,
+  trace?: TraceFn,
+): number {
   let fa = f(a);
   let fb = f(b);
   if (!isFinite(fa) || !isFinite(fb)) throw new Error('Function not finite on bracket');
@@ -117,6 +214,7 @@ export function brent(f: (x: number) => number, a: number, b: number, tol = 1e-1
       fc = fa;
     }
     const m = 0.5 * (c - b);
+    trace?.(`k=${k} b=${fmtTrace(b)} f=${fmtTrace(fb)}`);
     if (Math.abs(m) < tol || fb === 0) return b;
     if (Math.abs(e) >= tol && Math.abs(fa) > Math.abs(fb)) {
       const s = fb / fa;
@@ -165,6 +263,7 @@ export function nelderMead(
   x0: number[],
   maxIter = 500,
   tol = 1e-8,
+  trace?: TraceFn,
 ): NelderMeadResult {
   const n = x0.length;
   const alpha = 1;
@@ -189,6 +288,7 @@ export function nelderMead(
     const second = idx[n - 1];
     // сходимость: разброс значений
     const spread = Math.max(...vals) - Math.min(...vals);
+    trace?.(`k=${k} best=${fmtTrace(vals[best])} x=${vecTrace(simplex[best])}`);
     if (spread < tol) {
       return { x: simplex[best], fx: vals[best], iters: k };
     }
@@ -237,8 +337,14 @@ export function nelderMead(
   return { x: simplex[idx[0]], fx: vals[idx[0]], iters: maxIter };
 }
 
-/** Адаптивный Симпсон. */
-export function adaptiveSimpson(f: (x: number) => number, a: number, b: number, tol = 1e-10, maxDepth = 20): number {
+/** Адаптивный Симпсон (лог: дробины/счётчик f — рекурсия в одну строку итога). */
+export function adaptiveSimpson(
+  f: (x: number) => number, a: number, b: number, tol = 1e-10, maxDepth = 20,
+  trace?: TraceFn,
+): number {
+  let evals = 3;
+  let splits = 0;
+  let maxHit = 0;
   const fa = f(a);
   const fb = f(b);
   const m = (a + b) / 2;
@@ -247,23 +353,32 @@ export function adaptiveSimpson(f: (x: number) => number, a: number, b: number, 
     if (typeof v !== 'number' || !isFinite(v)) throw new Error('Function must return finite numbers');
   }
   const whole = ((b - a) / 6) * (fa + 4 * fm + fb);
+  trace?.(`[${fmtTrace(a)}, ${fmtTrace(b)}] S0=${fmtTrace(whole)}`);
   const rec = (x0: number, f0: number, xm: number, fm2: number, x1: number, f1: number, w: number, depth: number): number => {
     const m1 = (x0 + xm) / 2;
     const m2 = (xm + x1) / 2;
     const f1v = f(m1);
     const f2v = f(m2);
+    evals += 2;
     if (!isFinite(f1v) || !isFinite(f2v)) throw new Error('Function must return finite numbers');
     const left = ((xm - x0) / 6) * (f0 + 4 * f1v + fm2);
     const right = ((x1 - xm) / 6) * (fm2 + 4 * f2v + f1);
     const delta = left + right - w;
-    if (depth <= 0) return left + right + delta / 15;
+    if (depth <= 0) {
+      maxHit = Math.max(maxHit, maxDepth - depth);
+      return left + right + delta / 15;
+    }
     if (Math.abs(delta) < 15 * tol) return left + right + delta / 15;
+    splits++;
+    maxHit = Math.max(maxHit, maxDepth - depth);
     return (
       rec(x0, f0, m1, f1v, xm, fm2, left, depth - 1) +
       rec(xm, fm2, m2, f2v, x1, f1, right, depth - 1)
     );
   };
-  return rec(a, fa, m, fm, b, fb, whole, maxDepth);
+  const result = rec(a, fa, m, fm, b, fb, whole, maxDepth);
+  trace?.(`splits=${splits} f-evals=${evals} I=${fmtTrace(result)}`);
+  return result;
 }
 
 /** Один шаг RK4 для системы (для BVP-стрельбы и тестов). */
