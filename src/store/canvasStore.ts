@@ -1,10 +1,9 @@
 import { create } from 'zustand';
 import { v4 as uuid } from 'uuid';
 import type { MathBlockData } from '../engine/dependencies';
-import { TEST_SCENARIO_LINES } from '../data/testScenario';
-import { ADVANCED_DEMO } from '../data/demoAdvanced';
+import { getDemoItems, getDemoLines } from '../lib/db';
 import { loadTheme, saveTheme, THEMES, type ThemeName } from '../theme';
-import { getSimModel, SIM_MODELS, simModelPatch } from '../engine/simEngine';
+import { getSimModel, listSimModels, simModelPatch } from '../engine/simEngine';
 import { separateBlocksVertically } from '../lib/canvasLayout';
 import { getLang, loadLang, setLangState, t, type Lang } from '../i18n';
 import { RECALC_TIMEOUT_MS, recalcInWorker } from '../lib/recalcWorker';
@@ -1076,7 +1075,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   addSimBlock: (x, y, modelId = 'pendulum') => {
     pushHistory(get, set as SetFn, true);
     const id = uuid();
-    const m = getSimModel(modelId) ?? getSimModel('pendulum') ?? SIM_MODELS[0];
+    const m = getSimModel(modelId) ?? getSimModel('pendulum') ?? listSimModels()[0];
     const b: MathBlockData = {
       ...blank(id, x, y), rawInput: 'sim', kind: 'sim', simExport: '', simSpeed: 1, simLoop: true,
       w: fitViewportWidth(560),
@@ -1279,7 +1278,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn, true);
     const rec: Record<string, MathBlockData> = {};
     let y = 60;
-    for (const line of TEST_SCENARIO_LINES) {
+    for (const line of getDemoLines('variant20')) {
       const id = uuid();
       rec[id] = {
         ...blank(id, 80, y),
@@ -1301,7 +1300,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn, true);
     const rec: Record<string, MathBlockData> = {};
     let y = 60;
-    for (const item of ADVANCED_DEMO) {
+    for (const item of getDemoItems('advanced')) {
       const id = uuid();
       rec[id] = {
         ...blank(id, 80, y),

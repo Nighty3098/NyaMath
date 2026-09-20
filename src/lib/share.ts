@@ -30,8 +30,7 @@
  */
 import type { MathBlockData } from '../engine/dependencies';
 import type { Lang } from '../i18n';
-import { TEST_SCENARIO_LINES } from '../data/testScenario';
-import { ADVANCED_DEMO } from '../data/demoAdvanced';
+import { getDemoItems, getDemoLines } from './db';
 import { FROZEN_PHRASES } from './sharePhrases';
 import { copyTextToClipboard } from './exportFiles';
 
@@ -381,14 +380,14 @@ function templateBlocks(key: TemplateKey): Record<string, SlimSource> {
   };
   if (key === 'ex20') {
     let y = 60;
-    for (const line of TEST_SCENARIO_LINES) {
+    for (const line of getDemoLines('variant20')) {
       putB({ x: 80, y, rawInput: line, kind: line.startsWith('//') ? 'text' : 'math' });
       y += 64;
     }
     putB({ x: 560, y: 120, rawInput: 'plot', kind: 'plot', plotFn: 'sin(x)', plotXmin: -10, plotXmax: 10 });
   } else {
     let y = 60;
-    for (const item of ADVANCED_DEMO) {
+    for (const item of getDemoItems('advanced')) {
       putB({ x: 80, y, rawInput: item.raw, kind: item.kind, exportName: item.exportName ?? '' });
       y += item.kind === 'program' ? 210 : 64;
     }

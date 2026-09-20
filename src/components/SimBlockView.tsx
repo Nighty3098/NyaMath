@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
-import { SIM_DOMAINS, SIM_MODELS, SIM_SOLVERS, getSimModel, simModelPatch, type SimMode, type SimResult, type SimSolver } from '../engine/simEngine';
+import { SIM_DOMAINS, SIM_SOLVERS, getSimModel, listSimModels, simModelPatch, type SimMode, type SimResult, type SimSolver } from '../engine/simEngine';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IGrip, IWarn, IX } from './Icon';
@@ -163,7 +163,7 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
               <option value="custom">{t('sim.custom')}</option>
               {SIM_DOMAINS.map((d) => (
                 <optgroup key={d} label={simDomainName(d)}>
-                  {SIM_MODELS.filter((m) => m.domain === d).map((m) => (
+                  {listSimModels().filter((m) => m.domain === d).map((m) => (
                     <option key={m.id} value={m.id} title={lx(m.desc)}>{lx(m.label)}</option>
                   ))}
                 </optgroup>

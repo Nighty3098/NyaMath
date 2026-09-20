@@ -8,7 +8,9 @@ import {
   phrasePack,
   phraseUnpack,
 } from './share';
-import { TEST_SCENARIO_LINES } from '../data/testScenario';
+import { getDemoLines } from './db';
+
+const TEST_SCENARIO_LINES = getDemoLines('variant20');
 import type { MathBlockData } from '../engine/dependencies';
 
 function block(id: string, kind: MathBlockData['kind'], y: number, patch: Partial<MathBlockData> = {}): MathBlockData {

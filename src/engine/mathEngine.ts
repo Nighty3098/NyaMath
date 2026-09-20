@@ -19,7 +19,12 @@ export const math: MathJsInstance = create(all, {});
 // по math-namespace, поэтому импортируем их туда явно (флаг rawArgs сохраняется).
 // Поштучно и в try/catch: часть имён (напр. grad) зарезервирована внутри mathjs —
 // тогда остаётся scope-версия из createBaseScope (у неё приоритет при вычислении).
-{
+// Лениво (не на импорте модуля): buildPackScope читает NyaMath.db,
+// которая в браузере готова только после await initDb() в main.tsx.
+let packImportsDone = false;
+function ensurePackImports(): void {
+  if (packImportsDone) return;
+  packImportsDone = true;
   const packScope = buildPackScope(math) as Record<string, unknown>;
   for (const k of [
     'nlsolve', 'find', 'minerr', 'minimize', 'maximize', 'root', 'bvp',
@@ -180,6 +185,7 @@ export function compilePlotExpr(pre: string): CompiledPlotExpr | null {
 
 /** Базовый scope: j/i, константы физики и функции паков (статистика, телеком, ...). */
 export function createBaseScope(): Scope {
+  ensurePackImports();
   return {
     // Мнимая единица под двумя именами
     i: math.complex(0, 1),

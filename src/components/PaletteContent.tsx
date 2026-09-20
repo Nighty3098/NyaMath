@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { SNIPPETS, type Snippet } from '../engine/packs';
-import { FORMULA_SECTIONS, FORMULAS } from '../data/formulas';
-import { CONST_SECTIONS, CONSTANTS } from '../data/constants';
+import { type Snippet } from '../engine/packs';
+import {
+  listConstEntries, listConstSections, listFormulaSections, listFormulas, listSnippets,
+} from '../lib/db';
 import { useCanvasStore } from '../store/canvasStore';
 import { lx, packName, t, type PackId } from '../i18n';
 import {
@@ -37,19 +38,6 @@ const KIND_ICONS: Record<Snippet['kind'], () => React.JSX.Element> = {
   program: IProgram,
   sim: ISim,
 };
-
-interface FormulaRow {
-  id: string;
-  section: string;
-  label: { ru: string; en: string };
-  hint: { ru: string; en: string };
-  code: string;
-  sources: { title: string; url: string }[];
-  vars?: { name: string; label: { ru: string; en: string } }[];
-  plot2d?: string;
-  plot3d?: string;
-  sim?: string;
-}
 
 interface PalItem {
   key: string;
@@ -87,20 +75,20 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
   const [q, setQ] = useState('');
 
   const sections = formulas
-    ? FORMULA_SECTIONS.map((sec) => ({ id: sec.id, label: lx(sec.label) }))
+    ? listFormulaSections().map((sec) => ({ id: sec.id, label: lx(sec.label) }))
     : consts
-    ? CONST_SECTIONS.map((sec) => ({ id: sec.id, label: lx(sec.label) }))
+    ? listConstSections().map((sec) => ({ id: sec.id, label: lx(sec.label) }))
     : PACKS.map((pack) => ({ id: pack, label: packName(pack) }));
 
   const items = useMemo<PalItem[]>(() => {
     const sectionLabel = (id: string): string =>
       formulas
-        ? lx(FORMULA_SECTIONS.find((sec) => sec.id === id)?.label ?? { ru: id, en: id })
+        ? lx(listFormulaSections().find((sec) => sec.id === id)?.label ?? { ru: id, en: id })
         : consts
-        ? lx(CONST_SECTIONS.find((sec) => sec.id === id)?.label ?? { ru: id, en: id })
+        ? lx(listConstSections().find((sec) => sec.id === id)?.label ?? { ru: id, en: id })
         : packName(id as PackId);
     const all: PalItem[] = formulas
-      ? (FORMULAS as FormulaRow[]).map((f) => ({
+      ? listFormulas().map((f) => ({
           key: f.id,
           section: f.section,
           label: f.label[lang],
@@ -114,7 +102,7 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
           kind: 'math' as const,
         }))
       : consts
-      ? CONSTANTS.map((k) => ({
+      ? listConstEntries().map((k) => ({
           key: k.id,
           section: k.section,
           label: k.label[lang],
@@ -123,7 +111,7 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
           sources: k.sources,
           kind: 'math' as const,
         }))
-      : SNIPPETS.map((s, i) => ({
+      : listSnippets().map((s, i) => ({
           key: `${s.pack}-${i}`,
           section: s.pack,
           label: s.label[lang],

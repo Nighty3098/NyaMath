@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { recalculateAll, type MathBlockData } from './dependencies';
 import { samplePlotBlock } from './plotSample';
 import { samplePlot3d } from './plot3dSample';
-import { SNIPPETS } from './packs';
+import { listSnippets } from '../lib/db';
 
 function mathBlock(id: string, rawInput: string, y: number): MathBlockData {
   return {
@@ -28,6 +28,7 @@ function finiteCount(s: { series: { ys: unknown[]; indexMode?: boolean }[] }): {
   return { total: n, indexed: allIndexed };
 }
 
+const SNIPPETS = listSnippets();
 const plots = SNIPPETS.filter((s) => s.kind === 'plot');
 const contours = SNIPPETS.filter((s) => s.kind === 'contour');
 const withPlot2d = SNIPPETS.filter((s) => s.kind === 'math' && s.plot2d);

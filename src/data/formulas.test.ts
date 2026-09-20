@@ -4,25 +4,24 @@ import { compilePlotExpr, preprocessJ, preprocessRanges } from '../engine/mathEn
 import { samplePlotBlock } from '../engine/plotSample';
 import { samplePlot3d } from '../engine/plot3dSample';
 import { getSimModel } from '../engine/simEngine';
-import { FORMULAS, FORMULA_SECTIONS } from './formulas';
-import { FORMULA_VARS } from './formulaVars';
+import { formulaVars, listFormulas, listFormulaSections } from '../lib/db';
 import { getLang } from '../i18n';
 
 describe('formula catalog', () => {
   it('sections and formulas are consistent', () => {
-    const ids = new Set(FORMULA_SECTIONS.map((s) => s.id));
-    expect(ids.size).toBe(FORMULA_SECTIONS.length);
-    for (const f of FORMULAS) {
+    const ids = new Set(listFormulaSections().map((s) => s.id));
+    expect(ids.size).toBe(listFormulaSections().length);
+    for (const f of listFormulas()) {
       expect(ids.has(f.section), `${f.id}: unknown section ${f.section}`).toBe(true);
       expect(f.sources.length, `${f.id}: no sources`).toBeGreaterThan(0);
       for (const src of f.sources) expect(src.url.startsWith('http'), `${f.id}: bad url`).toBe(true);
     }
-    const fid = new Set(FORMULAS.map((f) => f.id));
-    expect(fid.size).toBe(FORMULAS.length);
+    const fid = new Set(listFormulas().map((f) => f.id));
+    expect(fid.size).toBe(listFormulas().length);
   });
 
   it('labels are localized', () => {
-    for (const f of FORMULAS) {
+    for (const f of listFormulas()) {
       expect(f.label.ru.length).toBeGreaterThan(0);
       expect(f.label.en.length).toBeGreaterThan(0);
       expect(f.hint.ru.length).toBeGreaterThan(0);
@@ -32,8 +31,8 @@ describe('formula catalog', () => {
   });
 
   it('every formula evaluates through the real recalc path', () => {
-    expect(FORMULAS.length).toBeGreaterThan(0);
-    for (const f of FORMULAS) {
+    expect(listFormulas().length).toBeGreaterThan(0);
+    for (const f of listFormulas()) {
       const block = {
         id: `f-${f.id}`, x: 0, y: 0, rawInput: f.code, displayLatex: '', resultStr: '',
         resultLatex: '', resultValue: null, error: null,
@@ -47,7 +46,7 @@ describe('formula catalog', () => {
   });
 
   it('every formula also evaluates split into per-line blocks (palette insert path)', () => {
-    for (const f of FORMULAS) {
+    for (const f of listFormulas()) {
       const lines = f.code.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
       if (lines.length <= 1) continue;
       const blocks = lines.map((rawInput, k) => ({
@@ -63,16 +62,12 @@ describe('formula catalog', () => {
   });
 
   it('variable legends cover every formula with assignments', () => {
-    const ids = new Set(FORMULAS.map((f) => f.id));
-    for (const id of Object.keys(FORMULA_VARS)) {
-      expect(ids.has(id), `legend for unknown formula ${id}`).toBe(true);
-    }
     const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    for (const f of FORMULAS) {
-      const vars = FORMULA_VARS[f.id];
+    for (const f of listFormulas()) {
+      const vars = formulaVars(f.id);
       // легенда обязана быть ровно у формул с присваиваниями
       expect(Boolean(vars?.length), `${f.id}: legend presence mismatch`).toBe(f.code.includes(':='));
-      expect(f.vars, `${f.id}: vars not merged`).toEqual(vars ?? undefined);
+      expect(f.vars, `${f.id}: vars not merged`).toEqual(vars.length ? vars : undefined);
       const seen = new Set<string>();
       for (const v of vars ?? []) {
         expect(v.name.length, `${f.id}: empty var name`).toBeGreaterThan(0);
@@ -89,7 +84,7 @@ describe('formula catalog', () => {
   it('plot and sim attachments are valid', () => {
     let plots = 0;
     let sims = 0;
-    for (const f of FORMULAS) {
+    for (const f of listFormulas()) {
       for (const key of ['plot2d', 'plot3d'] as const) {
         const expr = f[key];
         if (expr === undefined) continue;
@@ -110,7 +105,7 @@ describe('formula catalog', () => {
   });
 
   it('every attached plot renders points in its formula scope', () => {
-    for (const f of FORMULAS) {
+    for (const f of listFormulas()) {
       if (f.plot2d === undefined && f.plot3d === undefined) continue;
       const block = {
         id: `p-${f.id}`, x: 0, y: 0, rawInput: f.code, displayLatex: '', resultStr: '',
@@ -132,9 +127,9 @@ describe('formula catalog', () => {
   });
 
   it('catalog is non-empty and covers all sections', () => {
-    expect(FORMULAS.length).toBeGreaterThan(0);
-    for (const sec of FORMULA_SECTIONS) {
-      const n = FORMULAS.filter((f) => f.section === sec.id).length;
+    expect(listFormulas().length).toBeGreaterThan(0);
+    for (const sec of listFormulaSections()) {
+      const n = listFormulas().filter((f) => f.section === sec.id).length;
       expect(n, `section ${sec.id} has ${n} formulas`).toBeGreaterThanOrEqual(20);
     }
   });

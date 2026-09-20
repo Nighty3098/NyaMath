@@ -14,6 +14,7 @@ import {
   type WorkerOutBlock,
   type WorkerReq,
 } from '../engine/workerProtocol';
+import { snapshotDb } from './db';
 import { getLang, type Lang } from '../i18n';
 
 /**
@@ -70,6 +71,7 @@ function killWorker(): void {
     /* уже мёртв */
   }
   worker = null;
+  hydratedWorker = null;
 }
 
 function createWorker(): Worker | null {
@@ -155,6 +157,52 @@ async function fallbackMain(
   }
 }
 
+/** Воркер, уже получивший снапшот БД (init-хендшейк пройден). */
+let hydratedWorker: Worker | null = null;
+
+/** Отправить сырые строки БД в свежий реальный воркер и дождаться ready. */
+function hydrateRealWorker(w: Worker): Promise<boolean> {
+  return new Promise((resolve) => {
+    let done = false;
+    const timer = setTimeout(() => {
+      if (!done) {
+        done = true;
+        resolve(false);
+      }
+    }, 10000);
+    const prevOnMessage = w.onmessage;
+    const prevOnError = w.onerror;
+    w.onmessage = (ev: MessageEvent) => {
+      const m = ev.data as { type?: string } | null;
+      if (m && typeof m === 'object' && m.type === 'ready') {
+        if (!done) {
+          done = true;
+          clearTimeout(timer);
+          w.onmessage = prevOnMessage;
+          w.onerror = prevOnError;
+          resolve(true);
+        }
+      }
+    };
+    w.onerror = () => {
+      if (!done) {
+        done = true;
+        clearTimeout(timer);
+        resolve(false);
+      }
+    };
+    try {
+      w.postMessage({ type: 'init', snapshot: snapshotDb() });
+    } catch {
+      if (!done) {
+        done = true;
+        clearTimeout(timer);
+        resolve(false);
+      }
+    }
+  });
+}
+
 export async function recalcInWorker(
   blocks: MathBlockData[],
   opts: RecalcJobOpts,
@@ -163,6 +211,16 @@ export async function recalcInWorker(
   if (opts.signal?.aborted) return { status: 'cancelled' };
   if (!worker) worker = createWorker();
   if (!worker) return fallbackMain(blocks, opts, timeoutMs);
+  // настоящий воркер (не тестовая подмена): сначала снапшот БД, иначе движок
+  // внутри упадёт на первом же getConstant (sql.js в чанк воркера не тянем)
+  if (!factoryOverride && worker !== hydratedWorker) {
+    const ok = await hydrateRealWorker(worker);
+    if (!ok || worker === null) {
+      if (worker) killWorker();
+      return fallbackMain(blocks, opts, timeoutMs);
+    }
+    hydratedWorker = worker;
+  }
 
   const w = worker;
   const slim = blocks.map(slimWorkerInput);

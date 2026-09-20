@@ -17,19 +17,19 @@ export interface UnitScale {
 }
 
 /** Составные символы, которые нельзя резать «префикс + остаток» (RU). */
-const EXACT: Record<string, number> = {
+export const EXACT_UNITS: Record<string, number> = {
   Тл: 1, // тесла
   Гн: 1, // генри
   Вб: 1, // вебер
 };
 
-const PREFIX2: Array<[string, number]> = [
+export const UNIT_PREFIX2: Array<[string, number]> = [
   ['мк', 1e-6], // микро
   ['дк', 1e1], // дека
   ['da', 1e1],
 ];
 
-const PREFIX1: Array<[string, number]> = [
+export const UNIT_PREFIX1: Array<[string, number]> = [
   ['ф', 1e-15], ['f', 1e-15],
   ['п', 1e-12], ['p', 1e-12],
   ['н', 1e-9], ['n', 1e-9],
@@ -50,20 +50,20 @@ const REST_RE = /^[А-Яа-яЁёA-Za-zμΩ°′″]+(?:\/[А-Яа-яЁёA-Za-z�
 
 const isUnitLabel = (s: string): boolean => s.length > 0 && REST_RE.test(s);
 
+/**
+ * Префиксы живут в NyaMath.db (таблица unit_prefixes): точные совпадения,
+ * затем длинные префиксы первыми (порядок — из БД, ORDER BY len DESC).
+ * Таблицы EXACT_UNITS/UNIT_PREFIX* оставлены для seed-скрипта.
+ */
+import { unitPrefixes } from '../lib/db';
+
 export function parseUnitScale(r: string): UnitScale {
   const raw = r.trim();
   if (!raw) return { raw: '', ok: true, scale: 1, unit: '' };
-  if (raw in EXACT) return { raw, ok: true, scale: 1, unit: raw };
-  for (const [p, s] of PREFIX2) {
-    if (raw.startsWith(p)) {
+  for (const { prefix: p, mult: s } of unitPrefixes()) {
+    if (raw.startsWith(p) || raw === p) {
       const rest = raw.slice(p.length);
-      if (isUnitLabel(rest)) return { raw, ok: true, scale: s, unit: rest };
-      break;
-    }
-  }
-  for (const [p, s] of PREFIX1) {
-    if (raw.startsWith(p)) {
-      const rest = raw.slice(p.length);
+      if (!rest) return { raw, ok: true, scale: 1, unit: raw };
       if (isUnitLabel(rest)) return { raw, ok: true, scale: s, unit: rest };
       break;
     }

@@ -1,8 +1,4 @@
-// Порядок импортов важен: сначала mathEngine (через dependencies),
-// иначе кольцевой импорт packs↔mathEngine падает на PACK_NAMES.
-// Тот же порядок, что в snippetPlots.test.ts.
-import '../engine/dependencies';
-import { SNIPPETS } from '../engine/packs';
+import { listSnippets } from './db';
 import type { Lang } from '../i18n';
 
 export interface FuncDoc {
@@ -55,19 +51,27 @@ export interface SnippetDoc {
   syntax: string;
 }
 
-const snippetDocs = new Map<string, SnippetDoc>();
-for (const s of SNIPPETS) {
-  if (s.kind === 'program' || s.kind === 'sim') continue;
-  const name = primaryName(s.code);
-  if (!name || snippetDocs.has(name)) continue;
-  snippetDocs.set(name, { title: s.label, syntax: s.doc ?? `${s.hint.ru} / ${s.hint.en}` });
+let snippetDocs: Map<string, SnippetDoc> | null = null;
+
+/** Ленивый индекс по сниппетам из БД (после initDb; до этого — пусто). */
+function docsIndex(): Map<string, SnippetDoc> {
+  if (!snippetDocs) {
+    snippetDocs = new Map<string, SnippetDoc>();
+    for (const s of listSnippets()) {
+      if (s.kind === 'program' || s.kind === 'sim') continue;
+      const name = primaryName(s.code);
+      if (!name || snippetDocs.has(name)) continue;
+      snippetDocs.set(name, { title: s.label, syntax: s.doc ?? `${s.hint.ru} / ${s.hint.en}` });
+    }
+  }
+  return snippetDocs;
 }
 
 /** Документация по имени функции: сначала встроенные, затем сниппеты. */
 export function lookupFuncDoc(name: string, lang: Lang): FuncDoc | null {
   const b = BUILTIN.find((x) => x.name === name);
   if (b) return { name, title: name, syntax: lang === 'ru' ? b.ru : b.en };
-  const s = snippetDocs.get(name);
+  const s = docsIndex().get(name);
   if (s) return { name, title: s.title[lang], syntax: s.syntax };
   return null;
 }
@@ -79,7 +83,7 @@ export function listFuncDocs(lang: Lang): FuncDoc[] {
     title: b.name,
     syntax: lang === 'ru' ? b.ru : b.en,
   }));
-  for (const [name, s] of snippetDocs) {
+  for (const [name, s] of docsIndex()) {
     out.push({ name, title: s.title[lang], syntax: s.syntax });
   }
   return out;

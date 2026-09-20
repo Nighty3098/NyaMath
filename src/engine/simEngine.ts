@@ -14,6 +14,7 @@ import type { EvalFunction } from 'mathjs';
 import type { Scope } from './packs';
 import { solveLinear } from './numeric';
 import { t, type LText } from '../i18n';
+import { getSimModelDb as dbGetSimModel, listSimModels as dbListSimModels } from '../lib/db';
 
 export type SimSolver = 'euler' | 'rk4' | 'rk45' | 'trbdf2';
 
@@ -1101,228 +1102,13 @@ export interface SimModel {
     layers: string;
   };
 }
-
-const L = (ru: string, en: string): LText => ({ ru, en });
-
-export const SIM_MODELS: SimModel[] = [
-  {
-    id: 'projectile', domain: 'mechanics',
-    label: L('Бросок тела', 'Projectile motion'),
-    desc: L('Полёт с линейным сопротивлением воздуха', 'Flight with linear air drag'),
-    states: 'x, y, vx, vy', derivs: 'vx; vy; -k*vx/m; -g - k*vy/m', aux: '',
-    params: [{ name: 'm', def: '1' }, { name: 'g', def: '9.81' }, { name: 'k', def: '0' }],
-    init: '0, 0, 20, 20', t0: 0, t1: 5, dt: 0.01, solver: 'rk4', x: 'x', y: 'y',
-  },
-  {
-    id: 'pendulum', domain: 'mechanics',
-    label: L('Маятник (нелинейный)', 'Pendulum (nonlinear)'),
-    desc: L('Колебания на больших углах с трением', 'Large-angle swings with damping'),
-    states: 'th, om', derivs: 'om; -(g/L)*sin(th) - b*om', aux: '',
-    params: [{ name: 'L', def: '1' }, { name: 'g', def: '9.81' }, { name: 'b', def: '0.05' }],
-    init: '1.2, 0', t0: 0, t1: 10, dt: 0.01, solver: 'rk4', x: 't', y: 'th',
-  },
-  {
-    id: 'oscillator', domain: 'osc',
-    label: L('Осциллятор с затуханием', 'Damped oscillator'),
-    desc: L('Груз на пружине с вязким трением', 'Mass on a spring with viscous damping'),
-    states: 'x, v', derivs: 'v; -(k*x + c*v)/m', aux: '',
-    params: [{ name: 'm', def: '1' }, { name: 'k', def: '4' }, { name: 'c', def: '0.1' }],
-    init: '1, 0', t0: 0, t1: 12, dt: 0.01, solver: 'rk4', x: 't', y: 'x',
-  },
-  {
-    id: 'driven', domain: 'osc',
-    label: L('Вынужденные колебания', 'Driven oscillator'),
-    desc: L('Резонанс под гармонической силой', 'Resonance under harmonic forcing'),
-    states: 'x, v', derivs: 'v; (F*cos(w*t) - c*v - k*x)/m', aux: '',
-    params: [
-      { name: 'm', def: '1' }, { name: 'k', def: '4' }, { name: 'c', def: '0.05' },
-      { name: 'F', def: '1' }, { name: 'w', def: '2' },
-    ],
-    init: '0, 0', t0: 0, t1: 30, dt: 0.01, solver: 'rk4', x: 't', y: 'x',
-  },
-  {
-    id: 'vanderpol', domain: 'chaos',
-    label: L('Осциллятор Ван-дер-Поля', 'Van der Pol oscillator'),
-    desc: L('Нелинейный осциллятор с предельным циклом', 'Nonlinear oscillator with a limit cycle'),
-    states: 'x, v', derivs: 'v; mu*(1 - x^2)*v - x', aux: '',
-    params: [{ name: 'mu', def: '2' }],
-    init: '0.5, 0', t0: 0, t1: 25, dt: 0.01, solver: 'rk4', x: 'x', y: 'v',
-  },
-  {
-    id: 'lorenz', domain: 'chaos',
-    label: L('Система Лоренца', 'Lorenz system'),
-    desc: L('Детерминированный хаос: аттрактор-бабочка', 'Deterministic chaos: butterfly attractor'),
-    states: 'x, y, z', derivs: 's*(y - x); x*(r - z) - y; x*y - b*z', aux: '',
-    params: [{ name: 's', def: '10' }, { name: 'r', def: '28' }, { name: 'b', def: '8/3' }],
-    init: '1, 1, 1', t0: 0, t1: 40, dt: 0.005, solver: 'rk4', x: 'x', y: 'y',
-  },
-  {
-    id: 'doublepend', domain: 'chaos',
-    label: L('Двойной маятник', 'Double pendulum'),
-    desc: L('Полные нелинейные уравнения, хаос', 'Full nonlinear equations, chaos'),
-    states: 'th1, om1, th2, om2',
-    derivs: 'om1; d1; om2; d2',
-    aux: 'den := 2*m1 + m2 - m2*cos(2*th1 - 2*th2)\nd1 := (-g*(2*m1+m2)*sin(th1) - m2*g*sin(th1-2*th2) - 2*sin(th1-th2)*m2*(om2^2*L2 + om1^2*L1*cos(th1-th2)))/(L1*den)\nd2 := 2*sin(th1-th2)*(om1^2*L1*(m1+m2) + g*(m1+m2)*cos(th1) + om2^2*L2*m2*cos(th1-th2))/(L2*den)',
-    params: [
-      { name: 'm1', def: '1' }, { name: 'm2', def: '1' },
-      { name: 'L1', def: '1' }, { name: 'L2', def: '1' }, { name: 'g', def: '9.81' },
-    ],
-    init: '1.5, 0, 2.2, 0', t0: 0, t1: 15, dt: 0.005, solver: 'rk4', x: 't', y: 'th1; th2',
-  },
-  {
-    id: 'orbit', domain: 'astro',
-    label: L('Орбита спутника', 'Satellite orbit'),
-    desc: L('Кеплерова орбита вокруг Земли (СИ)', 'Kepler orbit around Earth (SI)'),
-    states: 'x, y, vx, vy', derivs: 'vx; vy; -mu*x/r^3; -mu*y/r^3',
-    aux: 'r := sqrt(x^2 + y^2)',
-    params: [{ name: 'mu', def: '3.986e14' }],
-    init: '6771000, 0, 0, 7672', t0: 0, t1: 6000, dt: 5, solver: 'rk45', x: 'x', y: 'y',
-  },
-  {
-    id: 'lctank', domain: 'circuits',
-    label: L('LC-контур', 'LC tank'),
-    desc: L('Свободные колебания с малыми потерями', 'Free oscillations with small losses'),
-    states: 'q, i', derivs: 'i; -q/(L*C) - R*i/L', aux: '',
-    params: [{ name: 'L', def: '0.01' }, { name: 'C', def: '1e-6' }, { name: 'R', def: '0.5' }],
-    init: '1e-6, 0', t0: 0, t1: 0.01, dt: 0.00001, solver: 'rk4', x: 't', y: 'q; i',
-  },
-  {
-    id: 'drivenRLC', domain: 'circuits',
-    label: L('RLC под синусом', 'Driven RLC'),
-    desc: L('Вынужденный отклик последовательного контура', 'Forced response of a series circuit'),
-    states: 'q, i', derivs: 'i; (V*cos(w*t) - R*i - q/C)/L', aux: '',
-    params: [
-      { name: 'R', def: '10' }, { name: 'L', def: '0.1' }, { name: 'C', def: '1e-5' },
-      { name: 'V', def: '5' }, { name: 'w', def: '1000' },
-    ],
-    init: '0, 0', t0: 0, t1: 0.05, dt: 0.00002, solver: 'rk4', x: 't', y: 'q; i',
-  },
-  {
-    id: 'duffing', domain: 'chaos',
-    label: L('Осциллятор Даффинга', 'Duffing oscillator'),
-    desc: L('Двухъямный потенциал, хаос под накачкой', 'Double-well potential, driven chaos'),
-    states: 'x, v', derivs: 'v; -d*v - a*x - b*x^3 + F*cos(w*t)', aux: '',
-    params: [
-      { name: 'd', def: '0.2' }, { name: 'a', def: '-1' }, { name: 'b', def: '1' },
-      { name: 'F', def: '0.3' }, { name: 'w', def: '1.2' },
-    ],
-    init: '1, 0', t0: 0, t1: 60, dt: 0.02, solver: 'rk4', x: 'x', y: 'v',
-  },
-  {
-    id: 'rlc', domain: 'circuits',
-    label: L('RLC-контур', 'RLC circuit'),
-    desc: L('Последовательный контур под постоянным напряжением', 'Series circuit under DC voltage'),
-    states: 'q, i', derivs: 'i; (V - R*i - q/C)/L', aux: '',
-    params: [{ name: 'R', def: '10' }, { name: 'L', def: '0.1' }, { name: 'C', def: '0.001' }, { name: 'V', def: '5' }],
-    init: '0, 0', t0: 0, t1: 0.2, dt: 0.0001, solver: 'rk4', x: 't', y: 'q; i',
-  },
-  {
-    id: 'rc', domain: 'circuits',
-    label: L('Заряд RC-цепи', 'RC charging'),
-    desc: L('Заряд конденсатора через резистор', 'Capacitor charging through a resistor'),
-    states: 'V', derivs: '(Vs - V)/(R*C)', aux: '',
-    params: [{ name: 'Vs', def: '5' }, { name: 'R', def: '1000' }, { name: 'C', def: '0.001' }],
-    init: '0', t0: 0, t1: 5, dt: 0.005, solver: 'rk4', x: 't', y: 'V',
-  },
-  {
-    id: 'newton', domain: 'thermo',
-    label: L('Охлаждение Ньютона', 'Newton cooling'),
-    desc: L('Температура тела в среде', 'Body temperature in a medium'),
-    states: 'T', derivs: '-k*(T - Ta)', aux: '',
-    params: [{ name: 'Ta', def: '20' }, { name: 'k', def: '0.05' }],
-    init: '90', t0: 0, t1: 100, dt: 0.1, solver: 'rk4', x: 't', y: 'T',
-  },
-  {
-    id: 'thermal2', domain: 'thermo',
-    label: L('Два тела + нагреватель', 'Two bodies + heater'),
-    desc: L('Теплообмен двух тел, первое греем', 'Heat exchange of two bodies, first one heated'),
-    states: 'T1, T2', derivs: '(P - K*(T1-T2))/C1; K*(T1-T2)/C2', aux: '',
-    params: [{ name: 'C1', def: '100' }, { name: 'C2', def: '200' }, { name: 'K', def: '5' }, { name: 'P', def: '50' }],
-    init: '20, 20', t0: 0, t1: 200, dt: 0.1, solver: 'rk4', x: 't', y: 'T1; T2',
-  },
-  {
-    id: 'decay', domain: 'nuclear',
-    label: L('Цепочка распада', 'Decay chain'),
-    desc: L('Радиоактивная цепочка A → B → C', 'Radioactive chain A → B → C'),
-    states: 'N1, N2, N3', derivs: '-l1*N1; l1*N1 - l2*N2; l2*N2', aux: '',
-    params: [{ name: 'l1', def: '0.1' }, { name: 'l2', def: '0.05' }],
-    init: '1000, 0, 0', t0: 0, t1: 100, dt: 0.1, solver: 'rk4', x: 't', y: 'N1; N2; N3',
-  },
-  {
-    id: 'kinetics', domain: 'molecular',
-    label: L('Кинетика A ↔ B', 'Kinetics A ↔ B'),
-    desc: L('Обратимая реакция первого порядка', 'Reversible first-order reaction'),
-    states: 'A, B', derivs: '-k1*A + k2*B; k1*A - k2*B', aux: '',
-    params: [{ name: 'k1', def: '0.3' }, { name: 'k2', def: '0.1' }],
-    init: '1, 0', t0: 0, t1: 30, dt: 0.05, solver: 'rk4', x: 't', y: 'A; B',
-  },
-  {
-    id: 'grin', domain: 'optics',
-    label: L('Луч в GRIN-среде', 'GRIN beam'),
-    desc: L('Параксиальный луч в градиентной оптике', 'Paraxial ray in gradient-index optics'),
-    states: 'x, u', derivs: 'u; -g^2*x', aux: '',
-    params: [{ name: 'g', def: '0.5' }],
-    init: '1, 0', t0: 0, t1: 15, dt: 0.02, solver: 'rk4', x: 't', y: 'x',
-  },
-  {
-    id: 'bounce', domain: 'mechanics',
-    label: L('Прыгающий мяч', 'Bouncing ball'),
-    desc: L('Удар об пол через событие: отражение скорости', 'Floor impact via event: velocity bounce'),
-    states: 'y, vy', derivs: 'vy; -g', aux: '',
-    params: [{ name: 'g', def: '9.81' }, { name: 'e', def: '0.8' }],
-    events: 'y <= 0 => vy := -e*vy; y := 0',
-    init: '5, 0', t0: 0, t1: 6, dt: 0.002, solver: 'rk4', x: 't', y: 'y',
-  },
-  {
-    id: 'binary', domain: 'astro',
-    label: L('Двойная система', 'Binary system'),
-    desc: L('Две звезды вокруг барицентра (m1=2, m2=1)', 'Two stars around barycenter (m1=2, m2=1)'),
-    states: 'x1, y1, vx1, vy1, x2, y2, vx2, vy2',
-    derivs: 'vx1; vy1; -G*m2*(x1-x2)/r^3; -G*m2*(y1-y2)/r^3; vx2; vy2; G*m1*(x1-x2)/r^3; G*m1*(y1-y2)/r^3',
-    aux: 'r := sqrt((x1-x2)^2 + (y1-y2)^2)',
-    params: [{ name: 'G', def: '1' }, { name: 'm1', def: '2' }, { name: 'm2', def: '1' }],
-    init: '-0.6667, 0, 0, -0.4082, 1.3333, 0, 0, 0.8165',
-    t0: 0, t1: 10.3, dt: 0.005, solver: 'rk4', x: 'x1', y: 'y1',
-  },
-  {
-    id: 'figure8', domain: 'astro',
-    label: L('Восьмёрка трёх тел', 'Figure-8 three-body'),
-    desc: L('Знаменитая периодическая орбита Мура (G=m=1)', "Moore's periodic orbit (G=m=1)"),
-    states: 'x1, y1, vx1, vy1, x2, y2, vx2, vy2, x3, y3, vx3, vy3',
-    derivs: 'vx1; vy1; (x2-x1)/r12^3 + (x3-x1)/r13^3; (y2-y1)/r12^3 + (y3-y1)/r13^3; vx2; vy2; (x1-x2)/r12^3 + (x3-x2)/r23^3; (y1-y2)/r12^3 + (y3-y2)/r23^3; vx3; vy3; (x1-x3)/r13^3 + (x2-x3)/r23^3; (y1-y3)/r13^3 + (y2-y3)/r23^3',
-    aux: 'r12 := sqrt((x1-x2)^2 + (y1-y2)^2)\nr13 := sqrt((x1-x3)^2 + (y1-y3)^2)\nr23 := sqrt((x2-x3)^2 + (y2-y3)^2)',
-    params: [],
-    init: '-0.97000436, 0.24308753, 0.466203685, 0.43236573, 0.97000436, -0.24308753, 0.466203685, 0.43236573, 0, 0, -0.93240737, -0.86473146',
-    t0: 0, t1: 6.33, dt: 0.002, solver: 'rk4', x: 'x1', y: 'y1',
-  },
-  {
-    id: 'slab', domain: 'optics', mode: 'fdtd',
-    label: L('Импульс через пластину', 'Pulse through slab'),
-    desc: L('Гауссов импульс: отражение и прохождение слоя eps=4', 'Gaussian pulse: reflection and transmission at eps=4 slab'),
-    states: '', derivs: '', aux: '', params: [], init: '',
-    t0: 0, t1: 0, dt: 0, solver: 'rk4', x: 't', y: '',
-    fdtd: { n: 400, length: 20, steps: 1500, src: 'gauss', freq: 1, amp: 1, srcX: 4, det: 16, layers: '8, 12, 4' },
-  },
-  {
-    id: 'mirror', domain: 'optics', mode: 'fdtd',
-    label: L('Отражение от зеркала', 'Mirror reflection'),
-    desc: L('Импульс отражается от плотного слоя eps=100', 'Pulse reflects off a dense eps=100 slab'),
-    states: '', derivs: '', aux: '', params: [], init: '',
-    t0: 0, t1: 0, dt: 0, solver: 'rk4', x: 't', y: '',
-    fdtd: { n: 400, length: 20, steps: 1500, src: 'gauss', freq: 1, amp: 1, srcX: 4, det: 16, layers: '9, 11, 100' },
-  },
-  {
-    id: 'bragg', domain: 'optics', mode: 'fdtd',
-    label: L('Зеркало Брэгга', 'Bragg mirror'),
-    desc: L('Два слоя eps=4: многократные отражения', 'Two eps=4 slabs: multiple reflections'),
-    states: '', derivs: '', aux: '', params: [], init: '',
-    t0: 0, t1: 0, dt: 0, solver: 'rk4', x: 't', y: '',
-    fdtd: { n: 400, length: 20, steps: 2000, src: 'gauss', freq: 1, amp: 1, srcX: 4, det: 16, layers: '8, 9, 4\n11, 12, 4' },
-  },
-];
+/** Пресеты моделей живут в NyaMath.db (таблица sim_models). */
+export function listSimModels(): SimModel[] {
+  return dbListSimModels();
+}
 
 export function getSimModel(id: string): SimModel | undefined {
-  return SIM_MODELS.find((m) => m.id === id);
+  return dbGetSimModel(id) ?? undefined;
 }
 
 /** Патч полей блока для применения модели (label локализуется через lx). */
@@ -1380,6 +1166,6 @@ export function simModelPatch(m: SimModel): {
 
 /** Дефолт нового sim-блока: маятник. */
 export function defaultSimPatch(): ReturnType<typeof simModelPatch> {
-  const m = getSimModel('pendulum') ?? SIM_MODELS[0];
+  const m = getSimModel('pendulum') ?? listSimModels()[0];
   return simModelPatch(m);
 }

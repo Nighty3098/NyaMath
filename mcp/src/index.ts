@@ -8,6 +8,7 @@
  *
  * Transport: stdio. Документ по умолчанию: $NYAMATH_DOC или ./nyamath-doc.json
  */
+import './preload.js';
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { ReadResourceResult, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -634,14 +635,14 @@ server.tool(
     const rec: MathBlockData[] = [];
     if (name === 'variant20') {
       let y = 60;
-      for (const line of TEST_SCENARIO_LINES) {
+      for (const line of getDemoLines('variant20')) {
         const id = uuid();
         rec.push({ ...blank(id, 80, y), rawInput: line, kind: line.startsWith('//') ? 'text' : 'math' });
         y += 64;
       }
     } else {
       let y = 60;
-      for (const item of ADVANCED_DEMO) {
+      for (const item of getDemoItems('advanced')) {
         const id = uuid();
         rec.push({ ...blank(id, 80, y), rawInput: item.raw, kind: item.kind, exportName: item.exportName ?? '' });
         y += item.kind === 'program' ? 210 : 64;
@@ -800,6 +801,7 @@ server.resource(
 );
 
 async function main(): Promise<void> {
+  // NyaMath.db уже открыт в preload.ts (первый импорт выше).
   // Автозагрузка: $NYAMATH_DOC, если файл существует (новый формат с header и legacy-массив)
   if (docPath && fs.existsSync(docPath)) {
     try {

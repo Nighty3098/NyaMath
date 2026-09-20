@@ -1,0 +1,453 @@
+/**
+ * NyaMath.db — единый источник справочных данных (константы, материалы,
+ * формулы, сниппеты, sim-пресеты, демо-наборы, SI-префиксы).
+ *
+ * Драйверы: sql.js (WASM, браузер) и node:sqlite (Node: тесты, MCP, seed).
+ * Все таблицы при init целиком уходят в память — геттеры синхронные,
+ * хот-пути движка (buildPackScope) не замечают разницы с бывшими константами.
+ *
+ * Браузер обязан вызвать `await initDb()` в main.tsx до первого рендера.
+ * В Node init синхронный: setup-файл витеста и main() MCP-сервера.
+ */
+import type { LText, PackId } from '../i18n';
+import type { SimModel, SimModelParam } from '../engine/simEngine';
+import type { Snippet } from '../engine/packs';
+
+export type Row = Record<string, unknown>;
+
+export interface Driver {
+  all(sql: string): Row[];
+}
+
+let driver: Driver | null = null;
+let dbPathUsed = '';
+
+/* ---------------- кэши таблиц ---------------- */
+
+const constants = new Map<string, ConstantRow>();
+const materials: Material[] = [];
+const materialById = new Map<string, Material>();
+const matPropNames = new Map<string, { ru: string; en: string }>();
+const formulaSections: FormulaSection[] = [];
+const formulas: Formula[] = [];
+const formulaById = new Map<string, Formula>();
+const constSections: ConstSection[] = [];
+const constEntries: ConstEntry[] = [];
+const snippets: Snippet[] = [];
+const simModels: SimModel[] = [];
+const simById = new Map<string, SimModel>();
+const demoBySuite = new Map<string, DemoItem[]>();
+let prefixes: Array<{ prefix: string; mult: number; len: number }> = [];
+
+export interface ConstantRow {
+  name: string;
+  value: number;
+  unit: string | null;
+  kind: string;
+  section: string | null;
+  label_ru: string | null;
+  label_en: string | null;
+  hint_ru: string | null;
+  hint_en: string | null;
+  source: string | null;
+}
+
+export interface Material {
+  id: string;
+  en: string;
+  ru: string;
+  formula: string;
+  type: 'metal' | 'dielectric' | 'semiconductor';
+  props: Partial<Record<string, number>>;
+}
+
+export type MatPropKey =
+  | 'sigma' | 'rho' | 'eps_r' | 'mu_r' | 'alpha_res'
+  | 'melting' | 'ct' | 'cp' | 'bandgap';
+
+export const MAT_PROP_KEYS: readonly MatPropKey[] = [
+  'sigma', 'rho', 'eps_r', 'mu_r', 'alpha_res', 'melting', 'ct', 'cp', 'bandgap',
+];
+
+export interface FormulaSection {
+  id: string;
+  label: LText;
+}
+
+export interface FormulaSource {
+  title: string;
+  url: string;
+}
+
+export interface FormulaVar {
+  name: string;
+  label: LText;
+}
+
+export interface Formula {
+  id: string;
+  section: string;
+  label: LText;
+  hint: LText;
+  code: string;
+  sources: FormulaSource[];
+  vars?: FormulaVar[];
+  plot2d?: string;
+  plot3d?: string;
+  sim?: string;
+}
+
+export interface ConstSection {
+  id: string;
+  label: LText;
+}
+
+export interface ConstEntry {
+  id: string;
+  section: string;
+  label: LText;
+  hint: LText;
+  code: string;
+  sources: FormulaSource[];
+}
+
+export interface DemoItem {
+  kind: 'math' | 'text' | 'plot' | 'program';
+  raw: string;
+  exportName?: string;
+  plotFn?: string;
+  plotXmin?: number;
+  plotXmax?: number;
+}
+
+/* ---------------- lifecycle ---------------- */
+
+export function isDbReady(): boolean {
+  return driver !== null;
+}
+
+export function dbPath(): string {
+  return dbPathUsed;
+}
+
+function assertDb(): Driver {
+  if (!driver) throw new Error('NyaMath.db not initialized (browser: await initDb(); node: setDriver(openNodeDb()))');
+  return driver;
+}
+
+/** Подключить готовый драйвер (sql.js / node:sqlite) и прогреть кэши. */
+export function setDriver(d: Driver, path: string): void {
+  driver = d;
+  dbPathUsed = path;
+  loadAll();
+}
+
+const str = (v: unknown): string => String(v ?? '');
+const num = (v: unknown): number => Number(v);
+const optStr = (v: unknown): string | undefined => (v === null || v === undefined || v === '' ? undefined : String(v));
+const optNum = (v: unknown): number | undefined => (v === null || v === undefined || v === '' ? undefined : Number(v));
+const nulStr = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
+
+/** Сырые строки таблиц — для snapshotDb()/hydrateDb (воркер без sql.js). */
+let rawTables: Record<string, Row[]> = {};
+
+function readAllTables(db: Driver): Record<string, Row[]> {
+  const tables = [
+    'constants', 'materials', 'mat_prop_names',
+    'formula_sections', 'formulas', 'formula_sources', 'formula_vars',
+    'const_sections', 'const_entries', 'const_sources',
+    'snippets', 'sim_models', 'demo_lines', 'unit_prefixes',
+  ];
+  return Object.fromEntries(tables.map((t) => [t, db.all(`SELECT * FROM ${t}`)]));
+}
+
+function loadAll(): void {
+  const db = assertDb();
+  ingest(readAllTables(db));
+}
+
+/** Заполнить кэши из сырых строк (общее для driver/snapshot путей). */
+function ingest(t: Record<string, Row[]>): void {
+  rawTables = t;
+  // сортировка по ord: устойчива и для таблиц без ord (все ключи 0)
+  const q = (name: string): Row[] =>
+    [...(t[name] ?? [])].sort((a, b) => Number(a['ord'] ?? 0) - Number(b['ord'] ?? 0));
+  const rows = q;
+  constants.clear();
+  for (const r of rows('constants')) {
+    constants.set(str(r['name']), {
+      name: str(r['name']), value: num(r['value']), unit: nulStr(r['unit']),
+      kind: str(r['kind']), section: nulStr(r['section']),
+      label_ru: nulStr(r['label_ru']), label_en: nulStr(r['label_en']),
+      hint_ru: nulStr(r['hint_ru']), hint_en: nulStr(r['hint_en']),
+      source: nulStr(r['source']),
+    });
+  }
+  materials.length = 0;
+  materialById.clear();
+  for (const r of rows('materials')) {
+    const props: Partial<Record<string, number>> = {};
+    for (const k of MAT_PROP_KEYS) {
+      if (r[k] !== null && r[k] !== undefined) props[k] = Number(r[k]);
+    }
+    const m: Material = {
+      id: str(r['id']), en: str(r['en']), ru: str(r['ru']),
+      formula: str(r['formula']), type: r['type'] as Material['type'], props,
+    };
+    materials.push(m);
+    materialById.set(m.id, m);
+  }
+  matPropNames.clear();
+  for (const r of rows('mat_prop_names')) {
+    matPropNames.set(str(r['prop']), { ru: str(r['ru']), en: str(r['en']) });
+  }
+  formulaSections.length = 0;
+  for (const r of q('formula_sections')) {
+    formulaSections.push({ id: str(r['id']), label: { ru: str(r['label_ru']), en: str(r['label_en']) } });
+  }
+  const sourcesByF = new Map<string, FormulaSource[]>();
+  for (const r of q('formula_sources')) {
+    const arr = sourcesByF.get(str(r['formula_id'])) ?? [];
+    arr.push({ title: str(r['title']), url: str(r['url']) });
+    sourcesByF.set(str(r['formula_id']), arr);
+  }
+  const varsByF = new Map<string, FormulaVar[]>();
+  for (const r of q('formula_vars')) {
+    const arr = varsByF.get(str(r['formula_id'])) ?? [];
+    arr.push({ name: str(r['name']), label: { ru: str(r['label_ru']), en: str(r['label_en']) } });
+    varsByF.set(str(r['formula_id']), arr);
+  }
+  formulas.length = 0;
+  formulaById.clear();
+  for (const r of q('formulas')) {
+    const vars = varsByF.get(str(r['id']));
+    const f: Formula = {
+      id: str(r['id']), section: str(r['section']),
+      label: { ru: str(r['label_ru']), en: str(r['label_en']) },
+      hint: { ru: str(r['hint_ru']), en: str(r['hint_en']) },
+      code: str(r['code']),
+      sources: sourcesByF.get(str(r['id'])) ?? [],
+      ...(vars?.length ? { vars } : {}),
+      ...optStr(r['plot2d']) !== undefined ? { plot2d: optStr(r['plot2d']) as string } : {},
+      ...optStr(r['plot3d']) !== undefined ? { plot3d: optStr(r['plot3d']) as string } : {},
+      ...optStr(r['sim']) !== undefined ? { sim: optStr(r['sim']) as string } : {},
+    };
+    formulas.push(f);
+    formulaById.set(f.id, f);
+  }
+  constSections.length = 0;
+  for (const r of q('const_sections')) {
+    constSections.push({ id: str(r['id']), label: { ru: str(r['label_ru']), en: str(r['label_en']) } });
+  }
+  const srcByE = new Map<string, FormulaSource[]>();
+  for (const r of q('const_sources')) {
+    const arr = srcByE.get(str(r['entry_id'])) ?? [];
+    arr.push({ title: str(r['title']), url: str(r['url']) });
+    srcByE.set(str(r['entry_id']), arr);
+  }
+  constEntries.length = 0;
+  for (const r of q('const_entries')) {
+    (constEntries as ConstEntry[]).push({
+      id: str(r['id']), section: str(r['section']),
+      label: { ru: str(r['label_ru']), en: str(r['label_en']) },
+      hint: { ru: str(r['hint_ru']), en: str(r['hint_en']) },
+      code: str(r['code']), sources: srcByE.get(str(r['id'])) ?? [],
+    });
+  }
+  snippets.length = 0;
+  for (const r of q('snippets')) {
+    (snippets as Snippet[]).push({
+      pack: str(r['pack']) as PackId,
+      kind: str(r['kind']) as Snippet['kind'],
+      label: { ru: str(r['label_ru']), en: str(r['label_en']) },
+      hint: { ru: str(r['hint_ru']), en: str(r['hint_en']) },
+      code: str(r['code']),
+      ...(optStr(r['doc']) !== undefined ? { doc: optStr(r['doc']) as string } : {}),
+      ...(optStr(r['exportName']) !== undefined ? { exportName: optStr(r['exportName']) as string } : {}),
+      ...(optStr(r['vars']) !== undefined ? { vars: optStr(r['vars']) as string } : {}),
+      ...(optStr(r['plot2d']) !== undefined ? { plot2d: optStr(r['plot2d']) as string } : {}),
+      ...(optStr(r['plot_json']) !== undefined ? { plot: JSON.parse(optStr(r['plot_json']) as string) as Snippet['plot'] } : {}),
+    });
+  }
+  simModels.length = 0;
+  simById.clear();
+  for (const r of q('sim_models')) {
+    const m = {
+      id: str(r['id']), domain: str(r['domain']),
+      label: { ru: str(r['label_ru']), en: str(r['label_en']) },
+      desc: { ru: str(r['desc_ru']), en: str(r['desc_en']) },
+      ...(optStr(r['mode']) !== undefined ? { mode: optStr(r['mode']) } : {}),
+      ...(optStr(r['events']) !== undefined ? { events: optStr(r['events']) } : {}),
+      states: str(r['states']), derivs: str(r['derivs']), aux: str(r['aux']),
+      params: JSON.parse(str(r['params_json'])) as SimModelParam[],
+      init: str(r['init']), t0: num(r['t0']), t1: num(r['t1']), dt: num(r['dt']),
+      solver: str(r['solver']), x: str(r['x']), y: str(r['y']),
+      ...(optStr(r['fdtd_json']) !== undefined ? { fdtd: JSON.parse(optStr(r['fdtd_json']) as string) } : {}),
+    } as unknown as SimModel;
+    simModels.push(m);
+    simById.set(m.id, m);
+  }
+  demoBySuite.clear();
+  for (const r of q('demo_lines')) {
+    const arr = demoBySuite.get(str(r['suite'])) ?? [];
+    arr.push({
+      kind: str(r['kind']) as DemoItem['kind'], raw: str(r['raw']),
+      ...(optStr(r['exportName']) !== undefined ? { exportName: optStr(r['exportName']) as string } : {}),
+      ...(optStr(r['plotFn']) !== undefined ? { plotFn: optStr(r['plotFn']) as string } : {}),
+      ...(optNum(r['plotXmin']) !== undefined ? { plotXmin: optNum(r['plotXmin']) as number } : {}),
+      ...(optNum(r['plotXmax']) !== undefined ? { plotXmax: optNum(r['plotXmax']) as number } : {}),
+    });
+    demoBySuite.set(str(r['suite']), arr);
+  }
+  prefixes = rows('unit_prefixes')
+    .map((r) => ({ prefix: String(r['prefix']), mult: Number(r['mult']), len: Number(r['len']) }))
+    .sort((a, b) => b.len - a.len || (a.prefix < b.prefix ? -1 : 1));
+}
+
+/* ---------------- геттеры (синхронно, из кэша) ---------------- */
+
+function ready(): void {
+  if (!driver) throw new Error('NyaMath.db not initialized (browser: await initDb(); node: setDriver(openNodeDb()))');
+}
+
+/** Значение константы по имени в scope (c_light, mu_0, ...). */
+export function getConstant(name: string): number {
+  ready();
+  const c = constants.get(name);
+  if (!c) throw new Error(`unknown constant: ${name}`);
+  return c.value;
+}
+
+/** Все константы имя → значение (для buildPackScope). */
+export function constantsMap(): Record<string, number> {
+  ready();
+  const o: Record<string, number> = {};
+  for (const [k, v] of constants) o[k] = v.value;
+  return o;
+}
+
+export function listConstants(): ConstantRow[] {
+  ready();
+  return [...constants.values()];
+}
+
+export function listMaterials(): Material[] {
+  ready();
+  return materials;
+}
+
+export function getMaterial(id: string): Material | null {
+  ready();
+  return materialById.get(id) ?? null;
+}
+
+const normKey = (s: string): string => s.toLowerCase().replace(/[^a-zа-я0-9]/gi, '');
+
+/** Поиск материала по id/en/ru/формуле (как раньше в materials.ts). */
+export function findMaterial(q: string): Material | null {
+  ready();
+  const nq = normKey(q);
+  if (!nq) return null;
+  let partial: Material | null = null;
+  for (const m of materials) {
+    const keys = [m.id, m.en, m.ru, m.formula].map(normKey);
+    for (const k of keys) {
+      if (!k) continue;
+      if (k === nq) return m;
+      if (!partial && k.startsWith(nq)) partial = m;
+    }
+  }
+  return partial;
+}
+
+export function matPropName(prop: string, lang: 'ru' | 'en'): string {
+  ready();
+  return matPropNames.get(prop)?.[lang] ?? prop;
+}
+
+export function listFormulaSections(): FormulaSection[] {
+  ready();
+  return formulaSections;
+}
+
+export function listFormulas(section?: string): Formula[] {
+  ready();
+  return section ? formulas.filter((f) => f.section === section) : formulas;
+}
+
+export function getFormula(id: string): Formula | null {
+  ready();
+  return formulaById.get(id) ?? null;
+}
+
+export function formulaVars(formulaId: string): FormulaVar[] {
+  ready();
+  return formulaById.get(formulaId)?.vars ?? [];
+}
+
+export function listConstSections(): ConstSection[] {
+  ready();
+  return constSections;
+}
+
+export function listConstEntries(section?: string): ConstEntry[] {
+  ready();
+  return section ? constEntries.filter((e) => e.section === section) : constEntries;
+}
+
+export function listSnippets(): Snippet[] {
+  ready();
+  return snippets;
+}
+
+export function listSimModels(): SimModel[] {
+  ready();
+  return simModels;
+}
+
+export function getSimModelDb(id: string): SimModel | null {
+  ready();
+  return simById.get(id) ?? null;
+}
+
+export function getDemoLines(suite: 'variant20'): string[] {
+  ready();
+  return (demoBySuite.get(suite) ?? []).map((d) => d.raw);
+}
+
+export function getDemoItems(suite: 'advanced'): DemoItem[] {
+  ready();
+  return demoBySuite.get(suite) ?? [];
+}
+
+export function unitPrefixes(): Array<{ prefix: string; mult: number; len: number }> {
+  ready();
+  return prefixes;
+}
+
+/* ---------------- snapshot для Web Worker (без sql.js в чанке) ---------------- */
+
+export type DbSnapshot = Record<string, Row[]>;
+
+/** Сырые строки таблиц — structured-cloneable, едут в воркер одним сообщением. */
+export function snapshotDb(): DbSnapshot {
+  ready();
+  return rawTables;
+}
+
+/** Заполнить кэши из снапшота (воркер; sql.js не нужен). */
+export function hydrateDb(snap: DbSnapshot): void {
+  ingest(snap);
+}
+
+/* ---------------- init (см. db-browser.ts / db-node.ts) ---------------- */
+
+/** Подключить драйвер sql.js как Driver для setDriver(). */
+export function sqlJsDriver(db: {
+  exec(sql: string): Array<{ columns: string[]; values: unknown[][] }>;
+}): Driver {
+  return {
+    all: (sql: string): Row[] =>
+      db.exec(sql).flatMap((t) => t.values.map((vals) => Object.fromEntries(t.columns.map((c, i) => [c, vals[i]])))),
+  };
+}

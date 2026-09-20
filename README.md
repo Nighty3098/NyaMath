@@ -33,6 +33,11 @@ stdio и приложение через *View → Live sync* видят оди�
   (`#d=…`, slim tuples → phrase dictionary → deflate-raw → base64url, `&lang=` included);
   pristine examples share as tiny `#t=ex20` links. No backend involved.
 - **Project files**: save/open JSON, print/PDF, undo/redo, themes, RU/EN interface.
+- **Reference data in SQLite**: constants, materials, formulas, snippets, sim
+  presets and SI prefixes live in `public/NyaMath.db` (SQLite, tables:
+  `constants`, `materials`, `formulas`, `snippets`, …), read by the app,
+  tests and MCP from the same file. Edit data in `db/seed.json`, then
+  `npm run seed` to rebuild the DB (`db/schema.sql` is the schema).
 
 ## MCP server (agent control)
 

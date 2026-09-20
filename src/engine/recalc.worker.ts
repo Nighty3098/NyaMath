@@ -1,13 +1,36 @@
-import { recalculateAllAsync, type MathBlockData } from './dependencies';
 import { setLangState } from '../i18n';
-import {
-  serializeScopeValue,
-  type SerVal,
-  type SlimBlock,
-  type WorkerMsgToMain,
-  type WorkerOutBlock,
-  type WorkerReq,
+import type { MathBlockData } from './dependencies';
+import type {
+  SerVal,
+  SlimBlock,
+  WorkerMsgToMain,
+  WorkerOutBlock,
+  WorkerReq,
 } from './workerProtocol';
+import { hydrateDb, type DbSnapshot } from '../lib/db';
+
+/**
+ * Движок грузим ЛЕНИВО, уже после hydrateDb: статический
+ * import './dependencies' выполнял бы createBaseScope()
+ * на старте воркера, когда драйвера БД ещё нет, и воркер падал
+ * до первого сообщения (ошибка "NyaMath.db not initialized" в консоли).
+ */
+type Engine = {
+  recalculateAllAsync: typeof import('./dependencies').recalculateAllAsync;
+  serializeScopeValue: typeof import('./workerProtocol').serializeScopeValue;
+};
+let enginePromise: Promise<Engine> | null = null;
+function ensureEngine(): Promise<Engine> {
+  if (!enginePromise) {
+    enginePromise = Promise.all([import('./dependencies'), import('./workerProtocol')]).then(
+      ([deps, wp]) => ({
+        recalculateAllAsync: deps.recalculateAllAsync,
+        serializeScopeValue: wp.serializeScopeValue,
+      }),
+    );
+  }
+  return enginePromise;
+}
 
 /**
  * Пересчёт в Web Worker: mathjs крутится вне UI-потока, зависший джоб
@@ -37,6 +60,8 @@ export async function runWorkerJob(
   setLangState(req.lang);
   const t0 = performance.now();
   try {
+    // порядок сообщений гарантирует: init+hydrateDb уже отработал, БД готова
+    const { recalculateAllAsync, serializeScopeValue } = await ensureEngine();
     const list = req.blocks.map(toFull);
     const outcome = await recalculateAllAsync(list, {
       onBlock: (done, total) => {
@@ -91,6 +116,13 @@ const wself: WorkerGlobal | null =
 
 if (wself) {
   wself.onmessage = (ev: MessageEvent) => {
+    const msg = ev.data as { snapshot?: DbSnapshot; jobId?: number } & Partial<WorkerReq>;
+    // init: сырые строки NyaMath.db (sql.js в чанк воркера не тянем)
+    if (msg && typeof msg === 'object' && 'snapshot' in msg) {
+      hydrateDb(msg.snapshot as DbSnapshot);
+      wself.postMessage({ type: 'ready', jobId: msg.jobId ?? -1 });
+      return;
+    }
     const req = ev.data as WorkerReq;
     void runWorkerJob(req, (m) => wself.postMessage(m)).then((res) => {
       wself.postMessage(res);

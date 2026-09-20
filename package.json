@@ -7,6 +7,7 @@
     "dev": "node scripts/dev.mjs",
     "dev:site": "vite",
     "build": "tsc -b && vite build",
+    "seed": "node scripts/seed-db.mjs",
     "lint": "oxlint",
     "test": "vitest run",
     "preview": "vite preview"
@@ -19,6 +20,7 @@
     "mathjs": "^15.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "sql.js": "^1.14.2",
     "three": "^0.186.0",
     "uuid": "^14.0.2",
     "zustand": "^5.0.15"
@@ -26,7 +28,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@types/katex": "^0.16.8",
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.13.6",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@types/three": "^0.186.0",

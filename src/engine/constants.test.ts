@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { CODATA2022, SI_CONSTANTS } from './constants';
+import { getConstant } from '../lib/db';
 import { recalculateAll } from './dependencies';
 
 /**
- * Привязка констант к авторитетным значениям (CODATA-2022, спецвыпуск,
+ * Привязка констант БД к авторитетным значениям (CODATA-2022, спецвыпуск,
  * https://physics.nist.gov/cuu/Constants/index.html). Любое расхождение —
- * сигнал, что число устарело: обновлять ТОЛЬКО по свежему листингу NIST,
- * выставив относительную неопределённость в 5·10⁻¹⁰ (14+ значащих цифр).
+ * сигнал, что число в NyaMath.db устарело: обновлять ТОЛЬКО по свежему
+ * листингу NIST (db/seed.json → npm run seed).
  */
 const EXACT: Record<string, number> = {
-  c: 299792458,
-  h: 6.62607015e-34,
+  c_light: 299792458,
+  h_planck: 6.62607015e-34,
   k_B: 1.380649e-23,
   q_e: 1.602176634e-19,
   N_A: 6.02214076e23,
@@ -46,20 +46,22 @@ const rel = (a: number, b: number) => Math.abs(a - b) / Math.max(Math.abs(a), Ma
 describe('physical constants (CODATA 2022 + SI-2019 exact)', () => {
   it('exact/defined SI constants match the fixed values', () => {
     for (const [name, expected] of Object.entries(EXACT)) {
-      expect(SI_CONSTANTS[name as keyof typeof SI_CONSTANTS]).toBeCloseTo(expected, 14);
+      expect(getConstant(name)).toBeCloseTo(expected, 14);
     }
   });
 
   it('measured CODATA 2022 values match NIST to 1e-10 relative', () => {
     for (const [name, expected] of Object.entries(CODATA)) {
-      const got = CODATA2022[name as keyof typeof CODATA2022];
+      const got = getConstant(name);
       expect(rel(got, expected), `${name}: off the 2022 value`).toBeLessThan(1e-10);
     }
   });
 
   it('SI-2019 identity: eps_0 · mu_0 · c² ≈ 1 and Z_0 = sqrt(mu_0/eps_0)', () => {
-    const { mu_0, eps_0, Z_0 } = CODATA2022;
-    const c2 = SI_CONSTANTS.c * SI_CONSTANTS.c;
+    const mu_0 = getConstant('mu_0');
+    const eps_0 = getConstant('eps_0');
+    const Z_0 = getConstant('Z_0');
+    const c2 = getConstant('c_light') * getConstant('c_light');
     // После SI-2019 соотношение не точное (μ₀ и ε₀ измеряются независимо):
     expect(Math.abs(mu_0 * eps_0 * c2 - 1)).toBeLessThan(5e-10);
     expect(rel(Z_0, Math.sqrt(mu_0 / eps_0))).toBeLessThan(5e-9);
@@ -68,32 +70,21 @@ describe('physical constants (CODATA 2022 + SI-2019 exact)', () => {
   it('derived R_gas = N_A·k_B and F_const = N_A·e hold', () => {
     // В SI-2019 R и F — точные производные; в IEEE-754 продукты согласуются
     // с литералами до ~1ulp, поэтому сравнение с ослаблением 1e-13.
-    expect(Math.abs(SI_CONSTANTS.R_gas - SI_CONSTANTS.N_A * SI_CONSTANTS.k_B)).toBeLessThan(1e-13 * SI_CONSTANTS.R_gas);
-    expect(Math.abs(SI_CONSTANTS.F_const - SI_CONSTANTS.N_A * SI_CONSTANTS.q_e)).toBeLessThan(1e-13 * SI_CONSTANTS.F_const);
+    const R_gas = getConstant('R_gas');
+    const N_A = getConstant('N_A');
+    const k_B = getConstant('k_B');
+    const F_const = getConstant('F_const');
+    const q_e = getConstant('q_e');
+    expect(Math.abs(R_gas - N_A * k_B)).toBeLessThan(1e-13 * R_gas);
+    expect(Math.abs(F_const - N_A * q_e)).toBeLessThan(1e-13 * F_const);
   });
 
   it('every constant is exposed to the engine scope via recalc path', () => {
     const { scope } = recalculateAll([]);
-    const publicNames: Array<[string, number]> = [
-      ['c_light', SI_CONSTANTS.c],
-      ['h_planck', SI_CONSTANTS.h],
-      ['hbar', SI_CONSTANTS.hbar],
-      ['k_B', SI_CONSTANTS.k_B],
-      ['q_e', SI_CONSTANTS.q_e],
-      ['N_A', SI_CONSTANTS.N_A],
-      ['R_gas', SI_CONSTANTS.R_gas],
-      ['sigma_sb', SI_CONSTANTS.sigma_sb],
-      ['g_std', SI_CONSTANTS.g_std],
-      ['atm_pa', SI_CONSTANTS.atm_pa],
-      ['au_m', SI_CONSTANTS.au_m],
-      ['ly_m', SI_CONSTANTS.ly_m],
-      ['F_const', SI_CONSTANTS.F_const],
-      ...(Object.entries(CODATA2022) as Array<[string, number]>),
-    ];
-    for (const [name, expected] of publicNames) {
+    const publicNames = [...Object.keys(EXACT), ...Object.keys(CODATA), 'hbar', 'eta0'];
+    for (const name of publicNames) {
       expect(scope[name], `scope lacks ${name}`).not.toBeUndefined();
-      expect(scope[name], `${name} wrong value`).toBeCloseTo(expected, 12);
+      expect(scope[name], `${name} wrong value`).toBeCloseTo(getConstant(name === 'eta0' ? 'Z_0' : name), 12);
     }
-    expect(scope.eta0).toBeCloseTo(CODATA2022.Z_0, 12);
   });
 });

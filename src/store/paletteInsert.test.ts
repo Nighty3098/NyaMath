@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { flushRecalc, useCanvasStore } from './canvasStore';
-import { FORMULAS } from '../data/formulas';
+import { listFormulas } from '../lib/db';
+
+const FORMULAS = listFormulas();
 
 /** Путь вставки из палитры: каждая строка формулы становится отдельным блоком. */
 describe('addBlocks insert path', () => {
