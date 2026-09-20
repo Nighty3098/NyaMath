@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import katex from "katex";
 import type { MathBlockData } from "../engine/dependencies";
 import { useCanvasStore } from "../store/canvasStore";
@@ -68,6 +69,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const updateInput = useCanvasStore((s) => s.updateInput);
   const removeBlock = useCanvasStore((s) => s.removeBlock);
   const toggleBlockDisabled = useCanvasStore((s) => s.toggleBlockDisabled);
+  const addBlock = useCanvasStore((s) => s.addBlock);
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
   const select = useCanvasStore((s) => s.select);
   const addPlot3dBlock = useCanvasStore((s) => s.addPlot3dBlock);
@@ -92,6 +94,12 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const taRef = useRef<HTMLTextAreaElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const regionRef = useRef<HTMLDivElement>(null);
+  /** Clickable Math (по-Maple): контекстное меню действий с блоком */
+  const [ctx, setCtx] = useState<{ x: number; y: number } | null>(null);
+  const ctxFirstRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (ctx) ctxFirstRef.current?.focus();
+  }, [ctx]);
 
   const { onGripDown, onGripMove, onGripUp } = useRegionDrag(
     block.id,
@@ -273,6 +281,16 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
         if (!editing) setHoveredVar(hoverNameOf(block));
       }}
       onMouseLeave={() => setHoveredVar(null)}
+      onContextMenu={(e) => {
+        if (editing) return;
+        e.preventDefault();
+        e.stopPropagation();
+        select(block.id);
+        setCtx({
+          x: Math.min(e.clientX, window.innerWidth - 250),
+          y: Math.min(e.clientY, window.innerHeight - 300),
+        });
+      }}
     >
       <div
         ref={regionRef}
@@ -703,7 +721,120 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
           </div>
         )}
       </div>
+      {ctx &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-50 print:hidden"
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setCtx(null);
+              }}
+              onClick={() => setCtx(null)}
+              onPointerDown={(e) => e.stopPropagation()}
+            />
+            <div
+              role="menu"
+              aria-label={t("m.actions")}
+              className="fixed z-50 min-w-[220px] rounded-xl border border-[var(--line)] bg-[var(--sheet)] p-1 shadow-xl print:hidden"
+              style={{ left: ctx.x, top: ctx.y }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.stopPropagation();
+                  setCtx(null);
+                }
+                e.stopPropagation();
+              }}
+            >
+            <CtxItem
+              label={t("m.ctxEdit")}
+              firstRef={ctxFirstRef}
+              onRun={() => {
+                setCtx(null);
+                startEdit();
+              }}
+            />
+            {block.plotPreview && !block.error && (
+              <CtxItem
+                label={t("m.expandPlot")}
+                onRun={() => {
+                  setCtx(null);
+                  if (block.plotPreview)
+                    addPlotBlock(block.x, block.y + 260, block.plotPreview.expr);
+                }}
+              />
+            )}
+            {block.visualize && (
+              <CtxItem
+                label={t("m.visualize")}
+                onRun={() => {
+                  setCtx(null);
+                  doVisualize();
+                }}
+              />
+            )}
+            <CtxItem
+              label={t("m.copyTex")}
+              onRun={() => {
+                setCtx(null);
+                doCopyTex();
+              }}
+            />
+            <CtxItem
+              label={block.disabled ? t("m.enable") : t("m.disable")}
+              onRun={() => {
+                setCtx(null);
+                toggleBlockDisabled(block.id);
+              }}
+            />
+            <CtxItem
+              label={t("m.ctxInsertBelow")}
+              onRun={() => {
+                setCtx(null);
+                addBlock(block.x, block.y + 72);
+              }}
+            />
+            <CtxItem
+              label={t("m.deleteBlock")}
+              danger
+              onRun={() => {
+                setCtx(null);
+                removeBlock(block.id);
+              }}
+            />
+            </div>
+          </>,
+          document.body,
+        )}
     </div>
+  );
+}
+
+function CtxItem({
+  label,
+  onRun,
+  danger,
+  firstRef,
+}: {
+  label: string;
+  onRun: () => void;
+  danger?: boolean;
+  firstRef?: React.Ref<HTMLButtonElement>;
+}) {
+  return (
+    <button
+      ref={firstRef}
+      type="button"
+      role="menuitem"
+      className={`w-full text-left px-3 min-h-[34px] py-1.5 rounded-lg text-[13px] cursor-pointer hover:bg-[var(--accent-line)]/15 ${
+        danger ? "text-[var(--danger)]" : "text-[var(--ink)]"
+      }`}
+      onClick={onRun}
+    >
+      {label}
+    </button>
   );
 }
 
