@@ -20,6 +20,7 @@ import ProgramBlockView from "./ProgramBlockView";
 import SimBlockView from "./SimBlockView";
 import SliderBlockView from "./SliderBlockView";
 import MathKeyboard from "./MathKeyboard";
+import EmptyStarter from "./EmptyStarter";
 import { t } from "../i18n";
 
 const MIN_SCALE = 0.25;
@@ -827,7 +828,8 @@ export default function Canvas() {
       </div>
 
       {/* пустое состояние — в экранных координатах */}
-      {/* (без иконки и названия приложения) */}
+      {/* стартер-примеры поверх прицела; приветствие перекрывает, если открыто */}
+      {list.length === 0 && <EmptyStarter />}
 
       {/* экранная мат-клавиатура слева внизу */}
       <MathKeyboard />
