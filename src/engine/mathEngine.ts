@@ -531,8 +531,16 @@ function evaluateMain(input: string, scope: Scope): EvalResult {
     const [outLhs, outUnit] = splitOffUnit(noShow);
     const outTarget = outUnit && !noShow.includes(':=') ? resolveUnit(outUnit, scope) : null;
     if (outUnit && outTarget) {
-      const inner = evalPre(preprocessRanges(preprocessJ(outLhs, false)), scope);
-      return { value: convertToUnit(inner, outUnit, noShow), error: null };
+      try {
+        const inner = evalPre(preprocessRanges(preprocessJ(outLhs, false)), scope);
+        return { value: convertToUnit(inner, outUnit, noShow), error: null };
+      } catch (e) {
+        // LHS не определён, а RHS случайно парсится как единица
+        // (`M_fix = F*L`: фарад·литр) — это метка вывода, а не перевод:
+        // считаем RHS как обычное выражение ниже.
+        const m = e instanceof Error ? e.message : String(e);
+        if (!/Undefined symbol/i.test(m)) throw e;
+      }
     }
     const exprPre = preprocessRanges(preprocessJ(parsed.expr, false));
     if (exprPre === '') return { value: null, error: null };

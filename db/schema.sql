@@ -169,6 +169,20 @@ CREATE TABLE IF NOT EXISTS demo_lines (
   PRIMARY KEY (suite, ord)
 );
 
+-- Шаблоны расчётов (fxSolver-библиотека, но версионированная в git):
+-- готовые листы по балкам/цепям/допускам, вставка одной командой.
+CREATE TABLE IF NOT EXISTS templates (
+  id TEXT PRIMARY KEY,
+  section TEXT NOT NULL,           -- 'beams' | 'circuits' | 'tolerances'
+  ord INTEGER NOT NULL,
+  title_ru TEXT NOT NULL,
+  title_en TEXT NOT NULL,
+  desc_ru TEXT NOT NULL,
+  desc_en TEXT NOT NULL,
+  lines_json TEXT NOT NULL,        -- [{kind: 'math'|'text', raw: '...'}]
+  standard TEXT                    -- ГОСТ/норматив или NULL
+);
+
 -- SI-префиксы и точные единицы для подписей осей (бывший unitScale.ts).
 CREATE TABLE IF NOT EXISTS unit_prefixes (
   prefix TEXT PRIMARY KEY,

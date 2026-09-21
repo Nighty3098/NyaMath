@@ -24877,5 +24877,73 @@
    "mult": 0.000001,
    "len": 1
   }
+ ],
+ "templates": [
+  {
+   "id": "beam-simply-uniform",
+   "section": "beams",
+   "ord": 0,
+   "title_ru": "Шарнирно опёртая балка · равномерная нагрузка",
+   "title_en": "Simply supported beam · uniform load",
+   "desc_ru": "Реакции опор и максимальный момент: R = q·L/2, M = q·L²/8",
+   "desc_en": "Support reactions and max moment: R = q·L/2, M = q·L²/8",
+   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Шарнирно опёртая балка, равномерная нагрузка q\"}, {\"kind\": \"math\", \"raw\": \"L := 6 m\"}, {\"kind\": \"math\", \"raw\": \"q := 10 kN/m\"}, {\"kind\": \"math\", \"raw\": \"R_A = q*L/2\"}, {\"kind\": \"math\", \"raw\": \"R_B = q*L/2\"}, {\"kind\": \"math\", \"raw\": \"M_max = q*L^2/8\"}]",
+   "standard": null
+  },
+  {
+   "id": "beam-cantilever-point",
+   "section": "beams",
+   "ord": 1,
+   "title_ru": "Консоль · сила на конце",
+   "title_en": "Cantilever · tip load",
+   "desc_ru": "Момент в заделке и прогиб: M = F·L, δ = F·L³/(3·E·J)",
+   "desc_en": "Fixed-end moment and tip deflection: M = F·L, δ = F·L³/(3·E·J)",
+   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Консольная балка, сила F на свободном конце\"}, {\"kind\": \"math\", \"raw\": \"L := 2 m\"}, {\"kind\": \"math\", \"raw\": \"F := 500 N\"}, {\"kind\": \"math\", \"raw\": \"M_fix = F*L\"}, {\"kind\": \"math\", \"raw\": \"E := 200 GPa\"}, {\"kind\": \"math\", \"raw\": \"J := 8.33 cm^4\"}, {\"kind\": \"math\", \"raw\": \"delta = F*L^3/(3*E*J)\"}]",
+   "standard": null
+  },
+  {
+   "id": "circuit-ohm",
+   "section": "circuits",
+   "ord": 2,
+   "title_ru": "Закон Ома",
+   "title_en": "Ohm's law",
+   "desc_ru": "Ток и мощность участка цепи: I = U/R, P = U·I",
+   "desc_en": "Branch current and power: I = U/R, P = U·I",
+   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Закон Ома: U, R → I, P\"}, {\"kind\": \"math\", \"raw\": \"U := 12 V\"}, {\"kind\": \"math\", \"raw\": \"R := 4 ohm\"}, {\"kind\": \"math\", \"raw\": \"I := U/R\"}, {\"kind\": \"math\", \"raw\": \"P := U*I\"}, {\"kind\": \"math\", \"raw\": \"I =\"}, {\"kind\": \"math\", \"raw\": \"P =\"}]",
+   "standard": null
+  },
+  {
+   "id": "circuit-series-parallel",
+   "section": "circuits",
+   "ord": 3,
+   "title_ru": "Резисторы: последовательно и параллельно",
+   "title_en": "Resistors: series and parallel",
+   "desc_ru": "Эквиваленты: R_s = R1+R2, R_p = R1·R2/(R1+R2)",
+   "desc_en": "Equivalents: R_s = R1+R2, R_p = R1·R2/(R1+R2)",
+   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Два резистора: последовательное и параллельное соединение\"}, {\"kind\": \"math\", \"raw\": \"R1 := 10 ohm\"}, {\"kind\": \"math\", \"raw\": \"R2 := 20 ohm\"}, {\"kind\": \"math\", \"raw\": \"R_s = R1+R2\"}, {\"kind\": \"math\", \"raw\": \"R_p = R1*R2/(R1+R2)\"}]",
+   "standard": null
+  },
+  {
+   "id": "tolerance-rss",
+   "section": "tolerances",
+   "ord": 4,
+   "title_ru": "Допуски: RSS-суммирование",
+   "title_en": "Tolerances: RSS stack-up",
+   "desc_ru": "Суммарный допуск — корень из суммы квадратов",
+   "desc_en": "Total tolerance as root sum of squares",
+   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// RSS-суммирование допусков\"}, {\"kind\": \"math\", \"raw\": \"t1 := 0.1 mm\"}, {\"kind\": \"math\", \"raw\": \"t2 := 0.2 mm\"}, {\"kind\": \"math\", \"raw\": \"t3 := 0.15 mm\"}, {\"kind\": \"math\", \"raw\": \"t_rss = sqrt(t1^2+t2^2+t3^2)\"}]",
+   "standard": "ГОСТ 25346-2013"
+  },
+  {
+   "id": "tolerance-chain",
+   "section": "tolerances",
+   "ord": 5,
+   "title_ru": "Размерная цепь: номинал и пределы",
+   "title_en": "Dimensional chain: nominal and limits",
+   "desc_ru": "Худший случай: A = A1−A2 с полями допусков",
+   "desc_en": "Worst case: A = A1−A2 with tolerance bands",
+   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Размерная цепь A = A1 - A2 (худший случай)\"}, {\"kind\": \"math\", \"raw\": \"A1 := 100 mm\"}, {\"kind\": \"math\", \"raw\": \"A2 := 60 mm\"}, {\"kind\": \"math\", \"raw\": \"t1 := 0.2 mm\"}, {\"kind\": \"math\", \"raw\": \"t2 := 0.1 mm\"}, {\"kind\": \"math\", \"raw\": \"A_nom = A1-A2\"}, {\"kind\": \"math\", \"raw\": \"A_max = (A1+t1)-(A2-t2)\"}, {\"kind\": \"math\", \"raw\": \"A_min = (A1-t1)-(A2+t2)\"}]",
+   "standard": "ГОСТ 25346-2013"
+  }
  ]
 }

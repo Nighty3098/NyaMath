@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { v4 as uuid } from 'uuid';
 import type { MathBlockData } from '../engine/dependencies';
-import { getDemoItems, getDemoLines } from '../lib/db';
+import { getDemoItems, getDemoLines, getTemplate } from '../lib/db';
 import { loadTheme, saveTheme, THEMES, type ThemeName } from '../theme';
 import { getSimModel, listSimModels, simModelPatch } from '../engine/simEngine';
 import { separateBlocksVertically, snapToGrid, GRID_STEP_FINE, GRID_STEP_STANDARD } from '../lib/canvasLayout';
@@ -239,6 +239,8 @@ export interface CanvasState {
   loadAdvancedDemo: () => void;
   /** Быстрый старт за 60 секунд: парабола со слайдером (Desmos-тест онбординга) */
   loadQuickstart: () => void;
+  /** Вставить шаблон из библиотеки (балки/цепи/допуски) в точку прицела. */
+  insertTemplate: (id: string) => void;
   /** Загрузить документ из файла (валидация + миграция) */
   loadDocument: (data: unknown) => { ok: boolean; message: string };
   /** Live-синхронизация с MCP-сервисом */
@@ -1445,6 +1447,29 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     });
     persist(rec);
     set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, editingId: null, kbInsert: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
+    scheduleRecalcAsync(60);
+  },
+
+  insertTemplate: (id) => {
+    const tpl = getTemplate(id);
+    if (!tpl || !tpl.lines.length) return;
+    const st = get();
+    const p = { x: st.cross.x, y: st.cross.y };
+    pushHistory(get, set as SetFn, true);
+    const next = { ...get().blocks };
+    const ids: string[] = [];
+    tpl.lines.forEach((ln, k) => {
+      const bid = uuid();
+      ids.push(bid);
+      next[bid] = {
+        ...blank(bid, p.x, p.y + k * 64),
+        rawInput: ln.raw,
+        kind: ln.kind === 'text' ? 'text' : 'math',
+      };
+    });
+    persist(next);
+    set({ blocks: next, selectedIds: ids });
+    st.nudgeCross(0, 140 * tpl.lines.length);
     scheduleRecalcAsync(60);
   },
 

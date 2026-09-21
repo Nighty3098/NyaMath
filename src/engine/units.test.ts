@@ -76,4 +76,14 @@ describe('unitsys: strict dimensional control', () => {
     expect(r.error).toBe(null);
     expect(r.str).toBe('5.3 m');
   });
+
+  it('перевод L = cm жив, а метка M_fix = F*L — выражение, не единица', () => {
+    const b1 = (y: number, raw: string, n: number): MathBlockData => ({ ...block(y, raw), id: `ux${n}` });
+    const conv = recalculateAll([b1(60, 'L := 2 m', 1), b1(124, 'L = cm', 2)]);
+    expect(conv.blocks['ux2']?.error).toBe(null);
+    expect(conv.blocks['ux2']?.resultStr).toBe('200 cm');
+    const lbl = recalculateAll([b1(60, 'F := 500 N', 3), b1(124, 'L := 2 m', 4), b1(188, 'M_fix = F*L', 5)]);
+    expect(lbl.blocks['ux5']?.error).toBe(null);
+    expect(lbl.blocks['ux5']?.resultStr).toBe('1000 J');
+  });
 });

@@ -37,6 +37,8 @@ const snippets: Snippet[] = [];
 const simModels: SimModel[] = [];
 const simById = new Map<string, SimModel>();
 const demoBySuite = new Map<string, DemoItem[]>();
+const templates: Template[] = [];
+const templateById = new Map<string, Template>();
 let prefixes: Array<{ prefix: string; mult: number; len: number }> = [];
 
 export interface ConstantRow {
@@ -120,6 +122,20 @@ export interface DemoItem {
   plotXmax?: number;
 }
 
+export interface TemplateLine {
+  kind: 'math' | 'text';
+  raw: string;
+}
+
+export interface Template {
+  id: string;
+  section: string;
+  title: LText;
+  desc: LText;
+  lines: TemplateLine[];
+  standard: string | null;
+}
+
 /* ---------------- lifecycle ---------------- */
 
 export function isDbReady(): boolean {
@@ -156,7 +172,7 @@ function readAllTables(db: Driver): Record<string, Row[]> {
     'constants', 'materials', 'mat_prop_names',
     'formula_sections', 'formulas', 'formula_sources', 'formula_vars',
     'const_sections', 'const_entries', 'const_sources',
-    'snippets', 'sim_models', 'demo_lines', 'unit_prefixes',
+    'snippets', 'sim_models', 'demo_lines', 'templates', 'unit_prefixes',
   ];
   return Object.fromEntries(tables.map((t) => [t, db.all(`SELECT * FROM ${t}`)]));
 }
@@ -288,8 +304,7 @@ function ingest(t: Record<string, Row[]>): void {
     simById.set(m.id, m);
   }
   demoBySuite.clear();
-  for (const r of q('demo_lines')) {
-    const arr = demoBySuite.get(str(r['suite'])) ?? [];
+  for (const r of q('demo_lines')) {    const arr = demoBySuite.get(str(r['suite'])) ?? [];
     arr.push({
       kind: str(r['kind']) as DemoItem['kind'], raw: str(r['raw']),
       ...(optStr(r['exportName']) !== undefined ? { exportName: optStr(r['exportName']) as string } : {}),
@@ -298,6 +313,30 @@ function ingest(t: Record<string, Row[]>): void {
       ...(optNum(r['plotXmax']) !== undefined ? { plotXmax: optNum(r['plotXmax']) as number } : {}),
     });
     demoBySuite.set(str(r['suite']), arr);
+  }
+  templates.length = 0;
+  templateById.clear();
+  for (const r of q('templates')) {
+    let lines: TemplateLine[] = [];
+    try {
+      const parsed = JSON.parse(str(r['lines_json'])) as Array<{ kind?: unknown; raw?: unknown }>;
+      if (Array.isArray(parsed)) {
+        lines = parsed
+          .filter((l) => typeof l?.raw === 'string')
+          .map((l) => ({ kind: l.kind === 'text' ? 'text' : 'math', raw: String(l.raw) }));
+      }
+    } catch {
+      lines = [];
+    }
+    const tpl: Template = {
+      id: str(r['id']), section: str(r['section']),
+      title: { ru: str(r['title_ru']), en: str(r['title_en']) },
+      desc: { ru: str(r['desc_ru']), en: str(r['desc_en']) },
+      lines,
+      standard: optStr(r['standard']) ?? null,
+    };
+    templates.push(tpl);
+    templateById.set(tpl.id, tpl);
   }
   prefixes = rows('unit_prefixes')
     .map((r) => ({ prefix: String(r['prefix']), mult: Number(r['mult']), len: Number(r['len']) }))
@@ -418,6 +457,17 @@ export function getDemoLines(suite: 'variant20'): string[] {
 export function getDemoItems(suite: 'advanced'): DemoItem[] {
   ready();
   return demoBySuite.get(suite) ?? [];
+}
+
+/** Шаблоны расчётов (балки/цепи/допуски), порядок — по ord. */
+export function listTemplates(): Template[] {
+  ready();
+  return [...templates];
+}
+
+export function getTemplate(id: string): Template | null {
+  ready();
+  return templateById.get(id) ?? null;
 }
 
 export function unitPrefixes(): Array<{ prefix: string; mult: number; len: number }> {

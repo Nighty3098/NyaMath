@@ -7,6 +7,20 @@ import { SHARE_WARN_CHARS, shareDocument } from '../lib/share';
 import { THEMES } from '../theme';
 import { t, themeLabel, type Lang } from '../i18n';
 import { connectLive, disconnectLive, getLiveUrl, setLiveUrl, testLiveConnection } from '../lib/liveSync';
+import { listTemplates } from '../lib/db';
+
+/** Пункты подменю шаблонов ГОСТ (пусто, если БД недоступна). */
+function templateEntries(): { id: string; label: string }[] {
+  try {
+    const lang = useCanvasStore.getState().lang;
+    return listTemplates().map((tpl) => ({
+      id: tpl.id,
+      label: lang === 'ru' ? tpl.title.ru : tpl.title.en,
+    }));
+  } catch {
+    return [];
+  }
+}
 import {
   IConst, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
   IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo, IScale,
@@ -63,6 +77,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const loadTestScenario = useCanvasStore((s) => s.loadTestScenario);
   const loadAdvancedDemo = useCanvasStore((s) => s.loadAdvancedDemo);
   const loadQuickstart = useCanvasStore((s) => s.loadQuickstart);
+  const insertTemplate = useCanvasStore((s) => s.insertTemplate);
   const clear = useCanvasStore((s) => s.clear);
   const recalc = useCanvasStore((s) => s.recalc);
   const calcMode = useCanvasStore((s) => s.calcMode);
@@ -285,6 +300,13 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
       id: 'examples',
       label: t('menu.examples'),
       items: [
+        {
+          id: 'tpl-sub', icon: <IFormula />, label: t('menu.templates'), children:
+            templateEntries().map((e): Entry => ({
+              id: `tpl-${e.id}`, label: e.label,
+              action: run(() => insertTemplate(e.id)),
+            })),
+        },
         { id: 'exquick', icon: <ISignal />, label: t('menu.exQuick'), action: run(loadQuickstart) },
         { id: 'ex20', icon: <IZap />, label: t('menu.ex20'), action: run(loadTestScenario) },
         { id: 'exdemo', icon: <IDemo />, label: t('menu.exdemo'), action: run(loadAdvancedDemo) },
