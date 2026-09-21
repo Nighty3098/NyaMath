@@ -10,6 +10,7 @@
     "seed": "node scripts/seed-db.mjs",
     "update-db": "node scripts/update-db.mjs",
     "codata": "node scripts/fetch-codata.mjs",
+    "elements": "node scripts/fetch-elements.mjs",
     "lint": "oxlint",
     "test": "vitest run",
     "preview": "vite preview"
