@@ -24,6 +24,8 @@ export default function StatusBar() {
   const computeActive = useCanvasStore((s) => s.computeActive);
   const showGrid = useCanvasStore((s) => s.showGrid);
   const gridSize = useCanvasStore((s) => s.gridSize);
+  const numFmt = useCanvasStore((s) => s.numFmt);
+  const unitSys = useCanvasStore((s) => s.unitSys);
   useCanvasStore((s) => s.lang);
 
   const errCount = useMemo(() => Object.values(blocks).filter((b) => b.error).length, [blocks]);
@@ -61,6 +63,14 @@ export default function StatusBar() {
       <span className="math-input tabular-nums whitespace-nowrap">
         {t('sb.calcMs')}: {calcMs.toFixed(1)} {t('sb.ms')}
       </span>
+      <span className="math-input tabular-nums whitespace-nowrap">
+        {t('sb.fmt')}: {numFmt.mode === 'auto' ? t('menu.numAuto') : numFmt.mode === 'sig' ? t('sb.sigN', { n: numFmt.digits }) : t('sb.fixN', { n: numFmt.digits })}
+      </span>
+      {unitSys !== 'none' && (
+        <span className="math-input tabular-nums whitespace-nowrap">
+          {t('sb.units')}: {unitSys}
+        </span>
+      )}
       <span className="ml-auto whitespace-nowrap">
         {t('sb.grid')}: {!showGrid ? t('sb.gridOff') : gridSize === 'fine' ? t('sb.gridFine') : t('sb.gridStd')}
       </span>
