@@ -8,6 +8,7 @@
     "dev:site": "vite",
     "build": "tsc -b && vite build",
     "seed": "node scripts/seed-db.mjs",
+    "codata": "node scripts/fetch-codata.mjs",
     "lint": "oxlint",
     "test": "vitest run",
     "preview": "vite preview"
