@@ -260,8 +260,6 @@ const ru = {
   'sb.sigN': 'зн. {n}',
   'sb.fixN': 'дес. {n}',
   'sb.units': 'Единицы',
-  'sb.calcModeAuto': 'Авто',
-  'sb.calcModeManual': 'Вручную',
 
   'ui.dragGrip': 'Тянуть для перемещения (группу — если выделено несколько)',
   'ui.delete': 'Удалить (Del)',
@@ -746,8 +744,6 @@ const en: Record<StrKey, string> = {
   'sb.sigN': 'sig {n}',
   'sb.fixN': 'dec {n}',
   'sb.units': 'Units',
-  'sb.calcModeAuto': 'Auto',
-  'sb.calcModeManual': 'Manual',
 
   'ui.dragGrip': 'Drag to move (group — if several are selected)',
   'ui.delete': 'Delete (Del)',

@@ -79,9 +79,6 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const setEditingId = useCanvasStore((s) => s.setEditingId);
   const kbInsert = useCanvasStore((s) => s.kbInsert);
   const lang = useCanvasStore((s) => s.lang);
-  const theme = useCanvasStore((s) => s.theme);
-  // Mathcad 15: пустой ввод — чёрный квадрат ■ вместо текстовой подсказки
-  const emptyPh = theme === "mathcad15" ? "■" : "f := 10*10^9";
   const [editing, setEditing] = useState(
     block.rawInput === "" && block.kind === "math",
   );
@@ -312,7 +309,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
 
   return (
     <div
-      className={`nya-region absolute ${editing ? "z-20" : "z-10"}${selected ? " nya-selected" : ""}`}
+      className={`nya-region absolute ${editing ? "z-20" : "z-10"}`}
       style={{ left: block.x, top: block.y }}
       onMouseEnter={() => {
         if (!editing) setHoveredVar(hoverNameOf(block));
@@ -648,7 +645,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                     e.currentTarget.selectionStart ?? draft.length,
                   )
                 }
-                placeholder={emptyPh}
+                placeholder="f := 10*10^9"
                 aria-label={t("m.groupHint")}
               />
               {editing && assist && assist.items.length > 0 && (

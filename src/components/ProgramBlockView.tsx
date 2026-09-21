@@ -89,7 +89,7 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
       <div
         ref={regionRef}
         data-block-id={block.id}
-        className={`nya-block relative rounded-xl pl-2.5 pr-1.5 py-1 border-l-[3px] group${selected ? ' nya-selected' : ''} ${block.disabled ? 'opacity-60 saturate-50' : ''} ${
+        className={`nya-block relative rounded-xl pl-2.5 pr-1.5 py-1 border-l-[3px] group ${block.disabled ? 'opacity-60 saturate-50' : ''} ${
           block.error
             ? 'border-[var(--danger)] bg-[var(--danger-bg)] outline outline-2 outline-[var(--danger)]'
             : editing

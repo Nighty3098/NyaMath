@@ -315,8 +315,6 @@
   --input-border: #7f7f7f;
   --grid-lt: rgba(0, 0, 0, 0);
   --grid-dk: rgba(0, 0, 0, 0);
-  /* красный прицел как в Mathcad 15 (иначе акцент темы) */
-  --crosshair: #ff0000;
   /* острые углы Win32 вместо мягких радиусов */
   --radius-s: 2px;
   --radius-m: 2px;
@@ -366,39 +364,6 @@ html[data-theme="mathcad15"] body {
   border-radius: 0;
 }
 [data-theme="mathcad15"] *::-webkit-scrollbar-track { background: #f1efe2; }
-
-/* Выделенный регион — чёрная рамка как в Mathcad 15 (вместо акцентной) */
-[data-theme="mathcad15"] .nya-selected {
-  outline: 2px solid #000000 !important;
-  outline-offset: 0 !important;
-}
-
-/* Вообще никаких скруглений: Win32 острый везде (карточки плотов тоже) */
-[data-theme="mathcad15"] [class*="rounded"] {
-  border-radius: 0 !important;
-}
-
-/* Текст листа — Arial как в Mathcad; редакторы остаются моноширинными */
-html[data-theme="mathcad15"] .nya-sheet {
-  font-family: Arial, Helvetica, sans-serif;
-}
-html[data-theme="mathcad15"] .nya-sheet .math-input {
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
-}
-
-/* Менюбар — серебристый градиент Luna, пункты — синяя подсветка с белым текстом */
-[data-theme="mathcad15"] .nya-menubar {
-  background: linear-gradient(to bottom, #fdfcf6, #ece9d8);
-}
-[data-theme="mathcad15"] .menu-item:hover {
-  background: #316ac5;
-  color: #ffffff;
-}
-
-/* Статусбар — классический, с тёмной верхней кромкой */
-[data-theme="mathcad15"] footer {
-  border-top: 1px solid #808080;
-}
 
 html, body, #root {
   height: 100%;
