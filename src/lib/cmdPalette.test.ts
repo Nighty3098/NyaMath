@@ -34,6 +34,11 @@ describe('cmdPalette: filterCommands', () => {
     expect(filterCommands('recalc', 'ru').some((h) => h.spec.id === 'recalc')).toBe(true);
   });
 
+  it('быстрый старт находится по «быстрый» и «parabola»', () => {
+    expect(filterCommands('быстрый', 'ru').some((h) => h.spec.id === 'quickstart')).toBe(true);
+    expect(filterCommands('parabola', 'en').some((h) => h.spec.id === 'quickstart')).toBe(true);
+  });
+
   it('мусор ничего не находит', () => {
     expect(filterCommands('zzzqqq', 'ru')).toEqual([]);
     expect(filterCommands('zzzqqq', 'en')).toEqual([]);

@@ -11,7 +11,7 @@ export type CmdId =
   | 'ins-math' | 'ins-text' | 'ins-plot' | 'ins-contour' | 'ins-3d'
   | 'ins-prog' | 'ins-sim' | 'ins-slider'
   | 'recalc' | 'calc-now' | 'scope-mon'
-  | 'ex20' | 'ex-advanced' | 'theme' | 'grid';
+  | 'quickstart' | 'ex20' | 'ex-advanced' | 'theme' | 'grid';
 
 export interface CmdSpec {
   id: CmdId;
@@ -33,6 +33,7 @@ export const COMMANDS: CmdSpec[] = [
   { id: 'recalc', ru: 'Пересчитать всё', en: 'Recalculate all', keywords: ['recalc', 'calc', 'пересчет', 'пересчёт'] },
   { id: 'calc-now', ru: 'Пересчитать видимые', en: 'Recalculate visible', keywords: ['visible', 'now', 'видимые'] },
   { id: 'scope-mon', ru: 'Пульт переменных', en: 'Variable scope monitor', keywords: ['scope', 'monitor', 'пульт', 'телеметрия'] },
+  { id: 'quickstart', ru: 'Быстрый старт: парабола со слайдером', en: 'Quickstart: parabola with slider', keywords: ['quickstart', 'старт', 'parabola', 'парабола', 'slider', 'demo', 'демо', '60'] },
   { id: 'ex20', ru: 'Пример: электродинамика', en: 'Example: electrodynamics', keywords: ['example', 'пример', 'variant', 'ex20'] },
   { id: 'ex-advanced', ru: 'Пример: матрицы и программы', en: 'Example: matrices & programs', keywords: ['advanced', 'матрицы', 'демо'] },
   { id: 'theme', ru: 'Переключить тему', en: 'Toggle theme', keywords: ['theme', 'dark', 'тема', 'темная', 'тёмная'] },

@@ -33,6 +33,7 @@ export default function WelcomeModal({
   const addProgramBlock = useCanvasStore((s) => s.addProgramBlock);
   const loadTestScenario = useCanvasStore((s) => s.loadTestScenario);
   const loadAdvancedDemo = useCanvasStore((s) => s.loadAdvancedDemo);
+  const loadQuickstart = useCanvasStore((s) => s.loadQuickstart);
   const addSimBlock = useCanvasStore((s) => s.addSimBlock);
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
@@ -144,6 +145,21 @@ export default function WelcomeModal({
             </p>
 
             <div className="welcome-chunk welcome-d1 grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 gap-2 mt-5">
+              <button
+                type="button"
+                onClick={start(loadQuickstart)}
+                className="flex flex-col gap-1 rounded-xl border-2 border-[var(--accent-line)] bg-[var(--accent-soft)]/40 px-3 py-3 text-left cursor-pointer transition-colors duration-150 ease-out hover:bg-[var(--accent-soft)]/70 active:scale-[0.97] min-[420px]:col-span-2 sm:col-span-3"
+              >
+                <span className="text-[var(--accent)]" aria-hidden="true">
+                  <IZap />
+                </span>
+                <span className="block text-[13px] font-medium leading-4">
+                  {t("w.quick")}
+                </span>
+                <span className="math-input block text-[11px] leading-4 text-[var(--chrome-soft)] truncate">
+                  {t("w.quickSub")}
+                </span>
+              </button>
               {quick.map((q) => (
                 <button
                   key={q.title}

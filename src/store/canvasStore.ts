@@ -185,6 +185,8 @@ export interface CanvasState {
   clear: () => void;
   loadTestScenario: () => void;
   loadAdvancedDemo: () => void;
+  /** Быстрый старт за 60 секунд: парабола со слайдером (Desmos-тест онбординга) */
+  loadQuickstart: () => void;
   /** Загрузить документ из файла (валидация + миграция) */
   loadDocument: (data: unknown) => { ok: boolean; message: string };
   /** Live-синхронизация с MCP-сервисом */
@@ -1345,6 +1347,27 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       ...blank(pid, 560, 140), rawInput: 'plot', kind: 'plot',
       plotFn: 'sin(w*x); cos(x)', plotXmin: -10, plotXmax: 10,
     };
+    persist(rec);
+    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, editingId: null, kbInsert: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
+    scheduleRecalcAsync(60);
+  },
+
+  loadQuickstart: () => {
+    pushHistory(get, set as SetFn, true);
+    const rec: Record<string, MathBlockData> = {};
+    const mk = (x: number, y: number, raw: string, patch?: Partial<MathBlockData>) => {
+      const id = uuid();
+      rec[id] = { ...blank(id, x, y), rawInput: raw, ...patch };
+      return id;
+    };
+    mk(80, 60, 'a := 2');
+    mk(80, 124, 'f(x) := a*x^2');
+    mk(80, 188, 'slider', {
+      kind: 'slider', sliderVar: 'a', sliderMin: -5, sliderMax: 5, sliderStep: 0.1, sliderVal: 2,
+    });
+    mk(560, 120, 'plot', {
+      kind: 'plot', plotFn: 'f(x)', plotXmin: -10, plotXmax: 10, w: fitViewportWidth(460),
+    });
     persist(rec);
     set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, editingId: null, kbInsert: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
     scheduleRecalcAsync(60);

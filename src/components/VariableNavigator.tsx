@@ -53,6 +53,7 @@ const CMD_ICON: Record<CmdId, () => React.JSX.Element> = {
   recalc: IRecalc,
   'calc-now': IZap,
   'scope-mon': ISignal,
+  quickstart: ISignal,
   ex20: IZap,
   'ex-advanced': IDemo,
   theme: IMoon,
@@ -83,6 +84,7 @@ function runCmd(id: CmdId): void {
     case 'recalc': st.recalc(); break;
     case 'calc-now': st.recalcNow(); break;
     case 'scope-mon': st.toggleScopeMon(); break;
+    case 'quickstart': st.loadQuickstart(); break;
     case 'ex20': st.loadTestScenario(); break;
     case 'ex-advanced': st.loadAdvancedDemo(); break;
     case 'theme': st.toggleTheme(); break;

@@ -62,6 +62,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const addSliderBlock = useCanvasStore((s) => s.addSliderBlock);
   const loadTestScenario = useCanvasStore((s) => s.loadTestScenario);
   const loadAdvancedDemo = useCanvasStore((s) => s.loadAdvancedDemo);
+  const loadQuickstart = useCanvasStore((s) => s.loadQuickstart);
   const clear = useCanvasStore((s) => s.clear);
   const recalc = useCanvasStore((s) => s.recalc);
   const calcMode = useCanvasStore((s) => s.calcMode);
@@ -260,6 +261,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
       id: 'examples',
       label: t('menu.examples'),
       items: [
+        { id: 'exquick', icon: <ISignal />, label: t('menu.exQuick'), action: run(loadQuickstart) },
         { id: 'ex20', icon: <IZap />, label: t('menu.ex20'), action: run(loadTestScenario) },
         { id: 'exdemo', icon: <IDemo />, label: t('menu.exdemo'), action: run(loadAdvancedDemo) },
       ],
