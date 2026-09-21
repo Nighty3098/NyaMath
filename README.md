@@ -38,6 +38,7 @@ stdio и приложение через *View → Live sync* видят оди�
   `constants`, `materials`, `formulas`, `snippets`, …), read by the app,
   tests and MCP from the same file. Edit data in `db/seed.json`, then
   `npm run seed` to rebuild the DB (`db/schema.sql` is the schema).
+  `npm run update-db` refreshes constants from NIST CODATA and rebuilds.
 
 ## MCP server (agent control)
 
