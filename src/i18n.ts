@@ -116,6 +116,10 @@ const ru = {
   'menu.exdemo': 'Демо · матрицы и программы',
   'menu.exQuick': 'Быстрый старт · парабола',
   'menu.templates': 'Шаблоны ГОСТ',
+  'menu.problems': 'Проблемы',
+
+  'prob.empty': 'Ошибок нет — расчёт чист',
+  'prob.close': 'Закрыть панель',
   'menu.liveSync': 'Синхронизация Live',
   'menu.welcome': 'Показать приветствие',
   'menu.language': 'Язык',
@@ -596,6 +600,10 @@ const en: Record<StrKey, string> = {
   'menu.exdemo': 'Demo · matrices and programs',
   'menu.exQuick': 'Quickstart · parabola',
   'menu.templates': 'GOST templates',
+  'menu.problems': 'Problems',
+
+  'prob.empty': 'No errors — calculation is clean',
+  'prob.close': 'Close panel',
   'menu.liveSync': 'Live sync',
   'menu.welcome': 'Show welcome dialog',
   'menu.language': 'Language',

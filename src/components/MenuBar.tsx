@@ -23,13 +23,14 @@ function templateEntries(): { id: string; label: string }[] {
 }
 import {
   IConst, IField, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
-  IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo, IScale,
+  IRecalc, IRedo, ISave, ISim, IUndo, IWarn, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo, IScale,
 } from './Icon';
 
 interface MenuBarProps {
   onOpenFile: () => void;
   onShowWelcome: () => void;
   onOpenNavigator: () => void;
+  onOpenProblems: () => void;
 }
 
 type Entry =
@@ -65,7 +66,7 @@ function atCross(): { x: number; y: number } {
  * вынесенные undo/redo/пересчёт и тихий статус листа.
  * Клик — открыть, наведение при открытом — переключить, Esc/клик мимо — закрыть.
  */
-export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: MenuBarProps) {
+export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, onOpenProblems }: MenuBarProps) {
   const blocks = useCanvasStore((s) => s.blocks);
   const addBlock = useCanvasStore((s) => s.addBlock);
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
@@ -281,6 +282,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
         { id: 'live', icon: <ISignal />, label: t('menu.liveSync'), checked: liveConnected, action: run(toggleLive) },
         { id: 'recalc', icon: <IRecalc />, label: t('menu.recalc'), hint: 'Ctrl+↵', action: run(recalc) },
         { id: 'variables', icon: <IFx />, label: t('menu.variables'), hint: 'Ctrl+K', action: run(onOpenNavigator) },
+        { id: 'problems', icon: <IWarn />, label: t('menu.problems'), hint: 'Ctrl+Shift+M', action: run(onOpenProblems) },
         { sep: true },
         {
           id: 'theme-sub',

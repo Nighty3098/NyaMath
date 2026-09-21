@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import MenuBar from './components/MenuBar';
 import ActivityBar from './components/ActivityBar';
+import ProblemsPanel from './components/ProblemsPanel';
 import Canvas from './components/Canvas';
 import StatusBar from './components/StatusBar';
 import WelcomeModal from './components/WelcomeModal';
@@ -21,6 +22,7 @@ export default function App() {
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const [welcomeForced, setWelcomeForced] = useState(false);
   const [navigatorOpen, setNavigatorOpen] = useState(false);
+  const [problemsOpen, setProblemsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   // вкладки, вытянутые в отдельные окна (показываем только включённые источники)
   const detachedTabs = useCanvasStore((s) => s.detachedTabs);
@@ -98,6 +100,11 @@ export default function App() {
         e.preventDefault();
         if (e.repeat) return;
         useCanvasStore.getState().toggleScopeMon();
+      } else if (e.code === 'KeyM' && e.shiftKey) {
+        // Ctrl+Shift+M — панель проблем (работает и в полях)
+        e.preventDefault();
+        if (e.repeat) return;
+        setProblemsOpen((v) => !v);
       } else if (e.code === 'Enter' || e.code === 'NumpadEnter') {
         // Ctrl+Enter — пересчитать (Thistle-паттерн ⌘⏎); в полях — нативный Enter редактора
         if (inField) return;
@@ -210,6 +217,7 @@ export default function App() {
         onOpenFile={() => fileRef.current?.click()}
         onShowWelcome={() => setWelcomeForced(true)}
         onOpenNavigator={() => setNavigatorOpen(true)}
+        onOpenProblems={() => setProblemsOpen((v) => !v)}
       />
       <input
         ref={fileRef}
@@ -238,6 +246,7 @@ export default function App() {
           <DetachedTabWindow key={tab} tab={tab} onOpenNavigator={() => setNavigatorOpen(true)} />
         ))}
       </div>
+      {problemsOpen && <ProblemsPanel onClose={() => setProblemsOpen(false)} />}
       <StatusBar onOpenNavigator={() => setNavigatorOpen(true)} />
       {/* вынесенные вкладки — отдельные окна поверх всего */}
       {floatDetached.map((tab) => (
