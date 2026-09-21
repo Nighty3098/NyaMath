@@ -188,7 +188,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
     <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: data.err ? 'auto' : ph + chromeH }}>
       <div
         data-block-id={block.id}
-        className={`nya-block relative w-full h-full rounded-xl px-3 py-2 flex flex-col bg-[var(--sheet)] group ${
+        className={`nya-block relative w-full h-full rounded-xl px-3 py-2 flex flex-col bg-[var(--sheet)] group${selected ? ' nya-selected' : ''} ${
           selected ? 'outline outline-2 outline-offset-2 outline-[var(--accent-line)]' : ''
         }`}
         onClick={(e) => {

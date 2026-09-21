@@ -114,7 +114,7 @@ function SliderBlockView({ block, scale }: Props) {
     <div className="nya-region absolute z-10" style={{ left: block.x, top: block.y }}>
       <div
         data-block-id={block.id}
-        className={`nya-block relative rounded-xl px-2 py-1.5 group min-w-[240px] ${
+        className={`nya-block relative rounded-xl px-2 py-1.5 group min-w-[240px]${selected ? ' nya-selected' : ''} ${
           block.error
             ? 'outline outline-2 outline-[var(--danger)] bg-[var(--danger-bg)]'
             : selected

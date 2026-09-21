@@ -695,7 +695,8 @@ export default function Canvas() {
       onDoubleClick={onDoubleClick}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* направляющие прицела через весь экран (САПР-стиль) */}
+      {/* направляющие прицела через весь экран (САПР-стиль).
+          Цвет — через --crosshair: в Mathcad 15 красный, иначе акцент темы. */}
       <div
         aria-hidden="true"
         className="absolute left-0 right-0 top-0 pointer-events-none print:hidden"
@@ -703,7 +704,7 @@ export default function Canvas() {
           transform: `translateY(${cross.y * view.k + view.y}px)`,
           height: 1,
           background:
-            "linear-gradient(to right, transparent, var(--accent-line) 12%, var(--accent-line) 88%, transparent)",
+            "linear-gradient(to right, transparent, var(--crosshair, var(--accent-line)) 12%, var(--crosshair, var(--accent-line)) 88%, transparent)",
           opacity: 0.28,
         }}
       />
@@ -714,7 +715,7 @@ export default function Canvas() {
           transform: `translateX(${cross.x * view.k + view.x}px)`,
           width: 1,
           background:
-            "linear-gradient(to bottom, transparent, var(--accent-line) 12%, var(--accent-line) 88%, transparent)",
+            "linear-gradient(to bottom, transparent, var(--crosshair, var(--accent-line)) 12%, var(--crosshair, var(--accent-line)) 88%, transparent)",
           opacity: 0.28,
         }}
       />
