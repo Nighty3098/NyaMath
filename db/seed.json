@@ -8001,6 +8001,59 @@
    "plot3d": null,
    "sim": null
   }
+ ,
+  {
+   "id": "perm-factorial",
+   "section": "probability",
+   "ord": 342,
+   "label_ru": "Перестановки P_n = n!",
+   "label_en": "Permutations P_n = n!",
+   "hint_ru": "P_n = n!; порядок важен, задействованы все n",
+   "hint_en": "P_n = n!; order matters, all n used",
+   "code": "n_n := 8\nP_n := factorial(n_n)\nP_n =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "arrange-nk",
+   "section": "probability",
+   "ord": 343,
+   "label_ru": "Размещения A(n,k)",
+   "label_en": "Arrangements A(n,k)",
+   "hint_ru": "A_n^k = n!/(n-k)!; порядок важен",
+   "hint_en": "A_n^k = n!/(n-k)!; order matters",
+   "code": "n_n := 9\nk_k := 4\nA_nk := factorial(n_n)/factorial(n_n-k_k)\nA_nk =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "comb-basic",
+   "section": "probability",
+   "ord": 344,
+   "label_ru": "Сочетания C(n,k)",
+   "label_en": "Combinations C(n,k)",
+   "hint_ru": "C_n^k = n!/(k!(n-k)!); порядок не важен",
+   "hint_en": "C_n^k = n!/(k!(n-k)!); order irrelevant",
+   "code": "n_n := 10\nk_k := 4\nC_nk := factorial(n_n)/(factorial(k_k)*factorial(n_n-k_k))\nC_nk =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "perm-repeat",
+   "section": "probability",
+   "ord": 345,
+   "label_ru": "Перестановки с повторениями",
+   "label_en": "Permutations with repetitions",
+   "hint_ru": "P = n!/(n1!·n2!·…); слово «коробок»: 7!/(3!·2!)",
+   "hint_en": "P = n!/(n1!·n2!·…); word with repeats: 7!/(3!·2!)",
+   "code": "F_all := factorial(7)\nD_rep := factorial(3)*factorial(2)\nP_rep := F_all/D_rep\nP_rep =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  }
  ],
  "formula_sources": [
   {
@@ -11222,6 +11275,55 @@
   },
   {
    "formula_id": "xor-events",
+   "ord": 1,
+   "title": "Вероятность — Википедия",
+   "url": "https://ru.wikipedia.org/wiki/Вероятность"
+  }
+ ,
+  {
+   "formula_id": "perm-factorial",
+   "ord": 0,
+   "title": "Probability — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Probability"
+  },
+  {
+   "formula_id": "perm-factorial",
+   "ord": 1,
+   "title": "Вероятность — Википедия",
+   "url": "https://ru.wikipedia.org/wiki/Вероятность"
+  },
+  {
+   "formula_id": "arrange-nk",
+   "ord": 0,
+   "title": "Probability — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Probability"
+  },
+  {
+   "formula_id": "arrange-nk",
+   "ord": 1,
+   "title": "Вероятность — Википедия",
+   "url": "https://ru.wikipedia.org/wiki/Вероятность"
+  },
+  {
+   "formula_id": "comb-basic",
+   "ord": 0,
+   "title": "Probability — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Probability"
+  },
+  {
+   "formula_id": "comb-basic",
+   "ord": 1,
+   "title": "Вероятность — Википедия",
+   "url": "https://ru.wikipedia.org/wiki/Вероятность"
+  },
+  {
+   "formula_id": "perm-repeat",
+   "ord": 0,
+   "title": "Probability — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Probability"
+  },
+  {
+   "formula_id": "perm-repeat",
    "ord": 1,
    "title": "Вероятность — Википедия",
    "url": "https://ru.wikipedia.org/wiki/Вероятность"
@@ -21462,6 +21564,84 @@
    "name": "P_xor",
    "label_ru": "вероятность ровно одного",
    "label_en": "exactly-one probability"
+  }
+ ,
+  {
+   "formula_id": "perm-factorial",
+   "ord": 0,
+   "name": "n_n",
+   "label_ru": "число объектов",
+   "label_en": "number of objects"
+  },
+  {
+   "formula_id": "perm-factorial",
+   "ord": 1,
+   "name": "P_n",
+   "label_ru": "перестановки",
+   "label_en": "permutations"
+  },
+  {
+   "formula_id": "arrange-nk",
+   "ord": 0,
+   "name": "n_n",
+   "label_ru": "всего объектов",
+   "label_en": "total objects"
+  },
+  {
+   "formula_id": "arrange-nk",
+   "ord": 1,
+   "name": "k_k",
+   "label_ru": "выбираем мест",
+   "label_en": "positions to fill"
+  },
+  {
+   "formula_id": "arrange-nk",
+   "ord": 2,
+   "name": "A_nk",
+   "label_ru": "размещения",
+   "label_en": "arrangements"
+  },
+  {
+   "formula_id": "comb-basic",
+   "ord": 0,
+   "name": "n_n",
+   "label_ru": "всего объектов",
+   "label_en": "total objects"
+  },
+  {
+   "formula_id": "comb-basic",
+   "ord": 1,
+   "name": "k_k",
+   "label_ru": "размер выборки",
+   "label_en": "sample size"
+  },
+  {
+   "formula_id": "comb-basic",
+   "ord": 2,
+   "name": "C_nk",
+   "label_ru": "сочетания",
+   "label_en": "combinations"
+  },
+  {
+   "formula_id": "perm-repeat",
+   "ord": 0,
+   "name": "F_all",
+   "label_ru": "n! — числитель",
+   "label_en": "n! numerator"
+  },
+  {
+   "formula_id": "perm-repeat",
+   "ord": 1,
+   "name": "D_rep",
+   "label_ru": "произведение факториалов повторов",
+   "label_en": "repetition factorials product"
+  },
+  {
+   "formula_id": "perm-repeat",
+   "ord": 2,
+   "name": "P_rep",
+   "label_ru": "перестановки",
+   "label_en": "permutations"
   }
  ],
  "const_sections": [

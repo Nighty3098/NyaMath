@@ -51,4 +51,11 @@ describe('probability combos: palette codes evaluate', () => {
     const f = getFormula('intersection-dependent');
     expect(f?.vars?.map((v) => v.name)).toEqual(['P_a', 'Pb_given_A', 'P_ab']);
   });
+
+  it('базовые: P_n = 40320, A(9,4) = 3024, C(10,4) = 210, повторы = 420', () => {
+    expect(last(calcFormula('perm-factorial'))).toBe('40320');
+    expect(last(calcFormula('arrange-nk'))).toBe('3024');
+    expect(last(calcFormula('comb-basic'))).toBe('210');
+    expect(last(calcFormula('perm-repeat'))).toBe('420');
+  });
 });
