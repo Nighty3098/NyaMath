@@ -11,7 +11,7 @@ import StaleChip from "./StaleChip";
 import { copyTextToClipboard } from "../lib/exportFiles";
 import { applyColonShortcut } from "../lib/canvasLayout";
 import { hoverNameOf, isVarRelated } from "../lib/varHighlight";
-import { expandSelection, insertSnippet, wrapSelection } from "../lib/mathEdit";
+import { expandSelection, insertSnippet, skipCloser, wrapSelection } from "../lib/mathEdit";
 import { lookupFuncDoc, wordAt } from "../lib/funcDoc";
 import AssistantPopup from "./AssistantPopup";
 import {
@@ -542,6 +542,21 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                     if (e.key === "Escape") {
                       e.preventDefault();
                       setAssist(null);
+                      e.stopPropagation();
+                      return;
+                    }
+                  }
+                  // Tab без ассистента — tab-stop сниппетов: перепрыгнуть `)`/`]`.
+                  // Иначе — штатный Tab (навигация фокуса, a11y не ломаем).
+                  if (e.key === "Tab" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    const jump = selS === selE ? skipCloser(draft, selS) : null;
+                    if (jump !== null) {
+                      e.preventDefault();
+                      setCurPos(jump);
+                      refreshAssist(draft, jump);
+                      requestAnimationFrame(() => {
+                        el.setSelectionRange?.(jump, jump);
+                      });
                       e.stopPropagation();
                       return;
                     }

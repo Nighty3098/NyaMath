@@ -34,6 +34,19 @@ export function insertSnippet(
   return { value: next, cursor: s + snippet.length };
 }
 
+/**
+ * Tab-stop для сниппетов (`sqrt(`, `^()`): курсор перед `)`/`]` —
+ * перепрыгнуть за неё и за цепочку (`))`). Иначе null — Tab идёт
+ * дальше как навигация фокуса (a11y не ломаем).
+ */
+export function skipCloser(value: string, pos: number): number | null {
+  const p = Math.max(0, Math.min(pos, value.length));
+  if (value[p] !== ')' && value[p] !== ']') return null;
+  let q = p;
+  while (value[q] === ')' || value[q] === ']') q++;
+  return q;
+}
+
 export type WrapKind = 'parens' | 'fraction' | 'power' | 'sqrt';
 
 /**

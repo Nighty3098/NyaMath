@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expandSelection, insertSnippet, wrapSelection } from './mathEdit';
+import { expandSelection, insertSnippet, skipCloser, wrapSelection } from './mathEdit';
 
 describe('editing: wrap selection with operator', () => {
   it('parens keep the selection on the group (chaining)', () => {
@@ -76,5 +76,25 @@ describe('editing: insert snippet from on-screen keyboard', () => {
 
   it('выход за длину обрезается', () => {
     expect(insertSnippet('ab', 99, 99, '²')).toEqual({ value: 'ab²', cursor: 3 });
+  });
+});
+
+describe('editing: Tab skips closing brackets', () => {
+  it('перепрыгивает одну скобку', () => {
+    expect(skipCloser('sqrt()', 5)).toBe(6);
+  });
+
+  it('перепрыгивает цепочку', () => {
+    expect(skipCloser('((x))', 3)).toBe(5);
+  });
+
+  it('матричные скобки тоже', () => {
+    expect(skipCloser('[1, 2]', 5)).toBe(6);
+  });
+
+  it('не перед скобкой — null, Tab идёт в фокус', () => {
+    expect(skipCloser('sqrt(x', 5)).toBe(null);
+    expect(skipCloser('ab', 2)).toBe(null);
+    expect(skipCloser('', 0)).toBe(null);
   });
 });
