@@ -352,10 +352,21 @@ export function convertToUnit(value: unknown, unitStr: string, exprSlice: string
 }
 
 /** Разобрать одну строку. Многострочный ввод бьётся вызывающим кодом. */
+/** Позиция одиночного `=` (маркер вывода): пропускаем `:=`, `==`, `<=`, `>=`, `!=`. */
+function indexOfBareEq(s: string): number {
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] !== '=') continue;
+    const prev = s[i - 1];
+    const next = s[i + 1];
+    if (prev === ':' || prev === '=' || prev === '!' || prev === '<' || prev === '>' || next === '=') continue;
+    return i;
+  }
+  return -1;
+}
+
 export function parseLine(rawInput: string): ParsedLine {
   const trimmed = rawInput.trim();
-  if (trimmed.includes(':=')) {
-    const idx = trimmed.indexOf(':=');
+  if (trimmed.includes(':=')) {    const idx = trimmed.indexOf(':=');
     const lhs = trimmed.slice(0, idx).trim();
     const expr = trimmed.slice(idx + 2).trim();
     // висячее `=` в конце: `delta := atan(x) =` — определить и показать
@@ -376,13 +387,14 @@ export function parseLine(rawInput: string): ParsedLine {
     const withoutTrailing = trimmed.replace(/=+\s*$/, '').trim();
     // если после обрезки остался `=` внутри (напр. `x = 2+2`), берём левую часть как запрос?
     // Семантика: `x =` показывает x. `2+2 =` показывает 6.
-    // Значит вычисляем именно левую часть до первого `=`.
-    const firstEq = withoutTrailing.indexOf('=');
+    // Значит вычисляем именно левую часть до первого одиночного `=`
+    // (`<=`, `>=`, `!=`, `==` — операторы, а не маркер: `2 <= 3 =` считает всё).
+    const firstEq = indexOfBareEq(withoutTrailing);
     const expr = firstEq >= 0 ? withoutTrailing.slice(0, firstEq).trim() || withoutTrailing : withoutTrailing;
     // особый случай `x = 2+2` (полное равенство с RHS): если справа что-то было — вычисляем RHS?
     // Для простоты: если исходник вида `name = <expr>` и name — валидный идентификатор,
     // а справа непусто — трактуем как eval всего RHS и НЕ присваиваем (чистый вывод).
-    const origEqIdx = trimmed.indexOf('=');
+    const origEqIdx = indexOfBareEq(trimmed);
     const rhs = trimmed.slice(origEqIdx + 1).replace(/=+\s*$/, '').trim();
     if (/^[A-Za-z_]\w*$/.test(withoutTrailing.split('=')[0]?.trim() ?? '') && rhs !== '') {
       return { kind: 'output', lhs: '', expr: rhs, definedVar: null, fnParams: [], isFunctionDef: false, show: true };
