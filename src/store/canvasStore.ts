@@ -7,6 +7,7 @@ import { getSimModel, listSimModels, simModelPatch } from '../engine/simEngine';
 import { separateBlocksVertically, snapToGrid, GRID_STEP_FINE, GRID_STEP_STANDARD } from '../lib/canvasLayout';
 import { getLang, loadLang, setLangState, t, type Lang } from '../i18n';
 import { RECALC_TIMEOUT_MS, recalcInWorker } from '../lib/recalcWorker';
+import { setNumFmt as setEngineNumFmt, type NumFmt, type NumFmtMode } from '../engine/mathEngine';
 import { engineMismatch, parseDocFile } from '../lib/docFile';
 import { ENGINE_VERSION } from '../engine/version';
 
@@ -41,6 +42,32 @@ function loadGridSize(): 'standard' | 'fine' {
 function saveGridSize(v: 'standard' | 'fine') {
   try {
     localStorage.setItem(GRID_SIZE_KEY, v);
+  } catch { /* ignore */ }
+}
+
+const NUMFMT_KEY = 'nyamath-num-fmt';
+
+function loadNumFmt(): NumFmt {
+  let out: NumFmt = { mode: 'auto', digits: 6 };
+  try {
+    const raw = localStorage.getItem(NUMFMT_KEY);
+    if (raw) {
+      const p = JSON.parse(raw) as Partial<NumFmt>;
+      const mode = p.mode === 'sig' || p.mode === 'fixed' ? p.mode : 'auto';
+      const digits = Math.max(1, Math.min(15, Math.floor(p.digits ?? 6) || 6));
+      out = { mode, digits };
+    }
+  } catch {
+    out = { mode: 'auto', digits: 6 };
+  }
+  // main-thread движок (фолбэк без воркера) читает модульное состояние
+  setEngineNumFmt(out);
+  return out;
+}
+
+function saveNumFmt(f: NumFmt) {
+  try {
+    localStorage.setItem(NUMFMT_KEY, JSON.stringify(f));
   } catch { /* ignore */ }
 }
 
@@ -170,6 +197,9 @@ export interface CanvasState {
   gridSize: 'standard' | 'fine';
   setGridSize: (s: 'standard' | 'fine') => void;
   setGridVisible: (v: boolean) => void;
+  /** Формат чисел в выводе (SMath-паттерн significant/fixed). */
+  numFmt: NumFmt;
+  setNumFmt: (f: NumFmt) => void;
   /** Disable Evaluation: исключить/вернуть блок из расчёта */
   toggleBlockDisabled: (id: string) => void;
   /** Инверсия флага для всего выделения одним шагом истории */
@@ -623,6 +653,7 @@ async function runRecalcJob(only?: Set<string>): Promise<void> {
       currentAbort = ctrl;
       const outcome = await recalcInWorker(list, {
         lang: getLang(),
+        fmt: st0.numFmt,
         timeoutMs: RECALC_TIMEOUT_MS,
         signal: ctrl.signal,
         only: attemptOnly ? [...attemptOnly] : undefined,
@@ -1259,6 +1290,18 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   setGridVisible: (v) => {
     saveGrid(v);
     set({ showGrid: v });
+  },
+
+  numFmt: loadNumFmt(),
+  setNumFmt: (f) => {
+    const mode: NumFmtMode = f.mode === 'sig' || f.mode === 'fixed' ? f.mode : 'auto';
+    const digits = Math.max(1, Math.min(15, Math.floor(f.digits) || 6));
+    const next = { mode, digits };
+    saveNumFmt(next);
+    // main-thread движок (фолбэк без воркера) читает модульное состояние
+    setEngineNumFmt(next);
+    set({ numFmt: next });
+    scheduleRecalcAsync(60);
   },
 
   toggleBlockDisabled: (id) => {

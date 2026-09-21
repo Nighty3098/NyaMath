@@ -18,14 +18,16 @@ import { hydrateDb, type DbSnapshot } from '../lib/db';
 type Engine = {
   recalculateAllAsync: typeof import('./dependencies').recalculateAllAsync;
   serializeScopeValue: typeof import('./workerProtocol').serializeScopeValue;
+  setNumFmt: typeof import('./mathEngine').setNumFmt;
 };
 let enginePromise: Promise<Engine> | null = null;
 function ensureEngine(): Promise<Engine> {
   if (!enginePromise) {
-    enginePromise = Promise.all([import('./dependencies'), import('./workerProtocol')]).then(
-      ([deps, wp]) => ({
+    enginePromise = Promise.all([import('./dependencies'), import('./workerProtocol'), import('./mathEngine')]).then(
+      ([deps, wp, me]) => ({
         recalculateAllAsync: deps.recalculateAllAsync,
         serializeScopeValue: wp.serializeScopeValue,
+        setNumFmt: me.setNumFmt,
       }),
     );
   }
@@ -61,7 +63,8 @@ export async function runWorkerJob(
   const t0 = performance.now();
   try {
     // порядок сообщений гарантирует: init+hydrateDb уже отработал, БД готова
-    const { recalculateAllAsync, serializeScopeValue } = await ensureEngine();
+    const { recalculateAllAsync, serializeScopeValue, setNumFmt } = await ensureEngine();
+    setNumFmt(req.fmt ?? { mode: 'auto', digits: 6 });
     const list = req.blocks.map(toFull);
     const outcome = await recalculateAllAsync(list, {
       onBlock: (done, total) => {

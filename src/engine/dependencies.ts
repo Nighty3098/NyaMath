@@ -1,9 +1,9 @@
-import { buildSubstitution, createBaseScope, compilePlotExpr, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, preprocessJ, preprocessRanges, splitOffUnit, stripOnError, toLatex, valueToLatex, type Scope } from './mathEngine';
+import { buildSubstitution, createBaseScope, compilePlotExpr, envTag, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, preprocessJ, preprocessRanges, splitOffUnit, stripOnError, toLatex, valueToLatex, type Scope } from './mathEngine';
 import { resetSolverTrace, takeSolverTrace } from './numeric';
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
 import { parseSimDef, runSim, runSimAsync, isSimCancel, yieldSlice, type SimResult, type SimSolver, type SimMode } from './simEngine';
-import { getLang, t } from '../i18n';
+import { t } from '../i18n';
 
 export interface MathBlockData {
   id: string;
@@ -442,7 +442,7 @@ function createRecalcCtx(list: MathBlockData[], opts?: RecalcOpts): RecalcCtx {
   // их имена не видны ниже — в циклах и цепочках определений не участвуют.
   const active = ordered.filter((b) => !b.disabled);
   const cyclic = detectCycles(active);
-  const langTag = getLang();
+  const langTag = envTag();
   const byId = new Map(ordered.map((b) => [b.id, b]));
   // определители имён сверху вниз — точное соответствие threading scope
   const defLists = new Map<string, number[]>();

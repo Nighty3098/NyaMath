@@ -75,6 +75,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const gridSize = useCanvasStore((s) => s.gridSize);
   const setGridSize = useCanvasStore((s) => s.setGridSize);
   const setGridVisible = useCanvasStore((s) => s.setGridVisible);
+  const numFmt = useCanvasStore((s) => s.numFmt);
+  const setNumFmt = useCanvasStore((s) => s.setNumFmt);
   const separateRegions = useCanvasStore((s) => s.separateRegions);
   const toggleSelectedDisabled = useCanvasStore((s) => s.toggleSelectedDisabled);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
@@ -229,6 +231,18 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
             { id: 'grid-off', icon: <IGrid />, label: t('menu.gridOff'), checked: !showGrid, action: run(() => setGridVisible(false)) },
             { sep: true },
             { id: 'separate', icon: <IGrid />, label: t('menu.separate'), action: run(separateRegions) },
+          ],
+        },
+        {
+          id: 'fmt-sub', icon: <IFx />, label: t('menu.numFmt'), children: [
+            { id: 'fmt-auto', label: t('menu.numAuto'), checked: numFmt.mode === 'auto', action: run(() => setNumFmt({ mode: 'auto', digits: numFmt.digits })) },
+            { id: 'fmt-sig', label: t('menu.numSig'), checked: numFmt.mode === 'sig', action: run(() => setNumFmt({ mode: 'sig', digits: numFmt.digits })) },
+            { id: 'fmt-fixed', label: t('menu.numFixed'), checked: numFmt.mode === 'fixed', action: run(() => setNumFmt({ mode: 'fixed', digits: numFmt.digits })) },
+            { sep: true },
+            ...[3, 4, 5, 6, 8, 10].map((d): Entry => ({
+              id: `fmt-d${d}`, label: t('menu.numDigits', { n: d }), checked: numFmt.digits === d,
+              action: run(() => setNumFmt({ mode: numFmt.mode, digits: d })),
+            })),
           ],
         },
         { id: 'scopemon', icon: <ISignal />, label: t('menu.scopeMon'), hint: 'Ctrl+J', checked: scopeMonOpen, action: run(toggleScopeMon) },

@@ -11,7 +11,7 @@
 import { create, all, type EvalFunction, type MathJsInstance, type MathNode, type Unit } from 'mathjs';
 import { buildPackScope, PACK_NAMES } from './packs';
 
-import { t } from '../i18n';
+import { t, getLang } from '../i18n';
 
 export const math: MathJsInstance = create(all, {});
 
@@ -612,6 +612,34 @@ export function suggestName(name: string, candidates: string[]): string | null {
   return pref ?? null;
 }
 
+/** Формат чисел в выводе: auto — legacy, sig — значащие цифры, fixed — знаки после запятой. */
+export type NumFmtMode = 'auto' | 'sig' | 'fixed';
+export interface NumFmt {
+  mode: NumFmtMode;
+  digits: number;
+}
+const DEFAULT_FMT: NumFmt = { mode: 'auto', digits: 6 };
+let numFmt: NumFmt = { ...DEFAULT_FMT };
+
+/** Установить формат чисел (стор + воркер-протокол; влияет только на отображение). */
+export function setNumFmt(f: NumFmt): void {
+  const d = Math.max(1, Math.min(15, Math.floor(f.digits) || 6));
+  numFmt = { mode: f.mode === 'sig' || f.mode === 'fixed' ? f.mode : 'auto', digits: d };
+}
+
+export function getNumFmt(): NumFmt {
+  return { ...numFmt };
+}
+
+function fmtTag(): string {
+  return `${numFmt.mode}:${numFmt.digits}`;
+}
+
+/** Кэш-партиция пересчёта: язык + формат чисел (результаты — строки). */
+export function envTag(): string {
+  return `${getLang()}|${fmtTag()}`;
+}
+
 /** Форматирование результата для отображения (числа, комплексные, матрицы). */
 export function formatResult(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -631,7 +659,7 @@ export function formatResult(value: unknown): string {
     // Единицы измерения: «5.3 m», «44.48 N» — с разумной точностью
     if (math.isUnit(value)) {
       try {
-        return math.format(value, { precision: 6 });
+        return math.format(value, { precision: fmtPrecision() });
       } catch {
         return String(value);
       }
@@ -639,7 +667,8 @@ export function formatResult(value: unknown): string {
     // Matrix / Array
     if (math.isMatrix(value)) {
       const arr = (value as { toArray: () => unknown }).toArray();
-      return JSON.stringify(arr, (_, v) => (typeof v === 'number' ? Number(v.toPrecision(6)) : v));
+      const p = fmtPrecision();
+      return JSON.stringify(arr, (_, v) => (typeof v === 'number' ? Number(v.toPrecision(p)) : v));
     }
     if (Array.isArray(value)) {
       return JSON.stringify(value.map((v) => (math.isComplex(v) ? formatResult(v) : v)));
@@ -648,15 +677,40 @@ export function formatResult(value: unknown): string {
       const c = value as { re: number; im: number };
       return formatComplex(Number(c.re), Number(c.im));
     }
-    return math.format(value as never, { precision: 6 });
+    return math.format(value as never, { precision: fmtPrecision() });
   } catch {
     return String(value);
   }
 }
 
+/** Точность для math.format/toPrecision: legacy 6, иначе знаки формата. */
+function fmtPrecision(): number {
+  return numFmt.mode === 'auto' ? 6 : numFmt.digits;
+}
+
+/** e-нотация mathjs → инженерная «·10^» (как в auto-ветке). */
+function expStr(s: string): string {
+  return s.replace('e+', '·10^').replace('e', '·10^');
+}
+
+/** -0.00 → 0.00 (иначе fixed даёт «-0.00» для округлённого нуля). */
+function fixZero(s: string, digits: number): string {
+  return Number(s) === 0 ? (0).toFixed(digits) : s;
+}
+
 function formatNumber(n: number): string {
-  if (n === 0) return '0';
+  if (n === 0 || Object.is(n, -0)) return numFmt.mode === 'fixed' ? (0).toFixed(numFmt.digits) : '0';
   const abs = Math.abs(n);
+  if (numFmt.mode === 'sig') {
+    const d = numFmt.digits;
+    if (abs >= 1e-3 && abs < 1e6) return String(Number(n.toPrecision(d)));
+    return expStr(n.toExponential(d - 1));
+  }
+  if (numFmt.mode === 'fixed') {
+    const d = numFmt.digits;
+    if (abs >= 1e-3 && abs < 1e6) return fixZero(n.toFixed(d), d);
+    return expStr(n.toExponential(d));
+  }
   if ((abs >= 1e-3 && abs < 1e6) || n === 0) {
     // убираем мусор float: 0.1+0.2
     const s = Number(n.toPrecision(10)).toString();

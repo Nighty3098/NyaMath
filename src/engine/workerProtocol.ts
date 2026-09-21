@@ -4,6 +4,7 @@ import {
   isValidVarName,
   math,
   parseLine,
+  type NumFmt,
   type Scope,
 } from './mathEngine';
 import { sortBlocksTopDown, type MathBlockData } from './dependencies';
@@ -248,6 +249,8 @@ export function rebuildMainScope(
 export interface WorkerReq {
   jobId: number;
   lang: Lang;
+  /** Формат чисел (опционально — по умолчанию auto/legacy). */
+  fmt?: NumFmt;
   blocks: SlimBlock[];
   /** Calculate Now: только эти + upstream (пусто/нет = полный пересчёт) */
   only?: string[];
