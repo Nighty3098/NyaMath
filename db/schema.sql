@@ -187,5 +187,27 @@ CREATE TABLE IF NOT EXISTS templates (
 CREATE TABLE IF NOT EXISTS unit_prefixes (
   prefix TEXT PRIMARY KEY,
   mult REAL NOT NULL,
-  len INTEGER NOT NULL            -- длина префикса: матчить длинные первыми
+  len INTEGER NOT NULL              -- длина префикса: матчить длинные первыми
+);
+
+-- Химические элементы 1..118 (fetch-elements.mjs из Periodic-Table-JSON).
+-- atomic_mass — относительная атомная масса (численно = молярная, г/моль).
+CREATE TABLE IF NOT EXISTS elements (
+  number INTEGER PRIMARY KEY,
+  symbol TEXT NOT NULL,
+  name_en TEXT NOT NULL,
+  name_ru TEXT,
+  atomic_mass REAL,
+  phase TEXT,
+  density REAL,                     -- г/л для газов, г/см³ для остальных (как в источнике)
+  melt REAL,                        -- K
+  boil REAL,                        -- K
+  group_no INTEGER,
+  period INTEGER NOT NULL,
+  electron_config TEXT,
+  electronegativity REAL,           -- шкала Полинга
+  molar_heat REAL,                  -- Дж/(моль·K)
+  category TEXT,
+  discovered TEXT,
+  source TEXT
 );

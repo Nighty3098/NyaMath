@@ -5,23 +5,28 @@ import * as path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import {
   dbPath,
+  findElement,
   findMaterial,
   formulaVars,
   getConstant,
   getDemoItems,
   getDemoLines,
+  getElement,
   getFormula,
   getMaterial,
   getSimModelDb,
+  getTemplate,
   isDbReady,
   listConstEntries,
   listConstSections,
   listConstants,
+  listElements,
   listFormulas,
   listFormulaSections,
   listMaterials,
   listSimModels,
   listSnippets,
+  listTemplates,
   matPropName,
   unitPrefixes,
 } from './db';
@@ -133,6 +138,28 @@ describe('NyaMath.db integrity', () => {
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
+  });
+
+  it('elements: 118 rows, Fe anchors, lookup', () => {
+    const all = listElements();
+    expect(all.length).toBe(118);
+    expect(all.map((e) => e.number)).toEqual(Array.from({ length: 118 }, (_, k) => k + 1));
+    const fe = getElement(26);
+    expect(fe?.symbol).toBe('Fe');
+    expect(fe?.name_ru).toBe('железо');
+    expect(fe?.atomic_mass).toBeCloseTo(55.845, 2);
+    expect(fe?.electron_config).toContain('3d6');
+    expect(getElement(999)).toBeNull();
+    expect(findElement('Fe')?.number).toBe(26);
+    expect(findElement('26')?.symbol).toBe('Fe');
+    expect(findElement('железо')?.number).toBe(26);
+    expect(findElement('oxygen')?.symbol).toBe('O');
+    expect(findElement('???')).toBeNull();
+    // у каждого есть ru-название и масса
+    expect(all.every((e) => (e.name_ru ?? '').length > 0)).toBe(true);
+    expect(all.every((e) => e.atomic_mass !== null)).toBe(true);
+    expect(getTemplate('beam-simply-uniform')?.lines.length).toBeGreaterThan(0);
+    expect(listTemplates().length).toBe(6);
   });
 
   it('unit prefixes ordered longest-first', () => {

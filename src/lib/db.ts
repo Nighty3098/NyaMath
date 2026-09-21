@@ -39,6 +39,8 @@ const simById = new Map<string, SimModel>();
 const demoBySuite = new Map<string, DemoItem[]>();
 const templates: Template[] = [];
 const templateById = new Map<string, Template>();
+const elements: ElementRow[] = [];
+const elementByNumber = new Map<number, ElementRow>();
 let prefixes: Array<{ prefix: string; mult: number; len: number }> = [];
 
 export interface ConstantRow {
@@ -122,6 +124,29 @@ export interface DemoItem {
   plotXmax?: number;
 }
 
+export interface ElementRow {
+  number: number;
+  symbol: string;
+  name_en: string;
+  name_ru: string | null;
+  atomic_mass: number | null;
+  phase: string | null;
+  /** г/л для газов, г/см³ для остальных (как в источнике) */
+  density: number | null;
+  /** K */
+  melt: number | null;
+  /** K */
+  boil: number | null;
+  group_no: number | null;
+  period: number;
+  electron_config: string | null;
+  electronegativity: number | null;
+  molar_heat: number | null;
+  category: string | null;
+  discovered: string | null;
+  source: string | null;
+}
+
 export interface TemplateLine {
   kind: 'math' | 'text';
   raw: string;
@@ -172,7 +197,7 @@ function readAllTables(db: Driver): Record<string, Row[]> {
     'constants', 'materials', 'mat_prop_names',
     'formula_sections', 'formulas', 'formula_sources', 'formula_vars',
     'const_sections', 'const_entries', 'const_sources',
-    'snippets', 'sim_models', 'demo_lines', 'templates', 'unit_prefixes',
+    'snippets', 'sim_models', 'demo_lines', 'templates', 'elements', 'unit_prefixes',
   ];
   return Object.fromEntries(tables.map((t) => [t, db.all(`SELECT * FROM ${t}`)]));
 }
@@ -341,6 +366,33 @@ function ingest(t: Record<string, Row[]>): void {
   prefixes = rows('unit_prefixes')
     .map((r) => ({ prefix: String(r['prefix']), mult: Number(r['mult']), len: Number(r['len']) }))
     .sort((a, b) => b.len - a.len || (a.prefix < b.prefix ? -1 : 1));
+  elements.length = 0;
+  elementByNumber.clear();
+  for (const r of q('elements')) {
+    const num = (v: unknown): number | null =>
+      (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
+    const el: ElementRow = {
+      number: Number(r['number']),
+      symbol: str(r['symbol']),
+      name_en: str(r['name_en']),
+      name_ru: optStr(r['name_ru']) ?? null,
+      atomic_mass: num(r['atomic_mass']),
+      phase: optStr(r['phase']) ?? null,
+      density: num(r['density']),
+      melt: num(r['melt']),
+      boil: num(r['boil']),
+      group_no: num(r['group_no']),
+      period: Number(r['period']),
+      electron_config: optStr(r['electron_config']) ?? null,
+      electronegativity: num(r['electronegativity']),
+      molar_heat: num(r['molar_heat']),
+      category: optStr(r['category']) ?? null,
+      discovered: optStr(r['discovered']) ?? null,
+      source: optStr(r['source']) ?? null,
+    };
+    elements.push(el);
+    elementByNumber.set(el.number, el);
+  }
 }
 
 /* ---------------- геттеры (синхронно, из кэша) ---------------- */
@@ -468,6 +520,33 @@ export function listTemplates(): Template[] {
 export function getTemplate(id: string): Template | null {
   ready();
   return templateById.get(id) ?? null;
+}
+
+/** Все химические элементы 1..118 по номеру. */
+export function listElements(): ElementRow[] {
+  ready();
+  return [...elements];
+}
+
+export function getElement(number: number): ElementRow | null {
+  ready();
+  return elementByNumber.get(number) ?? null;
+}
+
+/** Поиск: символ (Fe), номер (26) или подстрока ru/en-названия. */
+export function findElement(q: string): ElementRow | null {
+  ready();
+  const nq = q.trim().toLowerCase();
+  if (!nq) return null;
+  const byNum = Number(nq);
+  if (Number.isInteger(byNum) && elementByNumber.has(byNum)) return elementByNumber.get(byNum) ?? null;
+  for (const el of elements) {
+    if (el.symbol.toLowerCase() === nq) return el;
+  }
+  for (const el of elements) {
+    if (el.name_en.toLowerCase().includes(nq) || (el.name_ru ?? '').toLowerCase().includes(nq)) return el;
+  }
+  return null;
 }
 
 export function unitPrefixes(): Array<{ prefix: string; mult: number; len: number }> {
