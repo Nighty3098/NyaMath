@@ -20,8 +20,7 @@ export type ThemeName =
   | 'github-dark'
   | 'github-light'
   | 'blueprint'
-  | 'graph'
-  | 'mathcad15';
+  | 'graph';
 
 export interface ThemeMeta {
   id: ThemeName;
@@ -41,10 +40,9 @@ export const THEMES: ThemeMeta[] = [
   { id: 'github-light', kind: 'light' },
   { id: 'blueprint', kind: 'dark' },
   { id: 'graph', kind: 'light' },
-  { id: 'mathcad15', kind: 'light' },
 ];
 
-const LIGHT: ReadonlySet<ThemeName> = new Set(['gruvbox-light', 'nord-light', 'github-light', 'graph', 'mathcad15']);
+const LIGHT: ReadonlySet<ThemeName> = new Set(['gruvbox-light', 'nord-light', 'github-light', 'graph']);
 
 /** Светлая ли тема (для сетки Canvas и прочих ветвлений «светлое/тёмное»). */
 export function isLightTheme(t: ThemeName): boolean {
@@ -172,16 +170,6 @@ export const plotPalettes: Record<ThemeName, PlotPalette> = {
     frame: '#d7e2dc',
     legend: '#1c3d5a',
     series: ['#1c3d5a', '#c0392b', '#1e7c43', '#8a5a00', '#0e6e6e', '#6a3fb5', '#b5477a'],
-  },
-  mathcad15: {
-    svgBg: '#ffffff',
-    grid: '#000000',
-    gridOpacity: 0.12,
-    tick: '#404040',
-    axis: '#000000',
-    frame: '#808080',
-    legend: '#000000',
-    series: ['#0000ff', '#ff0000', '#008000', '#000000', '#ff00ff', '#008080', '#808080'],
   },
 };
 
