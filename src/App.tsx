@@ -95,6 +95,14 @@ export default function App() {
         e.preventDefault();
         if (e.repeat) return;
         useCanvasStore.getState().toggleScopeMon();
+      } else if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+        // Ctrl+Enter — пересчитать (Thistle-паттерн ⌘⏎); в полях — нативный Enter редактора
+        if (inField) return;
+        e.preventDefault();
+        if (e.repeat) return;
+        const st = useCanvasStore.getState();
+        if (st.calcMode === 'manual') st.recalcNow();
+        else st.recalc();
       }
     };
     window.addEventListener('keydown', onKey, true);
