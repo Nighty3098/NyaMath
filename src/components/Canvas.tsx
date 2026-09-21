@@ -25,8 +25,6 @@ import { t } from "../i18n";
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 3;
-// Скорость догоняющей анимации зума (меньше — плавнее)
-const ZOOM_EASE = 0.16;
 
 interface View {
   x: number;
@@ -86,35 +84,7 @@ export default function Canvas() {
     };
   }, []);
 
-  // Плавное догоняние цели (только зум/панорама от колеса и кнопок).
-  // При prefers-reduced-motion — мгновенно, без анимации.
-  const reducedRef = useRef(
-    typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
-  );
-  useEffect(() => {
-    let raf = 0;
-    const tick = () => {
-      const t = targetRef.current;
-      const ease = reducedRef.current ? 1 : ZOOM_EASE;
-      setView((v) => {
-        const dx = t.x - v.x;
-        const dy = t.y - v.y;
-        const dk = t.k - v.k;
-        if (
-          Math.abs(dx) < 0.05 &&
-          Math.abs(dy) < 0.05 &&
-          Math.abs(dk) < 0.0004
-        ) {
-          return v.x === t.x && v.y === t.y && v.k === t.k ? v : { ...t };
-        }
-        return { x: v.x + dx * ease, y: v.y + dy * ease, k: v.k + dk * ease };
-      });
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
+  // Без плавного скролла/зума: колесо и кнопки применяют вид мгновенно.
 
   useEffect(() => {
     viewRef.current = view;
@@ -170,9 +140,9 @@ export default function Canvas() {
       const t = targetRef.current;
       const k = clamp(t.k * factor, MIN_SCALE, MAX_SCALE);
       const f = k / t.k;
-      targetRef.current = { k, x: sx - (sx - t.x) * f, y: sy - (sy - t.y) * f };
+      applyView({ k, x: sx - (sx - t.x) * f, y: sy - (sy - t.y) * f });
     },
-    [],
+    [applyView],
   );
 
   // Колесо: обычный скролл = панорама (мгновенно), Ctrl/Cmd+колесо (pinch) = плавный зум к курсору.
