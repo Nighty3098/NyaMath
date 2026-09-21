@@ -441,6 +441,9 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
       >
         {rail}
         <div className="flex-1 min-w-0 flex flex-col min-h-0">
+          <div className="nya-pal-head shrink-0 px-3 py-1 text-[11px] font-bold truncate">
+            {active.title}
+          </div>
           {content}
         </div>
         {/* ручка ресайза */}

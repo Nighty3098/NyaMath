@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import MenuBar from './components/MenuBar';
+import ClassicToolbar from './components/ClassicToolbar';
 import Canvas from './components/Canvas';
 import ProblemsPanel from './components/ProblemsPanel';
 import StatusBar from './components/StatusBar';
@@ -218,6 +219,7 @@ export default function App() {
         onOpenNavigator={() => setNavigatorOpen(true)}
         onOpenProblems={() => setProblemsOpen((v) => !v)}
       />
+      <ClassicToolbar />
       <input
         ref={fileRef}
         type="file"
