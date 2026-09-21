@@ -635,9 +635,43 @@ function fmtTag(): string {
   return `${numFmt.mode}:${numFmt.digits}`;
 }
 
-/** Кэш-партиция пересчёта: язык + формат чисел (результаты — строки). */
+/** Кэш-партиция пересчёта: язык + формат чисел + система единиц (результаты — строки). */
 export function envTag(): string {
-  return `${getLang()}|${fmtTag()}`;
+  return `${getLang()}|${fmtTag()}|${unitSys}`;
+}
+
+/** Система единиц для отображения результатов: none — как введено (Prime 11-паттерн). */
+export type UnitSys = 'none' | 'SI' | 'US' | 'CGS';
+let unitSys: UnitSys = 'none';
+
+/** Установить систему единиц отображения (стор + воркер-протокол). */
+export function setUnitSys(s: UnitSys): void {
+  unitSys = s === 'SI' || s === 'US' || s === 'CGS' ? s : 'none';
+}
+
+export function getUnitSys(): UnitSys {
+  return unitSys;
+}
+
+/** Единицы отображения по размерности (первое совместимое побеждает). */
+const SYS_UNITS: Record<Exclude<UnitSys, 'none'>, string[]> = {
+  SI: ['m', 'm^2', 'm^3', 'kg', 's', 'A', 'K', 'mol', 'Hz', 'N', 'Pa', 'J', 'W', 'C', 'V', 'F', 'ohm', 'S', 'T', 'H', 'm/s', 'm/s^2', 'kg/m^3'],
+  US: ['ft', 'ft^2', 'ft^3', 'lbm', 's', 'A', 'degF', 'mol', 'Hz', 'lbf', 'psi', 'BTU', 'hp', 'gal', 'ft/s', 'ft/s^2', 'lbm/ft^3'],
+  CGS: ['cm', 'cm^2', 'cm^3', 'g', 's', 'A', 'degC', 'mol', 'Hz', 'dyn', 'dyn/cm^2', 'erg', 'C', 'V', 'F', 'ohm', 'S', 'T', 'H', 'cm/s', 'cm/s^2', 'g/cm^3'],
+};
+
+/** Перевести единицу в систему отображения; несовместимого нет — вернуть как есть. */
+function toSystemUnit(u: Unit): Unit {
+  if (unitSys === 'none') return u;
+  for (const cand of SYS_UNITS[unitSys]) {
+    try {
+      const c = math.unit(cand);
+      if (u.equalBase(c)) return u.to(cand);
+    } catch {
+      /* кандидат не подошёл — следующий */
+    }
+  }
+  return u;
 }
 
 /** Форматирование результата для отображения (числа, комплексные, матрицы). */
@@ -659,7 +693,7 @@ export function formatResult(value: unknown): string {
     // Единицы измерения: «5.3 m», «44.48 N» — с разумной точностью
     if (math.isUnit(value)) {
       try {
-        return math.format(value, { precision: fmtPrecision() });
+        return math.format(toSystemUnit(value), { precision: fmtPrecision() });
       } catch {
         return String(value);
       }

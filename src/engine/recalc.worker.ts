@@ -19,6 +19,7 @@ type Engine = {
   recalculateAllAsync: typeof import('./dependencies').recalculateAllAsync;
   serializeScopeValue: typeof import('./workerProtocol').serializeScopeValue;
   setNumFmt: typeof import('./mathEngine').setNumFmt;
+  setUnitSys: typeof import('./mathEngine').setUnitSys;
 };
 let enginePromise: Promise<Engine> | null = null;
 function ensureEngine(): Promise<Engine> {
@@ -28,6 +29,7 @@ function ensureEngine(): Promise<Engine> {
         recalculateAllAsync: deps.recalculateAllAsync,
         serializeScopeValue: wp.serializeScopeValue,
         setNumFmt: me.setNumFmt,
+        setUnitSys: me.setUnitSys,
       }),
     );
   }
@@ -63,8 +65,9 @@ export async function runWorkerJob(
   const t0 = performance.now();
   try {
     // порядок сообщений гарантирует: init+hydrateDb уже отработал, БД готова
-    const { recalculateAllAsync, serializeScopeValue, setNumFmt } = await ensureEngine();
+    const { recalculateAllAsync, serializeScopeValue, setNumFmt, setUnitSys } = await ensureEngine();
     setNumFmt(req.fmt ?? { mode: 'auto', digits: 6 });
+    setUnitSys(req.unitSys ?? 'none');
     const list = req.blocks.map(toFull);
     const outcome = await recalculateAllAsync(list, {
       onBlock: (done, total) => {

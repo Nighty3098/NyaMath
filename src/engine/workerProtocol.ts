@@ -6,6 +6,7 @@ import {
   parseLine,
   type NumFmt,
   type Scope,
+  type UnitSys,
 } from './mathEngine';
 import { sortBlocksTopDown, type MathBlockData } from './dependencies';
 import type { Lang } from '../i18n';
@@ -251,6 +252,8 @@ export interface WorkerReq {
   lang: Lang;
   /** Формат чисел (опционально — по умолчанию auto/legacy). */
   fmt?: NumFmt;
+  /** Система единиц отображения (опционально — по умолчанию none). */
+  unitSys?: UnitSys;
   blocks: SlimBlock[];
   /** Calculate Now: только эти + upstream (пусто/нет = полный пересчёт) */
   only?: string[];

@@ -7,7 +7,7 @@ import { getSimModel, listSimModels, simModelPatch } from '../engine/simEngine';
 import { separateBlocksVertically, snapToGrid, GRID_STEP_FINE, GRID_STEP_STANDARD } from '../lib/canvasLayout';
 import { getLang, loadLang, setLangState, t, type Lang } from '../i18n';
 import { RECALC_TIMEOUT_MS, recalcInWorker } from '../lib/recalcWorker';
-import { setNumFmt as setEngineNumFmt, type NumFmt, type NumFmtMode } from '../engine/mathEngine';
+import { setNumFmt as setEngineNumFmt, setUnitSys as setEngineUnitSys, type NumFmt, type NumFmtMode, type UnitSys } from '../engine/mathEngine';
 import { engineMismatch, parseDocFile } from '../lib/docFile';
 import { ENGINE_VERSION } from '../engine/version';
 
@@ -68,6 +68,25 @@ function loadNumFmt(): NumFmt {
 function saveNumFmt(f: NumFmt) {
   try {
     localStorage.setItem(NUMFMT_KEY, JSON.stringify(f));
+  } catch { /* ignore */ }
+}
+
+const UNITSYS_KEY = 'nyamath-unit-sys';
+
+function loadUnitSys(): UnitSys {
+  try {
+    const raw = localStorage.getItem(UNITSYS_KEY);
+    if (raw === 'SI' || raw === 'US' || raw === 'CGS') {
+      setEngineUnitSys(raw);
+      return raw;
+    }
+  } catch { /* ignore */ }
+  return 'none';
+}
+
+function saveUnitSys(s: UnitSys) {
+  try {
+    localStorage.setItem(UNITSYS_KEY, s);
   } catch { /* ignore */ }
 }
 
@@ -200,6 +219,9 @@ export interface CanvasState {
   /** Формат чисел в выводе (SMath-паттерн significant/fixed). */
   numFmt: NumFmt;
   setNumFmt: (f: NumFmt) => void;
+  /** Система единиц отображения (Prime 11-паттерн SI/US/CGS). */
+  unitSys: UnitSys;
+  setUnitSys: (s: UnitSys) => void;
   /** Disable Evaluation: исключить/вернуть блок из расчёта */
   toggleBlockDisabled: (id: string) => void;
   /** Инверсия флага для всего выделения одним шагом истории */
@@ -654,6 +676,7 @@ async function runRecalcJob(only?: Set<string>): Promise<void> {
       const outcome = await recalcInWorker(list, {
         lang: getLang(),
         fmt: st0.numFmt,
+        unitSys: st0.unitSys,
         timeoutMs: RECALC_TIMEOUT_MS,
         signal: ctrl.signal,
         only: attemptOnly ? [...attemptOnly] : undefined,
@@ -1301,6 +1324,15 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     // main-thread движок (фолбэк без воркера) читает модульное состояние
     setEngineNumFmt(next);
     set({ numFmt: next });
+    scheduleRecalcAsync(60);
+  },
+
+  unitSys: loadUnitSys(),
+  setUnitSys: (s) => {
+    const next: UnitSys = s === 'SI' || s === 'US' || s === 'CGS' ? s : 'none';
+    saveUnitSys(next);
+    setEngineUnitSys(next);
+    set({ unitSys: next });
     scheduleRecalcAsync(60);
   },
 

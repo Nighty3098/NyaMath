@@ -9,7 +9,7 @@ import { t, themeLabel, type Lang } from '../i18n';
 import { connectLive, disconnectLive, getLiveUrl, setLiveUrl, testLiveConnection } from '../lib/liveSync';
 import {
   IConst, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
-  IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo,
+  IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo, IScale,
 } from './Icon';
 
 interface MenuBarProps {
@@ -77,6 +77,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const setGridVisible = useCanvasStore((s) => s.setGridVisible);
   const numFmt = useCanvasStore((s) => s.numFmt);
   const setNumFmt = useCanvasStore((s) => s.setNumFmt);
+  const unitSys = useCanvasStore((s) => s.unitSys);
+  const setUnitSys = useCanvasStore((s) => s.setUnitSys);
   const separateRegions = useCanvasStore((s) => s.separateRegions);
   const toggleSelectedDisabled = useCanvasStore((s) => s.toggleSelectedDisabled);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
@@ -243,6 +245,14 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
               id: `fmt-d${d}`, label: t('menu.numDigits', { n: d }), checked: numFmt.digits === d,
               action: run(() => setNumFmt({ mode: numFmt.mode, digits: d })),
             })),
+          ],
+        },
+        {
+          id: 'units-sub', icon: <IScale />, label: t('menu.unitSys'), children: [
+            { id: 'units-none', label: t('menu.unitNone'), checked: unitSys === 'none', action: run(() => setUnitSys('none')) },
+            { id: 'units-si', label: t('menu.unitSI'), checked: unitSys === 'SI', action: run(() => setUnitSys('SI')) },
+            { id: 'units-us', label: t('menu.unitUS'), checked: unitSys === 'US', action: run(() => setUnitSys('US')) },
+            { id: 'units-cgs', label: t('menu.unitCGS'), checked: unitSys === 'CGS', action: run(() => setUnitSys('CGS')) },
           ],
         },
         { id: 'scopemon', icon: <ISignal />, label: t('menu.scopeMon'), hint: 'Ctrl+J', checked: scopeMonOpen, action: run(toggleScopeMon) },
