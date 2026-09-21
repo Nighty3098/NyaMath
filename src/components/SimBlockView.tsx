@@ -4,7 +4,7 @@ import { plotPalettes } from '../theme';
 import { SIM_DOMAINS, SIM_SOLVERS, getSimModel, listSimModels, simModelPatch, type SimMode, type SimResult, type SimSolver } from '../engine/simEngine';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IGrip, IWarn, IX } from './Icon';
+import { IGrip, IPause, IPlay, IWarn, IX } from './Icon';
 import StaleChip from './StaleChip';
 import { lx, simDomainName, simSolverName, t } from '../i18n';
 
@@ -231,7 +231,7 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
               >
-                ✕
+                <IX />
               </button>
             </div>
           )}
@@ -722,7 +722,7 @@ function SimPlayer({
           title={playing ? t('sim.pause') : t('sim.play')}
           className="min-w-[36px] min-h-[32px] px-2 rounded-lg border border-[var(--accent-line)]/60 bg-[var(--accent-soft)] text-[13px] cursor-pointer hover:brightness-125 active:scale-[0.96]"
         >
-          {playing ? '❚❚' : '▶'}
+          {playing ? <IPause /> : <IPlay />}
         </button>
         <input
           type="range"

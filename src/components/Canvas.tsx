@@ -21,6 +21,7 @@ import SimBlockView from "./SimBlockView";
 import SliderBlockView from "./SliderBlockView";
 import MathKeyboard from "./MathKeyboard";
 import EmptyStarter from "./EmptyStarter";
+import { IMinus, IPlus } from "./Icon";
 import { t } from "../i18n";
 
 const MIN_SCALE = 0.25;
@@ -811,7 +812,7 @@ export default function Canvas() {
         aria-label={t("c.zoomBar")}
       >
         <ZoomBtn onClick={() => zoomCenter(1 / 1.25)} label={t("c.zoomOut")}>
-          −
+          <IMinus />
         </ZoomBtn>
         <button
           type="button"
@@ -827,7 +828,7 @@ export default function Canvas() {
           {Math.round(view.k * 100)}%
         </button>
         <ZoomBtn onClick={() => zoomCenter(1.25)} label={t("c.zoomIn")}>
-          +
+          <IPlus />
         </ZoomBtn>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCanvasStore, type PaletteTab } from '../store/canvasStore';
 import { t } from '../i18n';
-import { IConst, IField, IFx, IFormula, IResize, ISignal, IX } from './Icon';
+import { IConst, IField, IFx, IFormula, IGrip, IResize, ISignal, IX } from './Icon';
 import { hideGhostFixed, moveGhostFixed, showGhostFixed } from './dragGhost';
 import PaletteContent from './PaletteContent';
 import ElementsContent from './ElementsContent';
@@ -156,9 +156,9 @@ export default function DetachedTabWindow({ tab, onOpenNavigator }: { tab: Palet
       onDoubleClick={dockBack}
       title={`${title} · ${t('detached.backHint')}`}
     >
-      <span className="text-[var(--faint)] text-[13px] leading-none tracking-tighter shrink-0" aria-hidden="true">
-        ⠿
-      </span>
+        <span className="text-[var(--faint)] text-[13px] leading-none tracking-tighter shrink-0" aria-hidden="true">
+          <IGrip />
+        </span>
       <span className="text-[var(--accent)] shrink-0" aria-hidden="true">
         <Icon />
       </span>

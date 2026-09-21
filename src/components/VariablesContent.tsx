@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
+import { IX } from './Icon';
 import { collectScopeVars } from '../lib/scopeVars';
 import { focusBlock } from '../lib/focusBlock';
 import { t } from '../i18n';
@@ -79,7 +80,7 @@ export default function VariablesContent({ onOpenNavigator }: { onOpenNavigator?
             aria-label={t('job.dismiss')}
             onClick={clearComputeError}
           >
-            ✕
+            <IX />
           </button>
         </div>
       )}

@@ -6,7 +6,7 @@ import {
   type PaletteTab,
 } from '../store/canvasStore';
 import { t } from '../i18n';
-import { IConst, IField, IFx, IFormula, IResize, ISignal, IX } from './Icon';
+import { IConst, IField, IFx, IFormula, IGrip, IResize, ISignal, IX } from './Icon';
 import { hideGhostFixed, moveGhostFixed, showGhostFixed } from './dragGhost';
 import PaletteContent from './PaletteContent';
 import ElementsContent from './ElementsContent';
@@ -320,8 +320,8 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
       aria-label={t('palTab.aria')}
       onPointerDown={startDrag}
     >
-      <span className="text-[var(--faint)] text-[13px] leading-none tracking-tighter text-center shrink-0 pb-1" aria-hidden="true">
-        ⠿
+      <span className="text-[var(--faint)] text-center shrink-0 pb-1 inline-flex justify-center" aria-hidden="true">
+        <IGrip />
       </span>
       {shown.map((tb) => {
         const Icon = tb.icon;

@@ -7,7 +7,7 @@ import { useCanvasStore } from '../store/canvasStore';
 import { lx, packName, t, type PackId } from '../i18n';
 import {
   IChart, IContour, IFormula, IConst, IFx, IGrid,
-  IPlot, IProgram, IScale, ISignal, ISim, IUnits, ICalc, IChip, IField, IZap,
+  IPlot, IProgram, IScale, ISignal, ISim, IUnits, ICalc, IChip, IField, IZap, IPlay,
 } from './Icon';
 
 export type PaletteVariant = 'functions' | 'formulas' | 'constants';
@@ -310,7 +310,7 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
                             title={t('formulaPal.sim')}
                             onClick={() => insertSim(s.sim!)}
                           >
-                            ▶
+                            <IPlay />
                           </button>
                         )}
                       </div>

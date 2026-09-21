@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { useCanvasStore } from "../store/canvasStore";
+import { IRecalc } from "./Icon";
 import { t } from "../i18n";
 
 /**
@@ -21,7 +22,10 @@ function StaleChip({ id }: { id: string }) {
       }}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <span aria-hidden="true">⟳</span> {t("m.stale")}
+      <span aria-hidden="true" className="inline-flex">
+        <IRecalc />
+      </span>{" "}
+      {t("m.stale")}
     </button>
   );
 }

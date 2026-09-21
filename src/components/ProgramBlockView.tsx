@@ -6,7 +6,7 @@ import { debugProgram } from '../engine/program';
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
-import { IBug, IGrip, IWarn, IX } from './Icon';
+import { IBug, IGrip, IPause, IPlay, IWarn, IX } from './Icon';
 import StaleChip from './StaleChip';
 
 interface Props {
@@ -181,7 +181,7 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
             }}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            {block.disabled ? '▶' : '⏸'}
+            {block.disabled ? <IPlay /> : <IPause />}
           </button>
           <button
             type="button"
@@ -271,7 +271,9 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
         ) : null}
 
         {block.disabled && (
-          <div className="text-[11px] leading-5 text-[var(--faint)]">⏸ {t('m.disabled')}</div>
+            <div className="text-[11px] leading-5 text-[var(--faint)] flex items-center gap-1">
+              <IPause /> {t('m.disabled')}
+            </div>
         )}
         {!block.disabled && lateDeps && lateDeps.length > 0 && (
           <div className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--accent-line)]" role="note">

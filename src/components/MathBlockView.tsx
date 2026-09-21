@@ -5,7 +5,7 @@ import type { MathBlockData } from "../engine/dependencies";
 import { useCanvasStore } from "../store/canvasStore";
 import { t, type Lang } from "../i18n";
 import { useRegionDrag, useRegionResize } from "./useRegionDrag";
-import { IGrip, ICopy, IPlot, IPlot3d, IWarn, IX } from "./Icon";
+import { IGrip, ICheck, ICopy, IPause, IPlay, IPlot, IPlot3d, IWarn, IX } from "./Icon";
 import StaleChip from "./StaleChip";
 import { copyTextToClipboard } from "../lib/exportFiles";
 import { applyColonShortcut } from "../lib/canvasLayout";
@@ -413,7 +413,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
               onPointerDown={(e) => e.stopPropagation()}
             >
               <span className="text-[13px] leading-4" aria-hidden="true">
-                {block.disabled ? "▶" : "⏸"}
+                {block.disabled ? <IPlay /> : <IPause />}
               </span>
             </button>
             <button
@@ -428,7 +428,9 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
               onPointerDown={(e) => e.stopPropagation()}
             >
               {copied ? (
-                <span className="text-[13px] leading-4 text-[var(--ok)]">✓</span>
+                <span className="text-[13px] leading-4 text-[var(--ok)]">
+                  <ICheck />
+                </span>
               ) : (
                 <ICopy />
               )}
@@ -711,8 +713,8 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
               </div>
             )}
             {block.disabled && (
-              <div className="text-[11px] leading-5 text-[var(--faint)]">
-                ⏸ {t("m.disabled")}
+              <div className="text-[11px] leading-5 text-[var(--faint)] flex items-center gap-1">
+                <IPause /> {t("m.disabled")}
               </div>
             )}
             {!block.disabled && lateDeps && lateDeps.length > 0 && (

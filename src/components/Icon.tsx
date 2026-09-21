@@ -12,6 +12,8 @@ import {
   faCalculator,
   faChartColumn,
   faChartLine,
+  faCheck,
+  faChevronRight,
   faCode,
   faCopy,
   faCube,
@@ -24,7 +26,9 @@ import {
   faInfinity,
   faLayerGroup,
   faMicrochip,
+  faMinus,
   faMoon,
+  faPause,
   faPaw,
   faPlay,
   faPlus,
@@ -54,6 +58,11 @@ function Fa({ icon, size = 14 }: { icon: IconDefinition; size?: number }) {
 }
 
 export const IPlus = () => <Fa icon={faPlus} />;
+export const IMinus = () => <Fa icon={faMinus} />;
+export const IPlay = () => <Fa icon={faPlay} />;
+export const IPause = () => <Fa icon={faPause} />;
+export const ICheck = () => <Fa icon={faCheck} />;
+export const IChevronR = () => <Fa icon={faChevronRight} />;
 export const IMenu = () => <Fa icon={faBars} />;
 export const IFormula = () => <Fa icon={faSquareRootVariable} />;
 export const IPlot = () => <Fa icon={faChartLine} />;

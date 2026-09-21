@@ -23,7 +23,7 @@ function templateEntries(): { id: string; label: string }[] {
 }
 import {
   IConst, IField, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
-  IRecalc, IRedo, ISave, ISim, IUndo, IWarn, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo, IScale,
+  IRecalc, IRedo, ISave, ISim, IUndo, IWarn, ICheck, IPlay, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo, IScale,
 } from './Icon';
 
 interface MenuBarProps {
@@ -343,7 +343,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
       className={`menu-item ${tall ? 'min-h-[44px]' : ''}`}
     >
       <span className="w-4 shrink-0 inline-flex justify-center" aria-hidden="true">
-        {it.checked ? <span className="text-[var(--accent)]">✓</span> : it.icon}
+        {it.checked ? <span className="text-[var(--accent)]"><ICheck /></span> : it.icon}
       </span>
       <span className={`flex-1 ${it.danger ? 'text-[var(--danger)]' : ''}`}>{it.label}</span>
       {it.hint && <kbd>{it.hint}</kbd>}
@@ -498,7 +498,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
             title={`${t('menu.calcNowTitle')}${staleIds.length ? ` · ${t('menu.calcStale', { n: staleIds.length })}` : ''}`}
             aria-label={t('menu.calcNow')}
           >
-            ⏵
+            <IPlay />
             {staleIds.length > 0 && (
               <span
                 aria-hidden="true"

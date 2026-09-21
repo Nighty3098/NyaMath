@@ -859,8 +859,8 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           {t('p2.footer', { fn: fnText, x0: xmin, x1: xmax })}
         </div>
         {unitBad && (
-          <div className="text-[10px] text-[var(--danger)]/80 truncate" title={t('p2.badUnit', { u: !xU.ok ? xUnitRaw : yUnitRaw })}>
-            ⚠ {t('p2.badUnit', { u: !xU.ok ? xUnitRaw : yUnitRaw })}
+          <div className="text-[10px] text-[var(--danger)]/80 truncate flex items-center gap-1" title={t('p2.badUnit', { u: !xU.ok ? xUnitRaw : yUnitRaw })}>
+            <IWarn /> {t('p2.badUnit', { u: !xU.ok ? xUnitRaw : yUnitRaw })}
           </div>
         )}
         {/* ручка размера */}
