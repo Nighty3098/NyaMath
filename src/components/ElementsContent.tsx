@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
-import { findElement, listElements } from '../lib/db';
-import { molarMassCode } from '../lib/elements';
+import { findElement, listElements, type ElementRow } from '../lib/db';
+import { elementBlocks } from '../lib/elements';
 import { t } from '../i18n';
 
 /**
@@ -10,8 +10,6 @@ import { t } from '../i18n';
  * определяемым блоком в точку прицела.
  */
 export default function ElementsContent() {
-  const addBlock = useCanvasStore((s) => s.addBlock);
-  useCanvasStore((s) => s.blocks);
   const lang = useCanvasStore((s) => s.lang);
   const [q, setQ] = useState('');
 
@@ -40,11 +38,30 @@ export default function ElementsContent() {
     const st = useCanvasStore.getState();
     const el = findElement(symbol);
     if (!el) return;
-    const code = molarMassCode(el);
-    if (!code) return;
+    const lines = elementBlocks(el);
+    if (!lines.length) return;
     const p = { x: st.cross.x, y: st.cross.y };
-    st.nudgeCross(0, 140);
-    addBlock(p.x, p.y, code);
+    st.addBlocks(lines, p.x, p.y);
+    // лесенка вниз из точки прицела — уводим прицел под неё
+    st.nudgeCross(0, 140 * lines.length);
+  };
+
+  /** Вторая строка карточки: значения с расшифровкой в title. */
+  const details = (e: ElementRow): { text: string; hint: string }[] => {
+    const out: { text: string; hint: string }[] = [];
+    if (e.density !== null) {
+      out.push({
+        text: `ρ ${e.density} ${e.phase === 'Gas' ? t('el.densityGas') : t('el.densitySolid')}`,
+        hint: t('el.hintDensity'),
+      });
+    }
+    if (e.melt !== null) out.push({ text: `${t('el.meltShort')} ${e.melt} K`, hint: t('el.hintMelt') });
+    if (e.boil !== null) out.push({ text: `${t('el.boilShort')} ${e.boil} K`, hint: t('el.hintBoil') });
+    if (e.electronegativity !== null) {
+      out.push({ text: `χ ${e.electronegativity}`, hint: t('el.hintEN') });
+    }
+    if (e.molar_heat !== null) out.push({ text: `Cp ${e.molar_heat}`, hint: t('el.hintCp') });
+    return out;
   };
 
   return (
@@ -72,7 +89,7 @@ export default function ElementsContent() {
             key={e.number}
             type="button"
             onClick={() => insert(e.symbol)}
-            title={molarMassCode(e) ?? e.symbol}
+            title={t('el.insertHint')}
             className="w-full flex items-center gap-2.5 px-3 py-[7px] text-left hover:bg-white/5 cursor-pointer"
           >
             <span className="math-input tabular-nums text-[11px] text-[var(--faint)] w-7 shrink-0">
@@ -86,10 +103,30 @@ export default function ElementsContent() {
                 {lang === 'ru' ? e.name_ru ?? e.name_en : e.name_en}
               </span>
               <span className="math-input block text-[11px] text-[var(--faint)] truncate tabular-nums">
-                {e.atomic_mass ?? '—'}
-                {e.phase ? ` · ${e.phase}` : ''}
-                {e.electron_config ? ` · ${e.electron_config}` : ''}
+                <span title={t('el.hintMass')}>{e.atomic_mass ?? '—'}</span>
+                {e.phase && (
+                  <>
+                    {' · '}
+                    <span title={t('el.hintPhase')}>{e.phase}</span>
+                  </>
+                )}
+                {e.electron_config && (
+                  <>
+                    {' · '}
+                    <span title={t('el.hintConfig')}>{e.electron_config}</span>
+                  </>
+                )}
               </span>
+              {details(e).length > 0 && (
+                <span className="math-input block text-[11px] text-[var(--faint)] truncate tabular-nums">
+                  {details(e).map((d, k) => (
+                    <span key={k} title={d.hint}>
+                      {k > 0 ? ' · ' : ''}
+                      {d.text}
+                    </span>
+                  ))}
+                </span>
+              )}
             </span>
           </button>
         ))}
