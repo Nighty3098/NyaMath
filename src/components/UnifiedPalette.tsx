@@ -303,71 +303,6 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
     };
   };
 
-  const tabbar = (
-    <div className="shrink-0">
-      {/* полоса перетаскивания: отдельная строка, её кнопки не забивают */}
-      <div
-        className="flex items-center gap-2 pl-2.5 pr-2 pt-2 pb-1 select-none cursor-grab active:cursor-grabbing touch-none"
-        onPointerDown={startDrag}
-        title={t('palTab.aria')}
-      >
-        <span className="text-[var(--faint)] text-[13px] leading-none tracking-tighter shrink-0" aria-hidden="true">
-          ⠿
-        </span>
-        <span className="flex-1 min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--faint)]">
-          {active.title}
-        </span>
-        <button
-          type="button"
-          className="nya-tbtn w-8 h-8 shrink-0"
-          onClick={closeAll}
-          aria-label={t('palTab.closeAll')}
-          title={t('palTab.closeAll')}
-        >
-          <IX />
-        </button>
-      </div>
-      {/* вкладки: горизонтальный скролл, за границы окна не вылезают */}
-      <div
-        className="flex items-center gap-1 px-2 pb-1 overflow-x-auto min-w-0"
-        role="tablist"
-        aria-label={t('palTab.aria')}
-      >
-        {/* вынесенные вкладки в ряду не показываем — они в отдельных окнах */}
-        {shown.map((tb) => {
-          const Icon = tb.icon;
-          const isActive = tb.id === active.id;
-          return (
-            <button
-              key={tb.id}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              title={`${tb.title} · ${t('palTab.tearHint')}`}
-              onPointerDown={(e) => onTabPointerDown(e, tb.id)}
-              onClick={() => onTabClick(tb.id)}
-              className={`shrink-0 flex items-center gap-1.5 px-2.5 min-h-[34px] rounded-lg text-[12.5px] border cursor-pointer transition-colors duration-120 ease-out ${
-                isActive
-                  ? 'bg-[var(--accent-soft)] border-[var(--accent-line)]/60 text-[var(--ink)]'
-                  : tb.enabled
-                  ? 'border-transparent text-[var(--chrome-soft)] hover:text-[var(--chrome-ink)] hover:bg-white/5'
-                  : 'border-transparent text-[var(--faint)] opacity-60 hover:opacity-100 hover:bg-white/5'
-              }`}
-            >
-              <span className={isActive ? 'text-[var(--accent)]' : ''} aria-hidden="true">
-                <Icon />
-              </span>
-              {tb.label}
-              {tb.id === 'variables' && (
-                <span className="math-input tabular-nums text-[10.5px] opacity-70">{varCount}</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
   const content =
     active.id === 'functions' ? <PaletteContent variant="functions" />
     : active.id === 'formulas' ? <PaletteContent variant="formulas" />
@@ -375,11 +310,11 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
     : active.id === 'elements' ? <ElementsContent />
     : <VariablesContent onOpenNavigator={onOpenNavigator} />;
 
-  // Вертикальный rail вкладок для плавающего окна (как activity bar в VS Code):
-  // только иконки, тяга окна — за свободное место, отрыв вкладки — как в ряду.
+  // Вертикальный rail вкладок (как activity bar в VS Code): только иконки,
+  // тяга окна — за свободное место, отрыв вкладки — жестом с иконки.
   const rail = (
     <div
-      className="shrink-0 w-12 flex flex-col items-stretch py-1.5 cursor-grab active:cursor-grabbing touch-none select-none"
+      className="shrink-0 w-12 flex flex-col items-stretch py-1.5 cursor-grab active:cursor-grabbing touch-none select-none border-r border-[var(--chrome-line)]"
       role="tablist"
       aria-orientation="vertical"
       aria-label={t('palTab.aria')}
@@ -469,8 +404,8 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
         aria-label={t('palTab.aria')}
       >
         {side === 'right' && gutter}
+        {rail}
         <div className="flex-1 min-w-0 flex flex-col min-h-0">
-          {tabbar}
           {content}
         </div>
         {side === 'left' && gutter}
@@ -505,7 +440,7 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
         }}
       >
         {rail}
-        <div className="flex-1 min-w-0 flex flex-col min-h-0 border-l border-[var(--chrome-line)]">
+        <div className="flex-1 min-w-0 flex flex-col min-h-0">
           {content}
         </div>
         {/* ручка ресайза */}

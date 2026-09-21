@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import MenuBar from './components/MenuBar';
-import ActivityBar from './components/ActivityBar';
-import ProblemsPanel from './components/ProblemsPanel';
 import Canvas from './components/Canvas';
+import ProblemsPanel from './components/ProblemsPanel';
 import StatusBar from './components/StatusBar';
 import WelcomeModal from './components/WelcomeModal';
 import UnifiedPalette from './components/UnifiedPalette';
@@ -232,9 +231,8 @@ export default function App() {
           e.target.value = '';
         }}
       />
-      {/* рабочая зона: activity bar + док-панели слева + единое окно + холст + док-панели справа */}
+      {/* рабочая зона: док-панели слева + единое окно + холст + док-панели справа */}
       <div className="nya-workspace flex-1 flex flex-row min-h-0 min-w-0">
-        <ActivityBar />
         {leftDetached.map((tab) => (
           <DetachedTabWindow key={tab} tab={tab} onOpenNavigator={() => setNavigatorOpen(true)} />
         ))}
