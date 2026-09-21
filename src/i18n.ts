@@ -1037,6 +1037,7 @@ const themeNames: Record<ThemeName, { ru: string; en: string }> = {
   'github-light': { ru: 'Paper светлая', en: 'Paper light' },
   blueprint: { ru: 'Синька', en: 'Blueprint' },
   graph: { ru: 'Миллиметровка', en: 'Graph paper' },
+  mathcad15: { ru: 'Mathcad 15', en: 'Mathcad 15' },
 };
 
 /** Название темы на текущем языке. */
