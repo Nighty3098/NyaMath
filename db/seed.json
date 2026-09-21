@@ -7948,6 +7948,59 @@
    "plot3d": null,
    "sim": null
   }
+ ,
+  {
+   "id": "union-incompatible",
+   "section": "probability",
+   "ord": 338,
+   "label_ru": "Сумма несовместных событий",
+   "label_en": "Union of mutually exclusive events",
+   "hint_ru": "P(A+B) = P(A) + P(B); пересечение невозможно",
+   "hint_en": "P(A+B) = P(A) + P(B); no overlap",
+   "code": "P_a := 0.3\nP_b := 0.2\nP_sum := P_a + P_b\nP_sum =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "intersection-dependent",
+   "section": "probability",
+   "ord": 339,
+   "label_ru": "Произведение зависимых событий",
+   "label_en": "Intersection of dependent events",
+   "hint_ru": "P(AB) = P(A)·P(B|A) — через условную вероятность",
+   "hint_en": "P(AB) = P(A)·P(B|A) — via conditional probability",
+   "code": "P_a := 0.5\nPb_given_A := 0.4\nP_ab := P_a*Pb_given_A\nP_ab =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "union-dependent",
+   "section": "probability",
+   "ord": 340,
+   "label_ru": "Объединение зависимых событий",
+   "label_en": "Union of dependent events",
+   "hint_ru": "P(A+B) = P(A) + P(B) − P(A)·P(B|A)",
+   "hint_en": "P(A+B) = P(A) + P(B) − P(A)·P(B|A)",
+   "code": "P_a := 0.5\nP_b := 0.4\nPb_given_A := 0.5\nP_un := P_a + P_b - P_a*Pb_given_A\nP_un =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "xor-events",
+   "section": "probability",
+   "ord": 341,
+   "label_ru": "Ровно одно из двух (XOR)",
+   "label_en": "Exactly one of two (XOR)",
+   "hint_ru": "P = P(A) + P(B) − 2·P(AB), независимые",
+   "hint_en": "P = P(A) + P(B) − 2·P(AB), independent",
+   "code": "P_a := 0.5\nP_b := 0.5\nP_xor := P_a + P_b - 2*P_a*P_b\nP_xor =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  }
  ],
  "formula_sources": [
   {
@@ -11123,6 +11176,55 @@
    "ord": 0,
    "title": "Chmod — Wikipedia",
    "url": "https://en.wikipedia.org/wiki/Chmod"
+  }
+ ,
+  {
+   "formula_id": "union-incompatible",
+   "ord": 0,
+   "title": "Probability — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Probability"
+  },
+  {
+   "formula_id": "union-incompatible",
+   "ord": 1,
+   "title": "Вероятность — Википедия",
+   "url": "https://ru.wikipedia.org/wiki/Вероятность"
+  },
+  {
+   "formula_id": "intersection-dependent",
+   "ord": 0,
+   "title": "Probability — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Probability"
+  },
+  {
+   "formula_id": "intersection-dependent",
+   "ord": 1,
+   "title": "Вероятность — Википедия",
+   "url": "https://ru.wikipedia.org/wiki/Вероятность"
+  },
+  {
+   "formula_id": "union-dependent",
+   "ord": 0,
+   "title": "Probability — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Probability"
+  },
+  {
+   "formula_id": "union-dependent",
+   "ord": 1,
+   "title": "Вероятность — Википедия",
+   "url": "https://ru.wikipedia.org/wiki/Вероятность"
+  },
+  {
+   "formula_id": "xor-events",
+   "ord": 0,
+   "title": "Probability — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Probability"
+  },
+  {
+   "formula_id": "xor-events",
+   "ord": 1,
+   "title": "Вероятность — Википедия",
+   "url": "https://ru.wikipedia.org/wiki/Вероятность"
   }
  ],
  "formula_vars": [
@@ -21268,6 +21370,98 @@
    "name": "Mode",
    "label_ru": "режим",
    "label_en": "mode"
+  }
+ ,
+  {
+   "formula_id": "union-incompatible",
+   "ord": 0,
+   "name": "P_a",
+   "label_ru": "вероятность A",
+   "label_en": "probability of A"
+  },
+  {
+   "formula_id": "union-incompatible",
+   "ord": 1,
+   "name": "P_b",
+   "label_ru": "вероятность B",
+   "label_en": "probability of B"
+  },
+  {
+   "formula_id": "union-incompatible",
+   "ord": 2,
+   "name": "P_sum",
+   "label_ru": "вероятность суммы",
+   "label_en": "union probability"
+  },
+  {
+   "formula_id": "intersection-dependent",
+   "ord": 0,
+   "name": "P_a",
+   "label_ru": "вероятность A",
+   "label_en": "probability of A"
+  },
+  {
+   "formula_id": "intersection-dependent",
+   "ord": 1,
+   "name": "Pb_given_A",
+   "label_ru": "условная вероятность B при A",
+   "label_en": "conditional probability of B given A"
+  },
+  {
+   "formula_id": "intersection-dependent",
+   "ord": 2,
+   "name": "P_ab",
+   "label_ru": "совместная вероятность",
+   "label_en": "joint probability"
+  },
+  {
+   "formula_id": "union-dependent",
+   "ord": 0,
+   "name": "P_a",
+   "label_ru": "вероятность A",
+   "label_en": "probability of A"
+  },
+  {
+   "formula_id": "union-dependent",
+   "ord": 1,
+   "name": "P_b",
+   "label_ru": "вероятность B",
+   "label_en": "probability of B"
+  },
+  {
+   "formula_id": "union-dependent",
+   "ord": 2,
+   "name": "Pb_given_A",
+   "label_ru": "условная вероятность B при A",
+   "label_en": "conditional probability of B given A"
+  },
+  {
+   "formula_id": "union-dependent",
+   "ord": 3,
+   "name": "P_un",
+   "label_ru": "вероятность объединения",
+   "label_en": "union probability"
+  },
+  {
+   "formula_id": "xor-events",
+   "ord": 0,
+   "name": "P_a",
+   "label_ru": "вероятность A",
+   "label_en": "probability of A"
+  },
+  {
+   "formula_id": "xor-events",
+   "ord": 1,
+   "name": "P_b",
+   "label_ru": "вероятность B",
+   "label_en": "probability of B"
+  },
+  {
+   "formula_id": "xor-events",
+   "ord": 2,
+   "name": "P_xor",
+   "label_ru": "вероятность ровно одного",
+   "label_en": "exactly-one probability"
   }
  ],
  "const_sections": [
