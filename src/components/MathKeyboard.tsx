@@ -23,6 +23,7 @@ const KEYS: { label: string; text: string; hint: string }[] = [
   { label: '^()', text: '^()', hint: '^()' },
   { label: 'j', text: 'j', hint: 'j' },
   { label: 'e', text: 'e', hint: 'e' },
+  { label: '_', text: '_', hint: 'subscript' },
 ];
 
 /**
