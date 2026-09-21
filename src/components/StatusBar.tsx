@@ -16,7 +16,7 @@ const DOT: Record<StatusTone, string> = {
  * ошибки + блоки/переменные + сетка (как Prime Status Bar). Только чтение,
  * кликабельного нет — действия остаются в MenuBar.
  */
-export default function StatusBar() {
+export default function StatusBar({ onOpenNavigator }: { onOpenNavigator?: () => void }) {
   const blocks = useCanvasStore((s) => s.blocks);
   const calcMs = useCanvasStore((s) => s.calcMs);
   const staleIds = useCanvasStore((s) => s.staleIds);
@@ -46,15 +46,31 @@ export default function StatusBar() {
       className="shrink-0 flex items-center gap-3 px-3 min-h-[28px] text-[11px] bg-[var(--chrome)] border-t border-[var(--chrome-line)] text-[var(--chrome-soft)] print:hidden"
       aria-label={t('sb.calcOk')}
     >
-      <span className="inline-flex items-center gap-1.5 min-w-0">
-        <span
-          aria-hidden="true"
-          className="inline-block w-2 h-2 rounded-full shrink-0"
-          style={{ background: DOT[tone] }}
-        />
-        <span className="truncate">{stateText}</span>
-      </span>
-      <span className="math-input tabular-nums whitespace-nowrap">
+      {errCount > 0 && onOpenNavigator ? (
+        <button
+          type="button"
+          onClick={onOpenNavigator}
+          title={t('nv.open')}
+          className="inline-flex items-center gap-1.5 min-w-0 cursor-pointer hover:text-[var(--chrome-ink)]"
+        >
+          <span
+            aria-hidden="true"
+            className="inline-block w-2 h-2 rounded-full shrink-0"
+            style={{ background: DOT[tone] }}
+          />
+          <span className="truncate">{stateText}</span>
+        </button>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 min-w-0">
+          <span
+            aria-hidden="true"
+            className="inline-block w-2 h-2 rounded-full shrink-0"
+            style={{ background: DOT[tone] }}
+          />
+          <span className="truncate">{stateText}</span>
+        </span>
+      )}
+      <span className="ml-auto math-input tabular-nums whitespace-nowrap">
         {t('sb.blocks')}: {blockCount}
       </span>
       <span className="math-input tabular-nums whitespace-nowrap">
@@ -71,7 +87,7 @@ export default function StatusBar() {
           {t('sb.units')}: {unitSys}
         </span>
       )}
-      <span className="ml-auto whitespace-nowrap">
+      <span className="whitespace-nowrap">
         {t('sb.grid')}: {!showGrid ? t('sb.gridOff') : gridSize === 'fine' ? t('sb.gridFine') : t('sb.gridStd')}
       </span>
     </footer>

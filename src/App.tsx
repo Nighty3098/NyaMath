@@ -238,7 +238,7 @@ export default function App() {
           <DetachedTabWindow key={tab} tab={tab} onOpenNavigator={() => setNavigatorOpen(true)} />
         ))}
       </div>
-      <StatusBar />
+      <StatusBar onOpenNavigator={() => setNavigatorOpen(true)} />
       {/* вынесенные вкладки — отдельные окна поверх всего */}
       {floatDetached.map((tab) => (
         <DetachedTabWindow key={tab} tab={tab} onOpenNavigator={() => setNavigatorOpen(true)} />

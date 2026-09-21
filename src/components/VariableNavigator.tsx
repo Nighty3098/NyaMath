@@ -240,7 +240,7 @@ export default function VariableNavigator({ onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-4"
       role="dialog"
       aria-label={t('nv.title')}
       onMouseDown={(e) => {
@@ -248,7 +248,7 @@ export default function VariableNavigator({ onClose }: Props) {
       }}
     >
       <div className="absolute inset-0 bg-black/30" />
-      <div className="relative w-[680px] max-w-[92vw] h-[460px] max-h-[85vh] flex flex-col rounded-xl bg-[var(--sheet)] border border-[var(--line)] overflow-hidden">
+      <div className="relative w-[640px] max-w-full max-h-[70vh] flex flex-col rounded-xl bg-[var(--sheet)] border border-[var(--line)] overflow-hidden shadow-2xl">
         {/* шапка: поиск + количество */}
         <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--line)]">
           <span className="text-[var(--faint)] inline-flex" aria-hidden="true">
@@ -273,7 +273,7 @@ export default function VariableNavigator({ onClose }: Props) {
             {t('nv.none')}
           </div>
         ) : (
-          <div className="flex-1 min-h-0 flex flex-row">
+          <div className="h-[380px] max-h-[60vh] min-h-0 flex flex-row">
             {/* список: команды + переменные */}
             <div ref={listRef} className="w-[240px] border-r border-[var(--line)] overflow-y-auto py-1">
               {rows.length === 0 ? (
