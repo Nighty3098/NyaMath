@@ -151,7 +151,7 @@ export default function DetachedTabWindow({ tab, onOpenNavigator }: { tab: Palet
 
   const header = (
     <div
-      className="nya-pal-head flex items-center gap-2 px-3 py-2.5 select-none cursor-grab active:cursor-grabbing touch-none"
+      className="flex items-center gap-2 px-3 py-2.5 select-none cursor-grab active:cursor-grabbing touch-none"
       onPointerDown={startDrag}
       onDoubleClick={dockBack}
       title={`${title} · ${t('detached.backHint')}`}

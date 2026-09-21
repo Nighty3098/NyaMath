@@ -400,37 +400,6 @@ html[data-theme="mathcad15"] .nya-sheet .math-input {
   border-top: 1px solid #808080;
 }
 
-/* Заголовки плавающих палитр — синяя Luna-полоса с белым текстом */
-[data-theme="mathcad15"] .nya-pal-head {
-  background: linear-gradient(to bottom, #3d95ff, #0058e6);
-  color: #ffffff;
-}
-[data-theme="mathcad15"] .nya-pal-head span {
-  color: #ffffff !important;
-}
-[data-theme="mathcad15"] .nya-pal-head button {
-  color: #ffffff;
-}
-
-/* Ручки выделенного региона — чёрные квадраты по диагонали */
-[data-theme="mathcad15"] .nya-selected::before,
-[data-theme="mathcad15"] .nya-selected::after {
-  content: "";
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  background: #000000;
-  z-index: 30;
-}
-[data-theme="mathcad15"] .nya-selected::before {
-  left: -4px;
-  top: -4px;
-}
-[data-theme="mathcad15"] .nya-selected::after {
-  right: -4px;
-  bottom: -4px;
-}
-
 html, body, #root {
   height: 100%;
   margin: 0;
