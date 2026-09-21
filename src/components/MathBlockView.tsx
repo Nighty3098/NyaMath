@@ -6,7 +6,6 @@ import { useCanvasStore } from "../store/canvasStore";
 import { t, type Lang } from "../i18n";
 import { useRegionDrag, useRegionResize } from "./useRegionDrag";
 import { IGrip, ICopy, IPlot, IPlot3d, IWarn, IX } from "./Icon";
-import MiniPlot from "./MiniPlot";
 import StaleChip from "./StaleChip";
 import { copyTextToClipboard } from "../lib/exportFiles";
 import { applyColonShortcut } from "../lib/canvasLayout";
@@ -743,11 +742,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
             )}
             {block.plotPreview && !block.error && (
               <div className="mt-1" onClick={(e) => e.stopPropagation()}>
-                <MiniPlot sample={block.plotPreview} />
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[11px] text-[var(--faint)]">
-                    {t("m.autoplot")}
-                  </span>
                   <button
                     type="button"
                     className="ml-auto text-[11px] px-2 min-h-[28px] rounded-lg border border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--accent-line)] hover:text-[var(--ink)] cursor-pointer"
