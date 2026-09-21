@@ -111,6 +111,7 @@ const ru = {
   'menu.palette': 'Палитра функций',
   'menu.formulaPalette': 'Палитра формул',
   'menu.constPalette': 'Палитра констант',
+  'menu.elemPalette': 'Палитра элементов',
   'menu.ex20': 'Вариант 20 · электродинамика',
   'menu.exdemo': 'Демо · матрицы и программы',
   'menu.exQuick': 'Быстрый старт · парабола',
@@ -220,6 +221,7 @@ const ru = {
   'palTab.functions': 'Функции',
   'palTab.formulas': 'Формулы',
   'palTab.constants': 'Константы',
+  'palTab.elements': 'Элементы',
   'palTab.variables': 'Переменные',
   'palTab.closeAll': 'Закрыть палитры',
   'palTab.tearHint': 'Потяните вкладку наружу — отдельное окно',
@@ -283,6 +285,9 @@ const ru = {
 
   'print.head': 'NyaMath · расчёт от {date}',
   'print.sub': 'блоков: {n} · ошибок: {e}',
+
+  'el.search': 'Поиск: Fe, железо, 26…',
+  'el.empty': 'Ничего не найдено',
   'm.groupHint': 'Выделите и нажмите ( / ^ • Ctrl+Space — расширить выделение • : — это := • F12 — ассистент' ,
   'm.disable': 'Отключить из расчёта',
   'm.enable': 'Вернуть в расчёт',
@@ -573,6 +578,7 @@ const en: Record<StrKey, string> = {
   'menu.palette': 'Function palette',
   'menu.formulaPalette': 'Formula palette',
   'menu.constPalette': 'Constants palette',
+  'menu.elemPalette': 'Elements palette',
   'menu.ex20': 'Variant 20 · electrodynamics',
   'menu.exdemo': 'Demo · matrices and programs',
   'menu.exQuick': 'Quickstart · parabola',
@@ -682,6 +688,7 @@ const en: Record<StrKey, string> = {
   'palTab.functions': 'Functions',
   'palTab.formulas': 'Formulas',
   'palTab.constants': 'Constants',
+  'palTab.elements': 'Elements',
   'palTab.variables': 'Variables',
   'palTab.closeAll': 'Close palettes',
   'palTab.tearHint': 'Drag the tab out for a separate window',
@@ -745,6 +752,9 @@ const en: Record<StrKey, string> = {
 
   'print.head': 'NyaMath · sheet of {date}',
   'print.sub': 'blocks: {n} · errors: {e}',
+
+  'el.search': 'Search: Fe, iron, 26…',
+  'el.empty': 'Nothing found',
   'm.groupHint': 'Select and press ( / ^ • Ctrl+Space — expand selection • : means := • F12 — assistant' ,
   'm.disable': 'Disable evaluation',
   'm.enable': 'Enable evaluation',

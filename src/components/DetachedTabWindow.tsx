@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCanvasStore, type PaletteTab } from '../store/canvasStore';
 import { t } from '../i18n';
-import { IConst, IFx, IFormula, IResize, ISignal, IX } from './Icon';
+import { IConst, IField, IFx, IFormula, IResize, ISignal, IX } from './Icon';
 import { hideGhostFixed, moveGhostFixed, showGhostFixed } from './dragGhost';
 import PaletteContent from './PaletteContent';
+import ElementsContent from './ElementsContent';
 import VariablesContent from './VariablesContent';
 import { loadDetachedDockW, loadDetachedPos, loadDetachedSize, saveDetachedDockW, saveDetachedPos, saveDetachedSize } from '../lib/detachedPos';
 
@@ -12,10 +13,11 @@ const SNAP_ZONE = 28;
 /** Сдвиг, после которого тяга док-панели превращается в открепление */
 const UNDOCK_DIST = 14;
 
-const META: Record<PaletteTab, { icon: () => React.JSX.Element; menuKey: 'menu.palette' | 'menu.formulaPalette' | 'menu.constPalette' | 'menu.scopeMon' }> = {
+const META: Record<PaletteTab, { icon: () => React.JSX.Element; menuKey: 'menu.palette' | 'menu.formulaPalette' | 'menu.constPalette' | 'menu.elemPalette' | 'menu.scopeMon' }> = {
   functions: { icon: IFx, menuKey: 'menu.palette' },
   formulas: { icon: IFormula, menuKey: 'menu.formulaPalette' },
   constants: { icon: IConst, menuKey: 'menu.constPalette' },
+  elements: { icon: IField, menuKey: 'menu.elemPalette' },
   variables: { icon: ISignal, menuKey: 'menu.scopeMon' },
 };
 
@@ -53,6 +55,7 @@ export default function DetachedTabWindow({ tab, onOpenNavigator }: { tab: Palet
     if (tab === 'functions') st.setPaletteOpen(false);
     else if (tab === 'formulas') st.setFormulaPaletteOpen(false);
     else if (tab === 'constants') st.setConstPaletteOpen(false);
+    else if (tab === 'elements') st.toggleElemPalette();
     else if (st.scopeMonOpen) st.toggleScopeMon();
   };
 
@@ -166,6 +169,8 @@ export default function DetachedTabWindow({ tab, onOpenNavigator }: { tab: Palet
 
   const content = tab === 'variables'
     ? <VariablesContent onOpenNavigator={onOpenNavigator} />
+    : tab === 'elements'
+    ? <ElementsContent />
     : <PaletteContent variant={tab} />;
 
   const onKey = (e: React.KeyboardEvent) => {

@@ -22,7 +22,7 @@ function templateEntries(): { id: string; label: string }[] {
   }
 }
 import {
-  IConst, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
+  IConst, IField, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
   IRecalc, IRedo, ISave, ISim, IUndo, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo, IScale,
 } from './Icon';
 
@@ -106,6 +106,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
   const toggleFormulaPalette = useCanvasStore((s) => s.toggleFormulaPalette);
   const constPaletteOpen = useCanvasStore((s) => s.constPaletteOpen);
   const toggleConstPalette = useCanvasStore((s) => s.toggleConstPalette);
+  const elemPaletteOpen = useCanvasStore((s) => s.elemPaletteOpen);
+  const toggleElemPalette = useCanvasStore((s) => s.toggleElemPalette);
   const liveConnected = useCanvasStore((s) => s.liveConnected);
   const liveError = useCanvasStore((s) => s.liveError);
   const theme = useCanvasStore((s) => s.theme);
@@ -275,6 +277,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator }: 
         { id: 'palette', icon: <IFx />, label: t('menu.palette'), checked: paletteOpen, action: run(togglePalette) },
         { id: 'fpalette', icon: <IFormula />, label: t('menu.formulaPalette'), checked: formulaPaletteOpen, action: run(toggleFormulaPalette) },
         { id: 'cpalette', icon: <IConst />, label: t('menu.constPalette'), checked: constPaletteOpen, action: run(toggleConstPalette) },
+        { id: 'epalette', icon: <IField />, label: t('menu.elemPalette'), checked: elemPaletteOpen, action: run(toggleElemPalette) },
         { id: 'live', icon: <ISignal />, label: t('menu.liveSync'), checked: liveConnected, action: run(toggleLive) },
         { id: 'recalc', icon: <IRecalc />, label: t('menu.recalc'), hint: 'Ctrl+↵', action: run(recalc) },
         { id: 'variables', icon: <IFx />, label: t('menu.variables'), hint: 'Ctrl+K', action: run(onOpenNavigator) },

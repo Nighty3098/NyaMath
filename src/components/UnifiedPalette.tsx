@@ -6,9 +6,10 @@ import {
   type PaletteTab,
 } from '../store/canvasStore';
 import { t } from '../i18n';
-import { IConst, IFx, IFormula, IResize, ISignal, IX } from './Icon';
+import { IConst, IField, IFx, IFormula, IResize, ISignal, IX } from './Icon';
 import { hideGhostFixed, moveGhostFixed, showGhostFixed } from './dragGhost';
 import PaletteContent from './PaletteContent';
+import ElementsContent from './ElementsContent';
 import VariablesContent from './VariablesContent';
 import { saveDetachedPos } from '../lib/detachedPos';
 import { collectScopeVars } from '../lib/scopeVars';
@@ -53,10 +54,12 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
   const paletteOpen = useCanvasStore((s) => s.paletteOpen);
   const formulaPaletteOpen = useCanvasStore((s) => s.formulaPaletteOpen);
   const constPaletteOpen = useCanvasStore((s) => s.constPaletteOpen);
+  const elemPaletteOpen = useCanvasStore((s) => s.elemPaletteOpen);
   const scopeMonOpen = useCanvasStore((s) => s.scopeMonOpen);
   const setPaletteOpen = useCanvasStore((s) => s.setPaletteOpen);
   const setFormulaPaletteOpen = useCanvasStore((s) => s.setFormulaPaletteOpen);
   const setConstPaletteOpen = useCanvasStore((s) => s.setConstPaletteOpen);
+  const toggleElemPalette = useCanvasStore((s) => s.toggleElemPalette);
   const toggleScopeMon = useCanvasStore((s) => s.toggleScopeMon);
   const tab = useCanvasStore((s) => s.paletteTab);
   const setTab = useCanvasStore((s) => s.setPaletteTab);
@@ -96,6 +99,7 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
     (paletteOpen && !detached.includes('functions')) ||
     (formulaPaletteOpen && !detached.includes('formulas')) ||
     (constPaletteOpen && !detached.includes('constants')) ||
+    (elemPaletteOpen && !detached.includes('elements')) ||
     (scopeMonOpen && !detached.includes('variables'));
   const varCount = useMemo(() => collectScopeVars(blocks).length, [blocks]);
 
@@ -104,9 +108,10 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
       { id: 'functions', enabled: paletteOpen, icon: IFx, label: t('palTab.functions'), title: t('menu.palette') },
       { id: 'formulas', enabled: formulaPaletteOpen, icon: IFormula, label: t('palTab.formulas'), title: t('menu.formulaPalette') },
       { id: 'constants', enabled: constPaletteOpen, icon: IConst, label: t('palTab.constants'), title: t('menu.constPalette') },
+      { id: 'elements', enabled: elemPaletteOpen, icon: IField, label: t('palTab.elements'), title: t('menu.elemPalette') },
       { id: 'variables', enabled: scopeMonOpen, icon: ISignal, label: t('palTab.variables'), title: t('menu.scopeMon') },
     ],
-    [paletteOpen, formulaPaletteOpen, constPaletteOpen, scopeMonOpen],
+    [paletteOpen, formulaPaletteOpen, constPaletteOpen, elemPaletteOpen, scopeMonOpen],
   );
 
   const shown = tabs.filter((x) => !detached.includes(x.id));
@@ -194,6 +199,10 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
       setConstPaletteOpen(true);
       return;
     }
+    if (id === 'elements' && !elemPaletteOpen) {
+      toggleElemPalette();
+      return;
+    }
     if (id === 'variables' && !scopeMonOpen) {
       toggleScopeMon();
       return;
@@ -254,6 +263,7 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
       if (g.tab === 'functions' && !st.paletteOpen) st.setPaletteOpen(true);
       else if (g.tab === 'formulas' && !st.formulaPaletteOpen) st.setFormulaPaletteOpen(true);
       else if (g.tab === 'constants' && !st.constPaletteOpen) st.setConstPaletteOpen(true);
+      else if (g.tab === 'elements' && !st.elemPaletteOpen) st.toggleElemPalette();
       else if (g.tab === 'variables' && !st.scopeMonOpen) st.toggleScopeMon();
       saveDetachedPos(g.tab, ev.clientX - 60, ev.clientY - 20);
       st.detachTab(g.tab);
@@ -275,6 +285,7 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
     if (paletteOpen) setPaletteOpen(false);
     if (formulaPaletteOpen) setFormulaPaletteOpen(false);
     if (constPaletteOpen) setConstPaletteOpen(false);
+    if (elemPaletteOpen) toggleElemPalette();
     if (scopeMonOpen) toggleScopeMon();
   };
 
@@ -362,6 +373,7 @@ export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: 
     active.id === 'functions' ? <PaletteContent variant="functions" />
     : active.id === 'formulas' ? <PaletteContent variant="formulas" />
     : active.id === 'constants' ? <PaletteContent variant="constants" />
+    : active.id === 'elements' ? <ElementsContent />
     : <VariablesContent onOpenNavigator={onOpenNavigator} />;
 
   if (mode !== 'float') {

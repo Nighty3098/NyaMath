@@ -31,6 +31,22 @@ function saveGrid(v: boolean) {
   } catch { /* ignore */ }
 }
 
+const ELEM_OPEN_KEY = 'nyamath-elem-open';
+
+function loadElemOpen(): boolean {
+  try {
+    return localStorage.getItem(ELEM_OPEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function saveElemOpen() {
+  try {
+    localStorage.setItem(ELEM_OPEN_KEY, useCanvasStore.getState().elemPaletteOpen ? '1' : '0');
+  } catch { /* ignore */ }
+}
+
 function loadGridSize(): 'standard' | 'fine' {
   try {
     return localStorage.getItem(GRID_SIZE_KEY) === 'fine' ? 'fine' : 'standard';
@@ -138,8 +154,12 @@ export interface CanvasState {
   setConstPaletteSize: (w: number, h: number) => void;
   constPaletteDockW: number;
   setConstPaletteDockW: (w: number) => void;
+  /** Вкладка химических элементов (таблица Менделеева из NyaMath.db) */
+  elemPaletteOpen: boolean;
+  setElemPaletteOpen: (v: boolean) => void;
+  toggleElemPalette: () => void;
   /** Единое окно палитр: активная вкладка + геометрия окна.
-   *  Флаги paletteOpen/formulaPaletteOpen/constPaletteOpen/scopeMonOpen —
+   *  Флаги paletteOpen/formulaPaletteOpen/constPaletteOpen/elemPaletteOpen/scopeMonOpen —
    *  какие вкладки включены; окно видно, пока включён хоть один источник. */
   paletteTab: PaletteTab;
   setPaletteTab: (t: PaletteTab) => void;
@@ -405,7 +425,7 @@ function restore(): Record<string, MathBlockData> {
  *  Единое окно с вкладками: функции / формулы / константы / переменные. */
 export type PaletteMode = 'float' | 'left' | 'right';
 /** Активная вкладка единого окна палитр. */
-export type PaletteTab = 'functions' | 'formulas' | 'constants' | 'variables';
+export type PaletteTab = 'functions' | 'formulas' | 'constants' | 'elements' | 'variables';
 
 const PAL_UI_KEY = 'nyamath-palette-ui';
 const PAL_UI_KEY_LEGACY = 'wengineering-palette-ui';
@@ -525,7 +545,7 @@ const initialUnifiedUi = loadUnifiedUi();
 
 /** Вынесенные в отдельные окна вкладки (персист отдельно от документа). */
 const DETACHED_KEY = 'nyamath-palette-detached';
-const ALL_TABS: PaletteTab[] = ['functions', 'formulas', 'constants', 'variables'];
+const ALL_TABS: PaletteTab[] = ['functions', 'formulas', 'constants', 'elements', 'variables'];
 
 function loadDetachedTabs(): PaletteTab[] {
   try {
@@ -885,6 +905,28 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   constPaletteDockW: initialConstPaletteUi.dockW,
   setConstPaletteDockW: (w) =>
     set({ constPaletteDockW: Math.min(640, Math.max(280, Math.round(w))) }),
+  elemPaletteOpen: loadElemOpen(),
+  setElemPaletteOpen: (v) => {
+    set((s) => ({
+      elemPaletteOpen: v,
+      paletteTab: v ? 'elements' : s.paletteTab,
+      detachedTabs: v ? s.detachedTabs : s.detachedTabs.filter((x) => x !== 'elements'),
+    }));
+    saveElemOpen();
+    saveUnifiedUi();
+    if (!v) saveDetachedTabs();
+  },
+  toggleElemPalette: () => {
+    const open = !get().elemPaletteOpen;
+    set((s) => ({
+      elemPaletteOpen: open,
+      paletteTab: open ? 'elements' : s.paletteTab,
+      detachedTabs: open ? s.detachedTabs : s.detachedTabs.filter((x) => x !== 'elements'),
+    }));
+    saveElemOpen();
+    saveUnifiedUi();
+    if (!open) saveDetachedTabs();
+  },
   paletteTab: initialUnifiedUi.tab,
   setPaletteTab: (t) => {
     set({ paletteTab: t });
@@ -1581,9 +1623,10 @@ export function isUnifiedPaletteOpen(s: {
   paletteOpen: boolean;
   formulaPaletteOpen: boolean;
   constPaletteOpen: boolean;
+  elemPaletteOpen: boolean;
   scopeMonOpen: boolean;
 }): boolean {
-  return s.paletteOpen || s.formulaPaletteOpen || s.constPaletteOpen || s.scopeMonOpen;
+  return s.paletteOpen || s.formulaPaletteOpen || s.constPaletteOpen || s.elemPaletteOpen || s.scopeMonOpen;
 }
 
 /** Сохранить геометрию и вкладку единого окна (по окончании жеста + при смене вкладок). */

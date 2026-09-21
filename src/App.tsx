@@ -26,11 +26,13 @@ export default function App() {
   const paletteOpen = useCanvasStore((s) => s.paletteOpen);
   const formulaPaletteOpen = useCanvasStore((s) => s.formulaPaletteOpen);
   const constPaletteOpen = useCanvasStore((s) => s.constPaletteOpen);
+  const elemPaletteOpen = useCanvasStore((s) => s.elemPaletteOpen);
   const scopeMonOpen = useCanvasStore((s) => s.scopeMonOpen);
   const detachedVisible = detachedTabs.filter((id: PaletteTab) =>
     id === 'functions' ? paletteOpen
     : id === 'formulas' ? formulaPaletteOpen
     : id === 'constants' ? constPaletteOpen
+    : id === 'elements' ? elemPaletteOpen
     : scopeMonOpen,
   );
   // пристыкованные вынесенные вкладки живут во flex-ряду (слева/справа от холста),
