@@ -8,7 +8,8 @@ import { t } from '../i18n';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IGrip, ISave, ITable, ITune, IWarn, IX } from './Icon';
-import { columnsToCsv, downloadTextFile, exportSvgElementToPng, safeFilename } from '../lib/exportFiles';
+import { columnsToCsv, copyTextToClipboard, downloadTextFile, exportSvgElementToPng, safeFilename } from '../lib/exportFiles';
+import { plotBlockToCode } from '../lib/plotCode';
 
 const W = 460;
 const H = 300;
@@ -91,6 +92,9 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   const footRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [optsOpen, setOptsOpen] = useState(false);
+  // Show Code (MATLAB-паттерн): настройки графика текстом + дублирование 1:1
+  const [codeOpen, setCodeOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   // Высота всего хрома (шапка + подпись под графиком) — измеряем, как в SimBlockView:
   // магическая константа врала, и между графиком и низом блока оставался зазор.
   // +12: offsetHeight не включает схлопнувшиеся наружу маргины.
@@ -104,6 +108,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
     maxH: 1400,
   });
   const updatePlot = useCanvasStore((s) => s.updatePlot);
+  const duplicatePlot = useCanvasStore((s) => s.duplicatePlot);
   const select = useCanvasStore((s) => s.select);
   const toggleSelect = useCanvasStore((s) => s.toggleSelect);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
@@ -705,6 +710,58 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
                 spellCheck={false}
               />
             </label>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 min-h-[32px] px-2 rounded-lg cursor-pointer"
+              style={{ background: codeOpen ? 'var(--accent-soft)' : 'transparent', color: codeOpen ? 'var(--accent-ink)' : 'inherit' }}
+              aria-expanded={codeOpen}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCodeOpen((v) => !v);
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              title={t('p2.codeHint')}
+            >
+              {'</>'}
+              <span className="hidden sm:inline">{t('p2.showCode')}</span>
+            </button>
+          </div>
+        )}
+        {codeOpen && (
+          <div className="mb-1 rounded-lg border border-[var(--line)] bg-[var(--input-bg)] p-2 print:hidden">
+            <pre className="max-h-[140px] overflow-auto whitespace-pre-wrap text-[11px] leading-5 text-[var(--ink)] select-text" title={t('p2.codeHint')}>
+              {plotBlockToCode(block, useCanvasStore.getState().lang)}
+            </pre>
+            <div className="mt-1.5 flex items-center gap-2">
+              <button
+                type="button"
+                className="min-h-[32px] px-2.5 rounded-lg bg-[var(--accent-soft)] text-[var(--accent-ink)] text-[12px] cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void copyTextToClipboard(plotBlockToCode(block, useCanvasStore.getState().lang)).then((ok) => {
+                    if (ok) {
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 1600);
+                    }
+                  });
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                {copied ? t('p2.copied') : t('p2.copyCode')}
+              </button>
+              <button
+                type="button"
+                className="min-h-[32px] px-2.5 rounded-lg border border-[var(--line)] text-[12px] text-[var(--ink-soft)] cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  duplicatePlot(block.id);
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                title={t('p2.duplicate')}
+              >
+                {t('p2.duplicate')}
+              </button>
+            </div>
           </div>
         )}
         {/* заголовок для печати (контролы выше скрыты в print) */}

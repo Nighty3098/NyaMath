@@ -7,7 +7,7 @@ import { getSimModel, listSimModels, simModelPatch } from '../engine/simEngine';
 import { separateBlocksVertically, snapToGrid, GRID_STEP_FINE, GRID_STEP_STANDARD } from '../lib/canvasLayout';
 import { getLang, loadLang, setLangState, t, type Lang } from '../i18n';
 import { RECALC_TIMEOUT_MS, recalcInWorker } from '../lib/recalcWorker';
-import { setNumFmt as setEngineNumFmt, setUnitSys as setEngineUnitSys, type NumFmt, type NumFmtMode, type UnitSys } from '../engine/mathEngine';
+import { setNumFmt as setEngineNumFmt, setUnitSys as setEngineUnitSys, setComplexFmt as setEngineComplexFmt, type NumFmt, type NumFmtMode, type UnitSys, type ComplexFmt } from '../engine/mathEngine';
 import { engineMismatch, parseDocFile } from '../lib/docFile';
 import { ENGINE_VERSION } from '../engine/version';
 
@@ -103,6 +103,25 @@ function loadUnitSys(): UnitSys {
 function saveUnitSys(s: UnitSys) {
   try {
     localStorage.setItem(UNITSYS_KEY, s);
+  } catch { /* ignore */ }
+}
+
+const COMPLEXFMT_KEY = 'nyamath-complex-fmt';
+
+function loadComplexFmt(): ComplexFmt {
+  try {
+    const raw = localStorage.getItem(COMPLEXFMT_KEY);
+    if (raw === 'polar' || raw === 'both') {
+      setEngineComplexFmt(raw);
+      return raw;
+    }
+  } catch { /* ignore */ }
+  return 'rect';
+}
+
+function saveComplexFmt(f: ComplexFmt) {
+  try {
+    localStorage.setItem(COMPLEXFMT_KEY, f);
   } catch { /* ignore */ }
 }
 
@@ -242,6 +261,9 @@ export interface CanvasState {
   /** Система единиц отображения (Prime 11-паттерн SI/US/CGS). */
   unitSys: UnitSys;
   setUnitSys: (s: UnitSys) => void;
+  /** Вид комплексных: rect `3 + 4·j`, polar `5 ∠ 36.87°`, both — оба сразу. */
+  complexFmt: ComplexFmt;
+  setComplexFmt: (f: ComplexFmt) => void;
   /** Disable Evaluation: исключить/вернуть блок из расчёта */
   toggleBlockDisabled: (id: string) => void;
   /** Инверсия флага для всего выделения одним шагом истории */
@@ -273,6 +295,8 @@ export interface CanvasState {
   /** Применить входящий снапшот сервиса (без засорения истории undo) */
   applyRemoteBlocks: (data: unknown) => { ok: boolean; count: number };
   updatePlot: (id: string, patch: Partial<MathBlockData>) => void;
+  /** Дублировать plot-блок ниже (Show Code: воспроизвести фигуру 1:1). */
+  duplicatePlot: (id: string) => void;
   /** История undo/redo (снапшоты blocks, без persist) */
   past: Record<string, MathBlockData>[];
   future: Record<string, MathBlockData>[];
@@ -699,6 +723,7 @@ async function runRecalcJob(only?: Set<string>): Promise<void> {
         lang: getLang(),
         fmt: st0.numFmt,
         unitSys: st0.unitSys,
+        complexFmt: st0.complexFmt,
         timeoutMs: RECALC_TIMEOUT_MS,
         signal: ctrl.signal,
         only: attemptOnly ? [...attemptOnly] : undefined,
@@ -1380,6 +1405,16 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     scheduleRecalcAsync(60);
   },
 
+  complexFmt: loadComplexFmt(),
+  setComplexFmt: (f) => {
+    const next: ComplexFmt = f === 'polar' || f === 'both' ? f : 'rect';
+    saveComplexFmt(next);
+    // main-thread движок (фолбэк без воркера) читает модульное состояние
+    setEngineComplexFmt(next);
+    set({ complexFmt: next });
+    scheduleRecalcAsync(60);
+  },
+
   toggleBlockDisabled: (id) => {
     const cur = get().blocks[id];
     if (!cur) return;
@@ -1503,11 +1538,24 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     tpl.lines.forEach((ln, k) => {
       const bid = uuid();
       ids.push(bid);
-      next[bid] = {
-        ...blank(bid, p.x, p.y + k * 64),
-        rawInput: ln.raw,
-        kind: ln.kind === 'text' ? 'text' : 'math',
-      };
+      const dy = ln.kind === 'program' ? 210 : ln.kind === 'plot' ? 380 : 64;
+      if (ln.kind === 'text') {
+        next[bid] = { ...blank(bid, p.x, p.y + k * 64), rawInput: ln.raw, kind: 'text' };
+      } else if (ln.kind === 'program') {
+        next[bid] = {
+          ...blank(bid, p.x, p.y + k * dy), rawInput: ln.raw, kind: 'program',
+          exportName: ln.exportName ?? '',
+        };
+      } else if (ln.kind === 'plot') {
+        next[bid] = {
+          ...blank(bid, p.x, p.y + k * 64), rawInput: 'plot', kind: 'plot',
+          plotFn: ln.plotFn ?? 'sin(x)',
+          plotXmin: ln.plotXmin ?? -10, plotXmax: ln.plotXmax ?? 10,
+          ...(ln.plotLogx ? { plotLogx: true } : {}),
+        };
+      } else {
+        next[bid] = { ...blank(bid, p.x, p.y + k * 64), rawInput: ln.raw, kind: 'math' };
+      }
     });
     persist(next);
     set({ blocks: next, selectedIds: ids });
@@ -1582,6 +1630,19 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const next = { ...get().blocks, [id]: { ...cur, ...patch } };
     persist(next);
     set({ blocks: next });
+  },
+
+  duplicatePlot: (id) => {
+    const cur = get().blocks[id];
+    if (!cur || cur.kind !== 'plot') return;
+    pushHistory(get, set as SetFn, true);
+    const nid = uuid();
+    const below = cur.y + (typeof cur.h === 'number' ? cur.h : 380) + 40;
+    const { plotPreview: _pp, ...rest } = cur;
+    void _pp;
+    const next = { ...get().blocks, [nid]: { ...rest, id: nid, y: below } };
+    persist(next);
+    set({ blocks: next, selectedIds: [nid] });
   },
 }));
 

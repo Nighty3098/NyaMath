@@ -3,23 +3,32 @@ import { useCanvasStore } from '../store/canvasStore';
 import { saveDocument } from '../lib/saveDocument';
 import { printDocument } from '../lib/print';
 import { downloadLatexReport, downloadMarkdown } from '../lib/report';
+import { downloadWordDoc } from '../lib/wordExport';
 import { SHARE_WARN_CHARS, shareDocument } from '../lib/share';
 import { THEMES } from '../theme';
-import { t, themeLabel, type Lang } from '../i18n';
+import { t, themeLabel, type Lang, type StrKey } from '../i18n';
 import { connectLive, disconnectLive, getLiveUrl, setLiveUrl, testLiveConnection } from '../lib/liveSync';
 import { listTemplates } from '../lib/db';
 
 /** Пункты подменю шаблонов ГОСТ (пусто, если БД недоступна). */
-function templateEntries(): { id: string; label: string }[] {
+function templateEntries(): { id: string; label: string; section: string }[] {
   try {
     const lang = useCanvasStore.getState().lang;
     return listTemplates().map((tpl) => ({
       id: tpl.id,
       label: lang === 'ru' ? tpl.title.ru : tpl.title.en,
+      section: tpl.section,
     }));
   } catch {
     return [];
   }
+}
+
+/** Название раздела шаблонов (фолбэк — сам id раздела). */
+function templateSectionLabel(section: string): string {
+  const key = `tplsec.${section}` as StrKey;
+  const s = t(key);
+  return s === key ? section : s;
 }
 import {
   IConst, IField, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
@@ -95,6 +104,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
   const setNumFmt = useCanvasStore((s) => s.setNumFmt);
   const unitSys = useCanvasStore((s) => s.unitSys);
   const setUnitSys = useCanvasStore((s) => s.setUnitSys);
+  const complexFmt = useCanvasStore((s) => s.complexFmt);
+  const setComplexFmt = useCanvasStore((s) => s.setComplexFmt);
   const separateRegions = useCanvasStore((s) => s.separateRegions);
   const toggleSelectedDisabled = useCanvasStore((s) => s.toggleSelectedDisabled);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
@@ -209,6 +220,20 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
     fn(p.x, p.y);
   };
 
+  /** Шаблоны, сгруппированные разделами с заголовками (порядок — по ord из БД). */
+  const templateChildren = (): Entry[] => {
+    const out: Entry[] = [];
+    let lastSec = '';
+    for (const e of templateEntries()) {
+      if (e.section !== lastSec) {
+        lastSec = e.section;
+        out.push({ head: templateSectionLabel(e.section) });
+      }
+      out.push({ id: `tpl-${e.id}`, label: e.label, action: run(() => insertTemplate(e.id)) });
+    }
+    return out;
+  };
+
   const menus: { id: string; label: string; alignRight?: boolean; items: Entry[] }[] = [
     {
       id: 'file',
@@ -222,6 +247,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
         { id: 'print-bw', icon: <IPrint />, label: t('menu.printBw'), action: run(() => printDocument('bw')) },
         { id: 'export-md', icon: <ICopy />, label: t('menu.exportMd'), action: run(() => downloadMarkdown(blocks)) },
         { id: 'export-tex', icon: <ICopy />, label: t('menu.exportTex'), action: run(() => downloadLatexReport(blocks)) },
+        { id: 'export-doc', icon: <ICopy />, label: t('menu.exportDoc'), action: run(() => downloadWordDoc(blocks, lang)) },
         { sep: true },
         { id: 'clear', icon: <IX />, label: t('menu.clear'), danger: true, action: run(() => { if (confirm(t('confirm.clear'))) clear(); }) },
       ],
@@ -273,6 +299,13 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
             { id: 'units-cgs', label: t('menu.unitCGS'), checked: unitSys === 'CGS', action: run(() => setUnitSys('CGS')) },
           ],
         },
+        {
+          id: 'cx-sub', icon: <ISignal />, label: t('menu.complexFmt'), children: [
+            { id: 'cx-rect', label: t('menu.cxRect'), checked: complexFmt === 'rect', action: run(() => setComplexFmt('rect')) },
+            { id: 'cx-polar', label: t('menu.cxPolar'), checked: complexFmt === 'polar', action: run(() => setComplexFmt('polar')) },
+            { id: 'cx-both', label: t('menu.cxBoth'), checked: complexFmt === 'both', action: run(() => setComplexFmt('both')) },
+          ],
+        },
         { id: 'scopemon', icon: <ISignal />, label: t('menu.scopeMon'), hint: 'Ctrl+J', checked: scopeMonOpen, action: run(toggleScopeMon) },
         { id: 'dis-sel', icon: <IZap />, label: t('menu.toggleDisabled'), disabled: selectedIds.length === 0, action: run(toggleSelectedDisabled) },
         { id: 'palette', icon: <IFx />, label: t('menu.palette'), checked: paletteOpen, action: run(togglePalette) },
@@ -307,10 +340,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
       items: [
         {
           id: 'tpl-sub', icon: <IFormula />, label: t('menu.templates'), children:
-            templateEntries().map((e): Entry => ({
-              id: `tpl-${e.id}`, label: e.label,
-              action: run(() => insertTemplate(e.id)),
-            })),
+            templateChildren(),
         },
         { id: 'exquick', icon: <ISignal />, label: t('menu.exQuick'), action: run(loadQuickstart) },
         { id: 'ex20', icon: <IZap />, label: t('menu.ex20'), action: run(loadTestScenario) },
