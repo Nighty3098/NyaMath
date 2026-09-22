@@ -113,8 +113,29 @@ describe('solverTrace: math blocks', () => {
   });
 });
 
-describe('solverTrace: program blocks', () => {
-  it('решатель внутри программы тоже логируется', () => {
+describe('solverTrace: форматирование подписей', () => {
+  it('nint: без программистских кавычек, числа — в нотации листа', () => {
+    const out = recalc([block(60, { rawInput: 'nint("ln(1+x)/(1+x^2)", "x", 0, 0.066) =' })]);
+    expect(out[0].error).toBeNull();
+    const tr = out[0].solverTrace ?? [];
+    expect(tr.length).toBeGreaterThan(0);
+    expect(tr[0]).not.toContain('"');
+    expect(tr[0]).toContain('∫');
+    expect(tr[0]).toContain('I=');
+  });
+
+  it('root/minimize: подписи без кавычек', () => {
+    const out = recalc([
+      block(60, { rawInput: 'root("x^3-2", "x", 0, 2) =' }),
+      block(124, { rawInput: 'minimize("(x-2)^2", ["x"], [0]) =' }),
+    ]);
+    for (const b of out) {
+      for (const l of b.solverTrace ?? []) expect(l).not.toContain('"');
+    }
+  });
+});
+
+describe('solverTrace: program blocks', () => {  it('решатель внутри программы тоже логируется', () => {
     const out = recalc([
       block(60, {
         kind: 'program',

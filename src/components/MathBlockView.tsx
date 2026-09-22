@@ -22,6 +22,7 @@ import {
   type AssistItem,
 } from '../lib/assistant';
 import { collectScopeVars } from '../lib/scopeVars';
+import { TraceLine } from './TraceLine';
 
 interface Props {
   block: MathBlockData;
@@ -684,12 +685,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                   {t('m.solveTrace')}
                 </div>
                 {block.solverTrace.map((line, k) => (
-                  <div
-                    key={k}
-                    className="math-input text-[12px] text-[var(--ink-soft)] whitespace-pre-wrap break-words"
-                  >
-                    {line}
-                  </div>
+                  <TraceLine key={k} line={line} prominent={k === 0} />
                 ))}
               </div>
             )}
