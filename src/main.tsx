@@ -11,6 +11,7 @@ import '@fontsource/jetbrains-mono/500.css'
 import '@fontsource/jetbrains-mono/600.css'
 import './index.css'
 import { initDb } from './lib/db-browser'
+import { registerSW } from './pwa'
 
 /** Справочники (NyaMath.db) — до любых импортов движка: модули больше
  *  ничего не выполняют на импорте, но первый createBaseScope уже требует БД. */
@@ -28,6 +29,8 @@ async function boot(): Promise<void> {
       <App />
     </StrictMode>,
   );
+  // офлайн-оболочка — после первого рендера (только production)
+  registerSW();
 }
 
 void boot();
