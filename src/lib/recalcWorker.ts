@@ -4,7 +4,7 @@ import {
   type MathBlockData,
 } from '../engine/dependencies';
 import type { Scope } from '../engine/mathEngine';
-import type { NumFmt, UnitSys } from '../engine/mathEngine';
+import type { ComplexFmt, NumFmt, UnitSys } from '../engine/mathEngine';
 import {
   collectDefLines,
   deserializeScopeValue,
@@ -50,6 +50,8 @@ export interface RecalcJobOpts {
   fmt?: NumFmt;
   /** Система единиц отображения (по умолчанию — из модуля движка). */
   unitSys?: UnitSys;
+  /** Вид комплексных (по умолчанию — из модуля движка). */
+  complexFmt?: ComplexFmt;
   timeoutMs?: number;
   signal?: AbortSignal;
   onProgress?: (done: number, total: number) => void;
@@ -230,7 +232,7 @@ export async function recalcInWorker(
   const w = worker;
   const slim = blocks.map(slimWorkerInput);
   const jobId = ++jobSeq;
-  const req: WorkerReq = { jobId, lang: opts.lang, fmt: opts.fmt, unitSys: opts.unitSys, blocks: slim, only: opts.only };
+  const req: WorkerReq = { jobId, lang: opts.lang, fmt: opts.fmt, unitSys: opts.unitSys, complexFmt: opts.complexFmt, blocks: slim, only: opts.only };
 
   return new Promise<RecalcJobOutcome>((resolve) => {
     let done = false;

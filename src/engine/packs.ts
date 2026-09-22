@@ -2112,6 +2112,58 @@ export function buildPackScope(math: MathJsInstance): Scope {
     },
     db2mag: (db: unknown) => 10 ** (needNum(db) / 20),
 
+    // ---------- фазоры: полярная форма для электриков ----------
+    // Фаза в градусах (−180, 180]: argDeg(3+4j) → 53.13, argDeg(−1) → 180.
+    argDeg: (z: unknown) => {
+      const c = toC(z);
+      let d = (Math.atan2(c.im, c.re) * 180) / Math.PI;
+      if (d <= -180) d += 360;
+      if (d > 180) d -= 360;
+      return Object.is(d, -0) ? 0 : d;
+    },
+    // Сборка фазора из модуля и фазы: fromPolar(5, 53.13) → ≈ 3+4j.
+    fromPolar: (mag: unknown, deg?: unknown) => {
+      const m = needNum(mag);
+      const d = deg === undefined ? 0 : needNum(deg);
+      if (!(m >= 0 && isFinite(d))) throw new Error(t('e.calcArgs'));
+      const a = (d * Math.PI) / 180;
+      return math.complex(m * Math.cos(a), m * Math.sin(a));
+    },
+
+    // ---------- МКЭ: балка Эйлера–Бернулли и стержень (плоская рама) ----------
+    // Узловые DOF балки: [w1, θ1, w2, θ2]. ke = EJ/L³ · K, K — классическая 4×4.
+    beamKe: (E: unknown, J: unknown, L: unknown) => {
+      const e = needNum(E);
+      const j = needNum(J);
+      const l = needNum(L);
+      if (!(e > 0 && j > 0 && l > 0)) throw new Error(t('e.calcArgs'));
+      const k = (e * j) / l ** 3;
+      const K = [
+        [12, 6 * l, -12, 6 * l],
+        [6 * l, 4 * l * l, -6 * l, 2 * l * l],
+        [-12, -6 * l, 12, -6 * l],
+        [6 * l, 2 * l * l, -6 * l, 4 * l * l],
+      ];
+      return math.matrix(K.map((r) => r.map((z) => z * k)));
+    },
+    // Эквивалентные узловые силы равномерной поперечной нагрузки q (вниз — плюс):
+    // [qL/2, qL²/12, qL/2, −qL²/12] (знаки моментов — по конвенции МКЭ).
+    beamFe: (q: unknown, L: unknown) => {
+      const qq = needNum(q);
+      const l = needNum(L);
+      if (!(isFinite(qq) && l > 0)) throw new Error(t('e.calcArgs'));
+      return math.matrix([qq * l / 2, qq * l * l / 12, qq * l / 2, -qq * l * l / 12]);
+    },
+    // Стержень на растяжение–сжатие: ke = EA/L · [[1, −1], [−1, 1]].
+    barKe: (E: unknown, A: unknown, L: unknown) => {
+      const e = needNum(E);
+      const a = needNum(A);
+      const l = needNum(L);
+      if (!(e > 0 && a > 0 && l > 0)) throw new Error(t('e.calcArgs'));
+      const k = (e * a) / l;
+      return math.matrix([[k, -k], [-k, k]]);
+    },
+
     // ---------- САУ / АЧХ-ФЧХ (Bode) ----------
     // Передаточная функция задаётся коэффициентами полиномов (старшая →
     // младшая): H(s) = num/den. Частоты — радиан/с, массив или скаляр.
@@ -2637,6 +2689,8 @@ export const PACK_NAMES = [
   'coaxCap', 'coaxInd', 'coaxZ', 'plateCap', 'solenoidL', 'microstripZ',
   'wgCutoff', 'wgLambda', 'coulombF', 'ePointQ', 'bWire', 'cycFreq',
   'friisPr', 'friisDb', 'sMag2db', 'db2mag',
+  'argDeg', 'fromPolar',
+  'beamKe', 'beamFe', 'barKe',
   // САУ / АЧХ-ФЧХ (Bode)
   'bodeH', 'bodeMagDb', 'bodePhaseDeg', 'bodeFreqs', 'bode',
   // материалы (справочник)

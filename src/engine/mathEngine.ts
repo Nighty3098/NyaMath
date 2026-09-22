@@ -655,9 +655,9 @@ function fmtTag(): string {
   return `${numFmt.mode}:${numFmt.digits}`;
 }
 
-/** Кэш-партиция пересчёта: язык + формат чисел + система единиц (результаты — строки). */
+/** Кэш-партиция пересчёта: язык + формат чисел + система единиц + вид комплексных (результаты — строки). */
 export function envTag(): string {
-  return `${getLang()}|${fmtTag()}|${unitSys}`;
+  return `${getLang()}|${fmtTag()}|${unitSys}|${complexFmt}`;
 }
 
 /** Система единиц для отображения результатов: none — как введено (Prime 11-паттерн). */
@@ -671,6 +671,30 @@ export function setUnitSys(s: UnitSys): void {
 
 export function getUnitSys(): UnitSys {
   return unitSys;
+}
+
+/** Вид комплексных чисел в выводе (Maple Flow-паттерн для электриков):
+ *  rect — `3 + 4·j`, polar — `5 ∠ 36.87°`, both — `3 + 4·j (5 ∠ 36.87°)`. */
+export type ComplexFmt = 'rect' | 'polar' | 'both';
+let complexFmt: ComplexFmt = 'rect';
+
+/** Установить вид комплексных (стор + воркер-протокол; влияет только на отображение). */
+export function setComplexFmt(f: ComplexFmt): void {
+  complexFmt = f === 'polar' || f === 'both' ? f : 'rect';
+}
+
+export function getComplexFmt(): ComplexFmt {
+  return complexFmt;
+}
+
+/** Модуль и фаза (градусы, (−180, 180]) комплексного — для phasor-вида. */
+export function complexPolar(re: number, im: number): { mag: number; deg: number } {
+  const mag = Math.hypot(re, im);
+  let deg = (Math.atan2(im, re) * 180) / Math.PI;
+  if (deg <= -180) deg += 360;
+  if (deg > 180) deg -= 360;
+  if (Object.is(deg, -0)) deg = 0;
+  return { mag, deg };
 }
 
 /** Единицы отображения по размерности (первое совместимое побеждает). */
@@ -777,9 +801,14 @@ function formatComplex(re: number, im: number): string {
   const r = Math.abs(re) < 1e-12 ? 0 : re;
   const imA = Math.abs(im) < 1e-12 ? 0 : im;
   if (imA === 0) return formatNumber(r);
-  if (r === 0) return `${formatNumber(imA)}·j`;
-  const sign = imA >= 0 ? '+' : '−';
-  return `${formatNumber(r)} ${sign} ${formatNumber(Math.abs(imA))}·j`;
+  const rect = r === 0
+    ? `${formatNumber(imA)}·j`
+    : `${formatNumber(r)} ${imA >= 0 ? '+' : '−'} ${formatNumber(Math.abs(imA))}·j`;
+  if (complexFmt === 'rect') return rect;
+  const { mag, deg } = complexPolar(r, imA);
+  // минус — типографский, как в rect-ветке
+  const polar = `${formatNumber(mag)} ∠ ${formatNumber(deg).replace(/^-/, '−')}°`;
+  return complexFmt === 'polar' ? polar : `${rect} (${polar})`;
 }
 
 /** Сгенерировать LaTeX для отображения через KaTeX (mathjs toTex + инженерные замены). */
@@ -994,8 +1023,13 @@ function complexLatex(re: number, im: number): string {
   const r = Math.abs(re) < 1e-12 ? 0 : re;
   const imA = Math.abs(im) < 1e-12 ? 0 : im;
   if (imA === 0) return numLatex(r);
-  if (r === 0) return `${numLatex(imA)}j`;
-  return imA >= 0 ? `${numLatex(r)}+${numLatex(imA)}j` : `${numLatex(r)}-${numLatex(Math.abs(imA))}j`;
+  const rect = r === 0
+    ? `${numLatex(imA)}j`
+    : imA >= 0 ? `${numLatex(r)}+${numLatex(imA)}j` : `${numLatex(r)}-${numLatex(Math.abs(imA))}j`;
+  if (complexFmt === 'rect') return rect;
+  const { mag, deg } = complexPolar(r, imA);
+  const polar = `${numLatex(mag)}\\angle ${numLatex(deg)}^{\\circ}`;
+  return complexFmt === 'polar' ? polar : `${rect}\\,(${polar})`;
 }
 
 function entryLatex(v: unknown): string {

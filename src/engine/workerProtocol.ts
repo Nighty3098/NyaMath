@@ -4,6 +4,7 @@ import {
   isValidVarName,
   math,
   parseLine,
+  type ComplexFmt,
   type NumFmt,
   type Scope,
   type UnitSys,
@@ -254,6 +255,8 @@ export interface WorkerReq {
   fmt?: NumFmt;
   /** Система единиц отображения (опционально — по умолчанию none). */
   unitSys?: UnitSys;
+  /** Вид комплексных (опционально — по умолчанию rect). */
+  complexFmt?: ComplexFmt;
   blocks: SlimBlock[];
   /** Calculate Now: только эти + upstream (пусто/нет = полный пересчёт) */
   only?: string[];
