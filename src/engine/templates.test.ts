@@ -11,6 +11,9 @@ function toBlocks(tplId: string): MathBlockData[] {
     displayLatex: '', resultStr: '', resultLatex: '', resultValue: null,
     error: null, dependencies: [], definedVar: null, isOutput: false,
     kind: ln.kind, plotPreview: null,
+    ...(ln.plotFn ? { plotFn: ln.plotFn, plotXmin: ln.plotXmin ?? -10, plotXmax: ln.plotXmax ?? 10 } : {}),
+    ...(ln.plotLogx ? { plotLogx: true } : {}),
+    ...(ln.exportName ? { exportName: ln.exportName } : {}),
   }));
 }
 
@@ -32,10 +35,12 @@ const byRaw = (blocks: Record<string, MathBlockData>, raw: string): MathBlockDat
  * движком без ошибок, контрольные значения — по ручному расчёту.
  */
 describe('templates: library integrity', () => {
-  it('6 шаблонов в 3 разделах с описаниями', () => {
+  it('16 шаблонов в 8 разделах с описаниями', () => {
     const all = listTemplates();
-    expect(all.length).toBe(6);
-    expect(new Set(all.map((t) => t.section))).toEqual(new Set(['beams', 'circuits', 'tolerances']));
+    expect(all.length).toBe(16);
+    expect(new Set(all.map((t) => t.section))).toEqual(new Set([
+      'beams', 'circuits', 'tolerances', 'thermal', 'vibration', 'hydro', 'fea', 'signal',
+    ]));
     for (const t of all) {
       expect(t.title.ru.length).toBeGreaterThan(0);
       expect(t.title.en.length).toBeGreaterThan(0);
@@ -83,5 +88,72 @@ describe('templates: library integrity', () => {
     expect(byRaw(b, 'A_nom = A1-A2').resultStr).toBe('40 mm');
     expect(byRaw(b, 'A_max = (A1+t1)-(A2-t2)').resultStr).toBe('40.3 mm');
     expect(byRaw(b, 'A_min = (A1-t1)-(A2+t2)').resultStr).toBe('39.7 mm');
+  });
+
+  it('консоль q: R=6 кН, M=9 кДж, δ≈12.66 мм', () => {
+    const b = calcAll('beam-cantilever-uniform');
+    expect(byRaw(b, 'R = q*L').resultStr).toBe('6 kN');
+    expect(byRaw(b, 'M_fix = q*L^2/2').resultStr).toBe('9 kJ');
+    expect(byRaw(b, 'delta = q*L^4/(8*E*J)').resultStr).toBe('1.26563 cm');
+  });
+
+  it('шарнирная P в середине: R=4 кН, M=8 кДж, δ≈6.67 мм', () => {
+    const b = calcAll('beam-simply-central');
+    expect(byRaw(b, 'R_A = P/2').resultStr).toBe('4 kN');
+    expect(byRaw(b, 'M_max = P*L/4').resultStr).toBe('8 kJ');
+    expect(byRaw(b, 'delta = P*L^3/(48*E*J)').resultStr).toBe('0.666667 cm');
+  });
+
+  it('делитель: 4 мА, 4 В, 16 мВт', () => {
+    const b = calcAll('circuit-divider');
+    expect(byRaw(b, 'I = U/(R1+R2)').resultStr).toBe('4 mA');
+    expect(byRaw(b, 'U2 := U*R2/(R1+R2) =').resultStr).toBe('4 V');
+    expect(byRaw(b, 'P2 = U2^2/R2').resultStr).toBe('16 mW');
+  });
+
+  it('RC-заряд: τ=0.1 с, U(5τ)≈4.966 В', () => {
+    const b = calcAll('circuit-rc-transient');
+    expect(byRaw(b, 'tau := R*C =').resultStr).toBe('0.1 s');
+    expect(byRaw(b, 'U = U0*(1-exp(-t5/tau))').resultStr).toContain('4.966');
+  });
+
+  it('RLC: f0≈159.155 Гц, Q=10, полоса ≈15.9 Гц', () => {
+    const b = calcAll('circuit-rlc-resonance');
+    expect(byRaw(b, 'f0 := 1/(2*pi*sqrt(L*C)) =').resultStr).toContain('159.155');
+    expect(byRaw(b, 'Q := w0*L/R =').resultStr).toBe('10');
+    expect(byRaw(b, 'BW = f0/Q').resultStr).toContain('15.9155');
+  });
+
+  it('стенка Фурье: 40 кВт, Rт=0.002 К/Вт', () => {
+    const b = calcAll('thermal-conduction');
+    expect(byRaw(b, 'Q = lam*A*delta_T/d').resultStr).toBe('40 kW');
+    expect(byRaw(b, 'R_t = K/W').resultStr).toBe('0.002 K / W');
+  });
+
+  it('осциллятор: f0≈3.183 Гц, T0≈0.314 с, статика 25 мм', () => {
+    const b = calcAll('vib-sdof');
+    expect(byRaw(b, 'f0 := sqrt(k/M)/(2*pi) =').resultStr).toContain('3.1831');
+    expect(byRaw(b, 'T0 = 1/f0').resultStr).toContain('0.314159');
+    expect(byRaw(b, 'x_st = F/k').resultStr).toBe('25 mm');
+  });
+
+  it('труба: Re=150000, Δp=22.5 кПа, мощность ≈265 Вт', () => {
+    const b = calcAll('hydro-pipe');
+    expect(byRaw(b, 'Re = rho*v*D/mu').resultStr).toBe('150000');
+    expect(byRaw(b, 'dp := lam*(L/D)*rho*v^2/2 =').resultStr).toBe('22.5 kPa');
+    expect(byRaw(b, 'Qv := v*pi*D^2/4 =').resultStr).toContain('0.011781');
+    expect(byRaw(b, 'P = dp*Qv').resultStr).toContain('265.07');
+  });
+
+  it('МКЭ-консоль: невязка с −FL³/3EJ < 1e-9', () => {
+    const b = calcAll('fea-cantilever-1el');
+    const rel = byRaw(b, '(w_fem-w_exact)/w_exact =').resultStr;
+    expect(Math.abs(Number(rel))).toBeLessThan(1e-9);
+  });
+
+  it('RC-ФНЧ: fc≈994.7 Гц, H(fc)≈−3.01 дБ', () => {
+    const b = calcAll('signal-rc-lowpass');
+    expect(byRaw(b, 'fc := 1/(2*pi*RC) =').resultStr).toContain('994.718');
+    expect(byRaw(b, 'Hfc = bodeMagDb([1], [inUnits(RC, "s"), 1], inUnits(2*pi*fc, "Hz"))').resultStr).toContain('-3.01');
   });
 });

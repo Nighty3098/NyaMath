@@ -148,8 +148,14 @@ export interface ElementRow {
 }
 
 export interface TemplateLine {
-  kind: 'math' | 'text';
+  kind: 'math' | 'text' | 'program' | 'plot';
   raw: string;
+  /** program: имя наружу (exportName); plot: выражение и диапазон */
+  exportName?: string;
+  plotFn?: string;
+  plotXmin?: number;
+  plotXmax?: number;
+  plotLogx?: boolean;
 }
 
 export interface Template {
@@ -344,11 +350,22 @@ function ingest(t: Record<string, Row[]>): void {
   for (const r of q('templates')) {
     let lines: TemplateLine[] = [];
     try {
-      const parsed = JSON.parse(str(r['lines_json'])) as Array<{ kind?: unknown; raw?: unknown }>;
+      const parsed = JSON.parse(str(r['lines_json'])) as Array<Record<string, unknown>>;
       if (Array.isArray(parsed)) {
         lines = parsed
           .filter((l) => typeof l?.raw === 'string')
-          .map((l) => ({ kind: l.kind === 'text' ? 'text' : 'math', raw: String(l.raw) }));
+          .map((l) => {
+            const kind = l['kind'] === 'text' ? 'text'
+              : l['kind'] === 'program' ? 'program'
+                : l['kind'] === 'plot' ? 'plot' : 'math';
+            const ln: TemplateLine = { kind, raw: String(l['raw']) };
+            if (typeof l['exportName'] === 'string' && l['exportName']) ln.exportName = l['exportName'];
+            if (typeof l['plotFn'] === 'string' && l['plotFn']) ln.plotFn = l['plotFn'];
+            if (typeof l['plotXmin'] === 'number' && isFinite(l['plotXmin'])) ln.plotXmin = l['plotXmin'];
+            if (typeof l['plotXmax'] === 'number' && isFinite(l['plotXmax'])) ln.plotXmax = l['plotXmax'];
+            if (l['plotLogx'] === true) ln.plotLogx = true;
+            return ln;
+          });
       }
     } catch {
       lines = [];
@@ -511,10 +528,20 @@ export function getDemoItems(suite: 'advanced'): DemoItem[] {
   return demoBySuite.get(suite) ?? [];
 }
 
-/** Шаблоны расчётов (балки/цепи/допуски), порядок — по ord. */
+/** Шаблоны расчётов (балки/цепи/допуски/тепло/МКЭ/…), порядок — по ord. */
 export function listTemplates(): Template[] {
   ready();
   return [...templates];
+}
+
+/** Разделы шаблонов в порядке первого появления (для группировки в меню). */
+export function listTemplateSections(): string[] {
+  ready();
+  const out: string[] = [];
+  for (const t of templates) {
+    if (!out.includes(t.section)) out.push(t.section);
+  }
+  return out;
 }
 
 export function getTemplate(id: string): Template | null {

@@ -159,7 +159,8 @@ describe('NyaMath.db integrity', () => {
     expect(all.every((e) => (e.name_ru ?? '').length > 0)).toBe(true);
     expect(all.every((e) => e.atomic_mass !== null)).toBe(true);
     expect(getTemplate('beam-simply-uniform')?.lines.length).toBeGreaterThan(0);
-    expect(listTemplates().length).toBe(6);
+    expect(getTemplate('fea-cantilever-1el')?.lines.length).toBeGreaterThan(0);
+    expect(listTemplates().length).toBe(16);
   });
 
   it('unit prefixes ordered longest-first', () => {
