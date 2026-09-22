@@ -24,6 +24,17 @@ import {
 import { collectScopeVars } from '../lib/scopeVars';
 import { TraceLine } from './TraceLine';
 
+/** Высота редактора под контент: rows знает только `\n`, а длинные формулы
+ *  переносятся — без подстройки появляется внутренний скроллбар.
+ *  Потолок — 8 строк (14px × 1.55 + паддинги ≈ 192px), дальше штатный скролл. */
+const TA_MAX_H = 192;
+function autosizeTextarea(el: HTMLTextAreaElement | null): void {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${Math.min(el.scrollHeight, TA_MAX_H)}px`;
+  el.style.overflowY = el.scrollHeight > TA_MAX_H ? 'auto' : 'hidden';
+}
+
 interface Props {
   block: MathBlockData;
   scale: number;
@@ -116,6 +127,11 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Высота редактора — по контенту (переносы длинных формул тоже считаются)
+  useEffect(() => {
+    if (editing) autosizeTextarea(taRef.current);
+  }, [editing, draft]);
 
   // Экранная клавиатура: регистрируем открытый редактор как приёмник вставки
   useEffect(() => {
@@ -467,11 +483,12 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
               <div className="relative">
                 <textarea
                   ref={taRef}
-                  rows={Math.min(8, Math.max(1, draft.split('\n').length))}
+                  rows={1}
                   className="math-input nya-editor select-text"
                   value={draft}
                   onChange={(e) => {
                     setDraft(e.target.value);
+                    autosizeTextarea(e.currentTarget);
                     const pos = e.target.selectionStart ?? e.target.value.length;
                     setCurPos(pos);
                     updateInput(block.id, e.target.value);
