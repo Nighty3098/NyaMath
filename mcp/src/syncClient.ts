@@ -8,6 +8,10 @@
 export interface SyncSnapshot {
   rev: number;
   blocks: unknown[];
+  /** Per-block LWW-метки (CRDT-лайт); нет — legacy-сервер. */
+  meta?: Record<string, { clock: number; actor: string }>;
+  /** Tombstones удалённых блоков. */
+  deleted?: Record<string, { clock: number; actor: string }>;
 }
 
 /** URL sync-сервиса: явный параметр → NYAMATH_SYNC_URL → дефолт dev-режима. */
@@ -43,22 +47,37 @@ export async function pullSnapshot(url: string, timeoutMs = 10000): Promise<Sync
   if (!data || typeof data !== 'object' || !Array.isArray((data as { blocks?: unknown }).blocks)) {
     throw new Error('Некорректный snapshot');
   }
-  const d = data as { rev?: unknown; blocks: unknown[] };
-  return { rev: typeof d.rev === 'number' ? d.rev : -1, blocks: d.blocks };
+  const d = data as { rev?: unknown; blocks: unknown[]; meta?: SyncSnapshot['meta']; deleted?: SyncSnapshot['deleted'] };
+  return {
+    rev: typeof d.rev === 'number' ? d.rev : -1,
+    blocks: d.blocks,
+    ...(d.meta && typeof d.meta === 'object' ? { meta: d.meta } : {}),
+    ...(d.deleted && typeof d.deleted === 'object' ? { deleted: d.deleted } : {}),
+  };
 }
 
 /** Отправить холст на sync-сервис (там пересчёт + рассылка в браузер). Возвращает rev.
- *  baseRev — optimistic concurrency: если задан и сервер ушёл вперёд — кинет CONFLICT. */
-export async function pushSnapshot(url: string, blocks: unknown[], baseRev?: number, timeoutMs = 15000): Promise<number> {
+ *  baseRev — optimistic concurrency: stale baseRev БЕЗ meta — кинет CONFLICT
+ *  (как раньше); С meta — сервер смёржит (CRDT-лайт) и вернёт rev мёржа. */
+export async function pushSnapshot(
+  url: string,
+  blocks: unknown[],
+  baseRev?: number,
+  timeoutMs = 15000,
+  extra?: { meta?: unknown; deleted?: unknown },
+): Promise<number> {
   let res: Response;
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
+      const body: Record<string, unknown> = baseRev === undefined ? { blocks } : { blocks, baseRev };
+      if (extra?.meta !== undefined) body['meta'] = extra.meta;
+      if (extra?.deleted !== undefined) body['deleted'] = extra.deleted;
       res = await fetch(`${url}/push`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(baseRev === undefined ? { blocks } : { blocks, baseRev }),
+        body: JSON.stringify(body),
         signal: ctrl.signal,
       });
     } finally {

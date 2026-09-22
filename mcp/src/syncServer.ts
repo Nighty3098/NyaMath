@@ -12,16 +12,32 @@
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
+export interface BlockMeta {
+  clock: number;
+  actor: string;
+}
+
 export interface SyncSnapshot {
   rev: number;
   blocks: unknown[];
+  /** Per-block LWW-метки (CRDT-лайт); нет — legacy-клиент. */
+  meta?: Record<string, BlockMeta>;
+  /** Tombstones удалённых блоков. */
+  deleted?: Record<string, BlockMeta>;
+}
+
+export interface PushResult {
+  rev: number;
+  /** Итог мёржа (только когда сервер сливал, а не принимал как есть). */
+  merged?: SyncSnapshot;
 }
 
 interface SyncHandlers {
   getSnapshot: () => SyncSnapshot;
-  /** Принять документ от клиента; вернуть новую ревизию. Бросает Error при битых данных.
-   *  baseRev — optimistic concurrency: если задан и не равен текущей rev — кинуть 409. */
-  applyPush: (blocks: unknown[], baseRev?: number) => number;
+  /** Принять документ от клиента; вернуть ревизию (+мёрж при конфликте с meta).
+   *  baseRev — optimistic concurrency: stale baseRev БЕЗ meta — 409 как раньше;
+   *  stale baseRev С meta — three-way merge (CRDT-лайт). Бросает Error при битых данных. */
+  applyPush: (blocks: unknown[], baseRev?: number, meta?: unknown, deleted?: unknown) => PushResult;
   getStatus: () => Record<string, unknown>;
 }
 
@@ -128,10 +144,14 @@ export function startSyncServer(
           const rawBaseRev = (data as { baseRev?: unknown }).baseRev;
           const baseRev = typeof rawBaseRev === 'number' && Number.isFinite(rawBaseRev) ? rawBaseRev : undefined;
           const inBlocks = (data as { blocks: unknown[] }).blocks;
-          const rev = handlers.applyPush(inBlocks, baseRev);
+          const inMeta = (data as { meta?: unknown }).meta;
+          const inDeleted = (data as { deleted?: unknown }).deleted;
+          const out = handlers.applyPush(inBlocks, baseRev, inMeta, inDeleted);
           broadcast();
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, rev }));
+          res.end(JSON.stringify(out.merged
+            ? { ok: true, rev: out.rev, blocks: out.merged.blocks, meta: out.merged.meta, deleted: out.merged.deleted }
+            : { ok: true, rev: out.rev }));
         } catch (e) {
           const status = typeof (e as { status?: unknown })?.status === 'number'
             ? (e as { status: number }).status

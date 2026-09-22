@@ -33,6 +33,7 @@ import { engineMismatch, parseDocFile, serializeDocFile } from '../../src/lib/do
 import { slimText, unifiedDiff } from '../../src/lib/slimDiff.js';
 import { parseCpd, parseSmXml, type ImportBlock } from '../../src/lib/importDoc.js';
 import { startSyncServer } from './syncServer.js';
+import { canon, mergeBlockMaps, saneMeta, type MetaMap, type WireBlock } from '../../src/lib/syncCrdt.js';
 import { getDemoItems, getDemoLines } from '../../src/lib/db.js';
 
 /* ---------------- состояние документа ---------------- */
@@ -50,6 +51,18 @@ let broadcastSync: (() => void) | null = null;
  * пуш идёт без проверки (last-writer-wins, как раньше).
  */
 let syncBaseRev: number | null = null;
+/* ---------- CRDT-лайт (per-block LWW + tombstones) ----------
+ * serverMeta/serverDeleted — метки текущего документа; syncHistory —
+ * последние состояния (rev → блоки+метки) как общие предки для мёржа. */
+let serverMeta: MetaMap = {};
+let serverDeleted: MetaMap = {};
+let syncHistory: Array<{ rev: number; blocks: unknown[]; meta: MetaMap }> = [];
+const SYNC_HIST_CAP = 20;
+
+function snapHistory(): void {
+  syncHistory.push({ rev, blocks: slimBlocks(), meta: { ...serverMeta } });
+  if (syncHistory.length > SYNC_HIST_CAP) syncHistory.shift();
+}
 
 function blank(id: string, x: number, y: number, kind: MathBlockData['kind'] = 'math'): MathBlockData {
   return {
@@ -61,9 +74,19 @@ function blank(id: string, x: number, y: number, kind: MathBlockData['kind'] = '
 
 /** Пересчёт всего документа сверху-вниз (как в приложении). */
 function refresh(): void {
+  // снэпшот «до» — общий предок для будущих CRDT-мёржей
+  snapHistory();
+  const prev = new Map(slimBlocks().map((b) => [b.id, canon(b)]));
   const { blocks: out, scope } = recalculateAll(blocks);
   blocks = blocks.map((b) => out[b.id] ?? b);
   lastScope = scope;
+  // штампуем только изменившиеся блоки: агентские правки получают часы,
+  // нетронутые — нет (иначе сервер всегда выигрывал бы конфликты)
+  const now = Date.now();
+  for (const b of slimBlocks()) {
+    if (prev.get(b.id) !== canon(b)) serverMeta[b.id] = { clock: now, actor: 'mcp' };
+    if (serverDeleted[b.id]) delete serverDeleted[b.id];
+  }
   rev += 1;
   broadcastSync?.();
 }
@@ -905,9 +928,12 @@ async function main(): Promise<void> {
   const port = Number(portRaw);
   if (portRaw && Number.isInteger(port) && port >= 0 && port <= 65535) {
     const sync = startSyncServer(port, {
-      getSnapshot: () => ({ rev, blocks: slimBlocks() }),
-      applyPush: (raw, baseRev) => {
-        if (typeof baseRev === 'number' && baseRev !== rev) {
+      getSnapshot: () => ({ rev, blocks: slimBlocks(), meta: { ...serverMeta }, deleted: { ...serverDeleted } }),
+      applyPush: (raw, baseRev, inMeta, inDeleted) => {
+        const peerMeta = saneMeta(inMeta);
+        const peerDeleted = saneMeta(inDeleted);
+        const hasMeta = inMeta !== undefined && inMeta !== null;
+        if (typeof baseRev === 'number' && baseRev !== rev && !hasMeta) {
           const err = new Error(`CONFLICT: baseRev=${baseRev}, server rev=${rev}`);
           (err as { status?: number }).status = 409;
           throw err;
@@ -919,9 +945,64 @@ async function main(): Promise<void> {
           if (b) rec.push(b);
         }
         if (!rec.length && raw.length > 0) throw new Error('Нет корректных блоков');
+        // stale baseRev С метками — three-way merge вместо 409
+        if (typeof baseRev === 'number' && baseRev !== rev && hasMeta) {
+          const ancestor = syncHistory.find((h) => h.rev === baseRev);
+          if (!ancestor) {
+            const err = new Error(`CONFLICT: baseRev=${baseRev} слишком стар (rev=${rev}), заберите snapshot`);
+            (err as { status?: number }).status = 409;
+            throw err;
+          }
+          const merged = mergeBlockMaps(
+            ancestor.blocks, ancestor.meta,
+            slimBlocks(), serverMeta,
+            rec as unknown as WireBlock[], peerMeta,
+            serverDeleted, peerDeleted,
+          );
+          const mrec: MathBlockData[] = [];
+          for (const item of merged.blocks) {
+            const vb = validateBlock(item);
+            if (vb) mrec.push(vb);
+          }
+          blocks = mrec;
+          serverMeta = merged.meta;
+          serverDeleted = merged.deleted;
+          refresh();
+          return { rev, merged: { rev, blocks: slimBlocks(), meta: { ...serverMeta }, deleted: { ...serverDeleted } } };
+        }
+        // fast path: свежий baseRev или безусловный push — принять как есть.
+        // Метки: входящие — за свои блоки; legacy-пушам без meta наследуем
+        // старые метки контентно-совпадающих блоков (иначе сервер выигрывал
+        // бы все будущие конфликты просто за счёт свежего штампа).
+        const stripCmp = (x: MathBlockData): unknown => {
+          const { plotPreview: _p, simResult: _s, ...rest } = x as MathBlockData & { simResult?: unknown };
+          void _p;
+          void _s;
+          return rest;
+        };
+        const prevCanon = new Map(blocks.map((sb) => [sb.id, canon(stripCmp(sb))]));
         blocks = rec;
+        const now = Date.now();
+        const nextMeta: MetaMap = {};
+        for (const blk of rec) {
+          const incoming = peerMeta[blk.id];
+          if (incoming) {
+            nextMeta[blk.id] = incoming;
+          } else if (prevCanon.get(blk.id) === canon(stripCmp(blk)) && serverMeta[blk.id]) {
+            nextMeta[blk.id] = serverMeta[blk.id];
+          } else {
+            nextMeta[blk.id] = { clock: now, actor: 'mcp-push' };
+          }
+        }
+        serverMeta = nextMeta;
+        for (const [id, tm] of Object.entries(peerDeleted)) {
+          if (!serverMeta[id]) serverDeleted[id] = tm;
+        }
+        for (const blk of rec) {
+          if (serverDeleted[blk.id]) delete serverDeleted[blk.id];
+        }
         refresh();
-        return rev;
+        return { rev };
       },
       getStatus: () => ({ rev, blocks: blocks.length, docPath }),
     });
