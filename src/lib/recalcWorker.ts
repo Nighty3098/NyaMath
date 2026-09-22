@@ -1,6 +1,6 @@
 import { recalculateAllAsync, setLastScope, type MathBlockData } from '../engine/dependencies';
 import type { Scope } from '../engine/mathEngine';
-import type { ComplexFmt, NumFmt, UnitSys } from '../engine/mathEngine';
+import type { AngleMode, ComplexFmt, NumFmt, UnitSys } from '../engine/mathEngine';
 import {
   collectDefLines,
   deserializeScopeValue,
@@ -48,6 +48,8 @@ export interface RecalcJobOpts {
   unitSys?: UnitSys;
   /** Вид комплексных (по умолчанию — из модуля движка). */
   complexFmt?: ComplexFmt;
+  /** Режим углов тригонометрии (по умолчанию — из модуля движка). */
+  angleMode?: AngleMode;
   timeoutMs?: number;
   signal?: AbortSignal;
   onProgress?: (done: number, total: number) => void;
@@ -238,6 +240,7 @@ export async function recalcInWorker(
     fmt: opts.fmt,
     unitSys: opts.unitSys,
     complexFmt: opts.complexFmt,
+    angleMode: opts.angleMode,
     blocks: slim,
     only: opts.only,
   };

@@ -16,10 +16,12 @@ import {
   setNumFmt as setEngineNumFmt,
   setUnitSys as setEngineUnitSys,
   setComplexFmt as setEngineComplexFmt,
+  setAngleMode as setEngineAngleMode,
   type NumFmt,
   type NumFmtMode,
   type UnitSys,
   type ComplexFmt,
+  type AngleMode,
 } from '../engine/mathEngine';
 import { engineMismatch, parseDocFile } from '../lib/docFile';
 import { ENGINE_VERSION } from '../engine/version';
@@ -149,6 +151,29 @@ function loadComplexFmt(): ComplexFmt {
 function saveComplexFmt(f: ComplexFmt) {
   try {
     localStorage.setItem(COMPLEXFMT_KEY, f);
+  } catch {
+    /* ignore */
+  }
+}
+
+const ANGLEMODE_KEY = 'nyamath-angle-mode';
+
+function loadAngleMode(): AngleMode {
+  try {
+    const raw = localStorage.getItem(ANGLEMODE_KEY);
+    if (raw === 'deg') {
+      setEngineAngleMode('deg');
+      return 'deg';
+    }
+  } catch {
+    /* ignore */
+  }
+  return 'rad';
+}
+
+function saveAngleMode(m: AngleMode) {
+  try {
+    localStorage.setItem(ANGLEMODE_KEY, m);
   } catch {
     /* ignore */
   }
@@ -293,6 +318,9 @@ export interface CanvasState {
   /** Вид комплексных: rect `3 + 4·j`, polar `5 ∠ 36.87°`, both — оба сразу. */
   complexFmt: ComplexFmt;
   setComplexFmt: (f: ComplexFmt) => void;
+  /** Режим углов тригонометрии: rad — радианы, deg — градусы (влияет на значения). */
+  angleMode: AngleMode;
+  setAngleMode: (m: AngleMode) => void;
   /** Disable Evaluation: исключить/вернуть блок из расчёта */
   toggleBlockDisabled: (id: string) => void;
   /** Инверсия флага для всего выделения одним шагом истории */
@@ -850,6 +878,7 @@ async function runRecalcJob(only?: Set<string>): Promise<void> {
         fmt: st0.numFmt,
         unitSys: st0.unitSys,
         complexFmt: st0.complexFmt,
+        angleMode: st0.angleMode,
         timeoutMs: RECALC_TIMEOUT_MS,
         signal: ctrl.signal,
         only: attemptOnly ? [...attemptOnly] : undefined,
@@ -1580,6 +1609,16 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     // main-thread движок (фолбэк без воркера) читает модульное состояние
     setEngineComplexFmt(next);
     set({ complexFmt: next });
+    scheduleRecalcAsync(60);
+  },
+
+  angleMode: loadAngleMode(),
+  setAngleMode: (m) => {
+    const next: AngleMode = m === 'deg' ? 'deg' : 'rad';
+    saveAngleMode(next);
+    // main-thread движок (фолбэк без воркера) читает модульное состояние
+    setEngineAngleMode(next);
+    set({ angleMode: next });
     scheduleRecalcAsync(60);
   },
 

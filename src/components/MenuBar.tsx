@@ -141,6 +141,8 @@ export default function MenuBar({
   const setUnitSys = useCanvasStore((s) => s.setUnitSys);
   const complexFmt = useCanvasStore((s) => s.complexFmt);
   const setComplexFmt = useCanvasStore((s) => s.setComplexFmt);
+  const angleMode = useCanvasStore((s) => s.angleMode);
+  const setAngleMode = useCanvasStore((s) => s.setAngleMode);
   const separateRegions = useCanvasStore((s) => s.separateRegions);
   const toggleSelectedDisabled = useCanvasStore((s) => s.toggleSelectedDisabled);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
@@ -511,6 +513,25 @@ export default function MenuBar({
               label: t('menu.cxBoth'),
               checked: complexFmt === 'both',
               action: run(() => setComplexFmt('both')),
+            },
+          ],
+        },
+        {
+          id: 'ang-sub',
+          icon: <ISignal />,
+          label: t('menu.angle'),
+          children: [
+            {
+              id: 'ang-rad',
+              label: t('menu.angRad'),
+              checked: angleMode === 'rad',
+              action: run(() => setAngleMode('rad')),
+            },
+            {
+              id: 'ang-deg',
+              label: t('menu.angDeg'),
+              checked: angleMode === 'deg',
+              action: run(() => setAngleMode('deg')),
             },
           ],
         },

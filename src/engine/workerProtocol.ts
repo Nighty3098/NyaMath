@@ -4,6 +4,7 @@ import {
   isValidVarName,
   math,
   parseLine,
+  type AngleMode,
   type ComplexFmt,
   type NumFmt,
   type Scope,
@@ -293,6 +294,8 @@ export interface WorkerReq {
   unitSys?: UnitSys;
   /** Вид комплексных (опционально — по умолчанию rect). */
   complexFmt?: ComplexFmt;
+  /** Режим углов тригонометрии (опционально — по умолчанию rad). */
+  angleMode?: AngleMode;
   blocks: SlimBlock[];
   /** Calculate Now: только эти + upstream (пусто/нет = полный пересчёт) */
   only?: string[];

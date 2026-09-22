@@ -21,6 +21,7 @@ type Engine = {
   setNumFmt: typeof import('./mathEngine').setNumFmt;
   setUnitSys: typeof import('./mathEngine').setUnitSys;
   setComplexFmt: typeof import('./mathEngine').setComplexFmt;
+  setAngleMode: typeof import('./mathEngine').setAngleMode;
 };
 let enginePromise: Promise<Engine> | null = null;
 function ensureEngine(): Promise<Engine> {
@@ -35,6 +36,7 @@ function ensureEngine(): Promise<Engine> {
       setNumFmt: me.setNumFmt,
       setUnitSys: me.setUnitSys,
       setComplexFmt: me.setComplexFmt,
+      setAngleMode: me.setAngleMode,
     }));
   }
   return enginePromise;
@@ -82,11 +84,18 @@ export async function runWorkerJob(
   const t0 = performance.now();
   try {
     // порядок сообщений гарантирует: init+hydrateDb уже отработал, БД готова
-    const { recalculateAllAsync, serializeScopeValue, setNumFmt, setUnitSys, setComplexFmt } =
-      await ensureEngine();
+    const {
+      recalculateAllAsync,
+      serializeScopeValue,
+      setNumFmt,
+      setUnitSys,
+      setComplexFmt,
+      setAngleMode,
+    } = await ensureEngine();
     setNumFmt(req.fmt ?? { mode: 'auto', digits: 6 });
     setUnitSys(req.unitSys ?? 'none');
     setComplexFmt(req.complexFmt ?? 'rect');
+    setAngleMode(req.angleMode ?? 'rad');
     const list = req.blocks.map(toFull);
     const outcome = await recalculateAllAsync(
       list,

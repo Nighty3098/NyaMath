@@ -26,6 +26,7 @@ export default function StatusBar({ onOpenNavigator }: { onOpenNavigator?: () =>
   const gridSize = useCanvasStore((s) => s.gridSize);
   const numFmt = useCanvasStore((s) => s.numFmt);
   const unitSys = useCanvasStore((s) => s.unitSys);
+  const angleMode = useCanvasStore((s) => s.angleMode);
   useCanvasStore((s) => s.lang);
 
   const errCount = useMemo(() => Object.values(blocks).filter((b) => b.error).length, [blocks]);
@@ -92,6 +93,9 @@ export default function StatusBar({ onOpenNavigator }: { onOpenNavigator?: () =>
           {t('sb.units')}: {unitSys}
         </span>
       )}
+      <span className="math-input tabular-nums whitespace-nowrap">
+        {t('menu.angle')}: {angleMode === 'deg' ? t('menu.angDeg') : t('menu.angRad')}
+      </span>
       <span className="whitespace-nowrap">
         {t('sb.grid')}:{' '}
         {!showGrid ? t('sb.gridOff') : gridSize === 'fine' ? t('sb.gridFine') : t('sb.gridStd')}

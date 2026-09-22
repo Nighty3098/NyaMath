@@ -96,6 +96,72 @@ math.import(
   { override: true },
 );
 
+// --- Режим углов для тригонометрии (калькуляторный паттерн DEG/RAD) ---
+// rad — как раньше (mathjs из коробки); deg — sin/cos/tan принимают градусы,
+// asin/acos/atan/atan2 возвращают градусы. Не-числа (комплексные, матрицы,
+// массивы, юниты) считает исходный mathjs в радианах — как раньше.
+export type AngleMode = 'rad' | 'deg';
+let angleMode: AngleMode = 'rad';
+
+/** Установить режим углов (стор + воркер-протокол; влияет на значения). */
+export function setAngleMode(m: AngleMode): void {
+  angleMode = m === 'deg' ? 'deg' : 'rad';
+}
+
+export function getAngleMode(): AngleMode {
+  return angleMode;
+}
+
+const D2R = Math.PI / 180;
+const R2D = 180 / Math.PI;
+
+// Исходники mathjs до override (им же делегируем не-числа ниже).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _trig = math as unknown as Record<string, (...a: any[]) => unknown>;
+const oSin = _trig['sin'];
+const oCos = _trig['cos'];
+const oTan = _trig['tan'];
+const oAsin = _trig['asin'];
+const oAcos = _trig['acos'];
+const oAtan = _trig['atan'];
+const oAtan2 = _trig['atan2'];
+
+/** Вещественный asin/acos: вне [−1, 1] — ошибка области, а не тихий комплекс. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function realInvTrig(fn: 'asin' | 'acos', x: any, orig: (...a: any[]) => unknown): unknown {
+  if (typeof x === 'number') {
+    if (Math.abs(x) > 1) throw new Error(t('e.trigDomain', { fn }));
+    return angleMode === 'deg' ? Number(orig(x)) * R2D : orig(x);
+  }
+  return orig(x);
+}
+
+math.import(
+  {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sin: (x: any) => (typeof x === 'number' ? oSin(angleMode === 'deg' ? x * D2R : x) : oSin(x)),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cos: (x: any) => (typeof x === 'number' ? oCos(angleMode === 'deg' ? x * D2R : x) : oCos(x)),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tan: (x: any) => (typeof x === 'number' ? oTan(angleMode === 'deg' ? x * D2R : x) : oTan(x)),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    asin: (x: any) => realInvTrig('asin', x, oAsin),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    acos: (x: any) => realInvTrig('acos', x, oAcos),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    atan: (x: any) =>
+      typeof x === 'number' ? (angleMode === 'deg' ? Number(oAtan(x)) * R2D : oAtan(x)) : oAtan(x),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    atan2: (y: any, x: any) =>
+      typeof y === 'number' && typeof x === 'number'
+        ? angleMode === 'deg'
+          ? Number(oAtan2(y, x)) * R2D
+          : oAtan2(y, x)
+        : oAtan2(y, x),
+  },
+  { override: true },
+);
+
 export type Scope = Record<string, unknown>;
 
 /* ---------- LRU-кэши горячего пути (#4) ----------
@@ -826,9 +892,9 @@ function fmtTag(): string {
   return `${numFmt.mode}:${numFmt.digits}`;
 }
 
-/** Кэш-партиция пересчёта: язык + формат чисел + система единиц + вид комплексных (результаты — строки). */
+/** Кэш-партиция пересчёта: язык + формат чисел + система единиц + вид комплексных + углы. */
 export function envTag(): string {
-  return `${getLang()}|${fmtTag()}|${unitSys}|${complexFmt}`;
+  return `${getLang()}|${fmtTag()}|${unitSys}|${complexFmt}|${angleMode}`;
 }
 
 /** Система единиц для отображения результатов: none — как введено (Prime 11-паттерн). */
@@ -1002,6 +1068,24 @@ function fmtPrecision(): number {
   return numFmt.mode === 'auto' ? 6 : numFmt.digits;
 }
 
+/**
+ * Unit → число в текущих единицах (сэмплинг графиков: `h·c/x` рисуем числом,
+ * а не null). Только публичный API mathjs (formatUnits/toNumber).
+ * Числа проходят как есть, всё остальное → null.
+ */
+export function unitToNumber(v: unknown): number | null {
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  try {
+    if (v !== null && typeof v === 'object' && math.isUnit(v)) {
+      const u = v as Unit;
+      const n = u.toNumber(u.formatUnits());
+      return isFinite(n) ? n : null;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
 /** e-нотация mathjs → инженерная «·10^» (как в auto-ветке). */
 function expStr(s: string): string {
   return s.replace('e+', '·10^').replace('e', '·10^');
