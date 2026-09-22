@@ -8,8 +8,10 @@ import {
   MAT_PROP_KEYS,
   findMaterial,
   getConstant,
+  getConstantUnit,
   listMaterials,
   matPropName,
+  normalizeUnitString,
   type MatPropKey,
 } from '../lib/db';
 import { getCompiledPre, preprocessJ, preprocessRanges } from './mathEngine';
@@ -109,6 +111,22 @@ export function buildPackScope(math: MathJsInstance): Scope {
   // μ₀/ε₀/η₀ — измеряемые CODATA 2022 (после SI-2019 не 4π·10⁻⁷ и не 1/(μ₀c²)):
   const MU0 = getConstant('mu_0');
   const EPS0 = getConstant('eps_0');
+
+  /**
+   * Константа в scope: число с единицей СИ из БД (c_light → 299792458 m/s),
+   * безразмерные (alpha) — голым числом. Внутренняя математика паков выше
+   * продолжает пользоваться числовыми C/MU0/EPS0 — scope не трогаем.
+   */
+  const CU = (name: string): unknown => {
+    const v = getConstant(name);
+    const u = getConstantUnit(name);
+    if (!u) return v;
+    try {
+      return math.unit(v, normalizeUnitString(u));
+    } catch {
+      return v;
+    }
+  };
 
   /* ----- помощники для rawArgs-функций (доступ к scope вызывающего) ----- */
   type RawFn = (args: MathNode[], math: MathJsInstance, scope: Scope) => unknown;
@@ -533,7 +551,6 @@ export function buildPackScope(math: MathJsInstance): Scope {
 
   /* ----- общие помощники новых паков (ВТ / высшая математика / физика / ЭМ) ----- */
   const ETA0 = getConstant('Z_0');
-  const R_GAS = getConstant('R_gas');
   const SIGMA_SB = getConstant('sigma_sb');
   const G_STD = getConstant('g_std');
 
@@ -1049,29 +1066,29 @@ export function buildPackScope(math: MathJsInstance): Scope {
     },
 
     // ---------- физика: константы SI (CODATA-2022, см. constants.ts) ----------
-    c_light: C,
-    mu_0: MU0,
-    eps_0: EPS0,
-    h_planck: getConstant('h_planck'),
-    hbar: getConstant('hbar'),
-    k_B: getConstant('k_B'),
-    q_e: getConstant('q_e'),
-    N_A: getConstant('N_A'),
-    G_const: getConstant('G_const'),
-    m_e: getConstant('m_e'),
-    m_p: getConstant('m_p'),
-    m_n: getConstant('m_n'),
-    u_mass: getConstant('u_mass'),
-    alpha: getConstant('alpha'),
-    alpha_inv: getConstant('alpha_inv'),
-    mu_B: getConstant('mu_B'),
-    mu_N: getConstant('mu_N'),
-    R_inf: getConstant('R_inf'),
-    a0: getConstant('a0'),
-    r_e: getConstant('r_e'),
-    lam_compton: getConstant('lam_compton'),
-    Z_0: getConstant('Z_0'),
-    F_const: getConstant('F_const'),
+    c_light: CU('c_light'),
+    mu_0: CU('mu_0'),
+    eps_0: CU('eps_0'),
+    h_planck: CU('h_planck'),
+    hbar: CU('hbar'),
+    k_B: CU('k_B'),
+    q_e: CU('q_e'),
+    N_A: CU('N_A'),
+    G_const: CU('G_const'),
+    m_e: CU('m_e'),
+    m_p: CU('m_p'),
+    m_n: CU('m_n'),
+    u_mass: CU('u_mass'),
+    alpha: CU('alpha'),
+    alpha_inv: CU('alpha_inv'),
+    mu_B: CU('mu_B'),
+    mu_N: CU('mu_N'),
+    R_inf: CU('R_inf'),
+    a0: CU('a0'),
+    r_e: CU('r_e'),
+    lam_compton: CU('lam_compton'),
+    Z_0: CU('Z_0'),
+    F_const: CU('F_const'),
 
     // ---------- телекоммуникации ----------
     // dB — отношение мощностей; dBV — отношение напряжений
@@ -2006,12 +2023,12 @@ export function buildPackScope(math: MathJsInstance): Scope {
     },
 
     // ---------- физика: формулы ----------
-    R_gas: R_GAS,
-    sigma_sb: SIGMA_SB,
-    g_std: G_STD,
-    atm_pa: getConstant('atm_pa'),
-    au_m: getConstant('au_m'),
-    ly_m: getConstant('ly_m'),
+    R_gas: CU('R_gas'),
+    sigma_sb: CU('sigma_sb'),
+    g_std: CU('g_std'),
+    atm_pa: CU('atm_pa'),
+    au_m: CU('au_m'),
+    ly_m: CU('ly_m'),
     kinE: (m: unknown, v: unknown) => {
       const mm = needNum(m);
       const vv = needNum(v);
@@ -2102,7 +2119,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
     },
 
     // ---------- электромагнитные поля ----------
-    eta0: ETA0,
+    eta0: CU('Z_0'),
     // gammaZL(75, 50) → 0.2; работает и с комплексными Z
     gammaZL: (ZL: unknown, Z0: unknown) => {
       if (cAbs(Z0) === 0) throw new Error(t('e.calcArgs'));

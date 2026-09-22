@@ -4,7 +4,14 @@
  * когда блок можно интерпретировать как функцию: `f(x) := ...`,
  * `sin(x) =`, `y := sin(w*x)` при неопределённом x и т.д.
  */
-import { compilePlotExpr, math, preprocessJ, preprocessRanges, type Scope } from './mathEngine';
+import {
+  compilePlotExpr,
+  math,
+  preprocessJ,
+  preprocessRanges,
+  unitToNumber,
+  type Scope,
+} from './mathEngine';
 
 export interface PlotSample {
   /** подпись серии */
@@ -58,7 +65,8 @@ export function sampleExpression(
     try {
       base[varName] = xv;
       const v: unknown = compiled.code.evaluate(base);
-      if (typeof v === 'number' && isFinite(v)) y = v;
+      const un = unitToNumber(v);
+      if (un !== null) y = un;
       else if (v !== null && typeof v === 'object' && 're' in (v as object)) {
         const re = Number((v as { re: number }).re);
         if (isFinite(re)) y = re;
@@ -97,7 +105,8 @@ export interface PlotBlockSample {
 }
 
 function numOf(v: unknown): number | null {
-  if (typeof v === 'number' && isFinite(v)) return v;
+  const un = unitToNumber(v);
+  if (un !== null) return un;
   if (v !== null && typeof v === 'object' && 're' in (v as object)) {
     const re = Number((v as { re: number }).re);
     return isFinite(re) ? re : null;

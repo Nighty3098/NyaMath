@@ -78,8 +78,8 @@ describe('Bode / transfer functions (САУ)', () => {
   });
 
   it('exposes constants via scope: c_light still exact, new SI constants present', () => {
-    close('c_light', 299792458, 0);
-    expect(ev('m_n')).toBeGreaterThan(0);
-    expect(ev('R_inf')).toBeGreaterThan(0);
+    close('c_light/(m/s)', 299792458, 0);
+    expect(ev('m_n/kg')).toBeGreaterThan(0);
+    expect(ev('R_inf/(1/m)')).toBeGreaterThan(0);
   });
 });

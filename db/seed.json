@@ -1092,8 +1092,8 @@
    "label_en": "Uniformly accelerated motion",
    "hint_ru": "s = v₀·t + a·t²/2; v₀ — нач. скорость, a — ускорение",
    "hint_en": "s = v₀·t + a·t²/2; v₀ — initial velocity, a — acceleration",
-   "code": "v0 := 20\na_acc := 2\nt_s := 5\ns_dist := v0*t_s + a_acc*t_s^2/2\ns_dist =",
-   "plot2d": "v0*x + a_acc*x^2/2",
+   "code": "v0 := 20 m/s\na_acc := 2 m/s^2\nt_s := 5 s\ns_dist := v0*t_s + a_acc*t_s^2/2\ns_dist =",
+   "plot2d": "v0*x*s + a_acc*(x*s)^2/2",
    "plot3d": null,
    "sim": null
   },
@@ -1105,8 +1105,8 @@
    "label_en": "Velocity without time",
    "hint_ru": "v = √(v₀² + 2·a·s); для равноускоренного движения",
    "hint_en": "v = √(v₀² + 2·a·s); uniformly accelerated",
-   "code": "v0 := 20\na_acc := 2\ns_dist := 100\nv_end := sqrt(v0^2 + 2*a_acc*s_dist)\nv_end =",
-   "plot2d": "sqrt(v0^2 + 2*a_acc*x)",
+   "code": "v0 := 20 m/s\na_acc := 2 m/s^2\ns_dist := 100 m\nv_end := sqrt(v0^2 + 2*a_acc*s_dist)\nv_end =",
+   "plot2d": "sqrt(v0^2 + 2*a_acc*x*m)",
    "plot3d": null,
    "sim": null
   },
@@ -1118,7 +1118,7 @@
    "label_en": "Free fall",
    "hint_ru": "h = g·t²/2; без сопротивления воздуха",
    "hint_en": "h = g·t²/2; no air drag",
-   "code": "g_g := 9.8\nt_s := 3\nh_fall := g_g*t_s^2/2\nh_fall =",
+   "code": "g_g := 9.8 m/s^2\nt_s := 3 s\nh_fall := g_g*t_s^2/2\nh_fall =",
    "plot2d": "g_g*x^2/2",
    "plot3d": null,
    "sim": null
@@ -1131,7 +1131,7 @@
    "label_en": "Fall velocity",
    "hint_ru": "v = g·t; из покоя",
    "hint_en": "v = g·t; from rest",
-   "code": "g_g := 9.8\nt_s := 3\nv_end := g_g*t_s\nv_end =",
+   "code": "g_g := 9.8 m/s^2\nt_s := 3 s\nv_end := g_g*t_s\nv_end =",
    "plot2d": "g_g*x",
    "plot3d": null,
    "sim": null
@@ -1144,8 +1144,8 @@
    "label_en": "Vertical throw up",
    "hint_ru": "H = v₀²/(2g); t_пол = 2v₀/g",
    "hint_en": "H = v₀²/(2g); t_up = 2v₀/g",
-   "code": "v0 := 20\ng_g := 9.8\nH_max := v0^2/(2*g_g)\nt_up := 2*v0/g_g\n[H_max; t_up] =",
-   "plot2d": "v0*x - g_g*x^2/2",
+   "code": "v0 := 20 m/s\ng_g := 9.8 m/s^2\nH_max := v0^2/(2*g_g)\nt_up := 2*v0/g_g\n[H_max; t_up] =",
+   "plot2d": "v0*x*s - g_g*(x*s)^2/2",
    "plot3d": null,
    "sim": null
   },
@@ -1157,8 +1157,8 @@
    "label_en": "Projectile range",
    "hint_ru": "R = v₀²·sin(2α)/g; α — угол к горизонту",
    "hint_en": "R = v₀²·sin(2α)/g; α — elevation angle",
-   "code": "v0 := 20\nalpha := pi/6\ng_g := 9.8\nR_range := v0^2*sin(2*alpha)/g_g\nR_range =",
-   "plot2d": "x*tan(alpha) - g_g*x^2/(2*v0^2*cos(alpha)^2)",
+   "code": "v0 := 20 m/s\nalpha := pi/6\ng_g := 9.8 m/s^2\nR_range := v0^2*sin(2*alpha)/g_g\nR_range =",
+   "plot2d": "x*m*tan(alpha) - g_g*(x*m)^2/(2*v0^2*cos(alpha)^2)",
    "plot3d": null,
    "sim": null
   },
@@ -1170,8 +1170,8 @@
    "label_en": "Projectile max height",
    "hint_ru": "H = v₀²·sin²α/(2g)",
    "hint_en": "H = v₀²·sin²α/(2g)",
-   "code": "v0 := 20\nalpha := pi/6\ng_g := 9.8\nH_max := v0^2*sin(alpha)^2/(2*g_g)\nH_max =",
-   "plot2d": "x*tan(alpha) - g_g*x^2/(2*v0^2*cos(alpha)^2)",
+   "code": "v0 := 20 m/s\nalpha := pi/6\ng_g := 9.8 m/s^2\nH_max := v0^2*sin(alpha)^2/(2*g_g)\nH_max =",
+   "plot2d": "x*m*tan(alpha) - g_g*(x*m)^2/(2*v0^2*cos(alpha)^2)",
    "plot3d": null,
    "sim": null
   },
@@ -1183,8 +1183,8 @@
    "label_en": "Projectile flight time",
    "hint_ru": "t = 2·v₀·sinα/g; приземление на тот же уровень",
    "hint_en": "t = 2·v₀·sinα/g; same launch level",
-   "code": "v0 := 20\nalpha := pi/6\ng_g := 9.8\nt_flight := 2*v0*sin(alpha)/g_g\nt_flight =",
-   "plot2d": "x*tan(alpha) - g_g*x^2/(2*v0^2*cos(alpha)^2)",
+   "code": "v0 := 20 m/s\nalpha := pi/6\ng_g := 9.8 m/s^2\nt_flight := 2*v0*sin(alpha)/g_g\nt_flight =",
+   "plot2d": "x*m*tan(alpha) - g_g*(x*m)^2/(2*v0^2*cos(alpha)^2)",
    "plot3d": null,
    "sim": null
   },
@@ -1196,8 +1196,8 @@
    "label_en": "Horizontal throw",
    "hint_ru": "t = √(2H/g); дальность R = v₀·t",
    "hint_en": "t = √(2H/g); range R = v₀·t",
-   "code": "v0 := 15\nH_cl := 20\ng_g := 9.8\nt_fall := sqrt(2*H_cl/g_g)\nR_rng := v0*t_fall\n[t_fall; R_rng] =",
-   "plot2d": "H_cl - g_g*x^2/(2*v0^2)",
+   "code": "v0 := 15 m/s\nH_cl := 20 m\ng_g := 9.8 m/s^2\nt_fall := sqrt(2*H_cl/g_g)\nR_rng := v0*t_fall\n[t_fall; R_rng] =",
+   "plot2d": "H_cl - g_g*(x*m)^2/(2*v0^2)",
    "plot3d": null,
    "sim": null
   },
@@ -1209,7 +1209,7 @@
    "label_en": "Angular velocity and period",
    "hint_ru": "ω = 2πf; T = 1/f",
    "hint_en": "ω = 2πf; T = 1/f",
-   "code": "f_hz := 50\nw_ang := 2*pi*f_hz\nT_per := 1/f_hz\n[w_ang; T_per] =",
+   "code": "f_hz := 50 Hz\nw_ang := 2*pi*f_hz\nT_per := 1/f_hz\n[w_ang; T_per] =",
    "plot2d": "2*pi*x",
    "plot3d": null,
    "sim": null
@@ -1261,8 +1261,8 @@
    "label_en": "Deceleration",
    "hint_ru": "a = (v − v₀)/t; тормозной путь s = v₀²/(2a)",
    "hint_en": "a = (v − v₀)/t; stop distance s = v₀²/(2a)",
-   "code": "v0 := 20\nv_end := 0\nt_s := 5\na_dec := (v_end - v0)/t_s\ns_stop := v0^2/(2*abs(a_dec))\n[a_dec; s_stop] =",
-   "plot2d": "v0 + a_dec*x",
+   "code": "v0 := 20 m/s\nv_end := 0 m/s\nt_s := 5 s\na_dec := (v_end - v0)/t_s\ns_stop := v0^2/(2*abs(a_dec))\n[a_dec; s_stop] =",
+   "plot2d": "v0 + a_dec*x*s",
    "plot3d": null,
    "sim": null
   },
@@ -1326,7 +1326,7 @@
    "label_en": "Newton's second law",
    "hint_ru": "F = m·a",
    "hint_en": "F = m·a",
-   "code": "m_kg := 2\nF_net := 10\na_acc := F_net/m_kg\na_acc =",
+   "code": "m_kg := 2 kg\nF_net := 10 N\na_acc := F_net/m_kg\na_acc =",
    "plot2d": "x/m_kg",
    "plot3d": null,
    "sim": null
@@ -1339,7 +1339,7 @@
    "label_en": "Weight",
    "hint_ru": "P = m·g",
    "hint_en": "P = m·g",
-   "code": "m_kg := 10\nP_w := m_kg*g_std\nP_w =",
+   "code": "m_kg := 10 kg\nP_w := m_kg*g_std\nP_w =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -1365,7 +1365,7 @@
    "label_en": "Impulse",
    "hint_ru": "Δp = F·Δt",
    "hint_en": "Δp = F·Δt",
-   "code": "F_net := 10\ndt_t := 0.5\ndp_imp := F_net*dt_t\ndp_imp =",
+   "code": "F_net := 10 N\ndt_t := 0.5 s\ndp_imp := F_net*dt_t\ndp_imp =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -1430,7 +1430,7 @@
    "label_en": "Friction force",
    "hint_ru": "F = μ·N; N = m·g на горизонтальной опоре",
    "hint_en": "F = μ·N; N = m·g on flat surface",
-   "code": "m_kg := 5\nmu_f := 0.3\nF_fric := mu_f*m_kg*g_std\nF_fric =",
+   "code": "m_kg := 5 kg\nmu_f := 0.3\nF_fric := mu_f*m_kg*g_std\nF_fric =",
    "plot2d": "x*m_kg*g_std",
    "plot3d": null,
    "sim": null
@@ -1443,7 +1443,7 @@
    "label_en": "Incline: normal force",
    "hint_ru": "N = m·g·cosα",
    "hint_en": "N = m·g·cosα",
-   "code": "m_kg := 10\nalpha_ang := pi/6\nN_norm := m_kg*g_std*cos(alpha_ang)\nN_norm =",
+   "code": "m_kg := 10 kg\nalpha_ang := pi/6\nN_norm := m_kg*g_std*cos(alpha_ang)\nN_norm =",
    "plot2d": "m_kg*g_std*cos(x)",
    "plot3d": null,
    "sim": null
@@ -1456,7 +1456,7 @@
    "label_en": "Incline: sliding force",
    "hint_ru": "F = m·g(sinα − μ·cosα)",
    "hint_en": "F = m·g(sinα − μ·cosα)",
-   "code": "m_kg := 10\nalpha_ang := pi/6\nmu_f := 0.2\nF_slide := m_kg*g_std*sin(alpha_ang) - mu_f*m_kg*g_std*cos(alpha_ang)\nF_slide =",
+   "code": "m_kg := 10 kg\nalpha_ang := pi/6\nmu_f := 0.2\nF_slide := m_kg*g_std*sin(alpha_ang) - mu_f*m_kg*g_std*cos(alpha_ang)\nF_slide =",
    "plot2d": "m_kg*g_std*sin(x) - mu_f*m_kg*g_std*cos(x)",
    "plot3d": null,
    "sim": null
@@ -1508,7 +1508,7 @@
    "label_en": "Kinetic energy",
    "hint_ru": "E = m·v²/2",
    "hint_en": "E = m·v²/2",
-   "code": "m_kg := 2\nv_vel := 10\nE_kin := m_kg*v_vel^2/2\nE_kin =",
+   "code": "m_kg := 2 kg\nv_vel := 10 m/s\nE_kin := m_kg*v_vel^2/2\nE_kin =",
    "plot2d": "m_kg*x^2/2",
    "plot3d": null,
    "sim": null
@@ -1521,7 +1521,7 @@
    "label_en": "Potential energy",
    "hint_ru": "E = m·g·h",
    "hint_en": "E = m·g·h",
-   "code": "m_kg := 2\nH_h := 10\nE_pot := m_kg*g_std*H_h\nE_pot =",
+   "code": "m_kg := 2 kg\nH_h := 10 m\nE_pot := m_kg*g_std*H_h\nE_pot =",
    "plot2d": "m_kg*g_std*x",
    "plot3d": null,
    "sim": null
@@ -1534,7 +1534,7 @@
    "label_en": "Total mechanical energy",
    "hint_ru": "E = mv²/2 + mgh",
    "hint_en": "E = mv²/2 + mgh",
-   "code": "m_kg := 2\nv_vel := 4\nH_h := 3\nE_total := m_kg*v_vel^2/2 + m_kg*g_std*H_h\nE_total =",
+   "code": "m_kg := 2 kg\nv_vel := 4 m/s\nH_h := 3 m\nE_total := m_kg*v_vel^2/2 + m_kg*g_std*H_h\nE_total =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -1547,7 +1547,7 @@
    "label_en": "Centripetal acceleration",
    "hint_ru": "a = v²/r",
    "hint_en": "a = v²/r",
-   "code": "v_vel := 10\nr_rad := 5\na_cent := v_vel^2/r_rad\na_cent =",
+   "code": "v_vel := 10 m/s\nr_rad := 5\na_cent := v_vel^2/r_rad\na_cent =",
    "plot2d": "x^2/r_rad",
    "plot3d": null,
    "sim": null
@@ -1560,7 +1560,7 @@
    "label_en": "Centripetal force",
    "hint_ru": "F = m·v²/r",
    "hint_en": "F = m·v²/r",
-   "code": "m_kg := 0.5\nv_vel := 4\nr_rad := 0.8\nF_cent := m_kg*v_vel^2/r_rad\nF_cent =",
+   "code": "m_kg := 0.5 kg\nv_vel := 4 m/s\nr_rad := 0.8 m\nF_cent := m_kg*v_vel^2/r_rad\nF_cent =",
    "plot2d": "m_kg*x^2/r_rad",
    "plot3d": null,
    "sim": null
@@ -1586,7 +1586,7 @@
    "label_en": "Angular momentum (point mass)",
    "hint_ru": "L = m·v·r",
    "hint_en": "L = m·v·r",
-   "code": "m_kg := 2\nv_vel := 3\nr_rad := 0.5\nL_ang := m_kg*v_vel*r_rad\nL_ang =",
+   "code": "m_kg := 2 kg\nv_vel := 3 m/s\nr_rad := 0.5 m\nL_ang := m_kg*v_vel*r_rad\nL_ang =",
    "plot2d": "m_kg*x*r_rad",
    "plot3d": null,
    "sim": null
@@ -1599,7 +1599,7 @@
    "label_en": "Newton's law of gravitation",
    "hint_ru": "F = G·m₁·m₂/r²",
    "hint_en": "F = G·m₁·m₂/r²",
-   "code": "m1 := 5.97*10^24\nm2 := 1000\nr_or := 6771*10^3\nF_gr := G_const*m1*m2/r_or^2\nF_gr =",
+   "code": "m1 := 5.97*10^24 kg\nm2 := 1000 kg\nr_or := 6771*10^3 m\nF_gr := G_const*m1*m2/r_or^2\nF_gr =",
    "plot2d": "G_const*m1*m2/x^2",
    "plot3d": null,
    "sim": null
@@ -1612,7 +1612,7 @@
    "label_en": "Orbital speed",
    "hint_ru": "v = √(G·M/r)",
    "hint_en": "v = √(G·M/r)",
-   "code": "M_p := 5.97*10^24\nr_or := 6771*10^3\nv1 := sqrt(G_const*M_p/r_or)\nv1 =",
+   "code": "M_p := 5.97*10^24 kg\nr_or := 6771*10^3 m\nv1 := sqrt(G_const*M_p/r_or)\nv1 =",
    "plot2d": "sqrt(G_const*M_p/x)",
    "plot3d": null,
    "sim": "orbit"
@@ -1625,7 +1625,7 @@
    "label_en": "Surface gravity",
    "hint_ru": "g = G·M/R²",
    "hint_en": "g = G·M/R²",
-   "code": "M_p := 5.97*10^24\nr_or := 6371*10^3\ng_p := G_const*M_p/r_or^2\ng_p =",
+   "code": "M_p := 5.97*10^24 kg\nr_or := 6371*10^3 m\ng_p := G_const*M_p/r_or^2\ng_p =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -1651,7 +1651,7 @@
    "label_en": "Hydrostatic pressure",
    "hint_ru": "p = ρ·g·h",
    "hint_en": "p = ρ·g·h",
-   "code": "rho_f := 1000\nH_h := 10\np_hyd := rho_f*g_std*H_h\np_hyd =",
+   "code": "rho_f := 1000 kg/m^3\nH_h := 10 m\np_hyd := rho_f*g_std*H_h\np_hyd =",
    "plot2d": "rho_f*g_std*x",
    "plot3d": null,
    "sim": null
@@ -1664,7 +1664,7 @@
    "label_en": "Buoyant force",
    "hint_ru": "F = ρ·g·V (вытесненный объём)",
    "hint_en": "F = ρ·g·V (displaced volume)",
-   "code": "rho_f := 1000\nV_b := 0.002\nF_arch := rho_f*g_std*V_b\nF_arch =",
+   "code": "rho_f := 1000 kg/m^3\nV_b := 0.002 m^3\nF_arch := rho_f*g_std*V_b\nF_arch =",
    "plot2d": "rho_f*g_std*x",
    "plot3d": null,
    "sim": null
@@ -1690,7 +1690,7 @@
    "label_en": "Point moment of inertia",
    "hint_ru": "I = m·r²",
    "hint_en": "I = m·r²",
-   "code": "m_kg := 2\nr_rad := 0.5\nI_pt := m_kg*r_rad^2\nI_pt =",
+   "code": "m_kg := 2 kg\nr_rad := 0.5 m\nI_pt := m_kg*r_rad^2\nI_pt =",
    "plot2d": "m_kg*x^2",
    "plot3d": null,
    "sim": null
@@ -1703,7 +1703,7 @@
    "label_en": "Rotational energy",
    "hint_ru": "E = I·ω²/2",
    "hint_en": "E = I·ω²/2",
-   "code": "I_ax := 0.5\nw_ang := 10\nE_rot := I_ax*w_ang^2/2\nE_rot =",
+   "code": "I_ax := 0.5 kg*m^2\nw_ang := 10/s\nE_rot := I_ax*w_ang^2/2\nE_rot =",
    "plot2d": "I_ax*x^2/2",
    "plot3d": null,
    "sim": null
@@ -1729,8 +1729,8 @@
    "label_en": "Elevator weight",
    "hint_ru": "P = m(g+a); вверх +",
    "hint_en": "P = m(g+a); up +",
-   "code": "m_kg := 70\ng_g := 9.8\na_el := 2\nP_up := m_kg*(g_g + a_el)\nP_dn := m_kg*(g_g - a_el)\n[P_up; P_dn] =",
-   "plot2d": "m_kg*(g_g+x)",
+   "code": "m_kg := 70 kg\ng_g := 9.8 m/s^2\na_el := 2 m/s^2\nP_up := m_kg*(g_g + a_el)\nP_dn := m_kg*(g_g - a_el)\n[P_up; P_dn] =",
+   "plot2d": "m_kg*(g_g+x*m/s^2)",
    "plot3d": null,
    "sim": null
   },
@@ -1742,7 +1742,7 @@
    "label_en": "Ideal gas law",
    "hint_ru": "p·V = n·R·T",
    "hint_en": "p·V = n·R·T",
-   "code": "n_mol := 1\nT_k := 300\nV_v := 0.001\nP_pres := n_mol*R_gas*T_k/V_v\nP_pres =",
+   "code": "n_mol := 1 mol\nT_k := 300 K\nV_v := 0.001 m^3\nP_pres := n_mol*R_gas*T_k/V_v\nP_pres =",
    "plot2d": "n_mol*R_gas*T_k/x",
    "plot3d": null,
    "sim": null
@@ -1755,7 +1755,7 @@
    "label_en": "Moles from pVT",
    "hint_ru": "n = p·V/(R·T)",
    "hint_en": "n = p·V/(R·T)",
-   "code": "P_p := 101325\nV_v := 0.0224\nT_k := 273.15\nn_mol := P_p*V_v/(R_gas*T_k)\nn_mol =",
+   "code": "P_p := 101325 Pa\nV_v := 0.0224 m^3\nT_k := 273.15 K\nn_mol := P_p*V_v/(R_gas*T_k)\nn_mol =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -1794,7 +1794,7 @@
    "label_en": "Pressure from number density",
    "hint_ru": "p = n·k·T",
    "hint_en": "p = n·k·T",
-   "code": "n_m3 := 10^25\nT_k := 300\np_press := n_m3*k_B*T_k\np_press =",
+   "code": "n_m3 := 10^25/m^3\nT_k := 300 K\np_press := n_m3*k_B*T_k\np_press =",
    "plot2d": "x*k_B*T_k",
    "plot3d": null,
    "sim": null
@@ -1807,8 +1807,8 @@
    "label_en": "RMS molecular speed",
    "hint_ru": "v = √(3kT/m₀)",
    "hint_en": "v = √(3kT/m₀)",
-   "code": "T_k := 300\nm0 := 4.65*10^-26\nv_rms := sqrt(3*k_B*T_k/m0)\nv_rms =",
-   "plot2d": "4*pi*(m0/(2*pi*k_B*T_k))^(3/2)*x^2*exp(-m0*x^2/(2*k_B*T_k))",
+   "code": "T_k := 300 K\nm0 := 4.65*10^-26 kg\nv_rms := sqrt(3*k_B*T_k/m0)\nv_rms =",
+   "plot2d": "4*pi*(m0/(2*pi*k_B*T_k))^(3/2)*(x*m/s)^2*exp(-m0*(x*m/s)^2/(2*k_B*T_k))",
    "plot3d": null,
    "sim": null
   },
@@ -1820,7 +1820,7 @@
    "label_en": "Average molecular KE",
    "hint_ru": "E = (3/2)·k·T (одноатомный газ)",
    "hint_en": "E = (3/2)·k·T (monatomic gas)",
-   "code": "T_k := 300\nE_avg := 1.5*k_B*T_k\nE_avg =",
+   "code": "T_k := 300 K\nE_avg := 1.5*k_B*T_k\nE_avg =",
    "plot2d": "1.5*k_B*x",
    "plot3d": null,
    "sim": null
@@ -1846,7 +1846,7 @@
    "label_en": "Number of molecules",
    "hint_ru": "N = n·N_A",
    "hint_en": "N = n·N_A",
-   "code": "n_mol := 2\nN_cnt := n_mol*N_A\nN_cnt =",
+   "code": "n_mol := 2 mol\nN_cnt := n_mol*N_A\nN_cnt =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -1859,7 +1859,7 @@
    "label_en": "Heat (sensible)",
    "hint_ru": "Q = c·m·ΔT",
    "hint_en": "Q = c·m·ΔT",
-   "code": "c_c := 4187\nm_kg := 1\ndT := 10\nQ_heat := c_c*m_kg*dT\nQ_heat =",
+   "code": "c_c := 4187 J/(kg*K)\nm_kg := 1 kg\ndT := 10 K\nQ_heat := c_c*m_kg*dT\nQ_heat =",
    "plot2d": "c_c*m_kg*x",
    "plot3d": null,
    "sim": null
@@ -1872,7 +1872,7 @@
    "label_en": "Heat of fusion",
    "hint_ru": "Q = λ·m",
    "hint_en": "Q = λ·m",
-   "code": "lam_fus := 3.3*10^5\nm_kg := 2\nQ_f := lam_fus*m_kg\nQ_f =",
+   "code": "lam_fus := 3.3*10^5\nm_kg := 2 kg\nQ_f := lam_fus*m_kg\nQ_f =",
    "plot2d": "lam_fus*x",
    "plot3d": null,
    "sim": null
@@ -1885,7 +1885,7 @@
    "label_en": "Heat of vaporization",
    "hint_ru": "Q = L·m",
    "hint_en": "Q = L·m",
-   "code": "L_vap := 2.26*10^6\nm_kg := 0.5\nQ_vap := L_vap*m_kg\nQ_vap =",
+   "code": "L_vap := 2.26*10^6 J/kg\nm_kg := 0.5 kg\nQ_vap := L_vap*m_kg\nQ_vap =",
    "plot2d": "L_vap*x",
    "plot3d": null,
    "sim": null
@@ -1898,7 +1898,7 @@
    "label_en": "Heat of combustion",
    "hint_ru": "Q = q·m",
    "hint_en": "Q = q·m",
-   "code": "q_fuel := 4.6*10^7\nm_kg := 2\nQ_c := q_fuel*m_kg\nQ_c =",
+   "code": "q_fuel := 4.6*10^7\nm_kg := 2 kg\nQ_c := q_fuel*m_kg\nQ_c =",
    "plot2d": "q_fuel*x",
    "plot3d": null,
    "sim": null
@@ -1924,7 +1924,7 @@
    "label_en": "Isobaric work",
    "hint_ru": "A = p·ΔV",
    "hint_en": "A = p·ΔV",
-   "code": "P_p := 101325\ndV := 0.001\nW_gas := P_p*dV\nW_gas =",
+   "code": "P_p := 101325 Pa\ndV := 0.001 m^3\nW_gas := P_p*dV\nW_gas =",
    "plot2d": "P_p*x",
    "plot3d": null,
    "sim": null
@@ -1989,7 +1989,7 @@
    "label_en": "Coulomb's law",
    "hint_ru": "F = k·q₁·q₂/r²; k = 1/(4πε₀)",
    "hint_en": "F = k·q₁·q₂/r²; k = 1/(4πε₀)",
-   "code": "q1 := 1.6*10^-19\nq2 := 1.6*10^-19\nr_c := 10^-10\nF_c := q1*q2/(4*pi*eps_0*r_c^2)\nF_c =",
+   "code": "q1 := 1.6*10^-19 C\nq2 := 1.6*10^-19 C\nr_c := 10^-10 m\nF_c := q1*q2/(4*pi*eps_0*r_c^2)\nF_c =",
    "plot2d": "q1*q2/(4*pi*eps_0*x^2)",
    "plot3d": null,
    "sim": null
@@ -2002,7 +2002,7 @@
    "label_en": "Point charge field",
    "hint_ru": "E = k·q/r²",
    "hint_en": "E = k·q/r²",
-   "code": "q_pt := 1.6*10^-19\nr_pt := 0.01\nE_f := q_pt/(4*pi*eps_0*r_pt^2)\nE_f =",
+   "code": "q_pt := 1.6*10^-19 C\nr_pt := 0.01 m\nE_f := q_pt/(4*pi*eps_0*r_pt^2)\nE_f =",
    "plot2d": "q_pt/(4*pi*eps_0*x^2)",
    "plot3d": null,
    "sim": null
@@ -2015,7 +2015,7 @@
    "label_en": "Point charge potential",
    "hint_ru": "φ = k·q/r",
    "hint_en": "φ = k·q/r",
-   "code": "q_pt := 1.6*10^-19\nr_pt := 0.01\nphi_pot := q_pt/(4*pi*eps_0*r_pt)\nphi_pot =",
+   "code": "q_pt := 1.6*10^-19 C\nr_pt := 0.01 m\nphi_pot := q_pt/(4*pi*eps_0*r_pt)\nphi_pot =",
    "plot2d": "q_pt/(4*pi*eps_0*x)",
    "plot3d": null,
    "sim": null
@@ -2028,7 +2028,7 @@
    "label_en": "Voltage and work",
    "hint_ru": "U = A/q",
    "hint_en": "U = A/q",
-   "code": "A_field := 3.2*10^-16\nq_mv := 1.6*10^-19\nU_v := A_field/q_mv\nU_v =",
+   "code": "A_field := 3.2*10^-16 J\nq_mv := 1.6*10^-19 C\nU_v := A_field/q_mv\nU_v =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2041,7 +2041,7 @@
    "label_en": "Capacitance and charge",
    "hint_ru": "q = C·U",
    "hint_en": "q = C·U",
-   "code": "C_c := 10*10^-6\nU_c := 12\nQ_charge := C_c*U_c\nQ_charge =",
+   "code": "C_c := 10*10^-6 F\nU_c := 12 V\nQ_charge := C_c*U_c\nQ_charge =",
    "plot2d": "C_c*x",
    "plot3d": null,
    "sim": null
@@ -2054,7 +2054,7 @@
    "label_en": "Parallel-plate capacitor",
    "hint_ru": "C = ε₀·ε·S/d",
    "hint_en": "C = ε₀·ε·S/d",
-   "code": "eps_r := 1\nS_ar := 0.01\nd_gap := 0.001\nC_cap := eps_0*eps_r*S_ar/d_gap\nC_cap =",
+   "code": "eps_r := 1\nS_ar := 0.01 m^2\nd_gap := 0.001 m\nC_cap := eps_0*eps_r*S_ar/d_gap\nC_cap =",
    "plot2d": "eps_0*eps_r*S_ar/x",
    "plot3d": null,
    "sim": null
@@ -2093,7 +2093,7 @@
    "label_en": "Capacitor energy",
    "hint_ru": "W = C·U²/2",
    "hint_en": "W = C·U²/2",
-   "code": "C_c := 10*10^-6\nU_c := 12\nW_cap := C_c*U_c^2/2\nW_cap =",
+   "code": "C_c := 10*10^-6 F\nU_c := 12 V\nW_cap := C_c*U_c^2/2\nW_cap =",
    "plot2d": "C_c*x^2/2",
    "plot3d": null,
    "sim": null
@@ -2106,7 +2106,7 @@
    "label_en": "Field energy density",
    "hint_ru": "w = ε₀·E²/2",
    "hint_en": "w = ε₀·E²/2",
-   "code": "E_f := 10^6\nw_dens := eps_0*E_f^2/2\nw_dens =",
+   "code": "E_f := 10^6 V/m\nw_dens := eps_0*E_f^2/2\nw_dens =",
    "plot2d": "eps_0*x^2/2",
    "plot3d": null,
    "sim": null
@@ -2119,7 +2119,7 @@
    "label_en": "Uniform capacitor field",
    "hint_ru": "E = U/d",
    "hint_en": "E = U/d",
-   "code": "U_v := 100\nd_gap := 0.002\nE_f := U_v/d_gap\nE_f =",
+   "code": "U_v := 100 V\nd_gap := 0.002 m\nE_f := U_v/d_gap\nE_f =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2184,7 +2184,7 @@
    "label_en": "Charge in uniform field",
    "hint_ru": "a = qE/m",
    "hint_en": "a = qE/m",
-   "code": "E_f := 10^4\nm_kg := 9.1*10^-31\na_defl := q_e*E_f/m_kg\na_defl =",
+   "code": "E_f := 10^4 V/m\nm_kg := 9.1*10^-31 kg\na_defl := q_e*E_f/m_kg\na_defl =",
    "plot2d": "q_e*x/m_kg",
    "plot3d": null,
    "sim": null
@@ -2210,7 +2210,7 @@
    "label_en": "Tangential acceleration",
    "hint_ru": "a_τ = ε·r",
    "hint_en": "a_τ = ε·r",
-   "code": "eps_ang := 2\nr_rad := 0.5\na_tan := eps_ang*r_rad\na_tan =",
+   "code": "eps_ang := 2/s^2\nr_rad := 0.5 m\na_tan := eps_ang*r_rad\na_tan =",
    "plot2d": "eps_ang*x",
    "plot3d": null,
    "sim": null
@@ -2223,7 +2223,7 @@
    "label_en": "Normal (centripetal) acceleration",
    "hint_ru": "a_n = ω²·r = v²/r",
    "hint_en": "a_n = ω²·r = v²/r",
-   "code": "w_ang := 10\nr_rad := 0.5\na_nor := w_ang^2*r_rad\na_nor =",
+   "code": "w_ang := 10/s\nr_rad := 0.5 m\na_nor := w_ang^2*r_rad\na_nor =",
    "plot2d": "w_ang^2*x",
    "plot3d": null,
    "sim": null
@@ -2301,7 +2301,7 @@
    "label_en": "Dipole field on axis",
    "hint_ru": "E = k·2p/r³ (r ≫ l)",
    "hint_en": "E = k·2p/r³ (r ≫ l)",
-   "code": "p_dp := 1.6*10^-29\nr_pt := 10^-9\nE_dp := 2*p_dp/(4*pi*eps_0*r_pt^3)\nE_dp =",
+   "code": "p_dp := 1.6*10^-29 C*m\nr_pt := 10^-9 m\nE_dp := 2*p_dp/(4*pi*eps_0*r_pt^3)\nE_dp =",
    "plot2d": "2*p_dp/(4*pi*eps_0*x^3)",
    "plot3d": null,
    "sim": null
@@ -2314,7 +2314,7 @@
    "label_en": "Charged plane field",
    "hint_ru": "E = σ/(2ε₀); σ = q/S",
    "hint_en": "E = σ/(2ε₀); σ = q/S",
-   "code": "q_pl := 10^-6\nS_pl := 0.5\nsig_pl := q_pl/S_pl\nE_pl := sig_pl/(2*eps_0)\nE_pl =",
+   "code": "q_pl := 10^-6 C\nS_pl := 0.5 m^2\nsig_pl := q_pl/S_pl\nE_pl := sig_pl/(2*eps_0)\nE_pl =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2327,7 +2327,7 @@
    "label_en": "Field between plates",
    "hint_ru": "E = σ/ε₀",
    "hint_en": "E = σ/ε₀",
-   "code": "sig_pl := 2*10^-6\nE_2pl := sig_pl/eps_0\nE_2pl =",
+   "code": "sig_pl := 2*10^-6 C/m^2\nE_2pl := sig_pl/eps_0\nE_2pl =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2340,7 +2340,7 @@
    "label_en": "Electron speed from voltage",
    "hint_ru": "v = √(2qU/m)",
    "hint_en": "v = √(2qU/m)",
-   "code": "U_v := 100\nm_kg := 9.1*10^-31\nv_el := sqrt(2*q_e*U_v/m_kg)\nv_el =",
+   "code": "U_v := 100 V\nm_kg := 9.1*10^-31 kg\nv_el := sqrt(2*q_e*U_v/m_kg)\nv_el =",
    "plot2d": "sqrt(2*q_e*x/m_kg)",
    "plot3d": null,
    "sim": null
@@ -2353,7 +2353,7 @@
    "label_en": "Ohm's law",
    "hint_ru": "I = U/R",
    "hint_en": "I = U/R",
-   "code": "U_v := 12\nR_r := 4\nI_c := U_v/R_r\nI_c =",
+   "code": "U_v := 12 V\nR_r := 4 ohm\nI_c := U_v/R_r\nI_c =",
    "plot2d": "x/R_r",
    "plot3d": null,
    "sim": null
@@ -2366,7 +2366,7 @@
    "label_en": "Electric power",
    "hint_ru": "P = U·I",
    "hint_en": "P = U·I",
-   "code": "U_v := 12\nI_c := 3\nP_dc := U_v*I_c\nP_dc =",
+   "code": "U_v := 12 V\nI_c := 3 A\nP_dc := U_v*I_c\nP_dc =",
    "plot2d": "U_v*x",
    "plot3d": null,
    "sim": null
@@ -2379,7 +2379,7 @@
    "label_en": "Power via R and I",
    "hint_ru": "P = I²·R = U²/R",
    "hint_en": "P = I²·R = U²/R",
-   "code": "I_c := 3\nR_r := 4\nP_ri := I_c^2*R_r\nP_ri =",
+   "code": "I_c := 3 A\nR_r := 4 ohm\nP_ri := I_c^2*R_r\nP_ri =",
    "plot2d": "x^2*R_r",
    "plot3d": null,
    "sim": null
@@ -2392,7 +2392,7 @@
    "label_en": "Joule heating",
    "hint_ru": "Q = I²·R·t",
    "hint_en": "Q = I²·R·t",
-   "code": "I_c := 2\nR_r := 10\ndt_t := 60\nQ_j := I_c^2*R_r*dt_t\nQ_j =",
+   "code": "I_c := 2 A\nR_r := 10 ohm\ndt_t := 60 s\nQ_j := I_c^2*R_r*dt_t\nQ_j =",
    "plot2d": "I_c^2*R_r*x",
    "plot3d": null,
    "sim": null
@@ -2405,7 +2405,7 @@
    "label_en": "Work of current",
    "hint_ru": "A = U·I·t",
    "hint_en": "A = U·I·t",
-   "code": "U_v := 220\nI_c := 5\ndt_t := 60\nA_dc := U_v*I_c*dt_t\nA_dc =",
+   "code": "U_v := 220 V\nI_c := 5 A\ndt_t := 60 s\nA_dc := U_v*I_c*dt_t\nA_dc =",
    "plot2d": "U_v*I_c*x",
    "plot3d": null,
    "sim": null
@@ -2470,8 +2470,8 @@
    "label_en": "Terminal voltage",
    "hint_ru": "U = E − I·r",
    "hint_en": "U = E − I·r",
-   "code": "E_emf := 12\nI_c := 2\nr_in := 0.5\nU_term := E_emf - I_c*r_in\nU_term =",
-   "plot2d": "E_emf - x*r_in",
+   "code": "E_emf := 12 V\nI_c := 2 A\nr_in := 0.5 ohm\nU_term := E_emf - I_c*r_in\nU_term =",
+   "plot2d": "E_emf - x*A*r_in",
    "plot3d": null,
    "sim": null
   },
@@ -2483,7 +2483,7 @@
    "label_en": "Short-circuit current",
    "hint_ru": "I = E/r",
    "hint_en": "I = E/r",
-   "code": "E_emf := 12\nr_in := 0.5\nI_sc := E_emf/r_in\nI_sc =",
+   "code": "E_emf := 12 V\nr_in := 0.5 ohm\nI_sc := E_emf/r_in\nI_sc =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2496,8 +2496,8 @@
    "label_en": "Source efficiency",
    "hint_ru": "η = R/(R+r)",
    "hint_en": "η = R/(R+r)",
-   "code": "R_ld := 10\nr_in := 0.5\neta_s := R_ld/(R_ld + r_in)\neta_s =",
-   "plot2d": "x/(x+r_in)",
+   "code": "R_ld := 10 ohm\nr_in := 0.5 ohm\neta_s := R_ld/(R_ld + r_in)\neta_s =",
+   "plot2d": "x*ohm/(x*ohm+r_in)",
    "plot3d": null,
    "sim": null
   },
@@ -2509,7 +2509,7 @@
    "label_en": "Max power (R = r)",
    "hint_ru": "P_max = E²/(4r)",
    "hint_en": "P_max = E²/(4r)",
-   "code": "E_emf := 12\nr_in := 0.5\nP_max := E_emf^2/(4*r_in)\nP_max =",
+   "code": "E_emf := 12 V\nr_in := 0.5 ohm\nP_max := E_emf^2/(4*r_in)\nP_max =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2561,7 +2561,7 @@
    "label_en": "RC time constant",
    "hint_ru": "τ = R·C",
    "hint_en": "τ = R·C",
-   "code": "R_r := 1000\nC_c := 10*10^-6\ntau_rc := R_r*C_c\ntau_rc =",
+   "code": "R_r := 1000 ohm\nC_c := 10*10^-6 F\ntau_rc := R_r*C_c\ntau_rc =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2574,8 +2574,8 @@
    "label_en": "Capacitor discharge",
    "hint_ru": "U = U₀·e^(−t/RC)",
    "hint_en": "U = U₀·e^(−t/RC)",
-   "code": "U0 := 12\nR_r := 1000\nC_c := 10*10^-6\ndt_t := 0.01\nU_rc := U0*exp(-dt_t/(R_r*C_c))\nU_rc =",
-   "plot2d": "U0*exp(-x/(R_r*C_c))",
+   "code": "U0 := 12 V\nR_r := 1000 ohm\nC_c := 10*10^-6 F\ndt_t := 0.01 s\nU_rc := U0*exp(-dt_t/(R_r*C_c))\nU_rc =",
+   "plot2d": "U0*exp(-x*s/(R_r*C_c))",
    "plot3d": null,
    "sim": "rc"
   },
@@ -2587,7 +2587,7 @@
    "label_en": "Inductor energy",
    "hint_ru": "W = L·I²/2",
    "hint_en": "W = L·I²/2",
-   "code": "L_in := 0.1\nI_c := 2\nW_ind := L_in*I_c^2/2\nW_ind =",
+   "code": "L_in := 0.1 H\nI_c := 2 A\nW_ind := L_in*I_c^2/2\nW_ind =",
    "plot2d": "L_in*x^2/2",
    "plot3d": null,
    "sim": null
@@ -2600,7 +2600,7 @@
    "label_en": "LC resonance (Thomson)",
    "hint_ru": "f = 1/(2π√(LC))",
    "hint_en": "f = 1/(2π√(LC))",
-   "code": "L_in := 0.1\nC_c := 10*10^-6\nf_lc := 1/(2*pi*sqrt(L_in*C_c))\nf_lc =",
+   "code": "L_in := 0.1 H\nC_c := 10*10^-6 F\nf_lc := 1/(2*pi*sqrt(L_in*C_c))\nf_lc =",
    "plot2d": "1/(2*pi*sqrt(L_in*x))",
    "plot3d": null,
    "sim": null
@@ -2613,7 +2613,7 @@
    "label_en": "Reactances Xl, Xc",
    "hint_ru": "Xl = 2πfL; Xc = 1/(2πfC)",
    "hint_en": "Xl = 2πfL; Xc = 1/(2πfC)",
-   "code": "f_hz := 50\nL_in := 0.1\nC_c := 10*10^-6\nXl := 2*pi*f_hz*L_in\nXc := 1/(2*pi*f_hz*C_c)\n[Xl; Xc] =",
+   "code": "f_hz := 50 Hz\nL_in := 0.1 H\nC_c := 10*10^-6 F\nXl := 2*pi*f_hz*L_in\nXc := 1/(2*pi*f_hz*C_c)\n[Xl; Xc] =",
    "plot2d": "2*pi*x*L_in; 1/(2*pi*x*C_c)",
    "plot3d": null,
    "sim": null
@@ -2639,7 +2639,7 @@
    "label_en": "Ampère's force",
    "hint_ru": "F = I·B·L·sinα",
    "hint_en": "F = I·B·L·sinα",
-   "code": "I_c := 5\nB_f := 0.2\nL_w := 0.4\nalpha := pi/2\nF_amp := I_c*B_f*L_w*sin(alpha)\nF_amp =",
+   "code": "I_c := 5 A\nB_f := 0.2 T\nL_w := 0.4 m\nalpha := pi/2\nF_amp := I_c*B_f*L_w*sin(alpha)\nF_amp =",
    "plot2d": "I_c*B_f*L_w*sin(x)",
    "plot3d": null,
    "sim": null
@@ -2652,7 +2652,7 @@
    "label_en": "Lorentz force",
    "hint_ru": "F = q·v·B·sinα",
    "hint_en": "F = q·v·B·sinα",
-   "code": "v_vel := 10^6\nalpha := pi/2\nB_f := 0.5\nF_lor := q_e*v_vel*B_f*sin(alpha)\nF_lor =",
+   "code": "v_vel := 10^6 m/s\nalpha := pi/2\nB_f := 0.5 T\nF_lor := q_e*v_vel*B_f*sin(alpha)\nF_lor =",
    "plot2d": "q_e*x*B_f*sin(alpha)",
    "plot3d": null,
    "sim": null
@@ -2665,7 +2665,7 @@
    "label_en": "Cyclotron radius",
    "hint_ru": "r = m·v/(q·B)",
    "hint_en": "r = m·v/(q·B)",
-   "code": "m_kg := 9.1*10^-31\nv_vel := 10^6\nB_f := 0.01\nr_cyc := m_kg*v_vel/(q_e*B_f)\nr_cyc =",
+   "code": "m_kg := 9.1*10^-31 kg\nv_vel := 10^6 m/s\nB_f := 0.01 T\nr_cyc := m_kg*v_vel/(q_e*B_f)\nr_cyc =",
    "plot2d": "m_kg*x/(q_e*B_f)",
    "plot3d": null,
    "sim": null
@@ -2678,7 +2678,7 @@
    "label_en": "Gyration period",
    "hint_ru": "T = 2π·m/(q·B)",
    "hint_en": "T = 2π·m/(q·B)",
-   "code": "m_kg := 9.1*10^-31\nB_f := 0.01\nT_cyc := 2*pi*m_kg/(q_e*B_f)\nT_cyc =",
+   "code": "m_kg := 9.1*10^-31 kg\nB_f := 0.01 T\nT_cyc := 2*pi*m_kg/(q_e*B_f)\nT_cyc =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2691,7 +2691,7 @@
    "label_en": "Cyclotron frequency",
    "hint_ru": "f = q·B/(2π·m)",
    "hint_en": "f = q·B/(2π·m)",
-   "code": "B_f := 0.01\nm_kg := 9.1*10^-31\nf_cyc := q_e*B_f/(2*pi*m_kg)\nf_cyc =",
+   "code": "B_f := 0.01 T\nm_kg := 9.1*10^-31 kg\nf_cyc := q_e*B_f/(2*pi*m_kg)\nf_cyc =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2704,7 +2704,7 @@
    "label_en": "Straight wire field",
    "hint_ru": "B = μ₀·I/(2πr)",
    "hint_en": "B = μ₀·I/(2πr)",
-   "code": "I_c := 10\nr_pt := 0.05\nB_wr := mu_0*I_c/(2*pi*r_pt)\nB_wr =",
+   "code": "I_c := 10 A\nr_pt := 0.05\nB_wr := mu_0*I_c/(2*pi*r_pt)\nB_wr =",
    "plot2d": "mu_0*I_c/(2*pi*x)",
    "plot3d": null,
    "sim": null
@@ -2717,7 +2717,7 @@
    "label_en": "Loop center field",
    "hint_ru": "B = μ₀·I/(2R)",
    "hint_en": "B = μ₀·I/(2R)",
-   "code": "I_c := 5\nR_lp := 0.1\nB_lp := mu_0*I_c/(2*R_lp)\nB_lp =",
+   "code": "I_c := 5 A\nR_lp := 0.1 m\nB_lp := mu_0*I_c/(2*R_lp)\nB_lp =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2730,7 +2730,7 @@
    "label_en": "Solenoid field",
    "hint_ru": "B = μ₀·N·I/L",
    "hint_en": "B = μ₀·N·I/L",
-   "code": "N_tr := 500\nI_c := 2\nL_sl := 0.5\nB_sl := mu_0*N_tr*I_c/L_sl\nB_sl =",
+   "code": "N_tr := 500\nI_c := 2 A\nL_sl := 0.5 m\nB_sl := mu_0*N_tr*I_c/L_sl\nB_sl =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2743,7 +2743,7 @@
    "label_en": "Toroid field",
    "hint_ru": "B = μ₀·N·I/(2πr)",
    "hint_en": "B = μ₀·N·I/(2πr)",
-   "code": "N_tr := 1000\nI_c := 3\nr_tr := 0.1\nB_tr := mu_0*N_tr*I_c/(2*pi*r_tr)\nB_tr =",
+   "code": "N_tr := 1000\nI_c := 3 A\nr_tr := 0.1 m\nB_tr := mu_0*N_tr*I_c/(2*pi*r_tr)\nB_tr =",
    "plot2d": "mu_0*N_tr*I_c/(2*pi*x)",
    "plot3d": null,
    "sim": null
@@ -2756,7 +2756,7 @@
    "label_en": "Magnetic flux",
    "hint_ru": "Φ = B·S·cosα",
    "hint_en": "Φ = B·S·cosα",
-   "code": "B_f := 0.5\nS_ar := 0.02\nalpha := 0\nPhi_m := B_f*S_ar*cos(alpha)\nPhi_m =",
+   "code": "B_f := 0.5 T\nS_ar := 0.02 m^2\nalpha := 0\nPhi_m := B_f*S_ar*cos(alpha)\nPhi_m =",
    "plot2d": "B_f*S_ar*cos(x)",
    "plot3d": null,
    "sim": null
@@ -2782,7 +2782,7 @@
    "label_en": "Motional EMF",
    "hint_ru": "E = B·l·v",
    "hint_en": "E = B·l·v",
-   "code": "B_f := 0.5\nlen_c := 0.3\nv_vel := 4\nE_mot := B_f*len_c*v_vel\nE_mot =",
+   "code": "B_f := 0.5 T\nlen_c := 0.3 m\nv_vel := 4 m/s\nE_mot := B_f*len_c*v_vel\nE_mot =",
    "plot2d": "B_f*len_c*x",
    "plot3d": null,
    "sim": null
@@ -2795,7 +2795,7 @@
    "label_en": "Self-induced EMF",
    "hint_ru": "E = L·ΔI/Δt (модуль)",
    "hint_en": "E = L·ΔI/Δt (magnitude)",
-   "code": "L_in := 0.2\ndI := 3\ndt_t := 0.05\nE_self := L_in*dI/dt_t\nE_self =",
+   "code": "L_in := 0.2 H\ndI := 3 A\ndt_t := 0.05 s\nE_self := L_in*dI/dt_t\nE_self =",
    "plot2d": "L_in*x/dt_t",
    "plot3d": null,
    "sim": null
@@ -2808,7 +2808,7 @@
    "label_en": "Coil field energy",
    "hint_ru": "W = L·I²/2",
    "hint_en": "W = L·I²/2",
-   "code": "L_in := 0.2\nI_c := 3\nW_mag := L_in*I_c^2/2\nW_mag =",
+   "code": "L_in := 0.2 H\nI_c := 3 A\nW_mag := L_in*I_c^2/2\nW_mag =",
    "plot2d": "L_in*x^2/2",
    "plot3d": null,
    "sim": null
@@ -2821,7 +2821,7 @@
    "label_en": "Magnetic energy density",
    "hint_ru": "w = B²/(2μ₀)",
    "hint_en": "w = B²/(2μ₀)",
-   "code": "B_f := 1\nw_mag := B_f^2/(2*mu_0)\nw_mag =",
+   "code": "B_f := 1 T\nw_mag := B_f^2/(2*mu_0)\nw_mag =",
    "plot2d": "x^2/(2*mu_0)",
    "plot3d": null,
    "sim": null
@@ -2834,7 +2834,7 @@
    "label_en": "Current loop torque",
    "hint_ru": "M = N·I·B·S·sinα",
    "hint_en": "M = N·I·B·S·sinα",
-   "code": "N_tr := 10\nI_c := 2\nB_f := 0.5\nS_ar := 0.01\nalpha := pi/2\nM_lp := N_tr*I_c*B_f*S_ar*sin(alpha)\nM_lp =",
+   "code": "N_tr := 10\nI_c := 2 A\nB_f := 0.5 T\nS_ar := 0.01 m^2\nalpha := pi/2\nM_lp := N_tr*I_c*B_f*S_ar*sin(alpha)\nM_lp =",
    "plot2d": "N_tr*I_c*B_f*S_ar*sin(x)",
    "plot3d": null,
    "sim": null
@@ -2847,7 +2847,7 @@
    "label_en": "Loop magnetic moment",
    "hint_ru": "p = I·S",
    "hint_en": "p = I·S",
-   "code": "I_c := 2\nS_ar := 0.01\npm_lp := I_c*S_ar\npm_lp =",
+   "code": "I_c := 2 A\nS_ar := 0.01 m^2\npm_lp := I_c*S_ar\npm_lp =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2860,7 +2860,7 @@
    "label_en": "Parallel wires force",
    "hint_ru": "F = μ₀·I₁·I₂·L/(2πd)",
    "hint_en": "F = μ₀·I₁·I₂·L/(2πd)",
-   "code": "I1 := 10\nI2 := 10\nL_w := 1\nd_wr := 0.1\nF_ww := mu_0*I1*I2*L_w/(2*pi*d_wr)\nF_ww =",
+   "code": "I1 := 10\nI2 := 10\nL_w := 1 m\nd_wr := 0.1 m\nF_ww := mu_0*I1*I2*L_w/(2*pi*d_wr)\nF_ww =",
    "plot2d": "mu_0*I1*I2*L_w/(2*pi*x)",
    "plot3d": null,
    "sim": null
@@ -2873,7 +2873,7 @@
    "label_en": "Hall voltage",
    "hint_ru": "U = I·B/(n·q·d)",
    "hint_en": "U = I·B/(n·q·d)",
-   "code": "I_c := 0.01\nB_f := 0.5\nn_cn := 10^28\nd_th := 10^-3\nU_hall := I_c*B_f/(n_cn*q_e*d_th)\nU_hall =",
+   "code": "I_c := 0.01 A\nB_f := 0.5 T\nn_cn := 10^28/m^3\nd_th := 10^-3 m\nU_hall := I_c*B_f/(n_cn*q_e*d_th)\nU_hall =",
    "plot2d": "x*B_f/(n_cn*q_e*d_th)",
    "plot3d": null,
    "sim": null
@@ -2886,7 +2886,7 @@
    "label_en": "B from H in material",
    "hint_ru": "B = μ₀·μ·H",
    "hint_en": "B = μ₀·μ·H",
-   "code": "mu_r := 1000\nH_f := 100\nB_mt := mu_0*mu_r*H_f\nB_mt =",
+   "code": "mu_r := 1000\nH_f := 100 A/m\nB_mt := mu_0*mu_r*H_f\nB_mt =",
    "plot2d": "mu_0*mu_r*x",
    "plot3d": null,
    "sim": null
@@ -2899,7 +2899,7 @@
    "label_en": "Solenoid inductance",
    "hint_ru": "L = μ₀·N²·S/L",
    "hint_en": "L = μ₀·N²·S/L",
-   "code": "N_tr := 500\nS_ar := 0.002\nL_sl := 0.5\nL_sl2 := mu_0*N_tr^2*S_ar/L_sl\nL_sl2 =",
+   "code": "N_tr := 500\nS_ar := 0.002 m^2\nL_sl := 0.5 m\nL_sl2 := mu_0*N_tr^2*S_ar/L_sl\nL_sl2 =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2912,7 +2912,7 @@
    "label_en": "Charge helix step check",
    "hint_ru": "h = v_∥·T; T = 2πm/(qB)",
    "hint_en": "h = v_∥·T; T = 2πm/(qB)",
-   "code": "m_kg := 9.1*10^-31\nv_par := 10^6\nB_f := 0.01\nT_gy := 2*pi*m_kg/(q_e*B_f)\nh_step := v_par*T_gy\nh_step =",
+   "code": "m_kg := 9.1*10^-31 kg\nv_par := 10^6\nB_f := 0.01 T\nT_gy := 2*pi*m_kg/(q_e*B_f)\nh_step := v_par*T_gy\nh_step =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -2925,8 +2925,8 @@
    "label_en": "Harmonic displacement",
    "hint_ru": "x = A·cos(ωt+φ)",
    "hint_en": "x = A·cos(ωt+φ)",
-   "code": "A_m := 0.1\nw_0 := 10\nt_s := 0.2\nphi_0 := 0\nx_sh := A_m*cos(w_0*t_s + phi_0)\nx_sh =",
-   "plot2d": "A_m*cos(w_0*x+phi_0)",
+   "code": "A_m := 0.1 m\nw_0 := 10/s\nt_s := 0.2 s\nphi_0 := 0\nx_sh := A_m*cos(w_0*t_s + phi_0)\nx_sh =",
+   "plot2d": "A_m*cos(w_0*x*s+phi_0)",
    "plot3d": null,
    "sim": "oscillator"
   },
@@ -2938,7 +2938,7 @@
    "label_en": "Spring pendulum period",
    "hint_ru": "T = 2π√(m/k)",
    "hint_en": "T = 2π√(m/k)",
-   "code": "m_kg := 0.5\nk_spr := 20\nT_spr := 2*pi*sqrt(m_kg/k_spr)\nT_spr =",
+   "code": "m_kg := 0.5 kg\nk_spr := 20 N/m\nT_spr := 2*pi*sqrt(m_kg/k_spr)\nT_spr =",
    "plot2d": "2*pi*sqrt(x/k_spr)",
    "plot3d": null,
    "sim": "oscillator"
@@ -2951,7 +2951,7 @@
    "label_en": "Spring frequency",
    "hint_ru": "f = (1/2π)√(k/m); ω = √(k/m)",
    "hint_en": "f = (1/2π)√(k/m); ω = √(k/m)",
-   "code": "m_kg := 0.5\nk_spr := 20\nw_0 := sqrt(k_spr/m_kg)\nf_0 := w_0/(2*pi)\n[w_0; f_0] =",
+   "code": "m_kg := 0.5 kg\nk_spr := 20 N/m\nw_0 := sqrt(k_spr/m_kg)\nf_0 := w_0/(2*pi)\n[w_0; f_0] =",
    "plot2d": "sqrt(k_spr/x)/(2*pi)",
    "plot3d": null,
    "sim": null
@@ -2964,7 +2964,7 @@
    "label_en": "Simple pendulum period",
    "hint_ru": "T = 2π√(L/g)",
    "hint_en": "T = 2π√(L/g)",
-   "code": "L_pen := 1\ng_g := 9.8\nT_pen := 2*pi*sqrt(L_pen/g_g)\nT_pen =",
+   "code": "L_pen := 1 m\ng_g := 9.8 m/s^2\nT_pen := 2*pi*sqrt(L_pen/g_g)\nT_pen =",
    "plot2d": "2*pi*sqrt(x/g_g)",
    "plot3d": null,
    "sim": "pendulum"
@@ -2977,7 +2977,7 @@
    "label_en": "Physical pendulum",
    "hint_ru": "T = 2π√(I/(mgd))",
    "hint_en": "T = 2π√(I/(mgd))",
-   "code": "I_ax := 0.12\nm_kg := 1\nd_cm := 0.3\nT_ph := 2*pi*sqrt(I_ax/(m_kg*g_std*d_cm))\nT_ph =",
+   "code": "I_ax := 0.12 kg*m^2\nm_kg := 1 kg\nd_cm := 0.3 m\nT_ph := 2*pi*sqrt(I_ax/(m_kg*g_std*d_cm))\nT_ph =",
    "plot2d": "2*pi*sqrt(x/(m_kg*g_std*d_cm))",
    "plot3d": null,
    "sim": null
@@ -2990,7 +2990,7 @@
    "label_en": "Oscillation energy",
    "hint_ru": "E = k·A²/2 = m·ω²·A²/2",
    "hint_en": "E = k·A²/2 = m·ω²·A²/2",
-   "code": "k_spr := 20\nA_m := 0.1\nE_sh := k_spr*A_m^2/2\nE_sh =",
+   "code": "k_spr := 20 N/m\nA_m := 0.1 m\nE_sh := k_spr*A_m^2/2\nE_sh =",
    "plot2d": "k_spr*x^2/2",
    "plot3d": null,
    "sim": null
@@ -3003,7 +3003,7 @@
    "label_en": "Max velocity and acceleration",
    "hint_ru": "v_max = A·ω; a_max = A·ω²",
    "hint_en": "v_max = A·ω; a_max = A·ω²",
-   "code": "A_m := 0.1\nw_0 := 10\nv_max := A_m*w_0\na_max := A_m*w_0^2\n[v_max; a_max] =",
+   "code": "A_m := 0.1 m\nw_0 := 10/s\nv_max := A_m*w_0\na_max := A_m*w_0^2\n[v_max; a_max] =",
    "plot2d": "x*w_0",
    "plot3d": null,
    "sim": null
@@ -3016,7 +3016,7 @@
    "label_en": "Velocity from displacement",
    "hint_ru": "v = ω√(A²−x²)",
    "hint_en": "v = ω√(A²−x²)",
-   "code": "A_m := 0.1\nx_p := 0.06\nw_0 := 10\nv_px := w_0*sqrt(A_m^2 - x_p^2)\nv_px =",
+   "code": "A_m := 0.1 m\nx_p := 0.06 m\nw_0 := 10/s\nv_px := w_0*sqrt(A_m^2 - x_p^2)\nv_px =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3042,7 +3042,7 @@
    "label_en": "Quality factor",
    "hint_ru": "Q = ω₀/(2β); δ = β·T",
    "hint_en": "Q = ω₀/(2β); δ = β·T",
-   "code": "w_0 := 100\nbeta_d := 1\nQ_f := w_0/(2*beta_d)\nQ_f =",
+   "code": "w_0 := 100/s\nbeta_d := 1/s\nQ_f := w_0/(2*beta_d)\nQ_f =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3055,7 +3055,7 @@
    "label_en": "Resonance amplitude",
    "hint_ru": "A = F₀/(m√((ω₀²−ω²)²+(2βω)²))",
    "hint_en": "A = F₀/(m√((ω₀²−ω²)²+(2βω)²))",
-   "code": "F0 := 10\nm_kg := 1\nw_0 := 20\nw_dr := 19\nbeta_d := 0.5\nA_res := F0/(m_kg*sqrt((w_0^2 - w_dr^2)^2 + (2*beta_d*w_dr)^2))\nA_res =",
+   "code": "F0 := 10 N\nm_kg := 1 kg\nw_0 := 20/s\nw_dr := 19/s\nbeta_d := 0.5/s\nA_res := F0/(m_kg*sqrt((w_0^2 - w_dr^2)^2 + (2*beta_d*w_dr)^2))\nA_res =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3172,7 +3172,7 @@
    "label_en": "LC period",
    "hint_ru": "T = 2π√(LC)",
    "hint_en": "T = 2π√(LC)",
-   "code": "L_in := 0.1\nC_c := 10*10^-6\nT_lc := 2*pi*sqrt(L_in*C_c)\nT_lc =",
+   "code": "L_in := 0.1 H\nC_c := 10*10^-6 F\nT_lc := 2*pi*sqrt(L_in*C_c)\nT_lc =",
    "plot2d": "2*pi*sqrt(L_in*x)",
    "plot3d": null,
    "sim": "lctank"
@@ -3185,7 +3185,7 @@
    "label_en": "RLC quality factor",
    "hint_ru": "Q = (1/R)√(L/C)",
    "hint_en": "Q = (1/R)√(L/C)",
-   "code": "R_r := 10\nL_in := 0.1\nC_c := 10*10^-6\nQ_rlc := sqrt(L_in/C_c)/R_r\nQ_rlc =",
+   "code": "R_r := 10 ohm\nL_in := 0.1 H\nC_c := 10*10^-6 F\nQ_rlc := sqrt(L_in/C_c)/R_r\nQ_rlc =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3289,7 +3289,7 @@
    "label_en": "Diffraction grating",
    "hint_ru": "d·sinφ = k·λ",
    "hint_en": "d·sinφ = k·λ",
-   "code": "d_gr := 2*10^-6\nk_or := 1\nlam_w := 550*10^-9\nphi_gr := asin(k_or*lam_w/d_gr)\nphi_gr =",
+   "code": "d_gr := 2*10^-6 m\nk_or := 1\nlam_w := 550*10^-9 m\nphi_gr := asin(k_or*lam_w/d_gr)\nphi_gr =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3302,7 +3302,7 @@
    "label_en": "Double-slit fringe width",
    "hint_ru": "Δx = λ·L/d",
    "hint_en": "Δx = λ·L/d",
-   "code": "lam_w := 550*10^-9\nL_sc := 1\nd_sl := 0.5*10^-3\nfr_w := lam_w*L_sc/d_sl\nfr_w =",
+   "code": "lam_w := 550*10^-9 m\nL_sc := 1\nd_sl := 0.5*10^-3\nfr_w := lam_w*L_sc/d_sl\nfr_w =",
    "plot2d": "x*L_sc/d_sl",
    "plot3d": null,
    "sim": null
@@ -3315,7 +3315,7 @@
    "label_en": "Interference maximum",
    "hint_ru": "Δ = k·λ; минимум Δ = (2k+1)λ/2",
    "hint_en": "Δ = k·λ; minimum Δ = (2k+1)λ/2",
-   "code": "k_or := 2\nlam_w := 550*10^-9\ndelta_max := k_or*lam_w\ndelta_min := (2*k_or + 1)*lam_w/2\n[delta_max; delta_min] =",
+   "code": "k_or := 2\nlam_w := 550*10^-9 m\ndelta_max := k_or*lam_w\ndelta_min := (2*k_or + 1)*lam_w/2\n[delta_max; delta_min] =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3354,7 +3354,7 @@
    "label_en": "Photon energy",
    "hint_ru": "E = h·c/λ",
    "hint_en": "E = h·c/λ",
-   "code": "lam_w := 550*10^-9\nE_ph := h_planck*c_light/lam_w\nE_ph =",
+   "code": "lam_w := 550*10^-9 m\nE_ph := h_planck*c_light/lam_w\nE_ph =",
    "plot2d": "h_planck*c_light/x",
    "plot3d": null,
    "sim": null
@@ -3367,7 +3367,7 @@
    "label_en": "Photon momentum",
    "hint_ru": "p = h/λ",
    "hint_en": "p = h/λ",
-   "code": "lam_w := 550*10^-9\np_ph := h_planck/lam_w\np_ph =",
+   "code": "lam_w := 550*10^-9 m\np_ph := h_planck/lam_w\np_ph =",
    "plot2d": "h_planck/x",
    "plot3d": null,
    "sim": null
@@ -3380,7 +3380,7 @@
    "label_en": "Photon in eV",
    "hint_ru": "E_эВ = E/q_e",
    "hint_en": "E_eV = E/q_e",
-   "code": "lam_w := 550*10^-9\nE_ph := h_planck*c_light/lam_w\nE_ev := E_ph/q_e\nE_ev =",
+   "code": "lam_w := 550*10^-9 m\nE_ph := h_planck*c_light/lam_w\nE_ev := E_ph/eV\nE_ev =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3393,7 +3393,7 @@
    "label_en": "Illuminance",
    "hint_ru": "E = I/d² (нормальное падение)",
    "hint_en": "E = I/d² (normal incidence)",
-   "code": "I_lm := 100\nd_m := 2\nE_lx := I_lm/d_m^2\nE_lx =",
+   "code": "I_lm := 100 cd\nd_m := 2 m\nE_lx := I_lm/d_m^2\nE_lx =",
    "plot2d": "I_lm/x^2",
    "plot3d": null,
    "sim": null
@@ -3432,7 +3432,7 @@
    "label_en": "Resolution limit",
    "hint_ru": "θ = 1.22·λ/D",
    "hint_en": "θ = 1.22·λ/D",
-   "code": "lam_w := 550*10^-9\nD_ap := 0.1\ntheta_r := 1.22*lam_w/D_ap\ntheta_r =",
+   "code": "lam_w := 550*10^-9 m\nD_ap := 0.1\ntheta_r := 1.22*lam_w/D_ap\ntheta_r =",
    "plot2d": "1.22*x/D_ap",
    "plot3d": null,
    "sim": null
@@ -3445,7 +3445,7 @@
    "label_en": "Wien's law",
    "hint_ru": "λ_max = b/T; b = 2.898·10⁻³",
    "hint_en": "λ_max = b/T; b = 2.898·10⁻³",
-   "code": "T_k := 5800\nb_w := 2.898*10^-3\nlam_max := b_w/T_k\nlam_max =",
+   "code": "T_k := 5800 K\nb_w := 2.898*10^-3 m*K\nlam_max := b_w/T_k\nlam_max =",
    "plot2d": "b_w/x",
    "plot3d": null,
    "sim": null
@@ -3458,7 +3458,7 @@
    "label_en": "Stefan–Boltzmann law",
    "hint_ru": "E = σ·T⁴",
    "hint_en": "E = σ·T⁴",
-   "code": "T_k := 5800\nE_sb := sigma_sb*T_k^4\nE_sb =",
+   "code": "T_k := 5800 K\nE_sb := sigma_sb*T_k^4\nE_sb =",
    "plot2d": "sigma_sb*x^4",
    "plot3d": null,
    "sim": null
@@ -3471,7 +3471,7 @@
    "label_en": "Light travel time",
    "hint_ru": "t = L/c",
    "hint_en": "t = L/c",
-   "code": "L_m := 150*10^9\nt_lt := L_m/c_light\nt_lt =",
+   "code": "L_m := 150*10^9 m\nt_lt := L_m/c_light\nt_lt =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3484,7 +3484,7 @@
    "label_en": "Redshift (v ≪ c)",
    "hint_ru": "z = Δλ/λ; v = z·c",
    "hint_en": "z = Δλ/λ; v = z·c",
-   "code": "lam_0 := 656*10^-9\ndlam := 0.1*10^-9\nz_rs := dlam/lam_0\nv_rs := z_rs*c_light\n[v_rs; z_rs] =",
+   "code": "lam_0 := 656*10^-9 m\ndlam := 0.1*10^-9 m\nz_rs := dlam/lam_0\nv_rs := z_rs*c_light\n[v_rs; z_rs] =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3497,7 +3497,7 @@
    "label_en": "Newton's rings",
    "hint_ru": "r = √(mλR), тёмные",
    "hint_en": "r = √(mλR), dark",
-   "code": "m_or := 3\nlam_w := 550*10^-9\nR_l := 1\nr_nr := sqrt(m_or*lam_w*R_l)\nr_nr =",
+   "code": "m_or := 3\nlam_w := 550*10^-9 m\nR_l := 1\nr_nr := sqrt(m_or*lam_w*R_l)\nr_nr =",
    "plot2d": "sqrt(x*550*10^-9*1)",
    "plot3d": null,
    "sim": null
@@ -3510,7 +3510,7 @@
    "label_en": "Anti-reflective coating",
    "hint_ru": "nd = λ/4",
    "hint_en": "nd = λ/4",
-   "code": "lam_w := 550*10^-9\nn_f := 1.38\nd_f := lam_w/(4*n_f)\nd_f =",
+   "code": "lam_w := 550*10^-9 m\nn_f := 1.38\nd_f := lam_w/(4*n_f)\nd_f =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3523,7 +3523,7 @@
    "label_en": "E = mc²",
    "hint_ru": "эквивалентность массы и энергии",
    "hint_en": "mass–energy equivalence",
-   "code": "m_kg := 1\nE_mc := m_kg*c_light^2\nE_mc =",
+   "code": "m_kg := 1 kg\nE_mc := m_kg*c_light^2\nE_mc =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3575,7 +3575,7 @@
    "label_en": "Relativistic mass",
    "hint_ru": "m = m₀/√(1−β²)",
    "hint_en": "m = m₀/√(1−β²)",
-   "code": "m0 := 9.1*10^-31\nbeta_r := 0.8\nm_rel := m0/sqrt(1 - beta_r^2)\nm_rel =",
+   "code": "m0 := 9.1*10^-31 kg\nbeta_r := 0.8\nm_rel := m0/sqrt(1 - beta_r^2)\nm_rel =",
    "plot2d": "m0/sqrt(1-x^2)",
    "plot3d": null,
    "sim": null
@@ -3588,7 +3588,7 @@
    "label_en": "Total relativistic energy",
    "hint_ru": "E = γ·m₀·c²",
    "hint_en": "E = γ·m₀·c²",
-   "code": "m0 := 9.1*10^-31\ngamma_r := 1.6667\nE_rel := gamma_r*m0*c_light^2\nE_rel =",
+   "code": "m0 := 9.1*10^-31 kg\ngamma_r := 1.6667\nE_rel := gamma_r*m0*c_light^2\nE_rel =",
    "plot2d": "x*m0*c_light^2",
    "plot3d": null,
    "sim": null
@@ -3601,7 +3601,7 @@
    "label_en": "Relativistic kinetic energy",
    "hint_ru": "E_k = (γ−1)m₀c²",
    "hint_en": "E_k = (γ−1)m₀c²",
-   "code": "m0 := 9.1*10^-31\ngamma_r := 1.6667\nEk_rel := (gamma_r - 1)*m0*c_light^2\nEk_rel =",
+   "code": "m0 := 9.1*10^-31 kg\ngamma_r := 1.6667\nEk_rel := (gamma_r - 1)*m0*c_light^2\nEk_rel =",
    "plot2d": "(x-1)*m0*c_light^2",
    "plot3d": null,
    "sim": null
@@ -3614,7 +3614,7 @@
    "label_en": "Relativistic momentum",
    "hint_ru": "p = γ·m₀·v",
    "hint_en": "p = γ·m₀·v",
-   "code": "m0 := 9.1*10^-31\ngamma_r := 1.6667\nv_vel := 0.8*c_light\np_rel := gamma_r*m0*v_vel\np_rel =",
+   "code": "m0 := 9.1*10^-31 kg\ngamma_r := 1.6667\nv_vel := 0.8*c_light\np_rel := gamma_r*m0*v_vel\np_rel =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3653,7 +3653,7 @@
    "label_en": "Planck quantum",
    "hint_ru": "E = h·ν",
    "hint_en": "E = h·ν",
-   "code": "nu_fr := 5*10^14\nE_q := h_planck*nu_fr\nE_q =",
+   "code": "nu_fr := 5*10^14 Hz\nE_q := h_planck*nu_fr\nE_q =",
    "plot2d": "h_planck*x",
    "plot3d": null,
    "sim": null
@@ -3666,8 +3666,8 @@
    "label_en": "Photoelectric effect",
    "hint_ru": "K_max = hc/λ − A",
    "hint_en": "K_max = hc/λ − A",
-   "code": "lam_w := 400*10^-9\nA_wf := 2*1.6*10^-19\nK_max := h_planck*c_light/lam_w - A_wf\nK_max =",
-   "plot2d": "h_planck*c_light/x - A_wf",
+   "code": "lam_w := 400*10^-9 m\nA_wf := 2 eV\nK_max := h_planck*c_light/lam_w - A_wf\nK_max =",
+   "plot2d": "h_planck*c_light/(x*m) - A_wf",
    "plot3d": null,
    "sim": null
   },
@@ -3679,7 +3679,7 @@
    "label_en": "Photoelectric threshold",
    "hint_ru": "λ_max = h·c/A",
    "hint_en": "λ_max = h·c/A",
-   "code": "A_wf := 2*1.6*10^-19\nlam_rb := h_planck*c_light/A_wf\nlam_rb =",
+   "code": "A_wf := 2 eV\nlam_rb := h_planck*c_light/A_wf\nlam_rb =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -3692,7 +3692,7 @@
    "label_en": "de Broglie wavelength",
    "hint_ru": "λ = h/(m·v)",
    "hint_en": "λ = h/(m·v)",
-   "code": "m_kg := 9.1*10^-31\nv_vel := 10^6\nlam_db := h_planck/(m_kg*v_vel)\nlam_db =",
+   "code": "m_kg := 9.1*10^-31 kg\nv_vel := 10^6 m/s\nlam_db := h_planck/(m_kg*v_vel)\nlam_db =",
    "plot2d": "h_planck/(m_kg*x)",
    "plot3d": null,
    "sim": null
@@ -3705,7 +3705,7 @@
    "label_en": "Compton shift",
    "hint_ru": "Δλ = (h/mc)(1−cosθ)",
    "hint_en": "Δλ = (h/mc)(1−cosθ)",
-   "code": "m_kg := 9.1*10^-31\ntheta := pi/2\ndlam_c := h_planck/(m_kg*c_light)*(1 - cos(theta))\ndlam_c =",
+   "code": "m_kg := 9.1*10^-31 kg\ntheta := pi/2\ndlam_c := h_planck/(m_kg*c_light)*(1 - cos(theta))\ndlam_c =",
    "plot2d": "h_planck/(m_kg*c_light)*(1-cos(x))",
    "plot3d": null,
    "sim": null
@@ -3744,8 +3744,8 @@
    "label_en": "Decay law",
    "hint_ru": "N = N₀·e^(−λt)",
    "hint_en": "N = N₀·e^(−λt)",
-   "code": "N0 := 1000\nlam_d := 0.1\nt_s := 5\nN_left := N0*exp(-lam_d*t_s)\nN_left =",
-   "plot2d": "N0*exp(-lam_d*x)",
+   "code": "N0 := 1000\nlam_d := 0.1/s\nt_s := 5 s\nN_left := N0*exp(-lam_d*t_s)\nN_left =",
+   "plot2d": "N0*exp(-lam_d*x*s)",
    "plot3d": null,
    "sim": "decay"
   },
@@ -3783,7 +3783,7 @@
    "label_en": "Binding energy",
    "hint_ru": "E = Δm·c²",
    "hint_en": "E = Δm·c²",
-   "code": "dm_kg := 10^-29\nE_bind := dm_kg*c_light^2\nE_bind =",
+   "code": "dm_kg := 10^-29 kg\nE_bind := dm_kg*c_light^2\nE_bind =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5304,7 +5304,7 @@
    "label_en": "Escape velocity",
    "hint_ru": "v = √(2GM/r)",
    "hint_en": "v = √(2GM/r)",
-   "code": "M_p := 5.97*10^24\nr_or := 6371*10^3\nv2 := sqrt(2*G_const*M_p/r_or)\nv2 =",
+   "code": "M_p := 5.97*10^24 kg\nr_or := 6371*10^3 m\nv2 := sqrt(2*G_const*M_p/r_or)\nv2 =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5317,7 +5317,7 @@
    "label_en": "Ideal gas internal energy",
    "hint_ru": "U = (3/2)·n·R·T (одноатомный)",
    "hint_en": "U = (3/2)·n·R·T (monatomic)",
-   "code": "n_mol := 2\nT_k := 300\nU_in := 1.5*n_mol*R_gas*T_k\nU_in =",
+   "code": "n_mol := 2 mol\nT_k := 300 K\nU_in := 1.5*n_mol*R_gas*T_k\nU_in =",
    "plot2d": "1.5*n_mol*R_gas*x",
    "plot3d": null,
    "sim": null
@@ -5330,7 +5330,7 @@
    "label_en": "Charge energy in field",
    "hint_ru": "W = q·U",
    "hint_en": "W = q·U",
-   "code": "q_mv := 1.6*10^-19\nU_v := 100\nW_q := q_mv*U_v\nW_q =",
+   "code": "q_mv := 1.6*10^-19 C\nU_v := 100 V\nW_q := q_mv*U_v\nW_q =",
    "plot2d": "x*U_v",
    "plot3d": null,
    "sim": null
@@ -5343,8 +5343,8 @@
    "label_en": "Ohm law for full circuit",
    "hint_ru": "I = E/(R+r)",
    "hint_en": "I = E/(R+r)",
-   "code": "E_emf := 12\nR_ld := 10\nr_in := 0.5\nI_full := E_emf/(R_ld + r_in)\nI_full =",
-   "plot2d": "E_emf/(x+r_in)",
+   "code": "E_emf := 12 V\nR_ld := 10 ohm\nr_in := 0.5 ohm\nI_full := E_emf/(R_ld + r_in)\nI_full =",
+   "plot2d": "E_emf/(x*ohm+r_in)",
    "plot3d": null,
    "sim": null
   },
@@ -5356,7 +5356,7 @@
    "label_en": "Active power (AC)",
    "hint_ru": "P = U·I·cosφ",
    "hint_en": "P = U·I·cosφ",
-   "code": "U_v := 220\nI_c := 5\nphi_ac := pi/6\nP_ac := U_v*I_c*cos(phi_ac)\nP_ac =",
+   "code": "U_v := 220 V\nI_c := 5 A\nphi_ac := pi/6\nP_ac := U_v*I_c*cos(phi_ac)\nP_ac =",
    "plot2d": "U_v*I_c*cos(x)",
    "plot3d": null,
    "sim": null
@@ -5369,7 +5369,7 @@
    "label_en": "Flux linkage",
    "hint_ru": "Ψ = N·B·S",
    "hint_en": "Ψ = N·B·S",
-   "code": "N_tr := 100\nB_f := 0.5\nS_ar := 0.02\nPsi_fl := N_tr*B_f*S_ar\nPsi_fl =",
+   "code": "N_tr := 100\nB_f := 0.5 T\nS_ar := 0.02 m^2\nPsi_fl := N_tr*B_f*S_ar\nPsi_fl =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5382,7 +5382,7 @@
    "label_en": "Travelling wave equation",
    "hint_ru": "y = A·sin(ωt − kx)",
    "hint_en": "y = A·sin(ωt − kx)",
-   "code": "A_m := 0.1\nw_0 := 10\nk_wn := 2\nt_s := 0.2\nx_p := 0.5\ny_wv := A_m*sin(w_0*t_s - k_wn*x_p)\ny_wv =",
+   "code": "A_m := 0.1 m\nw_0 := 10/s\nk_wn := 2/m\nt_s := 0.2 s\nx_p := 0.5 m\ny_wv := A_m*sin(w_0*t_s - k_wn*x_p)\ny_wv =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5408,7 +5408,7 @@
    "label_en": "Compton wavelength",
    "hint_ru": "λc = h/(m·c)",
    "hint_en": "λc = h/(m·c)",
-   "code": "m_kg := 9.1*10^-31\nlam_c := h_planck/(m_kg*c_light)\nlam_c =",
+   "code": "m_kg := 9.1*10^-31 kg\nlam_c := h_planck/(m_kg*c_light)\nlam_c =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5512,7 +5512,7 @@
    "label_en": "Static friction (max)",
    "hint_ru": "F_max = μs·N; μs зависит от материалов",
    "hint_en": "F_max = μs·N; μs depends on materials",
-   "code": "m_kg := 5\nmu_s := 0.4\nF_max := mu_s*m_kg*g_std\nF_max =",
+   "code": "m_kg := 5 kg\nmu_s := 0.4\nF_max := mu_s*m_kg*g_std\nF_max =",
    "plot2d": "x*m_kg*g_std",
    "plot3d": null,
    "sim": null
@@ -5525,8 +5525,8 @@
    "label_en": "Real gas (Van der Waals)",
    "hint_ru": "p = nRT/(V−nb) − a(n/V)²; a,b — газ",
    "hint_en": "p = nRT/(V−nb) − a(n/V)²; a,b — gas-specific",
-   "code": "n_mol := 1\nT_k := 300\nV_v := 0.024\na_vdw := 0.14\nb_vdw := 3.9*10^-5\nP_vdw := n_mol*R_gas*T_k/(V_v - n_mol*b_vdw) - a_vdw*(n_mol/V_v)^2\nP_vdw =",
-   "plot2d": "n_mol*R_gas*T_k/(x - n_mol*b_vdw) - a_vdw*(n_mol/x)^2",
+   "code": "n_mol := 1 mol\nT_k := 300 K\nV_v := 0.024 m^3\na_vdw := 0.14 Pa*m^6/mol^2\nb_vdw := 3.9*10^-5 m^3/mol\nP_vdw := n_mol*R_gas*T_k/(V_v - n_mol*b_vdw) - a_vdw*(n_mol/V_v)^2\nP_vdw =",
+   "plot2d": "n_mol*R_gas*T_k/(x*m^3 - n_mol*b_vdw) - a_vdw*(n_mol/(x*m^3))^2",
    "plot3d": null,
    "sim": null
   },
@@ -5551,8 +5551,8 @@
    "label_en": "Damped period",
    "hint_ru": "T = 2π/√(ω₀²−β²); β — трение",
    "hint_en": "T = 2π/√(ω₀²−β²); β — damping",
-   "code": "w_0 := 10\nbeta_d := 1\nT_dmp := 2*pi/sqrt(w_0^2 - beta_d^2)\nT_dmp =",
-   "plot2d": "2*pi/sqrt(w_0^2-x^2)",
+   "code": "w_0 := 10/s\nbeta_d := 1/s\nT_dmp := 2*pi/sqrt(w_0^2 - beta_d^2)\nT_dmp =",
+   "plot2d": "2*pi/sqrt(w_0^2-(x/s)^2)",
    "plot3d": null,
    "sim": null
   },
@@ -5590,7 +5590,7 @@
    "label_en": "Wavelength from frequency",
    "hint_ru": "λ = c/f",
    "hint_en": "λ = c/f",
-   "code": "f_hz := 2.4*10^9\nlam_rf := c_light/f_hz\nlam_rf =",
+   "code": "f_hz := 2.4*10^9 Hz\nlam_rf := c_light/f_hz\nlam_rf =",
    "plot2d": "sin(2*pi*x/0.125)",
    "plot3d": null,
    "sim": null
@@ -5616,7 +5616,7 @@
    "label_en": "Skin depth in copper",
    "hint_ru": "δ = √(1/(πfμσ))",
    "hint_en": "δ = √(1/(πfμσ))",
-   "code": "f_hz := 50\nsig_cu := 5.8*10^7\ndelta_s := sqrt(1/(pi*f_hz*mu_0*sig_cu))\ndelta_s =",
+   "code": "f_hz := 50 Hz\nsig_cu := 5.8*10^7 S/m\ndelta_s := sqrt(1/(pi*f_hz*mu_0*sig_cu))\ndelta_s =",
    "plot2d": "exp(-x/0.0093)",
    "plot3d": "sqrt(1/(pi*x*mu_0*y))",
    "sim": null
@@ -5629,7 +5629,7 @@
    "label_en": "Displacement current (amplitude)",
    "hint_ru": "J = ω·ε·E; гармоника",
    "hint_en": "J = ω·ε·E; harmonic",
-   "code": "f_hz := 10*10^9\neps_r := 2.1\nE_m := 100\nJ_d := 2*pi*f_hz*eps_0*eps_r*E_m\nJ_d =",
+   "code": "f_hz := 10*10^9 Hz\neps_r := 2.1\nE_m := 100\nJ_d := 2*pi*f_hz*eps_0*eps_r*E_m\nJ_d =",
    "plot2d": null,
    "plot3d": "2*pi*x*eps_0*2.1*y",
    "sim": null
@@ -5642,7 +5642,7 @@
    "label_en": "Poynting vector",
    "hint_ru": "S = E·H",
    "hint_en": "S = E·H",
-   "code": "E_f := 100\nH_f := 0.265\nS_p := E_f*H_f\nS_p =",
+   "code": "E_f := 100 V/m\nH_f := 0.265 A/m\nS_p := E_f*H_f\nS_p =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5655,7 +5655,7 @@
    "label_en": "EM energy density",
    "hint_ru": "w = (εE²+μH²)/2",
    "hint_en": "w = (εE²+μH²)/2",
-   "code": "eps_r := 1\nE_f := 100\nmu_r := 1\nH_f := 0.265\nw_em := (eps_0*eps_r*E_f^2 + mu_0*mu_r*H_f^2)/2\nw_em =",
+   "code": "eps_r := 1\nE_f := 100 V/m\nmu_r := 1\nH_f := 0.265 A/m\nw_em := (eps_0*eps_r*E_f^2 + mu_0*mu_r*H_f^2)/2\nw_em =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5668,7 +5668,7 @@
    "label_en": "Charge relaxation time",
    "hint_ru": "τ = ε/σ",
    "hint_en": "τ = ε/σ",
-   "code": "eps_r := 2.1\nsig_m := 0.0145\ntau_r := eps_0*eps_r/sig_m\ntau_r =",
+   "code": "eps_r := 2.1\nsig_m := 0.0145 S/m\ntau_r := eps_0*eps_r/sig_m\ntau_r =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5681,7 +5681,7 @@
    "label_en": "Dielectric vs conductor",
    "hint_ru": "σ/(ωε) ≪ 1 — диэлектрик",
    "hint_en": "σ/(ωε) ≪ 1 — dielectric",
-   "code": "sig_m := 0.0145\nf_hz := 10*10^9\neps_r := 2.1\ncrit := sig_m/(2*pi*f_hz*eps_0*eps_r)\ncrit =",
+   "code": "sig_m := 0.0145 S/m\nf_hz := 10*10^9 Hz\neps_r := 2.1\ncrit := sig_m/(2*pi*f_hz*eps_0*eps_r)\ncrit =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5694,7 +5694,7 @@
    "label_en": "Waveguide TE10 cutoff",
    "hint_ru": "fc = c/(2a)",
    "hint_en": "fc = c/(2a)",
-   "code": "a_wg := 23*10^-3\nf_c := c_light/(2*a_wg)\nf_c =",
+   "code": "a_wg := 23*10^-3 m\nf_c := c_light/(2*a_wg)\nf_c =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5707,7 +5707,7 @@
    "label_en": "Guide wavelength",
    "hint_ru": "λg = λ/√(1−(fc/f)²)",
    "hint_en": "λg = λ/√(1−(fc/f)²)",
-   "code": "f_hz := 10*10^9\na_wg := 23*10^-3\nlam_0 := c_light/f_hz\nf_c := c_light/(2*a_wg)\nlam_g := lam_0/sqrt(1 - (f_c/f_hz)^2)\nlam_g =",
+   "code": "f_hz := 10*10^9 Hz\na_wg := 23*10^-3 m\nlam_0 := c_light/f_hz\nf_c := c_light/(2*a_wg)\nlam_g := lam_0/sqrt(1 - (f_c/f_hz)^2)\nlam_g =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5772,7 +5772,7 @@
    "label_en": "Friis link",
    "hint_ru": "Pr = Pt·Gt·Gr·(λ/4πd)²",
    "hint_en": "Pr = Pt·Gt·Gr·(λ/4πd)²",
-   "code": "P_t := 1\nG_t := 1.64\nG_r := 1.64\nf_hz := 2.4*10^9\nd_m := 1000\nlam_rf := c_light/f_hz\nP_r := P_t*G_t*G_r*(lam_rf/(4*pi*d_m))^2\nP_r =",
+   "code": "P_t := 1\nG_t := 1.64\nG_r := 1.64\nf_hz := 2.4*10^9 Hz\nd_m := 1000 m\nlam_rf := c_light/f_hz\nP_r := P_t*G_t*G_r*(lam_rf/(4*pi*d_m))^2\nP_r =",
    "plot2d": "P_t*G_t*G_r*(lam_rf/(4*pi*x))^2",
    "plot3d": null,
    "sim": null
@@ -5798,7 +5798,7 @@
    "label_en": "Line phase shift",
    "hint_ru": "φ° = β·l·180/π; β = 2πf√ε/c",
    "hint_en": "φ° = β·l·180/π; β = 2πf√ε/c",
-   "code": "f_hz := 10*10^9\neps_r := 2.1\nlen_m := 0.1\nbeta_w := 2*pi*f_hz*sqrt(eps_r)/c_light\nphi_deg := beta_w*len_m*180/pi\nphi_deg =",
+   "code": "f_hz := 10*10^9 Hz\neps_r := 2.1\nlen_m := 0.1 m\nbeta_w := 2*pi*f_hz*sqrt(eps_r)/c_light\nphi_deg := beta_w*len_m*180/pi\nphi_deg =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5850,7 +5850,7 @@
    "label_en": "Phase constant",
    "hint_ru": "β = 2πf√ε/c",
    "hint_en": "β = 2πf√ε/c",
-   "code": "f_hz := 10*10^9\neps_r := 2.1\nbeta_w := 2*pi*f_hz*sqrt(eps_r)/c_light\nbeta_w =",
+   "code": "f_hz := 10*10^9 Hz\neps_r := 2.1\nbeta_w := 2*pi*f_hz*sqrt(eps_r)/c_light\nbeta_w =",
    "plot2d": "2*pi*x*sqrt(2.1)/c_light",
    "plot3d": null,
    "sim": null
@@ -5863,7 +5863,7 @@
    "label_en": "Drift velocity",
    "hint_ru": "V = μ·E",
    "hint_en": "V = μ·E",
-   "code": "mu_n := 0.14\nE_f := 1000\nV_dr := mu_n*E_f\nV_dr =",
+   "code": "mu_n := 0.14 m^2/(V*s)\nE_f := 1000\nV_dr := mu_n*E_f\nV_dr =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5889,7 +5889,7 @@
    "label_en": "Conductivity (electrons)",
    "hint_ru": "σ = q·n·μ",
    "hint_en": "σ = q·n·μ",
-   "code": "n_cn := 10^22\nmu_n := 0.14\nsig_n := q_e*n_cn*mu_n\nsig_n =",
+   "code": "n_cn := 10^22/m^3\nmu_n := 0.14 m^2/(V*s)\nsig_n := q_e*n_cn*mu_n\nsig_n =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5915,7 +5915,7 @@
    "label_en": "Mass action law",
    "hint_ru": "p = ni²/n",
    "hint_en": "p = ni²/n",
-   "code": "n_i := 10^16\nn_cn := 10^22\np_cn := n_i^2/n_cn\np_cn =",
+   "code": "n_i := 10^16/m^3\nn_cn := 10^22/m^3\np_cn := n_i^2/n_cn\np_cn =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5928,8 +5928,8 @@
    "label_en": "Intrinsic concentration",
    "hint_ru": "ni = √(NcNv)·e^(−Eg/2kT)",
    "hint_en": "ni = √(NcNv)·e^(−Eg/2kT)",
-   "code": "N_c := 2.8*10^25\nN_v := 1.04*10^25\nE_g := 1.12*1.6*10^-19\nT_k := 300\nn_i := sqrt(N_c*N_v)*exp(-E_g/(2*k_B*T_k))\nn_i =",
-   "plot2d": "sqrt(2.8*10^25*1.04*10^25)*exp(-1.12*1.6*10^-19/(2*k_B*x))",
+   "code": "N_c := 2.8*10^25\nN_v := 1.04*10^25\nE_g := 1.12 eV\nT_k := 300 K\nn_i := sqrt(N_c*N_v)*exp(-E_g/(2*k_B*T_k))\nn_i =",
+   "plot2d": "sqrt(2.8*10^25*1.04*10^25)*exp(-1.12*eV/(2*k_B*x*K))",
    "plot3d": null,
    "sim": null
   },
@@ -5941,7 +5941,7 @@
    "label_en": "Intrinsic Fermi (midgap)",
    "hint_ru": "φF = Eg/2",
    "hint_en": "φF = Eg/2",
-   "code": "E_g := 1.12\nphi_F := E_g/2\nphi_F =",
+   "code": "E_g := 1.12 eV\nphi_F := E_g/2\nphi_F =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5954,7 +5954,7 @@
    "label_en": "Fermi shift (n-type)",
    "hint_ru": "Δ = φT·ln(Nd/ni)",
    "hint_en": "Δ = φT·ln(Nd/ni)",
-   "code": "N_d := 10^22\nn_i := 10^16\nphi_T := 0.0259\ndphi_F := phi_T*log(N_d/n_i)\ndphi_F =",
+   "code": "N_d := 10^22/m^3\nn_i := 10^16/m^3\nphi_T := 0.0259 V\ndphi_F := phi_T*log(N_d/n_i)\ndphi_F =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5967,7 +5967,7 @@
    "label_en": "Minority carriers",
    "hint_ru": "p = ni²/Nd",
    "hint_en": "p = ni²/Nd",
-   "code": "n_i := 10^16\nN_d := 10^22\np_min := n_i^2/N_d\np_min =",
+   "code": "n_i := 10^16/m^3\nN_d := 10^22/m^3\np_min := n_i^2/N_d\np_min =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5980,7 +5980,7 @@
    "label_en": "Carrier lifetime",
    "hint_ru": "τ = 1/(r·p)",
    "hint_en": "τ = 1/(r·p)",
-   "code": "r_rc := 10^-17\np_cn := 10^22\ntau_n := 1/(r_rc*p_cn)\ntau_n =",
+   "code": "r_rc := 10^-17 m^3/s\np_cn := 10^22/m^3\ntau_n := 1/(r_rc*p_cn)\ntau_n =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -5993,7 +5993,7 @@
    "label_en": "Recombination rate",
    "hint_ru": "R = r·n·p",
    "hint_en": "R = r·n·p",
-   "code": "r_rc := 10^-17\nn_cn := 10^22\np_cn := 10^16\nR_rc := r_rc*n_cn*p_cn\nR_rc =",
+   "code": "r_rc := 10^-17 m^3/s\nn_cn := 10^22/m^3\np_cn := 10^16/m^3\nR_rc := r_rc*n_cn*p_cn\nR_rc =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -6019,7 +6019,7 @@
    "label_en": "Einstein relation",
    "hint_ru": "D = μ·φT",
    "hint_en": "D = μ·φT",
-   "code": "mu_n := 0.14\nphi_T := 0.0259\nD_n := mu_n*phi_T\nD_n =",
+   "code": "mu_n := 0.14 m^2/(V*s)\nphi_T := 0.0259 V\nD_n := mu_n*phi_T\nD_n =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -6045,7 +6045,7 @@
    "label_en": "Thermal voltage",
    "hint_ru": "φT = kT/q ≈ 25.9 мВ",
    "hint_en": "φT = kT/q ≈ 25.9 mV",
-   "code": "T_k := 300\nphi_T := k_B*T_k/q_e\nphi_T =",
+   "code": "T_k := 300 K\nphi_T := k_B*T_k/q_e\nphi_T =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -6058,7 +6058,7 @@
    "label_en": "Total conductivity",
    "hint_ru": "σ = q(niμn + piμp)",
    "hint_en": "σ = q(niμn + piμp)",
-   "code": "n_i := 10^16\nmu_n := 0.14\nmu_p := 0.05\nsig_t := q_e*(n_i*mu_n + n_i*mu_p)\nsig_t =",
+   "code": "n_i := 10^16/m^3\nmu_n := 0.14 m^2/(V*s)\nmu_p := 0.05 m^2/(V*s)\nsig_t := q_e*(n_i*mu_n + n_i*mu_p)\nsig_t =",
    "plot2d": null,
    "plot3d": "q_e*(x*0.14 + y*0.05)",
    "sim": null
@@ -6071,7 +6071,7 @@
    "label_en": "Absorption edge",
    "hint_ru": "λ = hc/Eg",
    "hint_en": "λ = hc/Eg",
-   "code": "E_g := 1.12\nlam_c := h_planck*c_light/(E_g*q_e)\nlam_c =",
+   "code": "E_g := 1.12 eV\nlam_c := h_planck*c_light/(E_g*q_e)\nlam_c =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -6110,7 +6110,7 @@
    "label_en": "Neutrality (check)",
    "hint_ru": "p − n + Nd − Na = 0",
    "hint_en": "p − n + Nd − Na = 0",
-   "code": "p_cn := 10^16\nn_cn := 10^16\nN_d := 0\nN_a := 0\nbal := p_cn - n_cn + N_d - N_a\nbal =",
+   "code": "p_cn := 10^16/m^3\nn_cn := 10^16/m^3\nN_d := 0/m^3\nN_a := 0/m^3\nbal := p_cn - n_cn + N_d - N_a\nbal =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -6123,7 +6123,7 @@
    "label_en": "Diode I–V",
    "hint_ru": "I = Is(e^(U/φT) − 1)",
    "hint_en": "I = Is(e^(U/φT) − 1)",
-   "code": "I_s := 10^-12\nU_d := 0.6\nphi_T := 0.0259\nI_d := I_s*(exp(U_d/phi_T) - 1)\nI_d =",
+   "code": "I_s := 10^-12 A\nU_d := 0.6 V\nphi_T := 0.0259 V\nI_d := I_s*(exp(U_d/phi_T) - 1)\nI_d =",
    "plot2d": "10^-12*(exp(x/0.0259)-1)",
    "plot3d": null,
    "sim": null
@@ -6136,7 +6136,7 @@
    "label_en": "Built-in potential",
    "hint_ru": "V₀ = φT·ln(NaNd/ni²)",
    "hint_en": "V₀ = φT·ln(NaNd/ni²)",
-   "code": "N_a := 10^24\nN_d := 10^22\nn_i := 10^16\nphi_T := 0.0259\nV0 := phi_T*log(N_a*N_d/n_i^2)\nV0 =",
+   "code": "N_a := 10^24/m^3\nN_d := 10^22/m^3\nn_i := 10^16/m^3\nphi_T := 0.0259 V\nV0 := phi_T*log(N_a*N_d/n_i^2)\nV0 =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -6318,8 +6318,8 @@
    "label_en": "Free-space loss",
    "hint_ru": "L = 20·log10(4πdf/c)",
    "hint_en": "L = 20·log10(4πdf/c)",
-   "code": "d_m := 1000\nf_hz := 2.4*10^9\nL_fs := 20*log10(4*pi*d_m*f_hz/c_light)\nL_fs =",
-   "plot2d": "20*log10(4*pi*x*2.4*10^9/c_light)",
+   "code": "d_m := 1000 m\nf_hz := 2.4*10^9 Hz\nL_fs := 20*log10(4*pi*d_m*f_hz/c_light)\nL_fs =",
+   "plot2d": "20*log10(4*pi*x*m*2.4*10^9*Hz/c_light)",
    "plot3d": null,
    "sim": null
   },
@@ -6357,7 +6357,7 @@
    "label_en": "Quarter-wave antenna",
    "hint_ru": "l = λ/4 = c/4f",
    "hint_en": "l = λ/4 = c/4f",
-   "code": "f_hz := 2.4*10^9\nl_ant := c_light/(4*f_hz)\nl_ant =",
+   "code": "f_hz := 2.4*10^9 Hz\nl_ant := c_light/(4*f_hz)\nl_ant =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -6383,7 +6383,7 @@
    "label_en": "Thermal noise",
    "hint_ru": "Vn = √(4kTRB)",
    "hint_en": "Vn = √(4kTRB)",
-   "code": "T_k := 300\nR_r := 50\nB_hz := 10^6\nV_n := sqrt(4*k_B*T_k*R_r*B_hz)\nV_n =",
+   "code": "T_k := 300 K\nR_r := 50 ohm\nB_hz := 10^6\nV_n := sqrt(4*k_B*T_k*R_r*B_hz)\nV_n =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -6877,7 +6877,7 @@
    "label_en": "Pu-238 power (1 g)",
    "hint_ru": "P = λ·N·Eα",
    "hint_en": "P = λ·N·Eα",
-   "code": "m_g := 1\nM_mol := 238\nN_at := m_g/M_mol*N_A\nT_half := 87.7*365.25*24*3600\nlam_d := log(2)/T_half\nE_al := 5.5*1.6*10^-13\nP_pu := lam_d*N_at*E_al\nP_pu =",
+   "code": "m_g := 1 g\nM_mol := 238 g/mol\nN_at := m_g/M_mol*N_A\nT_half := 87.7*365.25*24*3600 s\nlam_d := log(2)/T_half\nE_al := 5.5 MeV\nP_pu := lam_d*N_at*E_al\nP_pu =",
    "plot2d": null,
    "plot3d": null,
    "sim": "decay"
@@ -7592,7 +7592,7 @@
    "label_en": "Logistic growth",
    "hint_ru": "P = K/(1+Ae^(−rt))",
    "hint_en": "P = K/(1+Ae^(−rt))",
-   "code": "K_cp := 100\nA_l := 9\nr_g := 0.5\nt_s := 5\nP_l := K_cp/(1 + A_l*exp(-r_g*t_s))\nP_l =",
+   "code": "K_cp := 100\nA_l := 9\nr_g := 0.5/s\nt_s := 5 s\nP_l := K_cp/(1 + A_l*exp(-r_g*t_s))\nP_l =",
    "plot2d": "100/(1+9*exp(-0.5*x))",
    "plot3d": null,
    "sim": null
@@ -7657,7 +7657,7 @@
    "label_en": "RC discharge analytic",
    "hint_ru": "q = Q₀·e^(−t/RC)",
    "hint_en": "q = Q₀·e^(−t/RC)",
-   "code": "Q0 := 1\nR_r := 1000\nC_c := 10*10^-6\nt_s := 0.01\nq_t := Q0*exp(-t_s/(R_r*C_c))\nq_t =",
+   "code": "Q0 := 1 C\nR_r := 1000 ohm\nC_c := 10*10^-6 F\nt_s := 0.01 s\nq_t := Q0*exp(-t_s/(R_r*C_c))\nq_t =",
    "plot2d": "exp(-x/0.01)",
    "plot3d": null,
    "sim": "rc"
@@ -7670,7 +7670,7 @@
    "label_en": "RL switching on",
    "hint_ru": "I = (E/R)(1−e^(−Rt/L))",
    "hint_en": "I = (E/R)(1−e^(−Rt/L))",
-   "code": "E_emf := 12\nR_r := 10\nL_in := 0.5\nt_s := 0.1\nI_rl := (E_emf/R_r)*(1 - exp(-R_r*t_s/L_in))\nI_rl =",
+   "code": "E_emf := 12 V\nR_r := 10 ohm\nL_in := 0.5 H\nt_s := 0.1 s\nI_rl := (E_emf/R_r)*(1 - exp(-R_r*t_s/L_in))\nI_rl =",
    "plot2d": "(12/10)*(1-exp(-10*x/0.5))",
    "plot3d": null,
    "sim": null
@@ -7748,7 +7748,7 @@
    "label_en": "Terminal velocity",
    "hint_ru": "v* = mg/k",
    "hint_en": "v* = mg/k",
-   "code": "m_kg := 1\ng_g := 9.8\nk_dr := 0.5\nv_term := m_kg*g_g/k_dr\nv_term =",
+   "code": "m_kg := 1 kg\ng_g := 9.8 m/s^2\nk_dr := 0.5 kg/s\nv_term := m_kg*g_g/k_dr\nv_term =",
    "plot2d": "19.6*(1-exp(-0.5*x))",
    "plot3d": null,
    "sim": null
@@ -7852,7 +7852,7 @@
    "label_en": "Barometric formula",
    "hint_ru": "p = p₀·exp(−Mgh/RT); давление падает с высотой",
    "hint_en": "p = p₀·exp(−Mgh/RT); pressure drops with height",
-   "code": "p0 := 101325\nM_mol := 0.029\nh_m := 1000\nT_k := 288\np_h := p0*exp(-M_mol*g_std*h_m/(R_gas*T_k))\np_h =",
+   "code": "p0 := 101325\nM_mol := 0.029 kg/mol\nh_m := 1000 m\nT_k := 288 K\np_h := p0*exp(-M_mol*g_std*h_m/(R_gas*T_k))\np_h =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -7904,7 +7904,7 @@
    "label_en": "Fresnel zone radius",
    "hint_ru": "r = √(m·λ·a·b/(a+b))",
    "hint_en": "r = √(m·λ·a·b/(a+b))",
-   "code": "m_z := 1\nlam_w := 550*10^-9\na_z := 0.5\nb_z := 0.5\nr_fr := sqrt(m_z*lam_w*a_z*b_z/(a_z + b_z))\nr_fr =",
+   "code": "m_z := 1\nlam_w := 550*10^-9 m\na_z := 0.5\nb_z := 0.5\nr_fr := sqrt(m_z*lam_w*a_z*b_z/(a_z + b_z))\nr_fr =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -7917,7 +7917,7 @@
    "label_en": "X-ray cutoff",
    "hint_ru": "λmin = h·c/(e·U)",
    "hint_en": "λmin = h·c/(e·U)",
-   "code": "U_v := 50000\nlam_min := h_planck*c_light/(q_e*U_v)\nlam_min =",
+   "code": "U_v := 50000 V\nlam_min := h_planck*c_light/(q_e*U_v)\nlam_min =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -7930,7 +7930,7 @@
    "label_en": "Particle in a box",
    "hint_ru": "E = n²·π²·ℏ²/(2·m·l²)",
    "hint_en": "E = n²·π²·ℏ²/(2·m·l²)",
-   "code": "n_q := 1\nl_box := 10^-9\nm_kg := 9.1*10^-31\nE_box := n_q^2*pi^2*hbar^2/(2*m_kg*l_box^2)\nE_box =",
+   "code": "n_q := 1\nl_box := 10^-9 m\nm_kg := 9.1*10^-31 kg\nE_box := n_q^2*pi^2*hbar^2/(2*m_kg*l_box^2)\nE_box =",
    "plot2d": null,
    "plot3d": null,
    "sim": null
@@ -7947,8 +7947,7 @@
    "plot2d": null,
    "plot3d": null,
    "sim": null
-  }
- ,
+  },
   {
    "id": "union-incompatible",
    "section": "probability",
@@ -8000,8 +7999,7 @@
    "plot2d": null,
    "plot3d": null,
    "sim": null
-  }
- ,
+  },
   {
    "id": "perm-factorial",
    "section": "probability",
@@ -11229,8 +11227,7 @@
    "ord": 0,
    "title": "Chmod — Wikipedia",
    "url": "https://en.wikipedia.org/wiki/Chmod"
-  }
- ,
+  },
   {
    "formula_id": "union-incompatible",
    "ord": 0,
@@ -11278,8 +11275,7 @@
    "ord": 1,
    "title": "Вероятность — Википедия",
    "url": "https://ru.wikipedia.org/wiki/Вероятность"
-  }
- ,
+  },
   {
    "formula_id": "perm-factorial",
    "ord": 0,
@@ -21472,8 +21468,7 @@
    "name": "Mode",
    "label_ru": "режим",
    "label_en": "mode"
-  }
- ,
+  },
   {
    "formula_id": "union-incompatible",
    "ord": 0,
@@ -21564,8 +21559,7 @@
    "name": "P_xor",
    "label_ru": "вероятность ровно одного",
    "label_en": "exactly-one probability"
-  }
- ,
+  },
   {
    "formula_id": "perm-factorial",
    "ord": 0,
@@ -22486,7 +22480,7 @@
    "label_en": "650 nm photon",
    "hint_ru": "E = h·c/λ",
    "hint_en": "E = h·c/λ",
-   "code": "E_ph := h_planck*c_light/(650*10^-9)",
+   "code": "E_ph := h_planck*c_light/(650*10^-9 m)",
    "doc": "E = h·c/λ — λ в метрах",
    "exportName": null,
    "vars": null,
@@ -22501,7 +22495,7 @@
    "label_en": "Energy in eV",
    "hint_ru": "/q_e",
    "hint_en": "/q_e",
-   "code": "E_eV := E_ph/q_e",
+   "code": "E_eV := E_ph/eV",
    "doc": "E_эВ := E/q_e",
    "exportName": null,
    "vars": null,
@@ -22516,7 +22510,7 @@
    "label_en": "Thermal energy",
    "hint_ru": "k_B·T",
    "hint_en": "k_B·T",
-   "code": "E_th := k_B*300",
+   "code": "E_th := k_B*300 K",
    "doc": "E = k_B*T — T в кельвинах",
    "exportName": null,
    "vars": null,
@@ -25336,7 +25330,7 @@
    "title_en": "Simply supported beam · uniform load",
    "desc_ru": "Реакции опор и максимальный момент: R = q·L/2, M = q·L²/8",
    "desc_en": "Support reactions and max moment: R = q·L/2, M = q·L²/8",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Шарнирно опёртая балка, равномерная нагрузка q\"}, {\"kind\": \"math\", \"raw\": \"L := 6 m\"}, {\"kind\": \"math\", \"raw\": \"q := 10 kN/m\"}, {\"kind\": \"math\", \"raw\": \"R_A = q*L/2\"}, {\"kind\": \"math\", \"raw\": \"R_B = q*L/2\"}, {\"kind\": \"math\", \"raw\": \"M_max = q*L^2/8\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Шарнирно опёртая балка, равномерная нагрузка q\"},{\"kind\":\"math\",\"raw\":\"L := 6 m\"},{\"kind\":\"math\",\"raw\":\"q := 10 kN/m\"},{\"kind\":\"math\",\"raw\":\"R_A = q*L/2\"},{\"kind\":\"math\",\"raw\":\"R_B = q*L/2\"},{\"kind\":\"math\",\"raw\":\"M_max = q*L^2/8\"}]",
    "standard": null
   },
   {
@@ -25347,7 +25341,7 @@
    "title_en": "Cantilever · tip load",
    "desc_ru": "Момент в заделке и прогиб: M = F·L, δ = F·L³/(3·E·J)",
    "desc_en": "Fixed-end moment and tip deflection: M = F·L, δ = F·L³/(3·E·J)",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Консольная балка, сила F на свободном конце\"}, {\"kind\": \"math\", \"raw\": \"L := 2 m\"}, {\"kind\": \"math\", \"raw\": \"F := 500 N\"}, {\"kind\": \"math\", \"raw\": \"M_fix = F*L\"}, {\"kind\": \"math\", \"raw\": \"E := 200 GPa\"}, {\"kind\": \"math\", \"raw\": \"J := 8.33 cm^4\"}, {\"kind\": \"math\", \"raw\": \"delta = F*L^3/(3*E*J)\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Консольная балка, сила F на свободном конце\"},{\"kind\":\"math\",\"raw\":\"L := 2 m\"},{\"kind\":\"math\",\"raw\":\"F := 500 N\"},{\"kind\":\"math\",\"raw\":\"M_fix = F*L\"},{\"kind\":\"math\",\"raw\":\"E := 200 GPa\"},{\"kind\":\"math\",\"raw\":\"J := 8.33 cm^4\"},{\"kind\":\"math\",\"raw\":\"delta = F*L^3/(3*E*J)\"}]",
    "standard": null
   },
   {
@@ -25358,7 +25352,7 @@
    "title_en": "Ohm's law",
    "desc_ru": "Ток и мощность участка цепи: I = U/R, P = U·I",
    "desc_en": "Branch current and power: I = U/R, P = U·I",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Закон Ома: U, R → I, P\"}, {\"kind\": \"math\", \"raw\": \"U := 12 V\"}, {\"kind\": \"math\", \"raw\": \"R := 4 ohm\"}, {\"kind\": \"math\", \"raw\": \"I := U/R\"}, {\"kind\": \"math\", \"raw\": \"P := U*I\"}, {\"kind\": \"math\", \"raw\": \"I =\"}, {\"kind\": \"math\", \"raw\": \"P =\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Закон Ома: U, R → I, P\"},{\"kind\":\"math\",\"raw\":\"U := 12 V\"},{\"kind\":\"math\",\"raw\":\"R := 4 ohm\"},{\"kind\":\"math\",\"raw\":\"I := U/R\"},{\"kind\":\"math\",\"raw\":\"P := U*I\"},{\"kind\":\"math\",\"raw\":\"I =\"},{\"kind\":\"math\",\"raw\":\"P =\"}]",
    "standard": null
   },
   {
@@ -25369,7 +25363,7 @@
    "title_en": "Resistors: series and parallel",
    "desc_ru": "Эквиваленты: R_s = R1+R2, R_p = R1·R2/(R1+R2)",
    "desc_en": "Equivalents: R_s = R1+R2, R_p = R1·R2/(R1+R2)",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Два резистора: последовательное и параллельное соединение\"}, {\"kind\": \"math\", \"raw\": \"R1 := 10 ohm\"}, {\"kind\": \"math\", \"raw\": \"R2 := 20 ohm\"}, {\"kind\": \"math\", \"raw\": \"R_s = R1+R2\"}, {\"kind\": \"math\", \"raw\": \"R_p = R1*R2/(R1+R2)\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Два резистора: последовательное и параллельное соединение\"},{\"kind\":\"math\",\"raw\":\"R1 := 10 ohm\"},{\"kind\":\"math\",\"raw\":\"R2 := 20 ohm\"},{\"kind\":\"math\",\"raw\":\"R_s = R1+R2\"},{\"kind\":\"math\",\"raw\":\"R_p = R1*R2/(R1+R2)\"}]",
    "standard": null
   },
   {
@@ -25380,7 +25374,7 @@
    "title_en": "Tolerances: RSS stack-up",
    "desc_ru": "Суммарный допуск — корень из суммы квадратов",
    "desc_en": "Total tolerance as root sum of squares",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// RSS-суммирование допусков\"}, {\"kind\": \"math\", \"raw\": \"t1 := 0.1 mm\"}, {\"kind\": \"math\", \"raw\": \"t2 := 0.2 mm\"}, {\"kind\": \"math\", \"raw\": \"t3 := 0.15 mm\"}, {\"kind\": \"math\", \"raw\": \"t_rss = sqrt(t1^2+t2^2+t3^2)\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// RSS-суммирование допусков\"},{\"kind\":\"math\",\"raw\":\"t1 := 0.1 mm\"},{\"kind\":\"math\",\"raw\":\"t2 := 0.2 mm\"},{\"kind\":\"math\",\"raw\":\"t3 := 0.15 mm\"},{\"kind\":\"math\",\"raw\":\"t_rss = sqrt(t1^2+t2^2+t3^2)\"}]",
    "standard": "ГОСТ 25346-2013"
   },
   {
@@ -25391,7 +25385,7 @@
    "title_en": "Dimensional chain: nominal and limits",
    "desc_ru": "Худший случай: A = A1−A2 с полями допусков",
    "desc_en": "Worst case: A = A1−A2 with tolerance bands",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Размерная цепь A = A1 - A2 (худший случай)\"}, {\"kind\": \"math\", \"raw\": \"A1 := 100 mm\"}, {\"kind\": \"math\", \"raw\": \"A2 := 60 mm\"}, {\"kind\": \"math\", \"raw\": \"t1 := 0.2 mm\"}, {\"kind\": \"math\", \"raw\": \"t2 := 0.1 mm\"}, {\"kind\": \"math\", \"raw\": \"A_nom = A1-A2\"}, {\"kind\": \"math\", \"raw\": \"A_max = (A1+t1)-(A2-t2)\"}, {\"kind\": \"math\", \"raw\": \"A_min = (A1-t1)-(A2+t2)\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Размерная цепь A = A1 - A2 (худший случай)\"},{\"kind\":\"math\",\"raw\":\"A1 := 100 mm\"},{\"kind\":\"math\",\"raw\":\"A2 := 60 mm\"},{\"kind\":\"math\",\"raw\":\"t1 := 0.2 mm\"},{\"kind\":\"math\",\"raw\":\"t2 := 0.1 mm\"},{\"kind\":\"math\",\"raw\":\"A_nom = A1-A2\"},{\"kind\":\"math\",\"raw\":\"A_max = (A1+t1)-(A2-t2)\"},{\"kind\":\"math\",\"raw\":\"A_min = (A1-t1)-(A2+t2)\"}]",
    "standard": "ГОСТ 25346-2013"
   },
   {
@@ -25402,7 +25396,7 @@
    "title_en": "Cantilever · uniform load",
    "desc_ru": "Реакция, момент в заделке и прогиб конца: R = qL, M = qL²/2, δ = qL⁴/8EJ",
    "desc_en": "Reaction, fixed-end moment and tip deflection: R = qL, M = qL²/2, δ = qL⁴/8EJ",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Консоль, равномерная нагрузка q по всей длине\"}, {\"kind\": \"math\", \"raw\": \"L := 3 m\"}, {\"kind\": \"math\", \"raw\": \"q := 2 kN/m\"}, {\"kind\": \"math\", \"raw\": \"R = q*L\"}, {\"kind\": \"math\", \"raw\": \"M_fix = q*L^2/2\"}, {\"kind\": \"math\", \"raw\": \"E := 200 GPa\"}, {\"kind\": \"math\", \"raw\": \"J := 800 cm^4\"}, {\"kind\": \"math\", \"raw\": \"delta = q*L^4/(8*E*J)\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Консоль, равномерная нагрузка q по всей длине\"},{\"kind\":\"math\",\"raw\":\"L := 3 m\"},{\"kind\":\"math\",\"raw\":\"q := 2 kN/m\"},{\"kind\":\"math\",\"raw\":\"R = q*L\"},{\"kind\":\"math\",\"raw\":\"M_fix = q*L^2/2\"},{\"kind\":\"math\",\"raw\":\"E := 200 GPa\"},{\"kind\":\"math\",\"raw\":\"J := 800 cm^4\"},{\"kind\":\"math\",\"raw\":\"delta = q*L^4/(8*E*J)\"}]",
    "standard": null
   },
   {
@@ -25413,7 +25407,7 @@
    "title_en": "Simply supported · central load",
    "desc_ru": "Реакции, момент и прогиб: R = P/2, M = PL/4, δ = PL³/48EJ",
    "desc_en": "Reactions, moment and deflection: R = P/2, M = PL/4, δ = PL³/48EJ",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Шарнирная балка, сила P в середине пролёта\"}, {\"kind\": \"math\", \"raw\": \"L := 4 m\"}, {\"kind\": \"math\", \"raw\": \"P := 8 kN\"}, {\"kind\": \"math\", \"raw\": \"R_A = P/2\"}, {\"kind\": \"math\", \"raw\": \"R_B = P/2\"}, {\"kind\": \"math\", \"raw\": \"M_max = P*L/4\"}, {\"kind\": \"math\", \"raw\": \"E := 200 GPa\"}, {\"kind\": \"math\", \"raw\": \"J := 800 cm^4\"}, {\"kind\": \"math\", \"raw\": \"delta = P*L^3/(48*E*J)\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Шарнирная балка, сила P в середине пролёта\"},{\"kind\":\"math\",\"raw\":\"L := 4 m\"},{\"kind\":\"math\",\"raw\":\"P := 8 kN\"},{\"kind\":\"math\",\"raw\":\"R_A = P/2\"},{\"kind\":\"math\",\"raw\":\"R_B = P/2\"},{\"kind\":\"math\",\"raw\":\"M_max = P*L/4\"},{\"kind\":\"math\",\"raw\":\"E := 200 GPa\"},{\"kind\":\"math\",\"raw\":\"J := 800 cm^4\"},{\"kind\":\"math\",\"raw\":\"delta = P*L^3/(48*E*J)\"}]",
    "standard": null
   },
   {
@@ -25424,7 +25418,7 @@
    "title_en": "Voltage divider",
    "desc_ru": "Ток, выходное напряжение и мощность: I = U/(R1+R2), U2 = U·R2/(R1+R2)",
    "desc_en": "Current, output voltage and power: I = U/(R1+R2), U2 = U·R2/(R1+R2)",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Делитель напряжения без нагрузки\"}, {\"kind\": \"math\", \"raw\": \"U := 12 V\"}, {\"kind\": \"math\", \"raw\": \"R1 := 2000 ohm\"}, {\"kind\": \"math\", \"raw\": \"R2 := 1000 ohm\"}, {\"kind\": \"math\", \"raw\": \"I = U/(R1+R2)\"}, {\"kind\": \"math\", \"raw\": \"U2 := U*R2/(R1+R2) =\"}, {\"kind\": \"math\", \"raw\": \"P2 = U2^2/R2\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Делитель напряжения без нагрузки\"},{\"kind\":\"math\",\"raw\":\"U := 12 V\"},{\"kind\":\"math\",\"raw\":\"R1 := 2000 ohm\"},{\"kind\":\"math\",\"raw\":\"R2 := 1000 ohm\"},{\"kind\":\"math\",\"raw\":\"I = U/(R1+R2)\"},{\"kind\":\"math\",\"raw\":\"U2 := U*R2/(R1+R2) =\"},{\"kind\":\"math\",\"raw\":\"P2 = U2^2/R2\"}]",
    "standard": null
   },
   {
@@ -25435,7 +25429,7 @@
    "title_en": "RC circuit · charging",
    "desc_ru": "Постоянная времени и напряжение на конденсаторе: τ = RC, U = U0(1−e^(−t/τ))",
    "desc_en": "Time constant and capacitor voltage: τ = RC, U = U0(1−e^(−t/τ))",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Заряд конденсатора через R (ступенька U0)\"}, {\"kind\": \"math\", \"raw\": \"R := 1000 ohm\"}, {\"kind\": \"math\", \"raw\": \"C := 100 uF\"}, {\"kind\": \"math\", \"raw\": \"tau := R*C =\"}, {\"kind\": \"math\", \"raw\": \"U0 := 5 V\"}, {\"kind\": \"math\", \"raw\": \"t5 := 5*tau\"}, {\"kind\": \"math\", \"raw\": \"U = U0*(1-exp(-t5/tau))\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Заряд конденсатора через R (ступенька U0)\"},{\"kind\":\"math\",\"raw\":\"R := 1000 ohm\"},{\"kind\":\"math\",\"raw\":\"C := 100 uF\"},{\"kind\":\"math\",\"raw\":\"tau := R*C =\"},{\"kind\":\"math\",\"raw\":\"U0 := 5 V\"},{\"kind\":\"math\",\"raw\":\"t5 := 5*tau\"},{\"kind\":\"math\",\"raw\":\"U = U0*(1-exp(-t5/tau))\"}]",
    "standard": null
   },
   {
@@ -25446,7 +25440,7 @@
    "title_en": "RLC · resonance",
    "desc_ru": "Резонанс последовательного контура: f0 = 1/2π√LC, Q = ω0L/R",
    "desc_en": "Series resonance: f0 = 1/2π√LC, Q = ω0L/R",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Последовательный RLC: резонансная частота и добротность\"}, {\"kind\": \"math\", \"raw\": \"R := 10 ohm\"}, {\"kind\": \"math\", \"raw\": \"L := 100 mH\"}, {\"kind\": \"math\", \"raw\": \"C := 10 uF\"}, {\"kind\": \"math\", \"raw\": \"f0 := 1/(2*pi*sqrt(L*C)) =\"}, {\"kind\": \"math\", \"raw\": \"w0 := 2*pi*f0\"}, {\"kind\": \"math\", \"raw\": \"Q := w0*L/R =\"}, {\"kind\": \"math\", \"raw\": \"BW = f0/Q\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Последовательный RLC: резонансная частота и добротность\"},{\"kind\":\"math\",\"raw\":\"R := 10 ohm\"},{\"kind\":\"math\",\"raw\":\"L := 100 mH\"},{\"kind\":\"math\",\"raw\":\"C := 10 uF\"},{\"kind\":\"math\",\"raw\":\"f0 := 1/(2*pi*sqrt(L*C)) =\"},{\"kind\":\"math\",\"raw\":\"w0 := 2*pi*f0\"},{\"kind\":\"math\",\"raw\":\"Q := w0*L/R =\"},{\"kind\":\"math\",\"raw\":\"BW = f0/Q\"}]",
    "standard": null
   },
   {
@@ -25457,7 +25451,7 @@
    "title_en": "Slab conduction",
    "desc_ru": "Закон Фурье для плоской стенки: Q = λAΔT/δ, Rт = δ/λA",
    "desc_en": "Fourier slab: Q = λAΔT/δ, Rth = δ/λA",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Теплопроводность плоской стенки (Фурье)\"}, {\"kind\": \"math\", \"raw\": \"lam := 50 W/(m*K)\"}, {\"kind\": \"math\", \"raw\": \"d := 0.2 m\"}, {\"kind\": \"math\", \"raw\": \"A := 2 m^2\"}, {\"kind\": \"math\", \"raw\": \"delta_T := 80 K\"}, {\"kind\": \"math\", \"raw\": \"Q = lam*A*delta_T/d\"}, {\"kind\": \"math\", \"raw\": \"R_t := d/(lam*A)\"}, {\"kind\": \"math\", \"raw\": \"R_t = K/W\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Теплопроводность плоской стенки (Фурье)\"},{\"kind\":\"math\",\"raw\":\"lam := 50 W/(m*K)\"},{\"kind\":\"math\",\"raw\":\"d := 0.2 m\"},{\"kind\":\"math\",\"raw\":\"A := 2 m^2\"},{\"kind\":\"math\",\"raw\":\"delta_T := 80 K\"},{\"kind\":\"math\",\"raw\":\"Q = lam*A*delta_T/d\"},{\"kind\":\"math\",\"raw\":\"R_t := d/(lam*A)\"},{\"kind\":\"math\",\"raw\":\"R_t = K/W\"}]",
    "standard": null
   },
   {
@@ -25468,7 +25462,7 @@
    "title_en": "Undamped SDOF oscillator",
    "desc_ru": "Собственная частота, период и статика: f0 = √(k/m)/2π, x = F/k",
    "desc_en": "Natural frequency, period and statics: f0 = √(k/m)/2π, x = F/k",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Осциллятор без демпфирования: f0, T0, статический прогиб\"}, {\"kind\": \"math\", \"raw\": \"M := 5 kg\"}, {\"kind\": \"math\", \"raw\": \"k := 2000 N/m\"}, {\"kind\": \"math\", \"raw\": \"f0 := sqrt(k/M)/(2*pi) =\"}, {\"kind\": \"math\", \"raw\": \"T0 = 1/f0\"}, {\"kind\": \"math\", \"raw\": \"F := 50 N\"}, {\"kind\": \"math\", \"raw\": \"x_st = F/k\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Осциллятор без демпфирования: f0, T0, статический прогиб\"},{\"kind\":\"math\",\"raw\":\"M := 5 kg\"},{\"kind\":\"math\",\"raw\":\"k := 2000 N/m\"},{\"kind\":\"math\",\"raw\":\"f0 := sqrt(k/M)/(2*pi) =\"},{\"kind\":\"math\",\"raw\":\"T0 = 1/f0\"},{\"kind\":\"math\",\"raw\":\"F := 50 N\"},{\"kind\":\"math\",\"raw\":\"x_st = F/k\"}]",
    "standard": null
   },
   {
@@ -25479,7 +25473,7 @@
    "title_en": "Pipe · pressure drop",
    "desc_ru": "Рейнольдс и Дарси–Вейсбах: Re = ρvD/μ, Δp = λ(L/D)ρv²/2",
    "desc_en": "Reynolds and Darcy–Weisbach: Re = ρvD/μ, Δp = λ(L/D)ρv²/2",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Потери давления в трубе (Дарси–Вейсбах)\"}, {\"kind\": \"math\", \"raw\": \"L := 100 m\"}, {\"kind\": \"math\", \"raw\": \"D := 0.1 m\"}, {\"kind\": \"math\", \"raw\": \"v := 1.5 m/s\"}, {\"kind\": \"math\", \"raw\": \"rho := 1000 kg/m^3\"}, {\"kind\": \"math\", \"raw\": \"mu := 0.001 Pa*s\"}, {\"kind\": \"math\", \"raw\": \"Re = rho*v*D/mu\"}, {\"kind\": \"math\", \"raw\": \"lam := 0.02\"}, {\"kind\": \"math\", \"raw\": \"dp := lam*(L/D)*rho*v^2/2 =\"}, {\"kind\": \"math\", \"raw\": \"Qv := v*pi*D^2/4 =\"}, {\"kind\": \"math\", \"raw\": \"P = dp*Qv\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Потери давления в трубе (Дарси–Вейсбах)\"},{\"kind\":\"math\",\"raw\":\"L := 100 m\"},{\"kind\":\"math\",\"raw\":\"D := 0.1 m\"},{\"kind\":\"math\",\"raw\":\"v := 1.5 m/s\"},{\"kind\":\"math\",\"raw\":\"rho := 1000 kg/m^3\"},{\"kind\":\"math\",\"raw\":\"mu := 0.001 Pa*s\"},{\"kind\":\"math\",\"raw\":\"Re = rho*v*D/mu\"},{\"kind\":\"math\",\"raw\":\"lam := 0.02\"},{\"kind\":\"math\",\"raw\":\"dp := lam*(L/D)*rho*v^2/2 =\"},{\"kind\":\"math\",\"raw\":\"Qv := v*pi*D^2/4 =\"},{\"kind\":\"math\",\"raw\":\"P = dp*Qv\"}]",
    "standard": null
   },
   {
@@ -25490,7 +25484,7 @@
    "title_en": "FEM: 1-element cantilever",
    "desc_ru": "Балка Эйлера–Бернулли через beamKe/lsolve: сборка, ГУ, сверка с −FL³/3EJ",
    "desc_en": "Euler–Bernoulli beam via beamKe/lsolve: assembly, BCs, check vs −FL³/3EJ",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// МКЭ: консоль из 1 элемента (E, J, L, F — числа в СИ)\"}, {\"kind\": \"math\", \"raw\": \"E := 200*10^9\"}, {\"kind\": \"math\", \"raw\": \"J := 8.33*10^-6\"}, {\"kind\": \"math\", \"raw\": \"L := 2\"}, {\"kind\": \"math\", \"raw\": \"F := 1000\"}, {\"kind\": \"math\", \"raw\": \"Ke := beamKe(E, J, L)\"}, {\"kind\": \"math\", \"raw\": \"Kr := Ke[3:4, 3:4]\"}, {\"kind\": \"text\", \"raw\": \"// Свободные DOF: w2 (сила −F вниз), th2 (момент 0)\"}, {\"kind\": \"math\", \"raw\": \"Fr := [-F; 0]\"}, {\"kind\": \"math\", \"raw\": \"Ur := lsolve(Kr, Fr)\"}, {\"kind\": \"math\", \"raw\": \"w_fem := Ur[1]\"}, {\"kind\": \"math\", \"raw\": \"w_exact := -F*L^3/(3*E*J)\"}, {\"kind\": \"math\", \"raw\": \"(w_fem-w_exact)/w_exact =\"}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// МКЭ: консоль из 1 элемента (E, J, L, F — числа в СИ)\"},{\"kind\":\"math\",\"raw\":\"E := 200*10^9\"},{\"kind\":\"math\",\"raw\":\"J := 8.33*10^-6\"},{\"kind\":\"math\",\"raw\":\"L := 2\"},{\"kind\":\"math\",\"raw\":\"F := 1000\"},{\"kind\":\"math\",\"raw\":\"Ke := beamKe(E, J, L)\"},{\"kind\":\"math\",\"raw\":\"Kr := Ke[3:4, 3:4]\"},{\"kind\":\"text\",\"raw\":\"// Свободные DOF: w2 (сила −F вниз), th2 (момент 0)\"},{\"kind\":\"math\",\"raw\":\"Fr := [-F; 0]\"},{\"kind\":\"math\",\"raw\":\"Ur := lsolve(Kr, Fr)\"},{\"kind\":\"math\",\"raw\":\"w_fem := Ur[1]\"},{\"kind\":\"math\",\"raw\":\"w_exact := -F*L^3/(3*E*J)\"},{\"kind\":\"math\",\"raw\":\"(w_fem-w_exact)/w_exact =\"}]",
    "standard": null
   },
   {
@@ -25501,7 +25495,7 @@
    "title_en": "RC low-pass · cutoff and Bode",
    "desc_ru": "Частота среза и затухание на ней: fc = 1/2πRC, H(fc) ≈ −3 дБ (bodeMagDb)",
    "desc_en": "Cutoff and attenuation: fc = 1/2πRC, H(fc) ≈ −3 dB (bodeMagDb)",
-   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// RC-фильтр нижних частот: срез и АЧХ\"}, {\"kind\": \"math\", \"raw\": \"R := 1000 ohm\"}, {\"kind\": \"math\", \"raw\": \"C := 160 nF\"}, {\"kind\": \"math\", \"raw\": \"RC := R*C\"}, {\"kind\": \"math\", \"raw\": \"fc := 1/(2*pi*RC) =\"}, {\"kind\": \"math\", \"raw\": \"Hfc = bodeMagDb([1], [inUnits(RC, \\\"s\\\"), 1], inUnits(2*pi*fc, \\\"Hz\\\"))\"}, {\"kind\": \"plot\", \"raw\": \"plot\", \"plotFn\": \"bodeMagDb([1], [inUnits(RC, \\\"s\\\"), 1], x)\", \"plotXmin\": 10, \"plotXmax\": 100000, \"plotLogx\": true}]",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// RC-фильтр нижних частот: срез и АЧХ\"},{\"kind\":\"math\",\"raw\":\"R := 1000 ohm\"},{\"kind\":\"math\",\"raw\":\"C := 160 nF\"},{\"kind\":\"math\",\"raw\":\"RC := R*C\"},{\"kind\":\"math\",\"raw\":\"fc := 1/(2*pi*RC) =\"},{\"kind\":\"math\",\"raw\":\"Hfc = bodeMagDb([1], [inUnits(RC, \\\"s\\\"), 1], inUnits(2*pi*fc, \\\"Hz\\\"))\"},{\"kind\":\"plot\",\"raw\":\"plot\",\"plotFn\":\"bodeMagDb([1], [inUnits(RC, \\\"s\\\"), 1], x)\",\"plotXmin\":10,\"plotXmax\":100000,\"plotLogx\":true}]",
    "standard": null
   }
  ],

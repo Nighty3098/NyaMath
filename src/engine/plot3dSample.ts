@@ -13,7 +13,14 @@
  * Область: x ∈ [xmin, xmax], y ∈ [ymin, ymax]. Разрешение сетки res×res.
  * Все переменные документа видны (scope), x/y подставляются поверх scope.
  */
-import { compilePlotExpr, math, preprocessJ, preprocessRanges, type Scope } from './mathEngine';
+import {
+  compilePlotExpr,
+  math,
+  preprocessJ,
+  preprocessRanges,
+  unitToNumber,
+  type Scope,
+} from './mathEngine';
 
 export type Plot3dMode = 'auto' | 'surface' | 'points' | 'matrix';
 
@@ -61,7 +68,8 @@ export interface Sample3dOpts {
 }
 
 function numOf(v: unknown): number | null {
-  if (typeof v === 'number' && isFinite(v)) return v;
+  const un = unitToNumber(v);
+  if (un !== null) return un;
   if (v !== null && typeof v === 'object' && 're' in (v as object)) {
     const re = Number((v as { re: number }).re);
     return isFinite(re) ? re : null;

@@ -498,6 +498,44 @@ export function getConstant(name: string): number {
   return c.value;
 }
 
+/** Единица константы из БД (строка seed.json: «m/s», «J·s», «N/A²») или null. */
+export function getConstantUnit(name: string): string | null {
+  ready();
+  const c = constants.get(name);
+  if (!c) throw new Error(`unknown constant: ${name}`);
+  const u = (c.unit ?? '').trim();
+  return u ? u : null;
+}
+
+const SUPERSCRIPT: Record<string, string> = {
+  '⁰': '0',
+  '¹': '1',
+  '²': '2',
+  '³': '3',
+  '⁴': '4',
+  '⁵': '5',
+  '⁶': '6',
+  '⁷': '7',
+  '⁸': '8',
+  '⁹': '9',
+  '⁻': '-',
+  '⁺': '+',
+};
+
+/**
+ * Единица seed.json → синтаксис mathjs: «·» → «*», суперскрипты → ^n,
+ * обратные («mol⁻¹») → «1/mol».
+ * Важно: БЕЗ скобок вокруг показателя («m^2», а не «m^(2)») — двухаргументный
+ * math.unit(value, unit) не парсит `^(...)`, только голую степень.
+ * «J·s» → «J*s», «m⁻¹» → «1/m», «N/A²» → «N/A^2».
+ */
+export function normalizeUnitString(u: string): string {
+  // обратные единицы разбираем до суперскриптов: «mol⁻¹» → «1/mol»
+  const inv = /^(.+)⁻¹$/.exec(u.replaceAll('·', '*'));
+  if (inv) return `1/${inv[1]}`;
+  return u.replaceAll('·', '*').replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, (ch) => `^${SUPERSCRIPT[ch]}`);
+}
+
 /** Все константы имя → значение (для buildPackScope). */
 export function constantsMap(): Record<string, number> {
   ready();

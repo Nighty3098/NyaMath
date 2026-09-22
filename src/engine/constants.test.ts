@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { getConstant } from '../lib/db';
+import { getConstant, getConstantUnit, normalizeUnitString } from '../lib/db';
+import { math } from './mathEngine';
 import { recalculateAll } from './dependencies';
 
 /**
@@ -84,10 +85,31 @@ describe('physical constants (CODATA 2022 + SI-2019 exact)', () => {
     const publicNames = [...Object.keys(EXACT), ...Object.keys(CODATA), 'hbar', 'eta0'];
     for (const name of publicNames) {
       expect(scope[name], `scope lacks ${name}`).not.toBeUndefined();
-      expect(scope[name], `${name} wrong value`).toBeCloseTo(
+      expect(numOf(scope[name], name), `${name} wrong value`).toBeCloseTo(
         getConstant(name === 'eta0' ? 'Z_0' : name),
         12,
       );
     }
   });
+
+  it('every DB unit string parses in mathjs (two-arg form)', () => {
+    for (const name of [...Object.keys(EXACT), ...Object.keys(CODATA), 'hbar', 'eta0']) {
+      const dbName = name === 'eta0' ? 'Z_0' : name;
+      const u = getConstantUnit(dbName);
+      if (!u) continue;
+      const nu = normalizeUnitString(u);
+      expect(() => math.unit(getConstant(dbName), nu), `${dbName}: ${u}`).not.toThrow();
+    }
+  });
 });
+
+/** Значение из scope: число — как есть, Unit — числом (деление на свою единицу). */
+function numOf(v: unknown, name: string): number {
+  if (typeof v === 'number') return v;
+  const dbName = name === 'eta0' ? 'Z_0' : name;
+  const u = getConstantUnit(dbName);
+  if (u && v !== null && typeof v === 'object' && math.isUnit(v)) {
+    return Number(math.divide(v as never, math.unit(normalizeUnitString(u)) as never));
+  }
+  throw new Error(`scope ${name} is neither number nor Unit`);
+}

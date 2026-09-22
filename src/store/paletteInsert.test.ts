@@ -50,5 +50,7 @@ describe('addBlocks insert path', () => {
       after.clear();
     }
     expect(checked).toBe(FORMULAS.length);
-  });
+    // полный прогон каталога с юнитами ~4 c вхолостую, под нагрузкой параллельных
+    // воркеров — дольше: запас вместо дефолтных 5 c.
+  }, 60000);
 });
