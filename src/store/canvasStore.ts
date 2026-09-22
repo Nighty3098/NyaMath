@@ -23,161 +23,34 @@ import {
   type ComplexFmt,
   type AngleMode,
 } from '../engine/mathEngine';
+import {
+  STORAGE_KEY,
+  STORAGE_KEY_LEGACY,
+  loadAngleMode,
+  loadComplexFmt,
+  loadElemOpen,
+  loadGrid,
+  loadGridSize,
+  loadNumFmt,
+  loadUnitSys,
+  saveAngleMode,
+  saveComplexFmt,
+  saveElemOpen,
+  saveGrid,
+  saveGridSize,
+  saveNumFmt,
+  saveUnitSys,
+} from './persist';
 import { engineMismatch, parseDocFile } from '../lib/docFile';
 import { ENGINE_VERSION } from '../engine/version';
+import {
+  blankBlock,
+  normalizeBlock,
+  slimBlockRecord,
+  type BlockKind,
+} from '../lib/blocks';
 
-const STORAGE_KEY = 'nyamath-doc-v1';
-const STORAGE_KEY_LEGACY = 'wengineering-doc-v1';
-const GRID_KEY = 'nyamath-show-grid';
-const GRID_KEY_LEGACY = 'wengineering-show-grid';
-const GRID_SIZE_KEY = 'nyamath-grid-size';
-
-function loadGrid(): boolean {
-  try {
-    return (localStorage.getItem(GRID_KEY) ?? localStorage.getItem(GRID_KEY_LEGACY)) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function saveGrid(v: boolean) {
-  try {
-    localStorage.setItem(GRID_KEY, v ? '1' : '0');
-  } catch {
-    /* ignore */
-  }
-}
-
-const ELEM_OPEN_KEY = 'nyamath-elem-open';
-
-function loadElemOpen(): boolean {
-  try {
-    return localStorage.getItem(ELEM_OPEN_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function saveElemOpen() {
-  try {
-    localStorage.setItem(ELEM_OPEN_KEY, useCanvasStore.getState().elemPaletteOpen ? '1' : '0');
-  } catch {
-    /* ignore */
-  }
-}
-
-function loadGridSize(): 'standard' | 'fine' {
-  try {
-    return localStorage.getItem(GRID_SIZE_KEY) === 'fine' ? 'fine' : 'standard';
-  } catch {
-    return 'standard';
-  }
-}
-
-function saveGridSize(v: 'standard' | 'fine') {
-  try {
-    localStorage.setItem(GRID_SIZE_KEY, v);
-  } catch {
-    /* ignore */
-  }
-}
-
-const NUMFMT_KEY = 'nyamath-num-fmt';
-
-function loadNumFmt(): NumFmt {
-  let out: NumFmt = { mode: 'auto', digits: 6 };
-  try {
-    const raw = localStorage.getItem(NUMFMT_KEY);
-    if (raw) {
-      const p = JSON.parse(raw) as Partial<NumFmt>;
-      const mode = p.mode === 'sig' || p.mode === 'fixed' ? p.mode : 'auto';
-      const digits = Math.max(1, Math.min(15, Math.floor(p.digits ?? 6) || 6));
-      out = { mode, digits };
-    }
-  } catch {
-    out = { mode: 'auto', digits: 6 };
-  }
-  // main-thread движок (фолбэк без воркера) читает модульное состояние
-  setEngineNumFmt(out);
-  return out;
-}
-
-function saveNumFmt(f: NumFmt) {
-  try {
-    localStorage.setItem(NUMFMT_KEY, JSON.stringify(f));
-  } catch {
-    /* ignore */
-  }
-}
-
-const UNITSYS_KEY = 'nyamath-unit-sys';
-
-function loadUnitSys(): UnitSys {
-  try {
-    const raw = localStorage.getItem(UNITSYS_KEY);
-    if (raw === 'SI' || raw === 'US' || raw === 'CGS') {
-      setEngineUnitSys(raw);
-      return raw;
-    }
-  } catch {
-    /* ignore */
-  }
-  return 'none';
-}
-
-function saveUnitSys(s: UnitSys) {
-  try {
-    localStorage.setItem(UNITSYS_KEY, s);
-  } catch {
-    /* ignore */
-  }
-}
-
-const COMPLEXFMT_KEY = 'nyamath-complex-fmt';
-
-function loadComplexFmt(): ComplexFmt {
-  try {
-    const raw = localStorage.getItem(COMPLEXFMT_KEY);
-    if (raw === 'polar' || raw === 'both') {
-      setEngineComplexFmt(raw);
-      return raw;
-    }
-  } catch {
-    /* ignore */
-  }
-  return 'rect';
-}
-
-function saveComplexFmt(f: ComplexFmt) {
-  try {
-    localStorage.setItem(COMPLEXFMT_KEY, f);
-  } catch {
-    /* ignore */
-  }
-}
-
-const ANGLEMODE_KEY = 'nyamath-angle-mode';
-
-function loadAngleMode(): AngleMode {
-  try {
-    const raw = localStorage.getItem(ANGLEMODE_KEY);
-    if (raw === 'deg') {
-      setEngineAngleMode('deg');
-      return 'deg';
-    }
-  } catch {
-    /* ignore */
-  }
-  return 'rad';
-}
-
-function saveAngleMode(m: AngleMode) {
-  try {
-    localStorage.setItem(ANGLEMODE_KEY, m);
-  } catch {
-    /* ignore */
-  }
-}
+/* Настройки листа/форматы/палитры: персист — в store/persist.ts. */
 
 export interface CanvasState {
   blocks: Record<string, MathBlockData>;
@@ -377,23 +250,8 @@ export interface CanvasState {
   pushKbInsert: (id: string, text: string) => void;
 }
 
-function blank(id: string, x: number, y: number): MathBlockData {
-  return {
-    id,
-    x,
-    y,
-    rawInput: '',
-    displayLatex: '',
-    resultStr: '',
-    resultLatex: '',
-    resultValue: null,
-    error: null,
-    dependencies: [],
-    definedVar: null,
-    isOutput: false,
-    kind: 'math',
-    plotPreview: null,
-  };
+function blank(id: string, x: number, y: number, kind: BlockKind = 'math'): MathBlockData {
+  return blankBlock(id, x, y, kind);
 }
 
 /**
@@ -410,114 +268,18 @@ export let lastCalcMs = 0;
 
 function persist(blocks: Record<string, MathBlockData>) {
   try {
-    // plotPreview/simResult — пересчитываемые данные, в файл/хранилище не пишем
-    const slim = Object.values(blocks).map(({ plotPreview: _pp, simResult: _sr, ...b }) => b);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
+    // plotPreview/simResult — пересчитываемые данные, в файл/хранилище не пишем.
+    // Правило — в lib/blocks.ts (единое для persist/live/share/sync).
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(slimBlockRecord(blocks)));
   } catch {
     /* ignore */
   }
 }
 
-/** Привести сырой объект к MathBlockData (миграция старых сохранений и файлов) */
+/** Привести сырой объект к MathBlockData (миграция старых сохранений и файлов).
+ *  Единая реализация — в lib/blocks.ts (тот же normalizeBlock использует MCP). */
 function migrate(raw: unknown): MathBlockData | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const b = raw as Partial<MathBlockData>;
-  if (typeof b.x !== 'number' || typeof b.y !== 'number' || typeof b.rawInput !== 'string')
-    return null;
-  const id = typeof b.id === 'string' && b.id ? b.id : uuid();
-  const kind =
-    b.kind === 'plot' ||
-    b.kind === 'plot3d' ||
-    b.kind === 'program' ||
-    b.kind === 'text' ||
-    b.kind === 'sim' ||
-    b.kind === 'contour' ||
-    b.kind === 'slider'
-      ? b.kind
-      : 'math';
-  const numOrNull = (v: unknown): number | null =>
-    typeof v === 'number' && isFinite(v) ? v : null;
-  const numOrUndef = (v: unknown): number | undefined =>
-    typeof v === 'number' && isFinite(v) ? v : undefined;
-  const strOrUndef = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
-  const plotProj = b.plotProj === 'polar' || b.plotProj === 'xy' ? b.plotProj : undefined;
-  const plotTrace =
-    b.plotTrace === 'bar' || b.plotTrace === 'stem' || b.plotTrace === 'line'
-      ? b.plotTrace
-      : undefined;
-  const simSolver =
-    b.simSolver === 'euler' ||
-    b.simSolver === 'rk4' ||
-    b.simSolver === 'rk45' ||
-    b.simSolver === 'trbdf2'
-      ? b.simSolver
-      : undefined;
-  const simMode = b.simMode === 'fdtd' ? 'fdtd' : undefined;
-  const simFdtdSrc = b.simFdtdSrc === 'sine' ? 'sine' : undefined;
-  return {
-    ...blank(id, b.x, b.y),
-    ...b,
-    id,
-    kind,
-    resultLatex: b.resultLatex ?? '',
-    isOutput: b.isOutput ?? false,
-    disabled: b.disabled === true,
-    plotPreview: null,
-    simResult: null,
-    exportName: typeof b.exportName === 'string' ? b.exportName : undefined,
-    plotYmin: numOrUndef(b.plotYmin),
-    plotYmax: numOrUndef(b.plotYmax),
-    plotMode:
-      b.plotMode === 'surface' || b.plotMode === 'points' || b.plotMode === 'matrix'
-        ? b.plotMode
-        : undefined,
-    plotResolution: numOrUndef(b.plotResolution),
-    plotWireframe: typeof b.plotWireframe === 'boolean' ? b.plotWireframe : undefined,
-    plotProj,
-    plotTrace,
-    plotErr: strOrUndef(b.plotErr),
-    plotLogx: typeof b.plotLogx === 'boolean' ? b.plotLogx : undefined,
-    plotXUnit: strOrUndef(b.plotXUnit),
-    plotYUnit: strOrUndef(b.plotYUnit),
-    plotTitle: strOrUndef(b.plotTitle),
-    plotXLabel: strOrUndef(b.plotXLabel),
-    plotYLabel: strOrUndef(b.plotYLabel),
-    plotGrid: typeof b.plotGrid === 'boolean' ? b.plotGrid : undefined,
-    plotLegend: typeof b.plotLegend === 'boolean' ? b.plotLegend : undefined,
-    simModel: strOrUndef(b.simModel),
-    simMode,
-    simStates: strOrUndef(b.simStates),
-    simDerivs: strOrUndef(b.simDerivs),
-    simAux: strOrUndef(b.simAux),
-    simParams: strOrUndef(b.simParams),
-    simInit: strOrUndef(b.simInit),
-    simT0: numOrUndef(b.simT0),
-    simT1: numOrUndef(b.simT1),
-    simDt: numOrUndef(b.simDt),
-    simSolver,
-    simEvents: strOrUndef(b.simEvents),
-    simX: strOrUndef(b.simX),
-    simY: strOrUndef(b.simY),
-    simFdtdN: numOrUndef(b.simFdtdN),
-    simFdtdL: numOrUndef(b.simFdtdL),
-    simFdtdSteps: numOrUndef(b.simFdtdSteps),
-    simFdtdSrc,
-    simFdtdFreq: numOrUndef(b.simFdtdFreq),
-    simFdtdAmp: numOrUndef(b.simFdtdAmp),
-    simFdtdSrcX: numOrUndef(b.simFdtdSrcX),
-    simFdtdDet: numOrUndef(b.simFdtdDet),
-    simFdtdLayers: strOrUndef(b.simFdtdLayers),
-    simExport: typeof b.simExport === 'string' ? b.simExport : undefined,
-    simSpeed: numOrUndef(b.simSpeed),
-    simLoop: typeof b.simLoop === 'boolean' ? b.simLoop : undefined,
-    sliderVar: strOrUndef(b.sliderVar),
-    sliderMin: numOrUndef(b.sliderMin),
-    sliderMax: numOrUndef(b.sliderMax),
-    sliderStep: numOrUndef(b.sliderStep),
-    sliderVal: numOrUndef(b.sliderVal),
-    w: numOrNull(b.w),
-    h: numOrNull(b.h),
-  };
+  return normalizeBlock(raw);
 }
 
 function restore(): Record<string, MathBlockData> {
@@ -1096,7 +858,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       paletteTab: v ? 'elements' : s.paletteTab,
       detachedTabs: v ? s.detachedTabs : s.detachedTabs.filter((x) => x !== 'elements'),
     }));
-    saveElemOpen();
+    saveElemOpen(v);
     saveUnifiedUi();
     if (!v) saveDetachedTabs();
   },
@@ -1107,7 +869,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       paletteTab: open ? 'elements' : s.paletteTab,
       detachedTabs: open ? s.detachedTabs : s.detachedTabs.filter((x) => x !== 'elements'),
     }));
-    saveElemOpen();
+    saveElemOpen(open);
     saveUnifiedUi();
     if (!open) saveDetachedTabs();
   },

@@ -16,18 +16,13 @@ import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IGrip, IPause, IPlay, IWarn, IX } from './Icon';
 import StaleChip from './StaleChip';
 import { lx, simDomainName, simSolverName, t } from '../i18n';
+import { formatTick } from '../lib/plotTicks';
 
 const W = 560;
 const PH = 300;
 const PLAY_SECONDS = 6;
 
-const fmtTick = (v: number) => {
-  if (!isFinite(v)) return '—';
-  if (v === 0) return '0';
-  const a = Math.abs(v);
-  if (a >= 10000 || a < 0.001) return v.toExponential(0);
-  return String(Number(v.toPrecision(4)));
-};
+const fmtTick = (v: number) => formatTick(v, { hi: 10000, lo: 0.001 });
 
 const numField =
   'w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text';

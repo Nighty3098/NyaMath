@@ -11,26 +11,13 @@
  * Клиент подавляет эхо сравнением содержимого (см. src/lib/liveSync.ts).
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import type {
+  BlockMeta,
+  PushResult,
+  SyncSnapshot,
+} from '../../src/lib/syncProtocol.js';
 
-export interface BlockMeta {
-  clock: number;
-  actor: string;
-}
-
-export interface SyncSnapshot {
-  rev: number;
-  blocks: unknown[];
-  /** Per-block LWW-метки (CRDT-лайт); нет — legacy-клиент. */
-  meta?: Record<string, BlockMeta>;
-  /** Tombstones удалённых блоков. */
-  deleted?: Record<string, BlockMeta>;
-}
-
-export interface PushResult {
-  rev: number;
-  /** Итог мёржа (только когда сервер сливал, а не принимал как есть). */
-  merged?: SyncSnapshot;
-}
+export type { BlockMeta, PushResult, SyncSnapshot };
 
 interface SyncHandlers {
   getSnapshot: () => SyncSnapshot;

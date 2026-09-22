@@ -9,6 +9,7 @@ import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { ISave, IWarn, IX } from './Icon';
 import { t } from '../i18n';
 import { exportSvgElementToPng, safeFilename } from '../lib/exportFiles';
+import { formatTick as fmtTick } from '../lib/plotTicks';
 
 const W = 460;
 const H = 300;
@@ -19,13 +20,6 @@ const PAD_B = 30;
 const LEVELS = 10;
 /** Дебаунс ресемплинга: слайдер/ресайз шлют изменения на каждый кадр */
 const RESAMPLE_DEBOUNCE_MS = 150;
-
-const fmtTick = (v: number) => {
-  if (v === 0) return '0';
-  const a = Math.abs(v);
-  if (a >= 1000 || a < 0.01) return v.toExponential(0).replace('e', 'e');
-  return String(Number(v.toPrecision(4)));
-};
 
 /** Изолинии уровня методом marching squares → SVG-путь. */
 function isolines(

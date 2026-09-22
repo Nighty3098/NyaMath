@@ -13,14 +13,9 @@
  * Область: x ∈ [xmin, xmax], y ∈ [ymin, ymax]. Разрешение сетки res×res.
  * Все переменные документа видны (scope), x/y подставляются поверх scope.
  */
-import {
-  compilePlotExpr,
-  math,
-  preprocessJ,
-  preprocessRanges,
-  unitToNumber,
-  type Scope,
-} from './mathEngine';
+import { compilePlotExpr, math, preprocessJ, preprocessRanges, unitToNumber } from './mathEngine';
+import type { Scope } from './core';
+import { complexReOrNull, nestedValue, padRange } from './core';
 
 export type Plot3dMode = 'auto' | 'surface' | 'points' | 'matrix';
 
@@ -68,27 +63,12 @@ export interface Sample3dOpts {
 }
 
 function numOf(v: unknown): number | null {
-  const un = unitToNumber(v);
-  if (un !== null) return un;
-  if (v !== null && typeof v === 'object' && 're' in (v as object)) {
-    const re = Number((v as { re: number }).re);
-    return isFinite(re) ? re : null;
-  }
-  return null;
+  return unitToNumber(v) ?? complexReOrNull(v);
 }
 
 /** Значение → вложенный JS-массив (mathjs Matrix или Array). */
 function toNested(v: unknown): unknown[] | null {
-  if (Array.isArray(v)) return v;
-  if (v !== null && typeof v === 'object' && 'toArray' in (v as object)) {
-    try {
-      const a = (v as { toArray: () => unknown }).toArray();
-      return Array.isArray(a) ? a : null;
-    } catch {
-      return null;
-    }
-  }
-  return null;
+  return nestedValue(v);
 }
 
 /** Есть ли в выражении свободная переменная x / y (по AST, не регексом). */
@@ -114,12 +94,7 @@ function evalInScope(expr: string, scope: Scope): unknown {
 }
 
 function pad(lo: number, hi: number): [number, number] {
-  if (lo === hi) {
-    lo -= 1;
-    hi += 1;
-  }
-  const span = hi - lo;
-  return [lo - span * 0.06, hi + span * 0.06];
+  return padRange(lo, hi, 0.06);
 }
 
 /** Плоский вектор чисел из значения (для X; Y; Z). */

@@ -1,26 +1,16 @@
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
 import type { MathBlockData } from '../engine/dependencies';
+import { slimBlockRecord } from './blocks';
 import { getActor, mergeBlockMaps, stampOutgoing, type MetaMap, type WireBlock } from './syncCrdt';
 
 const URL_KEY = 'nyamath-live-url';
 const DEFAULT_URL = 'http://localhost:3777';
 const SEND_DEBOUNCE_MS = 400;
 
-/** Блоки без пересчитываемых полей — то же slim-правило, что persist/сервер. */
+/** Блоки без пересчитываемых полей — единое slim-правило (см. lib/blocks.ts). */
 function slimBlocks(blocks: Record<string, MathBlockData>): MathBlockData[] {
-  return Object.values(blocks).map((b) => {
-    const {
-      plotPreview: _pp,
-      simResult: _sr,
-      ...rest
-    } = b as MathBlockData & {
-      simResult?: unknown;
-    };
-    void _pp;
-    void _sr;
-    return rest as MathBlockData;
-  });
+  return slimBlockRecord(blocks);
 }
 
 let es: EventSource | null = null;

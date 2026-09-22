@@ -28,8 +28,8 @@ import {
   splitOffUnit,
   splitOnError,
   stripOnError,
-  type Scope,
 } from './mathEngine';
+import type { Scope } from './core';
 import type { EvalFunction } from 'mathjs';
 import { t } from '../i18n';
 

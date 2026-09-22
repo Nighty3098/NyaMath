@@ -11,8 +11,9 @@
  */
 import { math, compileRawExpr, preprocessJ, preprocessRanges } from './mathEngine';
 import type { EvalFunction } from 'mathjs';
-import type { Scope } from './packs';
+import type { Scope } from './core';
 import { solveLinear } from './numeric';
+import { formatCompact } from './format';
 import { t, type LText } from '../i18n';
 import { getSimModelDb as dbGetSimModel, listSimModels as dbListSimModels } from '../lib/db';
 
@@ -1063,10 +1064,8 @@ export async function runSimAsync(
 }
 
 function fmtT(v: number): string {
-  if (v === 0) return '0';
-  const a = Math.abs(v);
-  if (a >= 1000 || a < 0.01) return v.toExponential(2);
-  return String(Number(v.toPrecision(6)));
+  // Единый компактный формат (см. engine/format.ts).
+  return formatCompact(v);
 }
 
 function stepEuler(

@@ -40,6 +40,12 @@ import {
   type MetaMap,
   type WireBlock,
 } from '../../src/lib/syncCrdt.js';
+import {
+  blankBlock,
+  normalizeBlock,
+  slimBlock,
+  slimBlocks as slimBlocksLib,
+} from '../../src/lib/blocks.js';
 import { getDemoItems, getDemoLines } from '../../src/lib/db.js';
 
 /* ---------------- состояние документа ---------------- */
@@ -76,22 +82,8 @@ function blank(
   y: number,
   kind: MathBlockData['kind'] = 'math',
 ): MathBlockData {
-  return {
-    id,
-    x,
-    y,
-    rawInput: '',
-    displayLatex: '',
-    resultStr: '',
-    resultLatex: '',
-    resultValue: null,
-    error: null,
-    dependencies: [],
-    definedVar: null,
-    isOutput: false,
-    kind,
-    plotPreview: null,
-  };
+  // Единый blank — в src/lib/blocks.ts (тот же использует веб-стор).
+  return blankBlock(id, x, y, kind);
 }
 
 /** Пересчёт всего документа сверху-вниз (как в приложении). */
@@ -113,66 +105,15 @@ function refresh(): void {
   broadcastSync?.();
 }
 
-/** Блоки без пересчитываемых полей — для файла и realtime-рассылки. */
+/** Блоки без пересчитываемых полей — единое slim-правило (см. src/lib/blocks.ts). */
 function slimBlocks(): MathBlockData[] {
-  return blocks.map((b) => {
-    const {
-      plotPreview: _pp,
-      simResult: _sr,
-      ...rest
-    } = b as MathBlockData & {
-      simResult?: unknown;
-    };
-    void _pp;
-    void _sr;
-    return rest as MathBlockData;
-  });
+  return slimBlocksLib(blocks);
 }
 
 function validateBlock(raw: unknown): MathBlockData | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const b = raw as Partial<MathBlockData>;
-  if (typeof b['x'] !== 'number' || typeof b['y'] !== 'number' || typeof b['rawInput'] !== 'string')
-    return null;
-  const id = typeof b['id'] === 'string' && b['id'] ? b['id'] : uuid();
-  const kind: MathBlockData['kind'] =
-    b['kind'] === 'plot' ||
-    b['kind'] === 'plot3d' ||
-    b['kind'] === 'program' ||
-    b['kind'] === 'text' ||
-    b['kind'] === 'slider' ||
-    b['kind'] === 'sim' ||
-    b['kind'] === 'contour'
-      ? b['kind']
-      : 'math';
-  const numOrUndef = (v: unknown): number | undefined =>
-    typeof v === 'number' && isFinite(v) ? v : undefined;
-  return {
-    ...blank(id, b['x'], b['y'], kind),
-    ...b,
-    id,
-    kind,
-    resultLatex: b['resultLatex'] ?? '',
-    isOutput: b['isOutput'] ?? false,
-    // Как браузерный migrate: всегда boolean, иначе JSON-эхо
-    // (slim без disabled vs slim с disabled:false) даёт вечный push-loop.
-    disabled: (b as { disabled?: unknown })['disabled'] === true,
-    plotPreview: null,
-    exportName: typeof b['exportName'] === 'string' ? b['exportName'] : undefined,
-    plotMode:
-      b['plotMode'] === 'surface' || b['plotMode'] === 'points' || b['plotMode'] === 'matrix'
-        ? b['plotMode']
-        : undefined,
-    plotResolution: numOrUndef(b['plotResolution']),
-    plotWireframe: typeof b['plotWireframe'] === 'boolean' ? b['plotWireframe'] : undefined,
-    sliderVar: typeof b['sliderVar'] === 'string' ? b['sliderVar'] : undefined,
-    sliderMin: numOrUndef(b['sliderMin']),
-    sliderMax: numOrUndef(b['sliderMax']),
-    sliderStep: numOrUndef(b['sliderStep']),
-    sliderVal: numOrUndef(b['sliderVal']),
-    w: typeof b['w'] === 'number' && (b['w'] as number) > 0 ? (b['w'] as number) : null,
-    h: typeof b['h'] === 'number' && (b['h'] as number) > 0 ? (b['h'] as number) : null,
-  };
+  // Единая нормализация — в src/lib/blocks.ts (полный набор sim/slider/plot-полей,
+  // раньше MCP-версия молча роняла sim*/plotProj/plotTrace).
+  return normalizeBlock(raw);
 }
 
 function find(id: string): MathBlockData | null {
@@ -828,18 +769,7 @@ server.tool(
   async ({ path: p }): Promise<CallToolResult> => {
     const target = p ?? docPath ?? path.resolve(process.cwd(), 'nyamath-doc.json');
     try {
-      const slim = blocks.map((b) => {
-        const {
-          plotPreview: _pp,
-          simResult: _sr,
-          ...rest
-        } = b as MathBlockData & {
-          simResult?: unknown;
-        };
-        void _pp;
-        void _sr;
-        return rest;
-      });
+      const slim = slimBlocksLib(blocks);
       fs.writeFileSync(target, JSON.stringify(serializeDocFile(slim), null, 2), 'utf-8');
       docPath = target;
       return ok({ ok: true, blocks: blocks.length, docPath: target, engine: ENGINE_VERSION });
@@ -1244,16 +1174,7 @@ async function main(): Promise<void> {
         // Метки: входящие — за свои блоки; legacy-пушам без meta наследуем
         // старые метки контентно-совпадающих блоков (иначе сервер выигрывал
         // бы все будущие конфликты просто за счёт свежего штампа).
-        const stripCmp = (x: MathBlockData): unknown => {
-          const {
-            plotPreview: _p,
-            simResult: _s,
-            ...rest
-          } = x as MathBlockData & { simResult?: unknown };
-          void _p;
-          void _s;
-          return rest;
-        };
+        const stripCmp = (x: MathBlockData): unknown => slimBlock(x);
         const prevCanon = new Map(blocks.map((sb) => [sb.id, canon(stripCmp(sb))]));
         blocks = rec;
         const now = Date.now();

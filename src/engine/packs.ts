@@ -15,6 +15,7 @@ import {
   type MatPropKey,
 } from '../lib/db';
 import { getCompiledPre, preprocessJ, preprocessRanges } from './mathEngine';
+import type { Scope } from './core';
 import {
   adaptiveSimpson,
   brent,
@@ -27,7 +28,7 @@ import {
   vecTrace,
 } from './numeric';
 
-export type Scope = Record<string, unknown>;
+export type { Scope } from './core';
 
 /**
  * Scope mathjs (PartitionedMap) → плоский объект: spread `{...scope}`
@@ -1186,14 +1187,14 @@ export function buildPackScope(math: MathJsInstance): Scope {
       try {
         const r = nelderMead(f, guess, 500, 1e-8, (l) => lines.push(l));
         pushSolverTrace(scope, {
-          label: `minimize "${expr}" from ${vecTrace(guess)}: ${r.iters} iters, f=${fmtTrace(r.fx)}`,
+          label: `minimize ${expr} from ${vecTrace(guess)}: ${r.iters} iters, f=${fmtTrace(r.fx)}`,
           lines: compactTrace(lines),
         });
         return math.matrix(r.x);
       } catch {
         if (lines.length) {
           pushSolverTrace(scope, {
-            label: `minimize "${expr}": no convergence`,
+            label: `minimize ${expr}: no convergence`,
             lines: compactTrace(lines),
           });
         }
@@ -1217,14 +1218,14 @@ export function buildPackScope(math: MathJsInstance): Scope {
       try {
         const r = nelderMead(f, guess, 500, 1e-8, (l) => lines.push(l));
         pushSolverTrace(scope, {
-          label: `maximize "${expr}" from ${vecTrace(guess)}: ${r.iters} iters, f=${fmtTrace(-r.fx)}`,
+          label: `maximize ${expr} from ${vecTrace(guess)}: ${r.iters} iters, f=${fmtTrace(-r.fx)}`,
           lines: compactTrace(lines),
         });
         return math.matrix(r.x);
       } catch {
         if (lines.length) {
           pushSolverTrace(scope, {
-            label: `maximize "${expr}": no convergence`,
+            label: `maximize ${expr}: no convergence`,
             lines: compactTrace(lines),
           });
         }
@@ -1247,14 +1248,14 @@ export function buildPackScope(math: MathJsInstance): Scope {
           const a = needNum(evNode(args[2], scope));
           const b = needNum(evNode(args[3], scope));
           if (!(a < b)) throw new Error(t('e.calcArgs'));
-          const head = `root "${expr}" ${v} ∈ [${fmtTrace(a)}, ${fmtTrace(b)}]`;
+          const head = `root ${expr} ${v} ∈ [${fmtTrace(a)}, ${fmtTrace(b)}]`;
           const r = brent(f, a, b, 1e-12, 100, (l) => lines.push(l));
           pub(`${head}: f=${fmtTrace(f(r))}`);
           return r;
         }
         const g0 = needNum(evNode(args[2], scope));
         // скалярный Ньютон с численной производной
-        const head = `root "${expr}" ${v} from ${fmtTrace(g0)}`;
+        const head = `root ${expr} ${v} from ${fmtTrace(g0)}`;
         let x = g0;
         for (let k = 0; k < 100; k++) {
           const fx = f(x);
@@ -1272,7 +1273,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
         throw new Error(t('e.calcNoConv'));
       } catch (e) {
         // лог только если итерации реально были (не ошибка аргументов)
-        if (lines.length) pub(`root "${expr}" ${v}: no convergence`);
+        if (lines.length) pub(`root ${expr} ${v}: no convergence`);
         if (e instanceof Error && /bracket/i.test(e.message)) throw new Error(t('e.calcBracket'));
         if (e instanceof Error && e.message.startsWith('Симуляция:')) throw e;
         throw new Error(t('e.calcNoConv'));
@@ -1332,7 +1333,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
           f0 = f1;
           x1 = x2;
         }
-        pubBvp(`bvp "${expr}": secant ${iters} iters, s=${fmtTrace(x0)}`);
+        pubBvp(`bvp ${expr}: secant ${iters} iters, s=${fmtTrace(x0)}`);
         // финальный прогон с сеткой для графика
         const h = (b - a) / (NPTS - 1);
         let y = [ya, x0];
@@ -1345,7 +1346,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
         }
         return math.matrix(rows);
       } catch (e) {
-        if (lines.length) pubBvp(`bvp "${expr}": no convergence`);
+        if (lines.length) pubBvp(`bvp ${expr}: no convergence`);
         if (e instanceof Error && e.message.startsWith('Симуляция:')) throw e;
         throw new Error(t('e.calcNoConv'));
       }
@@ -1388,14 +1389,14 @@ export function buildPackScope(math: MathJsInstance): Scope {
       try {
         const r = sign * adaptiveSimpson(f, lo, hi, 1e-10, 20, (l) => lines.push(l));
         pushSolverTrace(scope, {
-          label: `∫ "${expr}" d${v} [${fmtTrace(a)}, ${fmtTrace(b)}]: I=${fmtTrace(r)}`,
+          label: `∫ ${expr} d${v} [${fmtTrace(a)}, ${fmtTrace(b)}]: I=${fmtTrace(r)}`,
           lines: compactTrace(lines),
         });
         return r;
       } catch {
         if (lines.length) {
           pushSolverTrace(scope, {
-            label: `∫ "${expr}" d${v}: no convergence`,
+            label: `∫ ${expr} d${v}: no convergence`,
             lines: compactTrace(lines),
           });
         }

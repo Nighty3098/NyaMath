@@ -10,8 +10,9 @@ import {
   preprocessJ,
   preprocessRanges,
   unitToNumber,
-  type Scope,
 } from './mathEngine';
+import type { Scope } from './core';
+import { complexReOrNull, flattenValue, padRange } from './core';
 
 export interface PlotSample {
   /** подпись серии */
@@ -65,12 +66,7 @@ export function sampleExpression(
     try {
       base[varName] = xv;
       const v: unknown = compiled.code.evaluate(base);
-      const un = unitToNumber(v);
-      if (un !== null) y = un;
-      else if (v !== null && typeof v === 'object' && 're' in (v as object)) {
-        const re = Number((v as { re: number }).re);
-        if (isFinite(re)) y = re;
-      }
+      y = numOf(v);
     } catch {
       y = null;
     }
@@ -78,15 +74,7 @@ export function sampleExpression(
   }
   const finite = ys.filter((v): v is number => typeof v === 'number' && isFinite(v));
   if (finite.length < 2) return null;
-  let lo = Math.min(...finite);
-  let hi = Math.max(...finite);
-  if (lo === hi) {
-    lo -= 1;
-    hi += 1;
-  }
-  const pad = (hi - lo) * 0.12;
-  lo -= pad;
-  hi += pad;
+  const [lo, hi] = padRange(Math.min(...finite), Math.max(...finite));
   return { label: opts?.label ?? rawExpr, expr: rawExpr, xs, ys, xmin, xmax, ymin: lo, ymax: hi };
 }
 
@@ -105,25 +93,12 @@ export interface PlotBlockSample {
 }
 
 function numOf(v: unknown): number | null {
-  const un = unitToNumber(v);
-  if (un !== null) return un;
-  if (v !== null && typeof v === 'object' && 're' in (v as object)) {
-    const re = Number((v as { re: number }).re);
-    return isFinite(re) ? re : null;
-  }
-  return null;
+  // Единицы → число, комплексные → Re. Та же семантика, что раньше.
+  return unitToNumber(v) ?? complexReOrNull(v);
 }
 
 function toFlatArray(v: unknown): unknown[] | null {
-  if (Array.isArray(v)) return (v as unknown[]).flat(Infinity);
-  if (v !== null && typeof v === 'object' && 'toArray' in (v as object)) {
-    try {
-      return ((v as { toArray: () => unknown }).toArray() as unknown[]).flat(Infinity);
-    } catch {
-      return null;
-    }
-  }
-  return null;
+  return flattenValue(v);
 }
 
 /**
@@ -216,14 +191,6 @@ export function samplePlotBlock(
     for (const y of s.ys) if (typeof y === 'number' && isFinite(y)) allY.push(y);
   }
   if (!allY.length) return null;
-  let lo = Math.min(...allY);
-  let hi = Math.max(...allY);
-  if (lo === hi) {
-    lo -= 1;
-    hi += 1;
-  }
-  const span = hi - lo;
-  lo -= span * 0.12;
-  hi += span * 0.12;
+  const [lo, hi] = padRange(Math.min(...allY), Math.max(...allY));
   return { series, ymin: lo, ymax: hi };
 }

@@ -19,6 +19,10 @@ import {
 import { buildPackScope, PACK_NAMES } from './packs';
 
 import { t, getLang } from '../i18n';
+import type { Scope } from './core';
+import { formatNumberWith, normalizeNumFmt } from './format';
+
+export type { Scope } from './core';
 
 export const math: MathJsInstance = create(all, {});
 
@@ -161,8 +165,6 @@ math.import(
   },
   { override: true },
 );
-
-export type Scope = Record<string, unknown>;
 
 /* ---------- LRU-кэши горячего пути (#4) ----------
  * parse / compile / deps / LaTeX одной и той же строки повторяются на каждый
@@ -880,8 +882,7 @@ let numFmt: NumFmt = { ...DEFAULT_FMT };
 
 /** Установить формат чисел (стор + воркер-протокол; влияет только на отображение). */
 export function setNumFmt(f: NumFmt): void {
-  const d = Math.max(1, Math.min(15, Math.floor(f.digits) || 6));
-  numFmt = { mode: f.mode === 'sig' || f.mode === 'fixed' ? f.mode : 'auto', digits: d };
+  numFmt = normalizeNumFmt(f);
 }
 
 export function getNumFmt(): NumFmt {
@@ -1086,36 +1087,10 @@ export function unitToNumber(v: unknown): number | null {
   }
   return null;
 }
-/** e-нотация mathjs → инженерная «·10^» (как в auto-ветке). */
-function expStr(s: string): string {
-  return s.replace('e+', '·10^').replace('e', '·10^');
-}
-
-/** -0.00 → 0.00 (иначе fixed даёт «-0.00» для округлённого нуля). */
-function fixZero(s: string, digits: number): string {
-  return Number(s) === 0 ? (0).toFixed(digits) : s;
-}
 
 function formatNumber(n: number): string {
-  if (n === 0 || Object.is(n, -0))
-    return numFmt.mode === 'fixed' ? (0).toFixed(numFmt.digits) : '0';
-  const abs = Math.abs(n);
-  if (numFmt.mode === 'sig') {
-    const d = numFmt.digits;
-    if (abs >= 1e-3 && abs < 1e6) return String(Number(n.toPrecision(d)));
-    return expStr(n.toExponential(d - 1));
-  }
-  if (numFmt.mode === 'fixed') {
-    const d = numFmt.digits;
-    if (abs >= 1e-3 && abs < 1e6) return fixZero(n.toFixed(d), d);
-    return expStr(n.toExponential(d));
-  }
-  if ((abs >= 1e-3 && abs < 1e6) || n === 0) {
-    // убираем мусор float: 0.1+0.2
-    const s = Number(n.toPrecision(10)).toString();
-    return s;
-  }
-  return n.toExponential(5).replace('e+', '·10^').replace('e', '·10^');
+  // Единая реализация — в engine/format.ts (там же тесты поведения).
+  return formatNumberWith(n, numFmt);
 }
 
 function formatComplex(re: number, im: number): string {
@@ -1350,7 +1325,11 @@ function postprocessTex(tex: string): string {
   return tex;
 }
 
-function safeTex(expr: string): string {
+/** Выражение листа → LaTeX (mathjs toTex + инженерные замены).
+ *  Экспортируется для рендера шагов решателя (lib/traceLatex.ts):
+ *  подынтегральные выражения и уравнения в треке — той же математикой,
+ *  что основная строка блока. Не бросает: при ошибке парсинга — escape. */
+export function safeTex(expr: string): string {
   try {
     const sig = sigmaTex(expr);
     if (sig) return sig;

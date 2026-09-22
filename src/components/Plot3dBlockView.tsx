@@ -11,6 +11,7 @@ import { plotPalettes } from '../theme';
 import { t } from '../i18n';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IGrip, IWarn, IX } from './Icon';
+import { formatTick } from '../lib/plotTicks';
 
 const W = 560;
 /** Стартовая оценка высоты шапки — точное значение замеряем (см. chromeH ниже) */
@@ -20,13 +21,7 @@ const N_MAX = 100;
 /** Дебаунс ресемплинга: слайдер/ресайз шлют изменения на каждый кадр */
 const RESAMPLE_DEBOUNCE_MS = 150;
 
-const fmt = (v: number) => {
-  if (!isFinite(v)) return '—';
-  if (v === 0) return '0';
-  const a = Math.abs(v);
-  if (a >= 1000 || a < 0.01) return v.toExponential(1);
-  return String(Number(v.toPrecision(4)));
-};
+const fmt = (v: number) => formatTick(v, { expDigits: 1 });
 
 /** Цвет по высоте: синий → голубой → жёлтый → красный */
 function colorFor(t: number, out: THREE.Color): THREE.Color {

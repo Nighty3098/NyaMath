@@ -23,10 +23,11 @@ export type TraceFn = (line: string) => void;
 /**
  * Ключ лога в scope документа. Строка, а не символ: raw-функции паков
  * получают от mathjs не сам scope, а PartitionedMap-обёртку (записи туда
- * снаружи не видны), а вот ЧТЕНИЕ делегируется — поэтому канал это ОБЩИЙ
- * массив: движок кладёт [], решатели push'ат, забор сбрасывает в [].
- * Имя с даблами подчёркиваниями — пользовательские переменные так не зовут.
+ *  снаружи не видны), а вот ЧТЕНИЕ делегируется — поэтому канал это ОБЩИЙ
+ *  массив: движок кладёт [], решатели push'ат, забор сбрасывает в [].
+ *  Имя с даблами подчёркиваниями — пользовательские переменные так не зовут.
  */
+import { formatCompact } from './format';
 export const SOLVER_TRACE_KEY = '__nya_trace__';
 
 export interface SolverTraceEntry {
@@ -82,13 +83,9 @@ export function takeSolverTrace(scope: Record<string, unknown>, maxLines = 40): 
   return out.slice(0, maxLines);
 }
 
-/** Компактный формат числа для лога. */
+/** Компактный формат числа для лога (единая реализация — в engine/format.ts). */
 export function fmtTrace(n: number): string {
-  if (!isFinite(n)) return String(n);
-  if (n === 0) return '0';
-  const a = Math.abs(n);
-  if (a >= 1e-3 && a < 1e6) return String(Number(n.toPrecision(6)));
-  return n.toExponential(2);
+  return formatCompact(n);
 }
 
 /** Вектор для лога. */

@@ -17,6 +17,7 @@ import {
   safeFilename,
 } from '../lib/exportFiles';
 import { plotBlockToCode } from '../lib/plotCode';
+import { formatTick as fmtTick, logTicks, niceTicks } from '../lib/plotTicks';
 
 const W = 460;
 const H = 300;
@@ -28,41 +29,6 @@ const N_PTS = 240;
 const MAX_BARS = 48;
 /** Стартовая оценка высоты шапки — точное значение замеряем (см. chromeH ниже) */
 const HEAD = 112;
-
-/** "Красивые" тики для оси */
-function niceTicks(lo: number, hi: number, count = 5): number[] {
-  if (!isFinite(lo) || !isFinite(hi) || lo === hi) return [lo];
-  const span = hi - lo;
-  const step0 = span / count;
-  const mag = 10 ** Math.floor(Math.log10(step0));
-  const norm = step0 / mag;
-  const step = (norm >= 5 ? 5 : norm >= 2 ? 2 : 1) * mag;
-  const ticks: number[] = [];
-  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-12; v += step) {
-    ticks.push(Number(v.toPrecision(10)));
-  }
-  return ticks;
-}
-
-const fmtTick = (v: number) => {
-  if (v === 0) return '0';
-  const a = Math.abs(v);
-  if (a >= 1000 || a < 0.01) return v.toExponential(0).replace('e', 'e');
-  return String(Number(v.toPrecision(4)));
-};
-
-/** Логарифмические тики: 1, 2, 5 · 10ᵖ внутри (lo, hi). */
-function logTicks(lo: number, hi: number): number[] {
-  const out: number[] = [];
-  for (let p = Math.floor(Math.log10(lo)); p <= Math.ceil(Math.log10(hi)); p++) {
-    const base = 10 ** p;
-    for (const m of [1, 2, 5]) {
-      const v = m * base;
-      if (v >= lo - 1e-12 && v <= hi + 1e-12) out.push(v);
-    }
-  }
-  return out;
-}
 
 interface Series {
   expr: string;

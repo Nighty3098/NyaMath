@@ -14,8 +14,8 @@ import {
   stripOnError,
   toLatex,
   valueToLatex,
-  type Scope,
 } from './mathEngine';
+import type { Scope } from './core';
 import { resetSolverTrace, takeSolverTrace } from './numeric';
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
