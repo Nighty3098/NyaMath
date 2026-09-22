@@ -8,10 +8,22 @@ import { fuzzyScore } from './assistant';
  */
 
 export type CmdId =
-  | 'ins-math' | 'ins-text' | 'ins-plot' | 'ins-contour' | 'ins-3d'
-  | 'ins-prog' | 'ins-sim' | 'ins-slider'
-  | 'recalc' | 'calc-now' | 'scope-mon'
-  | 'quickstart' | 'ex20' | 'ex-advanced' | 'theme' | 'grid';
+  | 'ins-math'
+  | 'ins-text'
+  | 'ins-plot'
+  | 'ins-contour'
+  | 'ins-3d'
+  | 'ins-prog'
+  | 'ins-sim'
+  | 'ins-slider'
+  | 'recalc'
+  | 'calc-now'
+  | 'scope-mon'
+  | 'quickstart'
+  | 'ex20'
+  | 'ex-advanced'
+  | 'theme'
+  | 'grid';
 
 export interface CmdSpec {
   id: CmdId;
@@ -22,21 +34,96 @@ export interface CmdSpec {
 }
 
 export const COMMANDS: CmdSpec[] = [
-  { id: 'ins-math', ru: 'Новый мат-блок', en: 'New math block', keywords: ['math', 'formula', 'мат', 'формула', ':='] },
-  { id: 'ins-text', ru: 'Новый текстовый блок', en: 'New text block', keywords: ['text', 'текст', 'заголовок', 'heading'] },
-  { id: 'ins-plot', ru: 'Новый 2D-график', en: 'New 2D plot', keywords: ['plot', 'graph', 'график', 'plt'] },
-  { id: 'ins-contour', ru: 'Новый контурный график', en: 'New contour plot', keywords: ['contour', 'контур'] },
-  { id: 'ins-3d', ru: 'Новый 3D-график', en: 'New 3D plot', keywords: ['3d', 'surface', 'поверхность'] },
-  { id: 'ins-prog', ru: 'Новый program-блок', en: 'New program block', keywords: ['program', 'code', 'программа', 'код', 'if', 'for'] },
-  { id: 'ins-sim', ru: 'Новая симуляция', en: 'New simulation', keywords: ['sim', 'ode', 'симуляция', 'модель'] },
-  { id: 'ins-slider', ru: 'Новый слайдер', en: 'New slider', keywords: ['slider', 'слайдер', 'manipulate', 'bind'] },
-  { id: 'recalc', ru: 'Пересчитать всё', en: 'Recalculate all', keywords: ['recalc', 'calc', 'пересчет', 'пересчёт'] },
-  { id: 'calc-now', ru: 'Пересчитать видимые', en: 'Recalculate visible', keywords: ['visible', 'now', 'видимые'] },
-  { id: 'scope-mon', ru: 'Пульт переменных', en: 'Variable scope monitor', keywords: ['scope', 'monitor', 'пульт', 'телеметрия'] },
-  { id: 'quickstart', ru: 'Быстрый старт: парабола со слайдером', en: 'Quickstart: parabola with slider', keywords: ['quickstart', 'старт', 'parabola', 'парабола', 'slider', 'demo', 'демо', '60'] },
-  { id: 'ex20', ru: 'Пример: электродинамика', en: 'Example: electrodynamics', keywords: ['example', 'пример', 'variant', 'ex20'] },
-  { id: 'ex-advanced', ru: 'Пример: матрицы и программы', en: 'Example: matrices & programs', keywords: ['advanced', 'матрицы', 'демо'] },
-  { id: 'theme', ru: 'Переключить тему', en: 'Toggle theme', keywords: ['theme', 'dark', 'тема', 'темная', 'тёмная'] },
+  {
+    id: 'ins-math',
+    ru: 'Новый мат-блок',
+    en: 'New math block',
+    keywords: ['math', 'formula', 'мат', 'формула', ':='],
+  },
+  {
+    id: 'ins-text',
+    ru: 'Новый текстовый блок',
+    en: 'New text block',
+    keywords: ['text', 'текст', 'заголовок', 'heading'],
+  },
+  {
+    id: 'ins-plot',
+    ru: 'Новый 2D-график',
+    en: 'New 2D plot',
+    keywords: ['plot', 'graph', 'график', 'plt'],
+  },
+  {
+    id: 'ins-contour',
+    ru: 'Новый контурный график',
+    en: 'New contour plot',
+    keywords: ['contour', 'контур'],
+  },
+  {
+    id: 'ins-3d',
+    ru: 'Новый 3D-график',
+    en: 'New 3D plot',
+    keywords: ['3d', 'surface', 'поверхность'],
+  },
+  {
+    id: 'ins-prog',
+    ru: 'Новый program-блок',
+    en: 'New program block',
+    keywords: ['program', 'code', 'программа', 'код', 'if', 'for'],
+  },
+  {
+    id: 'ins-sim',
+    ru: 'Новая симуляция',
+    en: 'New simulation',
+    keywords: ['sim', 'ode', 'симуляция', 'модель'],
+  },
+  {
+    id: 'ins-slider',
+    ru: 'Новый слайдер',
+    en: 'New slider',
+    keywords: ['slider', 'слайдер', 'manipulate', 'bind'],
+  },
+  {
+    id: 'recalc',
+    ru: 'Пересчитать всё',
+    en: 'Recalculate all',
+    keywords: ['recalc', 'calc', 'пересчет', 'пересчёт'],
+  },
+  {
+    id: 'calc-now',
+    ru: 'Пересчитать видимые',
+    en: 'Recalculate visible',
+    keywords: ['visible', 'now', 'видимые'],
+  },
+  {
+    id: 'scope-mon',
+    ru: 'Пульт переменных',
+    en: 'Variable scope monitor',
+    keywords: ['scope', 'monitor', 'пульт', 'телеметрия'],
+  },
+  {
+    id: 'quickstart',
+    ru: 'Быстрый старт: парабола со слайдером',
+    en: 'Quickstart: parabola with slider',
+    keywords: ['quickstart', 'старт', 'parabola', 'парабола', 'slider', 'demo', 'демо', '60'],
+  },
+  {
+    id: 'ex20',
+    ru: 'Пример: электродинамика',
+    en: 'Example: electrodynamics',
+    keywords: ['example', 'пример', 'variant', 'ex20'],
+  },
+  {
+    id: 'ex-advanced',
+    ru: 'Пример: матрицы и программы',
+    en: 'Example: matrices & programs',
+    keywords: ['advanced', 'матрицы', 'демо'],
+  },
+  {
+    id: 'theme',
+    ru: 'Переключить тему',
+    en: 'Toggle theme',
+    keywords: ['theme', 'dark', 'тема', 'темная', 'тёмная'],
+  },
   { id: 'grid', ru: 'Переключить сетку', en: 'Toggle grid', keywords: ['grid', 'сетка', 'snap'] },
 ];
 

@@ -84,7 +84,10 @@ describe('physical constants (CODATA 2022 + SI-2019 exact)', () => {
     const publicNames = [...Object.keys(EXACT), ...Object.keys(CODATA), 'hbar', 'eta0'];
     for (const name of publicNames) {
       expect(scope[name], `scope lacks ${name}`).not.toBeUndefined();
-      expect(scope[name], `${name} wrong value`).toBeCloseTo(getConstant(name === 'eta0' ? 'Z_0' : name), 12);
+      expect(scope[name], `${name} wrong value`).toBeCloseTo(
+        getConstant(name === 'eta0' ? 'Z_0' : name),
+        12,
+      );
     }
   });
 });

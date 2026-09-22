@@ -4,11 +4,23 @@ import { recalculateAll, type MathBlockData } from '../engine/dependencies';
 import type { ElementRow } from './db';
 
 const fe = (patch: Partial<ElementRow> = {}): ElementRow => ({
-  number: 26, symbol: 'Fe', name_en: 'Iron', name_ru: 'железо',
-  atomic_mass: 55.845, phase: 'Solid', density: 7.874, melt: 1811,
-  boil: 3134, group_no: 8, period: 4, electron_config: '[Ar] 3d6 4s2',
-  electronegativity: 1.83, molar_heat: 25.1, category: 'transition metal',
-  discovered: 'Ancient', source: 'https://en.wikipedia.org/wiki/Iron',
+  number: 26,
+  symbol: 'Fe',
+  name_en: 'Iron',
+  name_ru: 'железо',
+  atomic_mass: 55.845,
+  phase: 'Solid',
+  density: 7.874,
+  melt: 1811,
+  boil: 3134,
+  group_no: 8,
+  period: 4,
+  electron_config: '[Ar] 3d6 4s2',
+  electronegativity: 1.83,
+  molar_heat: 25.1,
+  category: 'transition metal',
+  discovered: 'Ancient',
+  source: 'https://en.wikipedia.org/wiki/Iron',
   ...patch,
 });
 
@@ -30,10 +42,20 @@ describe('elements: molarMassCode', () => {
 let bid = 0;
 function toBlocks(lines: string[]): MathBlockData[] {
   return lines.map((raw, k) => ({
-    id: `elb${bid++}`, x: 80, y: 60 + k * 64, rawInput: raw,
-    displayLatex: '', resultStr: '', resultLatex: '', resultValue: null,
-    error: null, dependencies: [], definedVar: null, isOutput: false,
-    kind: 'math', plotPreview: null,
+    id: `elb${bid++}`,
+    x: 80,
+    y: 60 + k * 64,
+    rawInput: raw,
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind: 'math',
+    plotPreview: null,
   }));
 }
 
@@ -58,7 +80,9 @@ describe('elements: elementBlocks', () => {
 
   it('пустые значения пропускаются', () => {
     expect(
-      elementBlocks(fe({ melt: null, boil: null, electronegativity: null, molar_heat: null, density: null })),
+      elementBlocks(
+        fe({ melt: null, boil: null, electronegativity: null, molar_heat: null, density: null }),
+      ),
     ).toEqual(['M_Fe := 55.845 g/mol']);
   });
 

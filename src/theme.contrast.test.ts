@@ -29,12 +29,12 @@ function ratio(a: string, b: string): number {
 function themeVars(): Map<string, Map<string, string>> {
   const css = readFileSync(new URL('./index.css', import.meta.url), 'utf-8');
   const out = new Map<string, Map<string, string>>();
-  for (const m of css.matchAll(/\[data-theme="([\w-]+)"\]\s*\{([^}]*)\}/g)) {
+  for (const m of css.matchAll(/\[data-theme=(["'])([\w-]+)\1\]\s*\{([^}]*)\}/g)) {
     const vars = new Map<string, string>();
-    for (const v of m[2].matchAll(/(--[\w-]+)\s*:\s*(#[0-9a-fA-F]{6});/g)) {
+    for (const v of m[3].matchAll(/(--[\w-]+)\s*:\s*(#[0-9a-fA-F]{6});/g)) {
       vars.set(v[1], v[2]);
     }
-    out.set(m[1], vars);
+    out.set(m[2], vars);
   }
   return out;
 }

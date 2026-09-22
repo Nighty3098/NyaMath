@@ -25,7 +25,11 @@ describe('codata: parseCodata', () => {
     const rows = parseCodata(SAMPLE);
     expect(rows.length).toBe(6);
     const byQ = new Map(rows.map((r) => [r.quantity, r]));
-    expect(byQ.get('Avogadro constant')).toMatchObject({ value: 6.02214076e23, exact: true, unit: 'mol^-1' });
+    expect(byQ.get('Avogadro constant')).toMatchObject({
+      value: 6.02214076e23,
+      exact: true,
+      unit: 'mol^-1',
+    });
     expect(byQ.get('Newtonian constant of gravitation')?.value).toBeCloseTo(6.6743e-11, 20);
     expect(byQ.get('Newtonian constant of gravitation')?.exact).toBe(false);
     expect(byQ.get('hyperfine transition frequency of Cs-133')?.value).toBe(9192631770);

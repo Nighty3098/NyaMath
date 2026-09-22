@@ -43,9 +43,7 @@ export default function EmptyStarter() {
         <div className="text-[15px] font-semibold text-[var(--chrome-ink)]">
           {t('c.startTitle')}
         </div>
-        <div className="text-[12px] text-[var(--chrome-soft)]">
-          {t('c.startSub')}
-        </div>
+        <div className="text-[12px] text-[var(--chrome-soft)]">{t('c.startSub')}</div>
         <div className="flex items-center gap-2 flex-wrap justify-center">
           {chips.map((c) => (
             <button

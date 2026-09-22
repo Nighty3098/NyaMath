@@ -1,8 +1,4 @@
-import {
-  recalculateAllAsync,
-  setLastScope,
-  type MathBlockData,
-} from '../engine/dependencies';
+import { recalculateAllAsync, setLastScope, type MathBlockData } from '../engine/dependencies';
 import type { Scope } from '../engine/mathEngine';
 import type { ComplexFmt, NumFmt, UnitSys } from '../engine/mathEngine';
 import {
@@ -33,13 +29,13 @@ export const RECALC_TIMEOUT_MS = 30000;
 
 export type RecalcJobOutcome =
   | {
-    status: 'done';
-    blocks: Record<string, MathBlockData>;
-    scope: Scope;
-    changed: boolean;
-    staleIds: string[];
-    calcMs: number;
-  }
+      status: 'done';
+      blocks: Record<string, MathBlockData>;
+      scope: Scope;
+      changed: boolean;
+      staleIds: string[];
+      calcMs: number;
+    }
   | { status: 'cancelled' }
   | { status: 'timeout' }
   | { status: 'failed'; error: string };
@@ -136,13 +132,17 @@ async function fallbackMain(
   }, timeoutMs);
   const t0 = performance.now();
   try {
-    const outcome = await recalculateAllAsync(blocks, {
-      shouldCancel: () => timedOut || opts.signal?.aborted === true,
-      onBlock: opts.onProgress,
-      onSimProgress: opts.onSimProgress,
-    }, {
-      only: opts.only?.length ? new Set(opts.only) : undefined,
-    });
+    const outcome = await recalculateAllAsync(
+      blocks,
+      {
+        shouldCancel: () => timedOut || opts.signal?.aborted === true,
+        onBlock: opts.onProgress,
+        onSimProgress: opts.onSimProgress,
+      },
+      {
+        only: opts.only?.length ? new Set(opts.only) : undefined,
+      },
+    );
     if (outcome.cancelled) {
       return timedOut ? { status: 'timeout' } : { status: 'cancelled' };
     }
@@ -232,7 +232,15 @@ export async function recalcInWorker(
   const w = worker;
   const slim = blocks.map(slimWorkerInput);
   const jobId = ++jobSeq;
-  const req: WorkerReq = { jobId, lang: opts.lang, fmt: opts.fmt, unitSys: opts.unitSys, complexFmt: opts.complexFmt, blocks: slim, only: opts.only };
+  const req: WorkerReq = {
+    jobId,
+    lang: opts.lang,
+    fmt: opts.fmt,
+    unitSys: opts.unitSys,
+    complexFmt: opts.complexFmt,
+    blocks: slim,
+    only: opts.only,
+  };
 
   return new Promise<RecalcJobOutcome>((resolve) => {
     let done = false;

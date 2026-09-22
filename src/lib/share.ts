@@ -45,9 +45,25 @@ export const SHARE_KEY = 'd';
 export const SHARE_WARN_CHARS = 7000;
 
 const KIND_TO_CODE: Record<string, number> = {
-  math: 0, text: 1, plot: 2, plot3d: 3, program: 4, sim: 5, contour: 6, slider: 7,
+  math: 0,
+  text: 1,
+  plot: 2,
+  plot3d: 3,
+  program: 4,
+  sim: 5,
+  contour: 6,
+  slider: 7,
 };
-const CODE_TO_KIND = ['math', 'text', 'plot', 'plot3d', 'program', 'sim', 'contour', 'slider'] as const;
+const CODE_TO_KIND = [
+  'math',
+  'text',
+  'plot',
+  'plot3d',
+  'program',
+  'sim',
+  'contour',
+  'slider',
+] as const;
 
 type CompactExtra = Record<string, string | number | boolean>;
 type CompactBlock = [number, number, string] | [number, number, string, CompactExtra];
@@ -59,7 +75,8 @@ function fin(dy: number, kind: number, main: string, extra: CompactExtra): Compa
 
 /** Положить значение в extra, только если оно отличается от дефолта. */
 function put<T>(o: CompactExtra, k: string, v: T, dflt: T): void {
-  if (v !== dflt && v !== undefined && v !== null && v !== '') o[k] = v as string | number | boolean;
+  if (v !== dflt && v !== undefined && v !== null && v !== '')
+    o[k] = v as string | number | boolean;
 }
 
 /** blocks → компактный массив кортежей (сортировка сверху-вниз, как считает движок). */
@@ -115,10 +132,34 @@ function slimBlocks(blocks: Record<string, SlimSource>): CompactBlock[] {
       out.push(fin(dy, kind, '', extra));
     } else if (b.kind === 'sim') {
       // sim-поля — полными именами (редкие блоки, deflate съест повторы ключей).
-      for (const k of ['simModel', 'simMode', 'simStates', 'simDerivs', 'simAux', 'simParams',
-        'simInit', 'simT0', 'simT1', 'simDt', 'simSolver', 'simEvents', 'simX', 'simY',
-        'simFdtdN', 'simFdtdL', 'simFdtdSteps', 'simFdtdSrc', 'simFdtdFreq', 'simFdtdAmp',
-        'simFdtdSrcX', 'simFdtdDet', 'simFdtdLayers', 'simExport', 'simSpeed', 'simLoop'] as const) {
+      for (const k of [
+        'simModel',
+        'simMode',
+        'simStates',
+        'simDerivs',
+        'simAux',
+        'simParams',
+        'simInit',
+        'simT0',
+        'simT1',
+        'simDt',
+        'simSolver',
+        'simEvents',
+        'simX',
+        'simY',
+        'simFdtdN',
+        'simFdtdL',
+        'simFdtdSteps',
+        'simFdtdSrc',
+        'simFdtdFreq',
+        'simFdtdAmp',
+        'simFdtdSrcX',
+        'simFdtdDet',
+        'simFdtdLayers',
+        'simExport',
+        'simSpeed',
+        'simLoop',
+      ] as const) {
         const v: unknown = b[k];
         if (v !== undefined && v !== null && v !== '') extra[k] = v as string | number | boolean;
       }
@@ -384,14 +425,30 @@ function templateBlocks(key: TemplateKey): Record<string, SlimSource> {
       putB({ x: 80, y, rawInput: line, kind: line.startsWith('//') ? 'text' : 'math' });
       y += 64;
     }
-    putB({ x: 560, y: 120, rawInput: 'plot', kind: 'plot', plotFn: 'sin(x)', plotXmin: -10, plotXmax: 10 });
+    putB({
+      x: 560,
+      y: 120,
+      rawInput: 'plot',
+      kind: 'plot',
+      plotFn: 'sin(x)',
+      plotXmin: -10,
+      plotXmax: 10,
+    });
   } else {
     let y = 60;
     for (const item of getDemoItems('advanced')) {
       putB({ x: 80, y, rawInput: item.raw, kind: item.kind, exportName: item.exportName ?? '' });
       y += item.kind === 'program' ? 210 : 64;
     }
-    putB({ x: 560, y: 140, rawInput: 'plot', kind: 'plot', plotFn: 'sin(w*x); cos(x)', plotXmin: -10, plotXmax: 10 });
+    putB({
+      x: 560,
+      y: 140,
+      rawInput: 'plot',
+      kind: 'plot',
+      plotFn: 'sin(w*x); cos(x)',
+      plotXmin: -10,
+      plotXmax: 10,
+    });
   }
   return rec;
 }
@@ -431,17 +488,38 @@ export async function encodeShare(blocks: Record<string, MathBlockData>): Promis
   if (tpl) {
     // Пример целиком: байты данных не нужны вообще — один ключ.
     const url = buildTemplateUrl(tpl);
-    return { param: null, urlLength: url.length, rawChars: json.length, count: compact.length, compressed: true, template: tpl };
+    return {
+      param: null,
+      urlLength: url.length,
+      rawChars: json.length,
+      count: compact.length,
+      compressed: true,
+      template: tpl,
+    };
   }
   const utf8 = new TextEncoder().encode(json);
   const packed = phrasePack(utf8);
   if (hasDeflate()) {
     const deflated = await deflateRaw(packed);
     const param = VERSION_PHRASE + bytesToB64url(deflated);
-    return { param, urlLength: buildShareUrl(param).length, rawChars: json.length, count: compact.length, compressed: true, template: null };
+    return {
+      param,
+      urlLength: buildShareUrl(param).length,
+      rawChars: json.length,
+      count: compact.length,
+      compressed: true,
+      template: null,
+    };
   }
   const param = VERSION_PLAIN + bytesToB64url(utf8);
-  return { param, urlLength: buildShareUrl(param).length, rawChars: json.length, count: compact.length, compressed: false, template: null };
+  return {
+    param,
+    urlLength: buildShareUrl(param).length,
+    rawChars: json.length,
+    count: compact.length,
+    compressed: false,
+    template: null,
+  };
 }
 
 /** Распаковать параметр в массив блоков для loadDocument. Бросает на битых данных. */
@@ -464,7 +542,8 @@ export async function decodeShareParam(param: string): Promise<Record<string, un
     throw new Error('bad-version');
   }
   const parsed: unknown = JSON.parse(json);
-  if (!Array.isArray(parsed) || parsed[0] !== 1 || !Array.isArray(parsed[1])) throw new Error('bad-payload');
+  if (!Array.isArray(parsed) || parsed[0] !== 1 || !Array.isArray(parsed[1]))
+    throw new Error('bad-payload');
   const arr = parsed[1] as CompactBlock[];
   if (arr.length > 5000) throw new Error('too-many');
   return expandBlocks(arr);
@@ -474,7 +553,9 @@ export async function decodeShareParam(param: string): Promise<Record<string, un
 function urlBase(): string {
   try {
     if (typeof location !== 'undefined') return `${location.origin}${location.pathname}`;
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return '';
 }
 
@@ -554,11 +635,17 @@ export function readShareParamFromUrl(): string | null {
 /** Убрать параметры шаринга из адресной строки после загрузки (чтобы refresh не импортил заново). */
 export function clearShareParamFromUrl(): void {
   try {
-    history.replaceState(null, '', location.pathname + location.search.replace(/([?&])[dst]=[^&]*/g, '$1').replace(/[?&]$/, ''));
+    history.replaceState(
+      null,
+      '',
+      location.pathname + location.search.replace(/([?&])[dst]=[^&]*/g, '$1').replace(/[?&]$/, ''),
+    );
     if (location.hash.includes(`${SHARE_KEY}=`) || location.hash.includes(`${TEMPLATE_KEY}=`)) {
       history.replaceState(null, '', location.pathname + location.search);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -570,7 +657,9 @@ export async function shareDocument(
   lang?: unknown,
 ): Promise<{ url: string; copied: boolean } & ShareEncoded> {
   const enc = await encodeShare(blocks);
-  const url = enc.template ? buildTemplateUrl(enc.template, lang) : buildShareUrl(enc.param as string, lang);
+  const url = enc.template
+    ? buildTemplateUrl(enc.template, lang)
+    : buildShareUrl(enc.param as string, lang);
   const copied = await copyTextToClipboard(url);
   return { ...enc, url, urlLength: url.length, copied };
 }

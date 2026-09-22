@@ -27,7 +27,11 @@ export interface SampleOpts {
   label?: string;
 }
 
-export function sampleExpression(rawExpr: string, scope: Scope, opts?: SampleOpts): PlotSample | null {
+export function sampleExpression(
+  rawExpr: string,
+  scope: Scope,
+  opts?: SampleOpts,
+): PlotSample | null {
   const varName = opts?.varName ?? 'x';
   const xmin = opts?.xmin ?? -10;
   const xmax = opts?.xmax ?? 10;

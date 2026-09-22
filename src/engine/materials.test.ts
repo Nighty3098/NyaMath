@@ -12,7 +12,8 @@ const close = (expr: string, want: number, tol: number) => {
   expect(Math.abs(num(expr) - want)).toBeLessThanOrEqual(tol);
 };
 
-const asArr2 = (v: unknown): unknown[][] => (v as { toArray: () => unknown[] }).toArray() as unknown[][];
+const asArr2 = (v: unknown): unknown[][] =>
+  (v as { toArray: () => unknown[] }).toArray() as unknown[][];
 
 describe('materials DB (справочник)', () => {
   it('matlist returns rows [id, en, ru, type]', () => {

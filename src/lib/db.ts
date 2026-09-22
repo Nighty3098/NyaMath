@@ -66,11 +66,18 @@ export interface Material {
 }
 
 export type MatPropKey =
-  | 'sigma' | 'rho' | 'eps_r' | 'mu_r' | 'alpha_res'
-  | 'melting' | 'ct' | 'cp' | 'bandgap';
+  'sigma' | 'rho' | 'eps_r' | 'mu_r' | 'alpha_res' | 'melting' | 'ct' | 'cp' | 'bandgap';
 
 export const MAT_PROP_KEYS: readonly MatPropKey[] = [
-  'sigma', 'rho', 'eps_r', 'mu_r', 'alpha_res', 'melting', 'ct', 'cp', 'bandgap',
+  'sigma',
+  'rho',
+  'eps_r',
+  'mu_r',
+  'alpha_res',
+  'melting',
+  'ct',
+  'cp',
+  'bandgap',
 ];
 
 export interface FormulaSection {
@@ -178,7 +185,10 @@ export function dbPath(): string {
 }
 
 function assertDb(): Driver {
-  if (!driver) throw new Error('NyaMath.db not initialized (browser: await initDb(); node: setDriver(openNodeDb()))');
+  if (!driver)
+    throw new Error(
+      'NyaMath.db not initialized (browser: await initDb(); node: setDriver(openNodeDb()))',
+    );
   return driver;
 }
 
@@ -191,8 +201,10 @@ export function setDriver(d: Driver, path: string): void {
 
 const str = (v: unknown): string => String(v ?? '');
 const num = (v: unknown): number => Number(v);
-const optStr = (v: unknown): string | undefined => (v === null || v === undefined || v === '' ? undefined : String(v));
-const optNum = (v: unknown): number | undefined => (v === null || v === undefined || v === '' ? undefined : Number(v));
+const optStr = (v: unknown): string | undefined =>
+  v === null || v === undefined || v === '' ? undefined : String(v);
+const optNum = (v: unknown): number | undefined =>
+  v === null || v === undefined || v === '' ? undefined : Number(v);
 const nulStr = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
 
 /** Сырые строки таблиц — для snapshotDb()/hydrateDb (воркер без sql.js). */
@@ -200,10 +212,22 @@ let rawTables: Record<string, Row[]> = {};
 
 function readAllTables(db: Driver): Record<string, Row[]> {
   const tables = [
-    'constants', 'materials', 'mat_prop_names',
-    'formula_sections', 'formulas', 'formula_sources', 'formula_vars',
-    'const_sections', 'const_entries', 'const_sources',
-    'snippets', 'sim_models', 'demo_lines', 'templates', 'elements', 'unit_prefixes',
+    'constants',
+    'materials',
+    'mat_prop_names',
+    'formula_sections',
+    'formulas',
+    'formula_sources',
+    'formula_vars',
+    'const_sections',
+    'const_entries',
+    'const_sources',
+    'snippets',
+    'sim_models',
+    'demo_lines',
+    'templates',
+    'elements',
+    'unit_prefixes',
   ];
   return Object.fromEntries(tables.map((t) => [t, db.all(`SELECT * FROM ${t}`)]));
 }
@@ -223,10 +247,15 @@ function ingest(t: Record<string, Row[]>): void {
   constants.clear();
   for (const r of rows('constants')) {
     constants.set(str(r['name']), {
-      name: str(r['name']), value: num(r['value']), unit: nulStr(r['unit']),
-      kind: str(r['kind']), section: nulStr(r['section']),
-      label_ru: nulStr(r['label_ru']), label_en: nulStr(r['label_en']),
-      hint_ru: nulStr(r['hint_ru']), hint_en: nulStr(r['hint_en']),
+      name: str(r['name']),
+      value: num(r['value']),
+      unit: nulStr(r['unit']),
+      kind: str(r['kind']),
+      section: nulStr(r['section']),
+      label_ru: nulStr(r['label_ru']),
+      label_en: nulStr(r['label_en']),
+      hint_ru: nulStr(r['hint_ru']),
+      hint_en: nulStr(r['hint_en']),
       source: nulStr(r['source']),
     });
   }
@@ -238,8 +267,12 @@ function ingest(t: Record<string, Row[]>): void {
       if (r[k] !== null && r[k] !== undefined) props[k] = Number(r[k]);
     }
     const m: Material = {
-      id: str(r['id']), en: str(r['en']), ru: str(r['ru']),
-      formula: str(r['formula']), type: r['type'] as Material['type'], props,
+      id: str(r['id']),
+      en: str(r['en']),
+      ru: str(r['ru']),
+      formula: str(r['formula']),
+      type: r['type'] as Material['type'],
+      props,
     };
     materials.push(m);
     materialById.set(m.id, m);
@@ -250,7 +283,10 @@ function ingest(t: Record<string, Row[]>): void {
   }
   formulaSections.length = 0;
   for (const r of q('formula_sections')) {
-    formulaSections.push({ id: str(r['id']), label: { ru: str(r['label_ru']), en: str(r['label_en']) } });
+    formulaSections.push({
+      id: str(r['id']),
+      label: { ru: str(r['label_ru']), en: str(r['label_en']) },
+    });
   }
   const sourcesByF = new Map<string, FormulaSource[]>();
   for (const r of q('formula_sources')) {
@@ -269,22 +305,26 @@ function ingest(t: Record<string, Row[]>): void {
   for (const r of q('formulas')) {
     const vars = varsByF.get(str(r['id']));
     const f: Formula = {
-      id: str(r['id']), section: str(r['section']),
+      id: str(r['id']),
+      section: str(r['section']),
       label: { ru: str(r['label_ru']), en: str(r['label_en']) },
       hint: { ru: str(r['hint_ru']), en: str(r['hint_en']) },
       code: str(r['code']),
       sources: sourcesByF.get(str(r['id'])) ?? [],
       ...(vars?.length ? { vars } : {}),
-      ...optStr(r['plot2d']) !== undefined ? { plot2d: optStr(r['plot2d']) as string } : {},
-      ...optStr(r['plot3d']) !== undefined ? { plot3d: optStr(r['plot3d']) as string } : {},
-      ...optStr(r['sim']) !== undefined ? { sim: optStr(r['sim']) as string } : {},
+      ...(optStr(r['plot2d']) !== undefined ? { plot2d: optStr(r['plot2d']) as string } : {}),
+      ...(optStr(r['plot3d']) !== undefined ? { plot3d: optStr(r['plot3d']) as string } : {}),
+      ...(optStr(r['sim']) !== undefined ? { sim: optStr(r['sim']) as string } : {}),
     };
     formulas.push(f);
     formulaById.set(f.id, f);
   }
   constSections.length = 0;
   for (const r of q('const_sections')) {
-    constSections.push({ id: str(r['id']), label: { ru: str(r['label_ru']), en: str(r['label_en']) } });
+    constSections.push({
+      id: str(r['id']),
+      label: { ru: str(r['label_ru']), en: str(r['label_en']) },
+    });
   }
   const srcByE = new Map<string, FormulaSource[]>();
   for (const r of q('const_sources')) {
@@ -295,10 +335,12 @@ function ingest(t: Record<string, Row[]>): void {
   constEntries.length = 0;
   for (const r of q('const_entries')) {
     (constEntries as ConstEntry[]).push({
-      id: str(r['id']), section: str(r['section']),
+      id: str(r['id']),
+      section: str(r['section']),
       label: { ru: str(r['label_ru']), en: str(r['label_en']) },
       hint: { ru: str(r['hint_ru']), en: str(r['hint_en']) },
-      code: str(r['code']), sources: srcByE.get(str(r['id'])) ?? [],
+      code: str(r['code']),
+      sources: srcByE.get(str(r['id'])) ?? [],
     });
   }
   snippets.length = 0;
@@ -310,35 +352,53 @@ function ingest(t: Record<string, Row[]>): void {
       hint: { ru: str(r['hint_ru']), en: str(r['hint_en']) },
       code: str(r['code']),
       ...(optStr(r['doc']) !== undefined ? { doc: optStr(r['doc']) as string } : {}),
-      ...(optStr(r['exportName']) !== undefined ? { exportName: optStr(r['exportName']) as string } : {}),
+      ...(optStr(r['exportName']) !== undefined
+        ? { exportName: optStr(r['exportName']) as string }
+        : {}),
       ...(optStr(r['vars']) !== undefined ? { vars: optStr(r['vars']) as string } : {}),
       ...(optStr(r['plot2d']) !== undefined ? { plot2d: optStr(r['plot2d']) as string } : {}),
-      ...(optStr(r['plot_json']) !== undefined ? { plot: JSON.parse(optStr(r['plot_json']) as string) as Snippet['plot'] } : {}),
+      ...(optStr(r['plot_json']) !== undefined
+        ? { plot: JSON.parse(optStr(r['plot_json']) as string) as Snippet['plot'] }
+        : {}),
     });
   }
   simModels.length = 0;
   simById.clear();
   for (const r of q('sim_models')) {
     const m = {
-      id: str(r['id']), domain: str(r['domain']),
+      id: str(r['id']),
+      domain: str(r['domain']),
       label: { ru: str(r['label_ru']), en: str(r['label_en']) },
       desc: { ru: str(r['desc_ru']), en: str(r['desc_en']) },
       ...(optStr(r['mode']) !== undefined ? { mode: optStr(r['mode']) } : {}),
       ...(optStr(r['events']) !== undefined ? { events: optStr(r['events']) } : {}),
-      states: str(r['states']), derivs: str(r['derivs']), aux: str(r['aux']),
+      states: str(r['states']),
+      derivs: str(r['derivs']),
+      aux: str(r['aux']),
       params: JSON.parse(str(r['params_json'])) as SimModelParam[],
-      init: str(r['init']), t0: num(r['t0']), t1: num(r['t1']), dt: num(r['dt']),
-      solver: str(r['solver']), x: str(r['x']), y: str(r['y']),
-      ...(optStr(r['fdtd_json']) !== undefined ? { fdtd: JSON.parse(optStr(r['fdtd_json']) as string) } : {}),
+      init: str(r['init']),
+      t0: num(r['t0']),
+      t1: num(r['t1']),
+      dt: num(r['dt']),
+      solver: str(r['solver']),
+      x: str(r['x']),
+      y: str(r['y']),
+      ...(optStr(r['fdtd_json']) !== undefined
+        ? { fdtd: JSON.parse(optStr(r['fdtd_json']) as string) }
+        : {}),
     } as unknown as SimModel;
     simModels.push(m);
     simById.set(m.id, m);
   }
   demoBySuite.clear();
-  for (const r of q('demo_lines')) {    const arr = demoBySuite.get(str(r['suite'])) ?? [];
+  for (const r of q('demo_lines')) {
+    const arr = demoBySuite.get(str(r['suite'])) ?? [];
     arr.push({
-      kind: str(r['kind']) as DemoItem['kind'], raw: str(r['raw']),
-      ...(optStr(r['exportName']) !== undefined ? { exportName: optStr(r['exportName']) as string } : {}),
+      kind: str(r['kind']) as DemoItem['kind'],
+      raw: str(r['raw']),
+      ...(optStr(r['exportName']) !== undefined
+        ? { exportName: optStr(r['exportName']) as string }
+        : {}),
       ...(optStr(r['plotFn']) !== undefined ? { plotFn: optStr(r['plotFn']) as string } : {}),
       ...(optNum(r['plotXmin']) !== undefined ? { plotXmin: optNum(r['plotXmin']) as number } : {}),
       ...(optNum(r['plotXmax']) !== undefined ? { plotXmax: optNum(r['plotXmax']) as number } : {}),
@@ -355,14 +415,22 @@ function ingest(t: Record<string, Row[]>): void {
         lines = parsed
           .filter((l) => typeof l?.raw === 'string')
           .map((l) => {
-            const kind = l['kind'] === 'text' ? 'text'
-              : l['kind'] === 'program' ? 'program'
-                : l['kind'] === 'plot' ? 'plot' : 'math';
+            const kind =
+              l['kind'] === 'text'
+                ? 'text'
+                : l['kind'] === 'program'
+                  ? 'program'
+                  : l['kind'] === 'plot'
+                    ? 'plot'
+                    : 'math';
             const ln: TemplateLine = { kind, raw: String(l['raw']) };
-            if (typeof l['exportName'] === 'string' && l['exportName']) ln.exportName = l['exportName'];
+            if (typeof l['exportName'] === 'string' && l['exportName'])
+              ln.exportName = l['exportName'];
             if (typeof l['plotFn'] === 'string' && l['plotFn']) ln.plotFn = l['plotFn'];
-            if (typeof l['plotXmin'] === 'number' && isFinite(l['plotXmin'])) ln.plotXmin = l['plotXmin'];
-            if (typeof l['plotXmax'] === 'number' && isFinite(l['plotXmax'])) ln.plotXmax = l['plotXmax'];
+            if (typeof l['plotXmin'] === 'number' && isFinite(l['plotXmin']))
+              ln.plotXmin = l['plotXmin'];
+            if (typeof l['plotXmax'] === 'number' && isFinite(l['plotXmax']))
+              ln.plotXmax = l['plotXmax'];
             if (l['plotLogx'] === true) ln.plotLogx = true;
             return ln;
           });
@@ -371,7 +439,8 @@ function ingest(t: Record<string, Row[]>): void {
       lines = [];
     }
     const tpl: Template = {
-      id: str(r['id']), section: str(r['section']),
+      id: str(r['id']),
+      section: str(r['section']),
       title: { ru: str(r['title_ru']), en: str(r['title_en']) },
       desc: { ru: str(r['desc_ru']), en: str(r['desc_en']) },
       lines,
@@ -387,7 +456,7 @@ function ingest(t: Record<string, Row[]>): void {
   elementByNumber.clear();
   for (const r of q('elements')) {
     const num = (v: unknown): number | null =>
-      (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
+      v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v);
     const el: ElementRow = {
       number: Number(r['number']),
       symbol: str(r['symbol']),
@@ -415,7 +484,10 @@ function ingest(t: Record<string, Row[]>): void {
 /* ---------------- геттеры (синхронно, из кэша) ---------------- */
 
 function ready(): void {
-  if (!driver) throw new Error('NyaMath.db not initialized (browser: await initDb(); node: setDriver(openNodeDb()))');
+  if (!driver)
+    throw new Error(
+      'NyaMath.db not initialized (browser: await initDb(); node: setDriver(openNodeDb()))',
+    );
 }
 
 /** Значение константы по имени в scope (c_light, mu_0, ...). */
@@ -566,12 +638,14 @@ export function findElement(q: string): ElementRow | null {
   const nq = q.trim().toLowerCase();
   if (!nq) return null;
   const byNum = Number(nq);
-  if (Number.isInteger(byNum) && elementByNumber.has(byNum)) return elementByNumber.get(byNum) ?? null;
+  if (Number.isInteger(byNum) && elementByNumber.has(byNum))
+    return elementByNumber.get(byNum) ?? null;
   for (const el of elements) {
     if (el.symbol.toLowerCase() === nq) return el;
   }
   for (const el of elements) {
-    if (el.name_en.toLowerCase().includes(nq) || (el.name_ru ?? '').toLowerCase().includes(nq)) return el;
+    if (el.name_en.toLowerCase().includes(nq) || (el.name_ru ?? '').toLowerCase().includes(nq))
+      return el;
   }
   return null;
 }
@@ -604,6 +678,10 @@ export function sqlJsDriver(db: {
 }): Driver {
   return {
     all: (sql: string): Row[] =>
-      db.exec(sql).flatMap((t) => t.values.map((vals) => Object.fromEntries(t.columns.map((c, i) => [c, vals[i]])))),
+      db
+        .exec(sql)
+        .flatMap((t) =>
+          t.values.map((vals) => Object.fromEntries(t.columns.map((c, i) => [c, vals[i]]))),
+        ),
   };
 }

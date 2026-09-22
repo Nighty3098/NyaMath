@@ -1,11 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { recalculateAll, type MathBlockData } from './dependencies';
 
-function block(suffix: string, kind: MathBlockData['kind'], y: number, patch: Partial<MathBlockData> = {}): MathBlockData {
+function block(
+  suffix: string,
+  kind: MathBlockData['kind'],
+  y: number,
+  patch: Partial<MathBlockData> = {},
+): MathBlockData {
   return {
-    id: `rc-${suffix}`, x: 80, y, rawInput: '', displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind, plotPreview: null, ...patch,
+    id: `rc-${suffix}`,
+    x: 80,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind,
+    plotPreview: null,
+    ...patch,
   };
 }
 
@@ -31,11 +48,7 @@ describe('incremental recalculation', () => {
     const r1 = recalculateAll([a, b, c]);
     expect(r1.blocks['rc-b2'].resultStr).toBe('6');
     // правим только c — a и b должны остаться теми же ссылками
-    const r2 = recalculateAll([
-      { ...a },
-      { ...b },
-      { ...c, rawInput: 'c := 200 =' },
-    ]);
+    const r2 = recalculateAll([{ ...a }, { ...b }, { ...c, rawInput: 'c := 200 =' }]);
     expect(r2.changed).toBe(true);
     expect(r2.blocks['rc-b1']).toBe(r1.blocks['rc-b1']);
     expect(r2.blocks['rc-b2']).toBe(r1.blocks['rc-b2']);
@@ -53,10 +66,7 @@ describe('incremental recalculation', () => {
 
   it('move without order change keeps results, updates geometry', () => {
     const r1 = recalculateAll([math('c1', 60, 'a := 5 ='), math('c2', 124, 'b := a + 1 =')]);
-    const r2 = recalculateAll([
-      { ...r1.blocks['rc-c1'], x: 200 },
-      { ...r1.blocks['rc-c2'] },
-    ]);
+    const r2 = recalculateAll([{ ...r1.blocks['rc-c1'], x: 200 }, { ...r1.blocks['rc-c2'] }]);
     expect(r2.changed).toBe(true); // геометрия поменялась
     expect(r2.blocks['rc-c1'].x).toBe(200);
     expect(r2.blocks['rc-c1'].resultStr).toBe('5');
@@ -69,9 +79,15 @@ describe('incremental recalculation', () => {
   it('caches heavy sim blocks across unrelated edits', () => {
     const sim = block('d1', 'sim', 60, {
       rawInput: 'sim',
-      simStates: 'x, v', simDerivs: 'v; -x', simInit: '1, 0',
-      simT0: 0, simT1: 5, simDt: 0.05, simSolver: 'rk4',
-      simX: 't', simY: 'x',
+      simStates: 'x, v',
+      simDerivs: 'v; -x',
+      simInit: '1, 0',
+      simT0: 0,
+      simT1: 5,
+      simDt: 0.05,
+      simSolver: 'rk4',
+      simX: 't',
+      simY: 'x',
     });
     const note = math('d2', 200, 'k := 1 =');
     const r1 = recalculateAll([sim, note]);
@@ -86,7 +102,12 @@ describe('incremental recalculation', () => {
 
   it('slider drag recomputes downstream only', () => {
     const s = block('e1', 'slider', 60, {
-      rawInput: 'slider', sliderVar: 'k', sliderMin: 0, sliderMax: 10, sliderStep: 1, sliderVal: 2,
+      rawInput: 'slider',
+      sliderVar: 'k',
+      sliderMin: 0,
+      sliderMax: 10,
+      sliderStep: 1,
+      sliderVal: 2,
     });
     const m = math('e2', 124, 'y := 2*k =');
     const r1 = recalculateAll([s, m]);

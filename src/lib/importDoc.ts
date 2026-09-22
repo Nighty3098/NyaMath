@@ -131,27 +131,50 @@ function rpnToInfix(els: RpnEl[]): string | null {
     if (!a || !b) return null;
     const bin = (sym: string, prec: number, rightAssoc = false): void => {
       const l = a.prec < prec || (rightAssoc && a.prec === prec) ? `(${a.s})` : a.s;
-      const r = b.prec < prec || (!rightAssoc && b.prec === prec) || (rightAssoc && b.prec <= prec && b.prec < PREC_ATOM)
-        ? `(${b.s})`
-        : b.s;
+      const r =
+        b.prec < prec ||
+        (!rightAssoc && b.prec === prec) ||
+        (rightAssoc && b.prec <= prec && b.prec < PREC_ATOM)
+          ? `(${b.s})`
+          : b.s;
       stack.push({ s: `${l} ${sym} ${r}`, prec });
     };
     switch (op) {
-      case ':': bin(':=', 0); break;
+      case ':':
+        bin(':=', 0);
+        break;
       case '≡':
-      case '=': bin('==', 1); break;
-      case '≠': bin('!=', 1); break;
+      case '=':
+        bin('==', 1);
+        break;
+      case '≠':
+        bin('!=', 1);
+        break;
       case '<':
-      case '>': bin(op, 1); break;
-      case '≤': bin('<=', 1); break;
-      case '≥': bin('>=', 1); break;
+      case '>':
+        bin(op, 1);
+        break;
+      case '≤':
+        bin('<=', 1);
+        break;
+      case '≥':
+        bin('>=', 1);
+        break;
       case '+':
-      case '-': bin(op, 2); break;
+      case '-':
+        bin(op, 2);
+        break;
       case '*':
       case '/':
-      case '·': bin(op === '·' ? '*' : op, 3); break;
-      case '^': bin('^', 4, true); break;
-      case '√': stack.push({ s: `(${a.s})^(1/(${b.s}))`, prec: 4 }); break;
+      case '·':
+        bin(op === '·' ? '*' : op, 3);
+        break;
+      case '^':
+        bin('^', 4, true);
+        break;
+      case '√':
+        stack.push({ s: `(${a.s})^(1/(${b.s}))`, prec: 4 });
+        break;
       default:
         // неизвестный оператор — честный generic, не молчаливая потеря
         stack.push({ s: `${par(a)} ${op} ${par(b)}`, prec: 2 });
@@ -169,7 +192,10 @@ function smInputExtra(mathXml: string): { show: boolean; contract: string | null
   const cm = mathXml.match(/<contract\b[^>]*>([\s\S]*?)<\/contract>/i);
   if (cm) {
     const els = parseRpnable(cm[1] ?? '');
-    const units = els.filter((e) => e.type === 'operand').map((e) => e.value).filter(Boolean);
+    const units = els
+      .filter((e) => e.type === 'operand')
+      .map((e) => e.value)
+      .filter(Boolean);
     if (units.length) contract = units.join('*');
   }
   return { show, contract };
@@ -208,7 +234,8 @@ export function parseSmXml(xml: string): ImportResult {
           .filter(Boolean);
         const joined = ps.join('\n');
         if (first === null && joined) first = joined;
-        if ((attr(th ?? '', 'lang') ?? '').toLowerCase().startsWith('eng') && joined) picked = joined;
+        if ((attr(th ?? '', 'lang') ?? '').toLowerCase().startsWith('eng') && joined)
+          picked = joined;
       }
       blocks.push({ kind: 'text', body: picked ?? first ?? '', x, y });
       continue;
@@ -307,7 +334,15 @@ function firstEq(line: string): number {
     else if (c === '=' && depth === 0) {
       const prev = line[i - 1] ?? '';
       const next = line[i + 1] ?? '';
-      if (prev === ':' || prev === '=' || prev === '!' || prev === '<' || prev === '>' || next === '=') continue;
+      if (
+        prev === ':' ||
+        prev === '=' ||
+        prev === '!' ||
+        prev === '<' ||
+        prev === '>' ||
+        next === '='
+      )
+        continue;
       return i;
     }
   }
@@ -323,10 +358,15 @@ function parsePlotLine(line: string, notes: string[], ln: number): ImportBlock |
   const at = inner.lastIndexOf('@');
   const fnsRaw = (at >= 0 ? inner.slice(0, at) : inner).trim();
   const rangeRaw = at >= 0 ? inner.slice(at + 1).trim() : '';
-  const fns = fnsRaw.split('&').map((s) => s.trim()).filter(Boolean);
+  const fns = fnsRaw
+    .split('&')
+    .map((s) => s.trim())
+    .filter(Boolean);
   const ranges = rangeRaw.split('&').map((s) => s.trim());
   const rangeNums = (r: string): [number, number] | null => {
-    const mm = r.match(/=\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/);
+    const mm = r.match(
+      /=\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/,
+    );
     return mm ? [Number(mm[1]), Number(mm[2])] : null;
   };
   const xr = rangeNums(ranges[0] ?? '');
@@ -335,14 +375,17 @@ function parsePlotLine(line: string, notes: string[], ln: number): ImportBlock |
     notes.push(`строка ${ln}: пустой $Plot — пропущен`);
     return null;
   }
-  const body = isMap
-    ? fns.map(semicolonsToCommas).join(', ')
-    : fns.join('; ');
+  const body = isMap ? fns.map(semicolonsToCommas).join(', ') : fns.join('; ');
   if (isMap) {
     return {
-      kind: 'contour', body,
-      plotXmin: xr?.[0], plotXmax: xr?.[1],
-      plotYmin: yr?.[0], plotYmax: yr?.[1], x: 80, y: 60,
+      kind: 'contour',
+      body,
+      plotXmin: xr?.[0],
+      plotXmax: xr?.[1],
+      plotYmin: yr?.[0],
+      plotYmax: yr?.[1],
+      x: 80,
+      y: 60,
     };
   }
   return { kind: 'plot', body, plotXmin: xr?.[0], plotXmax: xr?.[1], x: 80, y: 60 };

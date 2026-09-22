@@ -1,28 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   saveUnifiedUi,
   useCanvasStore,
   type PaletteMode,
   type PaletteTab,
-} from "../store/canvasStore";
-import { t } from "../i18n";
-import {
-  IConst,
-  IField,
-  IFx,
-  IFormula,
-  IResize,
-  ISignal,
-  IX,
-} from "./Icon";
-import { hideGhostFixed, moveGhostFixed, showGhostFixed } from "./dragGhost";
-import PaletteContent from "./PaletteContent";
-import ElementsContent from "./ElementsContent";
-import VariablesContent from "./VariablesContent";
-import { saveDetachedPos } from "../lib/detachedPos";
-import { collectScopeVars } from "../lib/scopeVars";
+} from '../store/canvasStore';
+import { t } from '../i18n';
+import { IConst, IField, IFx, IFormula, IResize, ISignal, IX } from './Icon';
+import { hideGhostFixed, moveGhostFixed, showGhostFixed } from './dragGhost';
+import PaletteContent from './PaletteContent';
+import ElementsContent from './ElementsContent';
+import VariablesContent from './VariablesContent';
+import { saveDetachedPos } from '../lib/detachedPos';
+import { collectScopeVars } from '../lib/scopeVars';
 
-const POS_KEY = "nyamath-unified-palette-pos";
+const POS_KEY = 'nyamath-unified-palette-pos';
 /** Зона прилипания к краям экрана, px */
 const SNAP_ZONE = 28;
 /** Сдвиг, после которого тяга док-панели превращается в открепление */
@@ -34,7 +26,7 @@ function loadPos(): { x: number; y: number } {
     const raw = localStorage.getItem(POS_KEY);
     if (!raw) return fallback;
     const p = JSON.parse(raw) as { x?: unknown; y?: unknown };
-    if (typeof p.x !== "number" || typeof p.y !== "number") return fallback;
+    if (typeof p.x !== 'number' || typeof p.y !== 'number') return fallback;
     return {
       x: Math.min(Math.max(0, p.x), Math.max(0, window.innerWidth - 120)),
       y: Math.min(Math.max(0, p.y), Math.max(0, window.innerHeight - 80)),
@@ -58,11 +50,7 @@ interface TabDef {
  * float — окно поверх всего (перетаскивание + ресайз + прилипание к краям),
  * left/right — док-панель на всю высоту стороны. Вкл/выкл вкладок — через меню «Вид».
  */
-export default function UnifiedPalette({
-  onOpenNavigator,
-}: {
-  onOpenNavigator?: () => void;
-}) {
+export default function UnifiedPalette({ onOpenNavigator }: { onOpenNavigator?: () => void }) {
   const paletteOpen = useCanvasStore((s) => s.paletteOpen);
   const formulaPaletteOpen = useCanvasStore((s) => s.formulaPaletteOpen);
   const constPaletteOpen = useCanvasStore((s) => s.constPaletteOpen);
@@ -123,65 +111,57 @@ export default function UnifiedPalette({
 
   // единое окно показывает только невынесенные вкладки
   const visible =
-    (paletteOpen && !detached.includes("functions")) ||
-    (formulaPaletteOpen && !detached.includes("formulas")) ||
-    (constPaletteOpen && !detached.includes("constants")) ||
-    (elemPaletteOpen && !detached.includes("elements")) ||
-    (scopeMonOpen && !detached.includes("variables"));
+    (paletteOpen && !detached.includes('functions')) ||
+    (formulaPaletteOpen && !detached.includes('formulas')) ||
+    (constPaletteOpen && !detached.includes('constants')) ||
+    (elemPaletteOpen && !detached.includes('elements')) ||
+    (scopeMonOpen && !detached.includes('variables'));
   const varCount = useMemo(() => collectScopeVars(blocks).length, [blocks]);
 
   const tabs: TabDef[] = useMemo(
     () => [
       {
-        id: "functions",
+        id: 'functions',
         enabled: paletteOpen,
         icon: IFx,
-        label: t("palTab.functions"),
-        title: t("menu.palette"),
+        label: t('palTab.functions'),
+        title: t('menu.palette'),
       },
       {
-        id: "formulas",
+        id: 'formulas',
         enabled: formulaPaletteOpen,
         icon: IFormula,
-        label: t("palTab.formulas"),
-        title: t("menu.formulaPalette"),
+        label: t('palTab.formulas'),
+        title: t('menu.formulaPalette'),
       },
       {
-        id: "constants",
+        id: 'constants',
         enabled: constPaletteOpen,
         icon: IConst,
-        label: t("palTab.constants"),
-        title: t("menu.constPalette"),
+        label: t('palTab.constants'),
+        title: t('menu.constPalette'),
       },
       {
-        id: "elements",
+        id: 'elements',
         enabled: elemPaletteOpen,
         icon: IField,
-        label: t("palTab.elements"),
-        title: t("menu.elemPalette"),
+        label: t('palTab.elements'),
+        title: t('menu.elemPalette'),
       },
       {
-        id: "variables",
+        id: 'variables',
         enabled: scopeMonOpen,
         icon: ISignal,
-        label: t("palTab.variables"),
-        title: t("menu.scopeMon"),
+        label: t('palTab.variables'),
+        title: t('menu.scopeMon'),
       },
     ],
-    [
-      paletteOpen,
-      formulaPaletteOpen,
-      constPaletteOpen,
-      elemPaletteOpen,
-      scopeMonOpen,
-    ],
+    [paletteOpen, formulaPaletteOpen, constPaletteOpen, elemPaletteOpen, scopeMonOpen],
   );
 
   const shown = tabs.filter((x) => !detached.includes(x.id));
   const active: TabDef =
-    shown.find((x) => x.id === tab && x.enabled) ??
-    shown.find((x) => x.enabled) ??
-    shown[0];
+    shown.find((x) => x.id === tab && x.enabled) ?? shown.find((x) => x.enabled) ?? shown[0];
 
   // Перетаскивание единого окна: оригинал стоит, едет лёгкая тень,
   // финал коммитится разом на отпускании.
@@ -201,9 +181,9 @@ export default function UnifiedPalette({
       moveGhostFixed(dx, dy);
       setSnap(
         e.clientX <= SNAP_ZONE
-          ? "left"
+          ? 'left'
           : e.clientX >= window.innerWidth - SNAP_ZONE
-            ? "right"
+            ? 'right'
             : null,
       );
     };
@@ -212,19 +192,13 @@ export default function UnifiedPalette({
       dragRef.current = null;
       if (!d?.moved) return;
       hideGhostFixed();
-      const nx = Math.min(
-        Math.max(-320, e.clientX - d.gx),
-        window.innerWidth - 80,
-      );
-      const ny = Math.min(
-        Math.max(0, e.clientY - d.gy),
-        window.innerHeight - 60,
-      );
+      const nx = Math.min(Math.max(-320, e.clientX - d.gx), window.innerWidth - 80);
+      const ny = Math.min(Math.max(0, e.clientY - d.gy), window.innerHeight - 60);
       const snapped =
         e.clientX <= SNAP_ZONE
-          ? "left"
+          ? 'left'
           : e.clientX >= window.innerWidth - SNAP_ZONE
-            ? "right"
+            ? 'right'
             : null;
       setSnap(null);
       if (snapped) {
@@ -251,18 +225,18 @@ export default function UnifiedPalette({
         }
         if (d.fromDock) {
           const st = useCanvasStore.getState();
-          st.setUnifiedMode("float");
+          st.setUnifiedMode('float');
           saveUnifiedUi();
         }
       }
     };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
     return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
       hideGhostFixed();
     };
   }, [visible]);
@@ -270,23 +244,23 @@ export default function UnifiedPalette({
   if (!visible) return null;
 
   const selectTab = (id: PaletteTab) => {
-    if (id === "functions" && !paletteOpen) {
+    if (id === 'functions' && !paletteOpen) {
       setPaletteOpen(true);
       return;
     }
-    if (id === "formulas" && !formulaPaletteOpen) {
+    if (id === 'formulas' && !formulaPaletteOpen) {
       setFormulaPaletteOpen(true);
       return;
     }
-    if (id === "constants" && !constPaletteOpen) {
+    if (id === 'constants' && !constPaletteOpen) {
       setConstPaletteOpen(true);
       return;
     }
-    if (id === "elements" && !elemPaletteOpen) {
+    if (id === 'elements' && !elemPaletteOpen) {
       toggleElemPalette();
       return;
     }
-    if (id === "variables" && !scopeMonOpen) {
+    if (id === 'variables' && !scopeMonOpen) {
       toggleScopeMon();
       return;
     }
@@ -322,9 +296,9 @@ export default function UnifiedPalette({
       moveGhostFixed(dx, dy);
     };
     const cleanup = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onCancel);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onCancel);
     };
     const onCancel = () => {
       tearRef.current = null;
@@ -339,7 +313,7 @@ export default function UnifiedPalette({
       if (!g?.dragging) return;
       hideGhostFixed();
       // отпустили внутри единого окна — просто выбор вкладки
-      const root = document.querySelector("[data-unified-palette]");
+      const root = document.querySelector('[data-unified-palette]');
       const r = root?.getBoundingClientRect();
       if (
         r &&
@@ -354,20 +328,17 @@ export default function UnifiedPalette({
       }
       // наружу — вынести в отдельное окно в точке дропа
       const st = useCanvasStore.getState();
-      if (g.tab === "functions" && !st.paletteOpen) st.setPaletteOpen(true);
-      else if (g.tab === "formulas" && !st.formulaPaletteOpen)
-        st.setFormulaPaletteOpen(true);
-      else if (g.tab === "constants" && !st.constPaletteOpen)
-        st.setConstPaletteOpen(true);
-      else if (g.tab === "elements" && !st.elemPaletteOpen)
-        st.toggleElemPalette();
-      else if (g.tab === "variables" && !st.scopeMonOpen) st.toggleScopeMon();
+      if (g.tab === 'functions' && !st.paletteOpen) st.setPaletteOpen(true);
+      else if (g.tab === 'formulas' && !st.formulaPaletteOpen) st.setFormulaPaletteOpen(true);
+      else if (g.tab === 'constants' && !st.constPaletteOpen) st.setConstPaletteOpen(true);
+      else if (g.tab === 'elements' && !st.elemPaletteOpen) st.toggleElemPalette();
+      else if (g.tab === 'variables' && !st.scopeMonOpen) st.toggleScopeMon();
       saveDetachedPos(g.tab, ev.clientX - 60, ev.clientY - 20);
       st.detachTab(g.tab);
     };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onCancel);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onCancel);
   };
 
   const onTabClick = (id: PaletteTab) => {
@@ -387,7 +358,7 @@ export default function UnifiedPalette({
   };
 
   const startDrag = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest("input,button")) return;
+    if ((e.target as HTMLElement).closest('input,button')) return;
     e.preventDefault();
     const rect = rootRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -400,19 +371,19 @@ export default function UnifiedPalette({
       gy: e.clientY - rect.top,
       w: rect.width,
       h: rect.height,
-      fromDock: mode !== "float",
+      fromDock: mode !== 'float',
       moved: false,
     };
   };
 
   const content =
-    active.id === "functions" ? (
+    active.id === 'functions' ? (
       <PaletteContent variant="functions" />
-    ) : active.id === "formulas" ? (
+    ) : active.id === 'formulas' ? (
       <PaletteContent variant="formulas" />
-    ) : active.id === "constants" ? (
+    ) : active.id === 'constants' ? (
       <PaletteContent variant="constants" />
-    ) : active.id === "elements" ? (
+    ) : active.id === 'elements' ? (
       <ElementsContent />
     ) : (
       <VariablesContent onOpenNavigator={onOpenNavigator} />
@@ -425,7 +396,7 @@ export default function UnifiedPalette({
       className="shrink-0 w-12 flex flex-col items-stretch py-1.5 cursor-grab active:cursor-grabbing touch-none select-none border-r border-[var(--chrome-line)]"
       role="tablist"
       aria-orientation="vertical"
-      aria-label={t("palTab.aria")}
+      aria-label={t('palTab.aria')}
       onPointerDown={startDrag}
     >
       {shown.map((tb) => {
@@ -437,24 +408,24 @@ export default function UnifiedPalette({
             type="button"
             role="tab"
             aria-selected={isActive}
-            title={`${tb.title} · ${t("palTab.tearHint")}`}
+            title={`${tb.title} · ${t('palTab.tearHint')}`}
             onPointerDown={(e) => onTabPointerDown(e, tb.id)}
             onClick={() => onTabClick(tb.id)}
             className={`relative flex items-center justify-center min-h-[44px] text-[16px] cursor-pointer transition-colors ${
               isActive
-                ? "text-[var(--chrome-ink)]"
-                : "text-[var(--faint)] hover:text-[var(--chrome-soft)]"
+                ? 'text-[var(--chrome-ink)]'
+                : 'text-[var(--faint)] hover:text-[var(--chrome-soft)]'
             }`}
           >
             <span
               aria-hidden="true"
               className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-6 rounded-full"
               style={{
-                background: isActive ? "var(--accent-line)" : "transparent",
+                background: isActive ? 'var(--accent-line)' : 'transparent',
               }}
             />
             <Icon />
-            {tb.id === "variables" && (
+            {tb.id === 'variables' && (
               <span className="math-input tabular-nums text-[9px] opacity-70 absolute bottom-0.5">
                 {varCount}
               </span>
@@ -467,22 +438,22 @@ export default function UnifiedPalette({
         type="button"
         className="nya-tbtn w-8 h-8 self-center"
         onClick={closeAll}
-        aria-label={t("palTab.closeAll")}
-        title={t("palTab.closeAll")}
+        aria-label={t('palTab.closeAll')}
+        title={t('palTab.closeAll')}
       >
         <IX />
       </button>
     </div>
   );
 
-  if (mode !== "float") {
+  if (mode !== 'float') {
     const side = mode;
     const gutter = (
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label={t("pal.resize")}
-        title={t("pal.resize")}
+        aria-label={t('pal.resize')}
+        title={t('pal.resize')}
         className="w-[7px] shrink-0 cursor-ew-resize hover:bg-white/10 active:bg-white/15 touch-none"
         onPointerDown={(e) => {
           dockResizeRef.current = { start: e.clientX, size: dockW };
@@ -492,7 +463,7 @@ export default function UnifiedPalette({
           const st = dockResizeRef.current;
           if (!st) return;
           const dx = e.clientX - st.start;
-          setDockW(st.size + (side === "left" ? dx : -dx));
+          setDockW(st.size + (side === 'left' ? dx : -dx));
         }}
         onPointerUp={() => {
           dockResizeRef.current = null;
@@ -508,16 +479,16 @@ export default function UnifiedPalette({
         ref={rootRef}
         data-unified-palette="1"
         className={`h-full shrink-0 flex items-stretch bg-[var(--chrome)] text-[var(--chrome-ink)] ${
-          side === "left" ? "border-r" : "border-l"
+          side === 'left' ? 'border-r' : 'border-l'
         } border-[var(--chrome-line)]`}
-        style={{ width: dockW, order: side === "left" ? 1 : 3 }}
+        style={{ width: dockW, order: side === 'left' ? 1 : 3 }}
         role="complementary"
-        aria-label={t("palTab.aria")}
+        aria-label={t('palTab.aria')}
       >
-        {side === "right" && gutter}
+        {side === 'right' && gutter}
         {rail}
         <div className="flex-1 min-w-0 flex flex-col min-h-0">{content}</div>
-        {side === "left" && gutter}
+        {side === 'left' && gutter}
       </div>
     );
   }
@@ -529,9 +500,9 @@ export default function UnifiedPalette({
         <div
           aria-hidden="true"
           className={`fixed z-40 pointer-events-none border-2 border-dashed border-[var(--accent-line)] bg-[var(--accent-soft)] ${
-            snap === "left"
-              ? "left-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-r-xl"
-              : "right-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-l-xl"
+            snap === 'left'
+              ? 'left-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-r-xl'
+              : 'right-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-l-xl'
           }`}
         />
       )}
@@ -546,9 +517,9 @@ export default function UnifiedPalette({
           height: Math.min(palH, window.innerHeight - pos.y - 8),
         }}
         role="dialog"
-        aria-label={t("palTab.aria")}
+        aria-label={t('palTab.aria')}
         onKeyDown={(e) => {
-          if (e.key === "Escape") {
+          if (e.key === 'Escape') {
             e.stopPropagation();
             closeAll();
           }
@@ -560,8 +531,8 @@ export default function UnifiedPalette({
         <span
           role="separator"
           aria-orientation="horizontal"
-          aria-label={t("pal.resize")}
-          title={t("pal.resize")}
+          aria-label={t('pal.resize')}
+          title={t('pal.resize')}
           className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize text-[var(--faint)] hover:text-[var(--accent-line)] select-none touch-none"
           onPointerDown={(e) => {
             e.stopPropagation();
@@ -576,10 +547,7 @@ export default function UnifiedPalette({
           onPointerMove={(e) => {
             const st = resizeRef.current;
             if (!st) return;
-            setPaletteSize(
-              st.w + (e.clientX - st.x),
-              st.h + (e.clientY - st.y),
-            );
+            setPaletteSize(st.w + (e.clientX - st.x), st.h + (e.clientY - st.y));
           }}
           onPointerUp={() => {
             resizeRef.current = null;

@@ -30,20 +30,34 @@ export const UNIT_PREFIX2: Array<[string, number]> = [
 ];
 
 export const UNIT_PREFIX1: Array<[string, number]> = [
-  ['ф', 1e-15], ['f', 1e-15],
-  ['п', 1e-12], ['p', 1e-12],
-  ['н', 1e-9], ['n', 1e-9],
-  ['м', 1e-3], ['m', 1e-3], // также μ/u — микро (после мк-проверки)
-  ['с', 1e-2], ['c', 1e-2],
-  ['д', 1e-1], ['d', 1e-1],
-  ['г', 1e2], ['h', 1e2],
-  ['к', 1e3], ['k', 1e3],
-  ['М', 1e6], ['M', 1e6],
-  ['Г', 1e9], ['G', 1e9],
-  ['Т', 1e12], ['T', 1e12],
-  ['П', 1e15], ['P', 1e15],
-  ['Э', 1e18], ['E', 1e18],
-  ['u', 1e-6], ['μ', 1e-6],
+  ['ф', 1e-15],
+  ['f', 1e-15],
+  ['п', 1e-12],
+  ['p', 1e-12],
+  ['н', 1e-9],
+  ['n', 1e-9],
+  ['м', 1e-3],
+  ['m', 1e-3], // также μ/u — микро (после мк-проверки)
+  ['с', 1e-2],
+  ['c', 1e-2],
+  ['д', 1e-1],
+  ['d', 1e-1],
+  ['г', 1e2],
+  ['h', 1e2],
+  ['к', 1e3],
+  ['k', 1e3],
+  ['М', 1e6],
+  ['M', 1e6],
+  ['Г', 1e9],
+  ['G', 1e9],
+  ['Т', 1e12],
+  ['T', 1e12],
+  ['П', 1e15],
+  ['P', 1e15],
+  ['Э', 1e18],
+  ['E', 1e18],
+  ['u', 1e-6],
+  ['μ', 1e-6],
 ];
 
 const REST_RE = /^[А-Яа-яЁёA-Za-zμΩ°′″]+(?:\/[А-Яа-яЁёA-Za-zμΩ°′″]+)?$/;
@@ -68,5 +82,7 @@ export function parseUnitScale(r: string): UnitScale {
       break;
     }
   }
-  return isUnitLabel(raw) ? { raw, ok: true, scale: 1, unit: raw } : { raw, ok: false, scale: 1, unit: raw };
+  return isUnitLabel(raw)
+    ? { raw, ok: true, scale: 1, unit: raw }
+    : { raw, ok: false, scale: 1, unit: raw };
 }

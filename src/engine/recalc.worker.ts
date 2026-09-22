@@ -25,15 +25,17 @@ type Engine = {
 let enginePromise: Promise<Engine> | null = null;
 function ensureEngine(): Promise<Engine> {
   if (!enginePromise) {
-    enginePromise = Promise.all([import('./dependencies'), import('./workerProtocol'), import('./mathEngine')]).then(
-      ([deps, wp, me]) => ({
-        recalculateAllAsync: deps.recalculateAllAsync,
-        serializeScopeValue: wp.serializeScopeValue,
-        setNumFmt: me.setNumFmt,
-        setUnitSys: me.setUnitSys,
-        setComplexFmt: me.setComplexFmt,
-      }),
-    );
+    enginePromise = Promise.all([
+      import('./dependencies'),
+      import('./workerProtocol'),
+      import('./mathEngine'),
+    ]).then(([deps, wp, me]) => ({
+      recalculateAllAsync: deps.recalculateAllAsync,
+      serializeScopeValue: wp.serializeScopeValue,
+      setNumFmt: me.setNumFmt,
+      setUnitSys: me.setUnitSys,
+      setComplexFmt: me.setComplexFmt,
+    }));
   }
   return enginePromise;
 }
@@ -49,10 +51,23 @@ function ensureEngine(): Promise<Engine> {
 function toFull(s: SlimBlock): MathBlockData {
   return Object.assign(
     {
-      id: '', x: 80, y: 60, rawInput: '', kind: 'math',
-      displayLatex: '', resultStr: '', resultLatex: '', resultValue: null,
-      error: null, dependencies: [], definedVar: null, isOutput: false,
-      plotPreview: null, visualize: null, programTrace: null, simResult: null,
+      id: '',
+      x: 80,
+      y: 60,
+      rawInput: '',
+      kind: 'math',
+      displayLatex: '',
+      resultStr: '',
+      resultLatex: '',
+      resultValue: null,
+      error: null,
+      dependencies: [],
+      definedVar: null,
+      isOutput: false,
+      plotPreview: null,
+      visualize: null,
+      programTrace: null,
+      simResult: null,
     },
     s,
   );
@@ -67,27 +82,42 @@ export async function runWorkerJob(
   const t0 = performance.now();
   try {
     // порядок сообщений гарантирует: init+hydrateDb уже отработал, БД готова
-    const { recalculateAllAsync, serializeScopeValue, setNumFmt, setUnitSys, setComplexFmt } = await ensureEngine();
+    const { recalculateAllAsync, serializeScopeValue, setNumFmt, setUnitSys, setComplexFmt } =
+      await ensureEngine();
     setNumFmt(req.fmt ?? { mode: 'auto', digits: 6 });
     setUnitSys(req.unitSys ?? 'none');
     setComplexFmt(req.complexFmt ?? 'rect');
     const list = req.blocks.map(toFull);
-    const outcome = await recalculateAllAsync(list, {
-      onBlock: (done, total) => {
-        report({
-          type: 'progress', jobId: req.jobId, done, total,
-          simId: null, simDone: 0, simTotal: null,
-        });
+    const outcome = await recalculateAllAsync(
+      list,
+      {
+        onBlock: (done, total) => {
+          report({
+            type: 'progress',
+            jobId: req.jobId,
+            done,
+            total,
+            simId: null,
+            simDone: 0,
+            simTotal: null,
+          });
+        },
+        onSimProgress: (id, done, total) => {
+          report({
+            type: 'progress',
+            jobId: req.jobId,
+            done: -1,
+            total: -1,
+            simId: id,
+            simDone: done,
+            simTotal: total,
+          });
+        },
       },
-      onSimProgress: (id, done, total) => {
-        report({
-          type: 'progress', jobId: req.jobId, done: -1, total: -1,
-          simId: id, simDone: done, simTotal: total,
-        });
+      {
+        only: req.only?.length ? new Set(req.only) : undefined,
       },
-    }, {
-      only: req.only?.length ? new Set(req.only) : undefined,
-    });
+    );
     if (outcome.cancelled) {
       return { type: 'result', jobId: req.jobId, ok: false, error: 'cancelled' };
     }
@@ -101,12 +131,20 @@ export async function runWorkerJob(
       serScope[k] = serializeScopeValue(v) ?? null;
     }
     return {
-      type: 'result', jobId: req.jobId, ok: true,
-      blocks: out, scope: serScope, changed, staleIds, calcMs: performance.now() - t0,
+      type: 'result',
+      jobId: req.jobId,
+      ok: true,
+      blocks: out,
+      scope: serScope,
+      changed,
+      staleIds,
+      calcMs: performance.now() - t0,
     };
   } catch (e) {
     return {
-      type: 'result', jobId: req.jobId, ok: false,
+      type: 'result',
+      jobId: req.jobId,
+      ok: false,
       error: e instanceof Error ? e.message.slice(0, 300) : String(e).slice(0, 300),
     };
   }

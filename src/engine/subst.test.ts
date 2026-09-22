@@ -3,11 +3,27 @@ import { recalculateAll, type MathBlockData } from './dependencies';
 import { buildSubstitution, createBaseScope, evaluateLine } from './mathEngine';
 
 let id = 0;
-function block(kind: MathBlockData['kind'], y: number, patch: Partial<MathBlockData> = {}): MathBlockData {
+function block(
+  kind: MathBlockData['kind'],
+  y: number,
+  patch: Partial<MathBlockData> = {},
+): MathBlockData {
   return {
-    id: `s${id++}`, x: 80, y, rawInput: '', displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind, plotPreview: null, ...patch,
+    id: `s${id++}`,
+    x: 80,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind,
+    plotPreview: null,
+    ...patch,
   };
 }
 
@@ -146,9 +162,7 @@ describe('subst: recalculateAll', () => {
   });
 
   it('переопределение в том же блоке: scope ДО последней строки', () => {
-    const out = recalc([
-      block('math', 60, { rawInput: 'x := 1\nx := x + 1 =' }),
-    ]);
+    const out = recalc([block('math', 60, { rawInput: 'x := 1\nx := x + 1 =' })]);
     expect(out[0].error).toBeNull();
     expect(out[0].resultStr).toBe('2');
     // x на момент последней строки был 1, а не 2

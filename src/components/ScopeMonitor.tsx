@@ -43,9 +43,7 @@ export default function ScopeMonitor() {
       </div>
       <div className="flex-1 overflow-y-auto min-h-0 py-1">
         {vars.length === 0 && (
-          <div className="px-3 py-4 text-[12px] text-[var(--faint)]">
-            {t('scopeMon.empty')}
-          </div>
+          <div className="px-3 py-4 text-[12px] text-[var(--faint)]">{t('scopeMon.empty')}</div>
         )}
         {vars.map((v) => (
           <button

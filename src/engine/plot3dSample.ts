@@ -186,9 +186,19 @@ function asHeightMatrix(v: unknown): number[][] | null {
 }
 
 function boundsOf(pts: { x: number; y: number; z: number }[]): {
-  xmin: number; xmax: number; ymin: number; ymax: number; zmin: number; zmax: number;
+  xmin: number;
+  xmax: number;
+  ymin: number;
+  ymax: number;
+  zmin: number;
+  zmax: number;
 } {
-  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  let x0 = Infinity,
+    x1 = -Infinity,
+    y0 = Infinity,
+    y1 = -Infinity,
+    z0 = Infinity,
+    z1 = -Infinity;
   for (const p of pts) {
     if (p.x < x0) x0 = p.x;
     if (p.x > x1) x1 = p.x;
@@ -204,7 +214,13 @@ function boundsOf(pts: { x: number; y: number; z: number }[]): {
 }
 
 function sampleSurface(
-  expr: string, scope: Scope, xmin: number, xmax: number, ymin: number, ymax: number, res: number,
+  expr: string,
+  scope: Scope,
+  xmin: number,
+  xmax: number,
+  ymin: number,
+  ymax: number,
+  res: number,
 ): Plot3dSurface | null {
   const pre = preprocessRanges(preprocessJ(expr, false));
   // Однократная компиляция вместо parse+compile на каждую точку сетки
@@ -239,26 +255,61 @@ function sampleSurface(
   let z0 = Math.min(...finite);
   let z1 = Math.max(...finite);
   [z0, z1] = pad(z0, z1);
-  return { mode: 'surface', expr, gx, gy, zs, cols: res, rows: res, xmin, xmax, ymin, ymax, zmin: z0, zmax: z1 };
+  return {
+    mode: 'surface',
+    expr,
+    gx,
+    gy,
+    zs,
+    cols: res,
+    rows: res,
+    xmin,
+    xmax,
+    ymin,
+    ymax,
+    zmin: z0,
+    zmax: z1,
+  };
 }
 
-function heightToSurface(expr: string, grid: number[][], xmin: number, xmax: number, ymin: number, ymax: number): Plot3dSurface {
+function heightToSurface(
+  expr: string,
+  grid: number[][],
+  xmin: number,
+  xmax: number,
+  ymin: number,
+  ymax: number,
+): Plot3dSurface {
   const rows = grid.length;
   const cols = grid[0].length;
   const gx: number[] = [];
   const gy: number[] = [];
-  for (let k = 0; k < cols; k++) gx.push(xmin + ((xmax - xmin) * (cols === 1 ? 0.5 : k / (cols - 1))));
-  for (let k = 0; k < rows; k++) gy.push(ymin + ((ymax - ymin) * (rows === 1 ? 0.5 : k / (rows - 1))));
-  let z0 = Infinity, z1 = -Infinity;
-  for (const row of grid) for (const z of row) {
-    if (z < z0) z0 = z;
-    if (z > z1) z1 = z;
-  }
+  for (let k = 0; k < cols; k++)
+    gx.push(xmin + (xmax - xmin) * (cols === 1 ? 0.5 : k / (cols - 1)));
+  for (let k = 0; k < rows; k++)
+    gy.push(ymin + (ymax - ymin) * (rows === 1 ? 0.5 : k / (rows - 1)));
+  let z0 = Infinity,
+    z1 = -Infinity;
+  for (const row of grid)
+    for (const z of row) {
+      if (z < z0) z0 = z;
+      if (z > z1) z1 = z;
+    }
   [z0, z1] = pad(z0, z1);
   return {
-    mode: 'surface', expr, gx, gy,
+    mode: 'surface',
+    expr,
+    gx,
+    gy,
     zs: grid.map((r) => [...r]),
-    cols, rows, xmin, xmax, ymin, ymax, zmin: z0, zmax: z1,
+    cols,
+    rows,
+    xmin,
+    xmax,
+    ymin,
+    ymax,
+    zmin: z0,
+    zmax: z1,
   };
 }
 
@@ -266,7 +317,11 @@ function heightToSurface(expr: string, grid: number[][], xmin: number, xmax: num
  * Главная функция сэмплинга 3D-блока. Возвращает null, если интерпретировать
  * ввод как 3D-данные не удалось (компонент покажет подсказку).
  */
-export function samplePlot3d(plotFn: string, scope: Scope, opts?: Sample3dOpts): Plot3dSample | null {
+export function samplePlot3d(
+  plotFn: string,
+  scope: Scope,
+  opts?: Sample3dOpts,
+): Plot3dSample | null {
   const xmin = opts?.xmin ?? -5;
   const xmax = opts?.xmax ?? 5;
   const ymin = opts?.ymin ?? -5;
@@ -286,7 +341,11 @@ export function samplePlot3d(plotFn: string, scope: Scope, opts?: Sample3dOpts):
   if (parts.length === 3 && (mode === 'auto' || mode === 'points')) {
     try {
       const vecs = parts.map((p) => flatNums(evalInScope(p, scope)));
-      if (vecs.every((v) => v && v.length >= 2) && vecs[0]!.length === vecs[1]!.length && vecs[0]!.length === vecs[2]!.length) {
+      if (
+        vecs.every((v) => v && v.length >= 2) &&
+        vecs[0]!.length === vecs[1]!.length &&
+        vecs[0]!.length === vecs[2]!.length
+      ) {
         const pts = vecs[0]!.map((x, k) => ({ x, y: vecs[1]![k], z: vecs[2]![k] }));
         return { mode: 'points', expr: plotFn, pts, ...boundsOf(pts) };
       }
@@ -323,10 +382,12 @@ export function samplePlot3d(plotFn: string, scope: Scope, opts?: Sample3dOpts):
     const s = sampleSurface(expr, scope, xmin, xmax, ymin, ymax, Math.min(res, 40));
     if (!s) return null;
     const pts: { x: number; y: number; z: number }[] = [];
-    s.gy.forEach((yv, r) => s.gx.forEach((xv, c) => {
-      const z = s.zs[r][c];
-      if (z !== null) pts.push({ x: xv, y: yv, z });
-    }));
+    s.gy.forEach((yv, r) =>
+      s.gx.forEach((xv, c) => {
+        const z = s.zs[r][c];
+        if (z !== null) pts.push({ x: xv, y: yv, z });
+      }),
+    );
     if (pts.length < 2) return null;
     return { mode: 'points', expr, pts, ...boundsOf(pts) };
   }

@@ -55,8 +55,10 @@ export default function ElementsContent() {
         hint: t('el.hintDensity'),
       });
     }
-    if (e.melt !== null) out.push({ text: `${t('el.meltShort')} ${e.melt} K`, hint: t('el.hintMelt') });
-    if (e.boil !== null) out.push({ text: `${t('el.boilShort')} ${e.boil} K`, hint: t('el.hintBoil') });
+    if (e.melt !== null)
+      out.push({ text: `${t('el.meltShort')} ${e.melt} K`, hint: t('el.hintMelt') });
+    if (e.boil !== null)
+      out.push({ text: `${t('el.boilShort')} ${e.boil} K`, hint: t('el.hintBoil') });
     if (e.electronegativity !== null) {
       out.push({ text: `χ ${e.electronegativity}`, hint: t('el.hintEN') });
     }
@@ -78,7 +80,9 @@ export default function ElementsContent() {
           onChange={(e) => setQ(e.target.value)}
           onPointerDown={(e) => e.stopPropagation()}
         />
-        <span className="math-input tabular-nums text-[11px] text-[var(--chrome-soft)] shrink-0">{filtered.length}</span>
+        <span className="math-input tabular-nums text-[11px] text-[var(--chrome-soft)] shrink-0">
+          {filtered.length}
+        </span>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto py-1">
         {filtered.length === 0 && (
@@ -100,7 +104,7 @@ export default function ElementsContent() {
             </span>
             <span className="flex-1 min-w-0">
               <span className="block text-[13px] text-[var(--chrome-ink)] truncate">
-                {lang === 'ru' ? e.name_ru ?? e.name_en : e.name_en}
+                {lang === 'ru' ? (e.name_ru ?? e.name_en) : e.name_en}
               </span>
               <span className="math-input block text-[11px] text-[var(--faint)] truncate tabular-nums">
                 <span title={t('el.hintMass')}>{e.atomic_mass ?? '—'}</span>

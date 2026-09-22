@@ -1,21 +1,21 @@
 {
- "name": "NyaMath — engineering sheet",
- "short_name": "NyaMath",
- "description": "Engineering sheet in the browser: formulas, plots, programs and units. Works offline.",
- "description_ru": "Инженерный лист в браузере: формулы, графики, программы и единицы. Работает офлайн.",
- "start_url": ".",
- "scope": ".",
- "display": "standalone",
- "orientation": "any",
- "background_color": "#101218",
- "theme_color": "#4f7cff",
- "lang": "ru",
- "icons": [
-  {
-   "src": "favicon.svg",
-   "sizes": "any",
-   "type": "image/svg+xml",
-   "purpose": "any"
-  }
- ]
+  "name": "NyaMath — engineering sheet",
+  "short_name": "NyaMath",
+  "description": "Engineering sheet in the browser: formulas, plots, programs and units. Works offline.",
+  "description_ru": "Инженерный лист в браузере: формулы, графики, программы и единицы. Работает офлайн.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#101218",
+  "theme_color": "#4f7cff",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }

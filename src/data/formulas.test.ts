@@ -14,7 +14,8 @@ describe('formula catalog', () => {
     for (const f of listFormulas()) {
       expect(ids.has(f.section), `${f.id}: unknown section ${f.section}`).toBe(true);
       expect(f.sources.length, `${f.id}: no sources`).toBeGreaterThan(0);
-      for (const src of f.sources) expect(src.url.startsWith('http'), `${f.id}: bad url`).toBe(true);
+      for (const src of f.sources)
+        expect(src.url.startsWith('http'), `${f.id}: bad url`).toBe(true);
     }
     const fid = new Set(listFormulas().map((f) => f.id));
     expect(fid.size).toBe(listFormulas().length);
@@ -34,9 +35,19 @@ describe('formula catalog', () => {
     expect(listFormulas().length).toBeGreaterThan(0);
     for (const f of listFormulas()) {
       const block = {
-        id: `f-${f.id}`, x: 0, y: 0, rawInput: f.code, displayLatex: '', resultStr: '',
-        resultLatex: '', resultValue: null, error: null,
-        dependencies: [], definedVar: null, isOutput: true, kind: 'math' as const,
+        id: `f-${f.id}`,
+        x: 0,
+        y: 0,
+        rawInput: f.code,
+        displayLatex: '',
+        resultStr: '',
+        resultLatex: '',
+        resultValue: null,
+        error: null,
+        dependencies: [],
+        definedVar: null,
+        isOutput: true,
+        kind: 'math' as const,
       };
       const res = recalculateAll([block]);
       const b = res.blocks[`f-${f.id}`];
@@ -47,12 +58,25 @@ describe('formula catalog', () => {
 
   it('every formula also evaluates split into per-line blocks (palette insert path)', () => {
     for (const f of listFormulas()) {
-      const lines = f.code.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+      const lines = f.code
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
       if (lines.length <= 1) continue;
       const blocks = lines.map((rawInput, k) => ({
-        id: `fs-${f.id}-${k}`, x: 0, y: k * 64, rawInput, displayLatex: '', resultStr: '',
-        resultLatex: '', resultValue: null, error: null,
-        dependencies: [], definedVar: null, isOutput: true, kind: 'math' as const,
+        id: `fs-${f.id}-${k}`,
+        x: 0,
+        y: k * 64,
+        rawInput,
+        displayLatex: '',
+        resultStr: '',
+        resultLatex: '',
+        resultValue: null,
+        error: null,
+        dependencies: [],
+        definedVar: null,
+        isOutput: true,
+        kind: 'math' as const,
       }));
       const res = recalculateAll(blocks);
       for (const b of Object.values(res.blocks)) {
@@ -66,7 +90,9 @@ describe('formula catalog', () => {
     for (const f of listFormulas()) {
       const vars = formulaVars(f.id);
       // легенда обязана быть ровно у формул с присваиваниями
-      expect(Boolean(vars?.length), `${f.id}: legend presence mismatch`).toBe(f.code.includes(':='));
+      expect(Boolean(vars?.length), `${f.id}: legend presence mismatch`).toBe(
+        f.code.includes(':='),
+      );
       expect(f.vars, `${f.id}: vars not merged`).toEqual(vars.length ? vars : undefined);
       const seen = new Set<string>();
       for (const v of vars ?? []) {
@@ -90,7 +116,9 @@ describe('formula catalog', () => {
         if (expr === undefined) continue;
         expect(expr.trim().length, `${f.id}: empty ${key}`).toBeGreaterThan(0);
         for (const part of expr.split(';')) {
-          const compiled = compilePlotExpr(preprocessRanges(`(${preprocessJ(part.trim(), false)})`));
+          const compiled = compilePlotExpr(
+            preprocessRanges(`(${preprocessJ(part.trim(), false)})`),
+          );
           expect(compiled, `${f.id}: ${key} does not compile [${part.trim()}]`).not.toBeNull();
         }
         plots++;
@@ -108,20 +136,42 @@ describe('formula catalog', () => {
     for (const f of listFormulas()) {
       if (f.plot2d === undefined && f.plot3d === undefined) continue;
       const block = {
-        id: `p-${f.id}`, x: 0, y: 0, rawInput: f.code, displayLatex: '', resultStr: '',
-        resultLatex: '', resultValue: null, error: null,
-        dependencies: [], definedVar: null, isOutput: true, kind: 'math' as const,
+        id: `p-${f.id}`,
+        x: 0,
+        y: 0,
+        rawInput: f.code,
+        displayLatex: '',
+        resultStr: '',
+        resultLatex: '',
+        resultValue: null,
+        error: null,
+        dependencies: [],
+        definedVar: null,
+        isOutput: true,
+        kind: 'math' as const,
       };
       const res = recalculateAll([block]);
       if (f.plot2d !== undefined) {
         const s = samplePlotBlock(f.plot2d, res.scope, -10, 10, 60);
-        const n = (s?.series ?? []).flatMap((ser) => ser.ys).filter((y) => typeof y === 'number' && isFinite(y)).length;
+        const n = (s?.series ?? [])
+          .flatMap((ser) => ser.ys)
+          .filter((y) => typeof y === 'number' && isFinite(y)).length;
         expect(n, `${f.id}: plot2d is empty on default range`).toBeGreaterThanOrEqual(1);
       }
       if (f.plot3d !== undefined) {
-        const s = samplePlot3d(f.plot3d, res.scope, { xmin: -5, xmax: 5, ymin: -5, ymax: 5, res: 12, mode: 'auto' });
+        const s = samplePlot3d(f.plot3d, res.scope, {
+          xmin: -5,
+          xmax: 5,
+          ymin: -5,
+          ymax: 5,
+          res: 12,
+          mode: 'auto',
+        });
         const zs = ((s as { zs?: unknown[][] } | null)?.zs ?? []).flat(Infinity);
-        expect(zs.some((z) => typeof z === 'number' && isFinite(z)), `${f.id}: plot3d is empty`).toBe(true);
+        expect(
+          zs.some((z) => typeof z === 'number' && isFinite(z)),
+          `${f.id}: plot3d is empty`,
+        ).toBe(true);
       }
     }
   });

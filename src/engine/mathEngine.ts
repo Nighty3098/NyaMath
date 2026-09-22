@@ -8,7 +8,14 @@
  *  - константы pi, e; функции sqrt/sin/cos/atan/Re/Im/abs/log/ln
  *  - порядок вычислений строго сверху-вниз по Y (см. dependencies.ts)
  */
-import { create, all, type EvalFunction, type MathJsInstance, type MathNode, type Unit } from 'mathjs';
+import {
+  create,
+  all,
+  type EvalFunction,
+  type MathJsInstance,
+  type MathNode,
+  type Unit,
+} from 'mathjs';
 import { buildPackScope, PACK_NAMES } from './packs';
 
 import { t, getLang } from '../i18n';
@@ -27,9 +34,25 @@ function ensurePackImports(): void {
   packImportsDone = true;
   const packScope = buildPackScope(math) as Record<string, unknown>;
   for (const k of [
-    'nlsolve', 'find', 'minerr', 'minimize', 'maximize', 'root', 'bvp',
-    'ndiff', 'nint', 'nsum', 'nprod', 'numdiff', 'numint', 'numsum', 'numprod',
-    'taylor', 'limit', 'numgrad', 'uMC',
+    'nlsolve',
+    'find',
+    'minerr',
+    'minimize',
+    'maximize',
+    'root',
+    'bvp',
+    'ndiff',
+    'nint',
+    'nsum',
+    'nprod',
+    'numdiff',
+    'numint',
+    'numsum',
+    'numprod',
+    'taylor',
+    'limit',
+    'numgrad',
+    'uMC',
   ]) {
     try {
       math.import({ [k]: packScope[k] } as never, { override: false });
@@ -309,7 +332,14 @@ export function splitOffUnit(text: string): [string, string | null] {
       const prev = text[i - 1];
       const next = text[i + 1];
       // `:=`, `==`, `<=`, `>=`, `!=` — не перевод
-      if (prev === ':' || prev === '=' || prev === '!' || prev === '<' || prev === '>' || next === '=') {
+      if (
+        prev === ':' ||
+        prev === '=' ||
+        prev === '!' ||
+        prev === '<' ||
+        prev === '>' ||
+        next === '='
+      ) {
         return [text, null];
       }
       eqPos = i;
@@ -358,7 +388,15 @@ function indexOfBareEq(s: string): number {
     if (s[i] !== '=') continue;
     const prev = s[i - 1];
     const next = s[i + 1];
-    if (prev === ':' || prev === '=' || prev === '!' || prev === '<' || prev === '>' || next === '=') continue;
+    if (
+      prev === ':' ||
+      prev === '=' ||
+      prev === '!' ||
+      prev === '<' ||
+      prev === '>' ||
+      next === '='
+    )
+      continue;
     return i;
   }
   return -1;
@@ -366,7 +404,8 @@ function indexOfBareEq(s: string): number {
 
 export function parseLine(rawInput: string): ParsedLine {
   const trimmed = rawInput.trim();
-  if (trimmed.includes(':=')) {    const idx = trimmed.indexOf(':=');
+  if (trimmed.includes(':=')) {
+    const idx = trimmed.indexOf(':=');
     const lhs = trimmed.slice(0, idx).trim();
     const expr = trimmed.slice(idx + 2).trim();
     // висячее `=` в конце: `delta := atan(x) =` — определить и показать
@@ -377,7 +416,15 @@ export function parseLine(rawInput: string): ParsedLine {
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
-      return { kind: 'assign', lhs, expr, definedVar: m[1], fnParams: params, isFunctionDef: true, show };
+      return {
+        kind: 'assign',
+        lhs,
+        expr,
+        definedVar: m[1],
+        fnParams: params,
+        isFunctionDef: true,
+        show,
+      };
     }
     return { kind: 'assign', lhs, expr, definedVar: lhs, fnParams: [], isFunctionDef: false, show };
   }
@@ -390,36 +437,153 @@ export function parseLine(rawInput: string): ParsedLine {
     // Значит вычисляем именно левую часть до первого одиночного `=`
     // (`<=`, `>=`, `!=`, `==` — операторы, а не маркер: `2 <= 3 =` считает всё).
     const firstEq = indexOfBareEq(withoutTrailing);
-    const expr = firstEq >= 0 ? withoutTrailing.slice(0, firstEq).trim() || withoutTrailing : withoutTrailing;
+    const expr =
+      firstEq >= 0 ? withoutTrailing.slice(0, firstEq).trim() || withoutTrailing : withoutTrailing;
     // особый случай `x = 2+2` (полное равенство с RHS): если справа что-то было — вычисляем RHS?
     // Для простоты: если исходник вида `name = <expr>` и name — валидный идентификатор,
     // а справа непусто — трактуем как eval всего RHS и НЕ присваиваем (чистый вывод).
     const origEqIdx = indexOfBareEq(trimmed);
-    const rhs = trimmed.slice(origEqIdx + 1).replace(/=+\s*$/, '').trim();
+    const rhs = trimmed
+      .slice(origEqIdx + 1)
+      .replace(/=+\s*$/, '')
+      .trim();
     if (/^[A-Za-z_]\w*$/.test(withoutTrailing.split('=')[0]?.trim() ?? '') && rhs !== '') {
-      return { kind: 'output', lhs: '', expr: rhs, definedVar: null, fnParams: [], isFunctionDef: false, show: true };
+      return {
+        kind: 'output',
+        lhs: '',
+        expr: rhs,
+        definedVar: null,
+        fnParams: [],
+        isFunctionDef: false,
+        show: true,
+      };
     }
-    return { kind: 'output', lhs: '', expr: expr || withoutTrailing, definedVar: null, fnParams: [], isFunctionDef: false, show: true };
+    return {
+      kind: 'output',
+      lhs: '',
+      expr: expr || withoutTrailing,
+      definedVar: null,
+      fnParams: [],
+      isFunctionDef: false,
+      show: true,
+    };
   }
-  return { kind: 'eval', lhs: '', expr: trimmed, definedVar: null, fnParams: [], isFunctionDef: false, show: false };
+  return {
+    kind: 'eval',
+    lhs: '',
+    expr: trimmed,
+    definedVar: null,
+    fnParams: [],
+    isFunctionDef: false,
+    show: false,
+  };
 }
 
 /** Имена встроенных символов, которые НЕ считаются зависимостями. */
 const BUILTINS = new Set([
-  'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2', 'sinh', 'cosh', 'tanh',
-  'sqrt', 'cbrt', 'abs', 'exp', 'log', 'ln', 'log10', 'log10_', 're', 'im',
-  'Re', 'Im', 'conj', 'arg', 'round', 'floor', 'ceil', 'sign', 'min', 'max',
-  'sum', 'prod', 'mean', 'median', 'mode', 'std', 'var', 'quantileSeq', 'cumsum',
-  'det', 'inv', 'transpose', 'identity', 'concat', 'flatten', 'sort', 'filter',
-  'zeros', 'ones', 'eye', 'size', 'length', 'pi', 'e', 'i', 'j', 'true', 'false',
-  'null', 'Complex', 'Matrix', 'pi_', 'range', 'round', 'clone', 'to', 'in',
-  'convertTo', 'inUnits', 'hasUnit',
-  'uMean', 'nuMean', 'uRect', 'uTri', 'uNorm', 'uUshape', 'uComb', 'nuEff',
-  'normQuant', 'tStud', 'kCov', 'uExpand', 'uncRound', 'resRound',
-  'confEps', 'thetaComb', 'deltaComb', 'pmgSumAbs', 'pmgRSS', 'pmgExpand',
-  'repLim', 'uTopDown', 'prec5725',
-  'expand', 'sfactor', 'sint', 'simplify', 'sderiv',
-  'find', 'numdiff', 'numint', 'numsum', 'numprod',
+  'sin',
+  'cos',
+  'tan',
+  'asin',
+  'acos',
+  'atan',
+  'atan2',
+  'sinh',
+  'cosh',
+  'tanh',
+  'sqrt',
+  'cbrt',
+  'abs',
+  'exp',
+  'log',
+  'ln',
+  'log10',
+  'log10_',
+  're',
+  'im',
+  'Re',
+  'Im',
+  'conj',
+  'arg',
+  'round',
+  'floor',
+  'ceil',
+  'sign',
+  'min',
+  'max',
+  'sum',
+  'prod',
+  'mean',
+  'median',
+  'mode',
+  'std',
+  'var',
+  'quantileSeq',
+  'cumsum',
+  'det',
+  'inv',
+  'transpose',
+  'identity',
+  'concat',
+  'flatten',
+  'sort',
+  'filter',
+  'zeros',
+  'ones',
+  'eye',
+  'size',
+  'length',
+  'pi',
+  'e',
+  'i',
+  'j',
+  'true',
+  'false',
+  'null',
+  'Complex',
+  'Matrix',
+  'pi_',
+  'range',
+  'round',
+  'clone',
+  'to',
+  'in',
+  'convertTo',
+  'inUnits',
+  'hasUnit',
+  'uMean',
+  'nuMean',
+  'uRect',
+  'uTri',
+  'uNorm',
+  'uUshape',
+  'uComb',
+  'nuEff',
+  'normQuant',
+  'tStud',
+  'kCov',
+  'uExpand',
+  'uncRound',
+  'resRound',
+  'confEps',
+  'thetaComb',
+  'deltaComb',
+  'pmgSumAbs',
+  'pmgRSS',
+  'pmgExpand',
+  'repLim',
+  'uTopDown',
+  'prec5725',
+  'expand',
+  'sfactor',
+  'sint',
+  'simplify',
+  'sderiv',
+  'find',
+  'numdiff',
+  'numint',
+  'numsum',
+  'numprod',
   ...PACK_NAMES,
 ]);
 
@@ -445,7 +609,12 @@ function extractDependenciesUncached(expr: string, fnParams: string[] = []): str
   }
   const excluded = new Set([...BUILTINS, ...fnParams]);
   node.traverse((n: unknown) => {
-    const nn = n as { isSymbolNode?: boolean; isFunctionNode?: boolean; name?: string; fn?: unknown };
+    const nn = n as {
+      isSymbolNode?: boolean;
+      isFunctionNode?: boolean;
+      name?: string;
+      fn?: unknown;
+    };
     if (nn.isSymbolNode) {
       const name = String(nn.name ?? '');
       if (name && !excluded.has(name)) deps.add(name);
@@ -529,7 +698,7 @@ function evaluateMain(input: string, scope: Scope): EvalResult {
       }
       // math.evaluate с присваиванием `x = ...` внутри уже кладёт в scope,
       // но у нас `:=` — делаем вручную для надёжности:
-      scope[parsed.lhs] = value;      // особый случай `j := sqrt(-1)` — синхронизируем i
+      scope[parsed.lhs] = value; // особый случай `j := sqrt(-1)` — синхронизируем i
       if (parsed.lhs === 'j') {
         scope['i'] = value;
       }
@@ -576,7 +745,8 @@ export function humanizeMathError(err: unknown, scopeNames?: string[]): string {
   }
   if (/Division by zero/i.test(msg)) return t('e.divZero');
   if (/Units do not match/i.test(msg)) return t('e.unitsMismatch', { msg: msg.slice(0, 160) });
-  if (/Cannot convert|Unexpected|Value expected|Parenthesis|Syntax/i.test(msg)) return t('e.syntax', { msg });
+  if (/Cannot convert|Unexpected|Value expected|Parenthesis|Syntax/i.test(msg))
+    return t('e.syntax', { msg });
   if (/cyclic|recursion|stack/i.test(msg)) return t('e.cyclic');
   return msg.slice(0, 220);
 }
@@ -627,8 +797,9 @@ export function suggestName(name: string, candidates: string[]): string | null {
   }
   if (best && bestD <= maxD) return best;
   // запасной вариант: префикс (alp → alpha)
-  const pref = CAPPED.filter((c) => c.toLowerCase().startsWith(n) && c !== name)
-    .sort((a, b) => a.length - b.length)[0];
+  const pref = CAPPED.filter((c) => c.toLowerCase().startsWith(n) && c !== name).sort(
+    (a, b) => a.length - b.length,
+  )[0];
   return pref ?? null;
 }
 
@@ -699,9 +870,74 @@ export function complexPolar(re: number, im: number): { mag: number; deg: number
 
 /** Единицы отображения по размерности (первое совместимое побеждает). */
 const SYS_UNITS: Record<Exclude<UnitSys, 'none'>, string[]> = {
-  SI: ['m', 'm^2', 'm^3', 'kg', 's', 'A', 'K', 'mol', 'Hz', 'N', 'Pa', 'J', 'W', 'C', 'V', 'F', 'ohm', 'S', 'T', 'H', 'm/s', 'm/s^2', 'kg/m^3'],
-  US: ['ft', 'ft^2', 'ft^3', 'lbm', 's', 'A', 'degF', 'mol', 'Hz', 'lbf', 'psi', 'BTU', 'hp', 'gal', 'ft/s', 'ft/s^2', 'lbm/ft^3'],
-  CGS: ['cm', 'cm^2', 'cm^3', 'g', 's', 'A', 'degC', 'mol', 'Hz', 'dyn', 'dyn/cm^2', 'erg', 'C', 'V', 'F', 'ohm', 'S', 'T', 'H', 'cm/s', 'cm/s^2', 'g/cm^3'],
+  SI: [
+    'm',
+    'm^2',
+    'm^3',
+    'kg',
+    's',
+    'A',
+    'K',
+    'mol',
+    'Hz',
+    'N',
+    'Pa',
+    'J',
+    'W',
+    'C',
+    'V',
+    'F',
+    'ohm',
+    'S',
+    'T',
+    'H',
+    'm/s',
+    'm/s^2',
+    'kg/m^3',
+  ],
+  US: [
+    'ft',
+    'ft^2',
+    'ft^3',
+    'lbm',
+    's',
+    'A',
+    'degF',
+    'mol',
+    'Hz',
+    'lbf',
+    'psi',
+    'BTU',
+    'hp',
+    'gal',
+    'ft/s',
+    'ft/s^2',
+    'lbm/ft^3',
+  ],
+  CGS: [
+    'cm',
+    'cm^2',
+    'cm^3',
+    'g',
+    's',
+    'A',
+    'degC',
+    'mol',
+    'Hz',
+    'dyn',
+    'dyn/cm^2',
+    'erg',
+    'C',
+    'V',
+    'F',
+    'ohm',
+    'S',
+    'T',
+    'H',
+    'cm/s',
+    'cm/s^2',
+    'g/cm^3',
+  ],
 };
 
 /** Перевести единицу в систему отображения; несовместимого нет — вернуть как есть. */
@@ -777,7 +1013,8 @@ function fixZero(s: string, digits: number): string {
 }
 
 function formatNumber(n: number): string {
-  if (n === 0 || Object.is(n, -0)) return numFmt.mode === 'fixed' ? (0).toFixed(numFmt.digits) : '0';
+  if (n === 0 || Object.is(n, -0))
+    return numFmt.mode === 'fixed' ? (0).toFixed(numFmt.digits) : '0';
   const abs = Math.abs(n);
   if (numFmt.mode === 'sig') {
     const d = numFmt.digits;
@@ -801,9 +1038,10 @@ function formatComplex(re: number, im: number): string {
   const r = Math.abs(re) < 1e-12 ? 0 : re;
   const imA = Math.abs(im) < 1e-12 ? 0 : im;
   if (imA === 0) return formatNumber(r);
-  const rect = r === 0
-    ? `${formatNumber(imA)}·j`
-    : `${formatNumber(r)} ${imA >= 0 ? '+' : '−'} ${formatNumber(Math.abs(imA))}·j`;
+  const rect =
+    r === 0
+      ? `${formatNumber(imA)}·j`
+      : `${formatNumber(r)} ${imA >= 0 ? '+' : '−'} ${formatNumber(Math.abs(imA))}·j`;
   if (complexFmt === 'rect') return rect;
   const { mag, deg } = complexPolar(r, imA);
   // минус — типографский, как в rect-ветке
@@ -867,41 +1105,93 @@ function toLatexUncached(input: string): string {
 
 /** Греческие имена → буквы (показывает α вместо alpha). */
 const GREEK_TEX: Record<string, string> = {
-  alpha: '\\alpha', beta: '\\beta', gamma: '\\gamma', delta: '\\delta',
-  epsilon: '\\epsilon', zeta: '\\zeta', eta: '\\eta', theta: '\\theta',
-  iota: '\\iota', kappa: '\\kappa', lambda: '\\lambda', mu: '\\mu',
-  nu: '\\nu', xi: '\\xi', pi: '\\pi', rho: '\\rho', sigma: '\\sigma',
-  tau: '\\tau', upsilon: '\\upsilon', phi: '\\phi', chi: '\\chi',
-  psi: '\\psi', omega: '\\omega',
-  Alpha: '\\Alpha', Beta: '\\Beta', Gamma: '\\Gamma', Delta: '\\Delta',
-  Epsilon: '\\Epsilon', Zeta: '\\Zeta', Eta: '\\Eta', Theta: '\\Theta',
-  Iota: '\\Iota', Kappa: '\\Kappa', Lambda: '\\Lambda', Mu: '\\Mu',
-  Nu: '\\Nu', Xi: '\\Xi', Pi: '\\Pi', Rho: '\\Rho', Sigma: '\\Sigma',
-  Tau: '\\Tau', Upsilon: '\\Upsilon', Phi: '\\Phi', Chi: '\\Chi',
-  Psi: '\\Psi', Omega: '\\Omega',
+  alpha: '\\alpha',
+  beta: '\\beta',
+  gamma: '\\gamma',
+  delta: '\\delta',
+  epsilon: '\\epsilon',
+  zeta: '\\zeta',
+  eta: '\\eta',
+  theta: '\\theta',
+  iota: '\\iota',
+  kappa: '\\kappa',
+  lambda: '\\lambda',
+  mu: '\\mu',
+  nu: '\\nu',
+  xi: '\\xi',
+  pi: '\\pi',
+  rho: '\\rho',
+  sigma: '\\sigma',
+  tau: '\\tau',
+  upsilon: '\\upsilon',
+  phi: '\\phi',
+  chi: '\\chi',
+  psi: '\\psi',
+  omega: '\\omega',
+  Alpha: '\\Alpha',
+  Beta: '\\Beta',
+  Gamma: '\\Gamma',
+  Delta: '\\Delta',
+  Epsilon: '\\Epsilon',
+  Zeta: '\\Zeta',
+  Eta: '\\Eta',
+  Theta: '\\Theta',
+  Iota: '\\Iota',
+  Kappa: '\\Kappa',
+  Lambda: '\\Lambda',
+  Mu: '\\Mu',
+  Nu: '\\Nu',
+  Xi: '\\Xi',
+  Pi: '\\Pi',
+  Rho: '\\Rho',
+  Sigma: '\\Sigma',
+  Tau: '\\Tau',
+  Upsilon: '\\Upsilon',
+  Phi: '\\Phi',
+  Chi: '\\Chi',
+  Psi: '\\Psi',
+  Omega: '\\Omega',
   // короткие алиасы из конспектов и кода
-  eps: '\\epsilon', Eps: '\\Epsilon',
+  eps: '\\epsilon',
+  Eps: '\\Epsilon',
 };
 
 /** Отдельное греческое слово: eps → \epsilon (не трогаем \epsilon, eps_r, eps2). */
 const GREEK_WORD_RE = new RegExp(
-  `(?<![A-Za-z\\\\])(${Object.keys(GREEK_TEX).sort((a, b) => b.length - a.length).join('|')})(?![A-Za-z0-9_])`,
+  `(?<![A-Za-z\\\\])(${Object.keys(GREEK_TEX)
+    .sort((a, b) => b.length - a.length)
+    .join('|')})(?![A-Za-z0-9_])`,
   'g',
 );
 /** lambda0 → \lambda_{0}: греческое имя + цифровой хвост, без подчёркивания. */
 const GREEK_SUFFIX_RE = new RegExp(
-  `(?<![A-Za-z\\\\])(${Object.keys(GREEK_TEX).sort((a, b) => b.length - a.length).join('|')})([0-9]+)(?![A-Za-z0-9])`,
+  `(?<![A-Za-z\\\\])(${Object.keys(GREEK_TEX)
+    .sort((a, b) => b.length - a.length)
+    .join('|')})([0-9]+)(?![A-Za-z0-9])`,
   'g',
 );
 
 /** numsum("тело", "k", низ, верх) целиком — знак Σ с пределами. */
-const NUMSUM_RE = /^numsum\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"([A-Za-z][A-Za-z0-9]*)"\s*,\s*(.+?)\s*,\s*(.+?)\s*\)$/;
+const NUMSUM_RE =
+  /^numsum\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"([A-Za-z][A-Za-z0-9]*)"\s*,\s*(.+?)\s*,\s*(.+?)\s*\)$/;
 
 /** Первый строковый аргумент численных функций — тело выражения: рисуем
  * настоящей математикой, а не печатным \mathtt (иначе ^2 там плоское). */
 const MATH_STR_FUNCS = [
-  'limit', 'numint', 'numdiff', 'numprod', 'root', 'taylor',
-  'sderiv', 'sint', 'expand', 'sfactor', 'bvp', 'minimize', 'find', 'numgrad',
+  'limit',
+  'numint',
+  'numdiff',
+  'numprod',
+  'root',
+  'taylor',
+  'sderiv',
+  'sint',
+  'expand',
+  'sfactor',
+  'bvp',
+  'minimize',
+  'find',
+  'numgrad',
 ];
 const MATH_STR_ARG_RE = new RegExp(
   `\\\\mathrm\\{(${MATH_STR_FUNCS.join('|')})\\}\\\\left\\(\\\\mathtt\\{"((?:[^"\\\\]|\\\\.)*)"\\}`,
@@ -915,7 +1205,8 @@ function sigmaTex(expr: string): string | null {
 }
 
 /** numint("тело", "x", a, b) целиком — знак ∫ с пределами. */
-const NUMINT_RE = /^numint\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"([A-Za-z][A-Za-z0-9]*)"\s*,\s*(.+?)\s*,\s*(.+?)\s*\)$/;
+const NUMINT_RE =
+  /^numint\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"([A-Za-z][A-Za-z0-9]*)"\s*,\s*(.+?)\s*,\s*(.+?)\s*\)$/;
 
 function intTex(expr: string): string | null {
   const m = expr.trim().match(NUMINT_RE);
@@ -925,7 +1216,8 @@ function intTex(expr: string): string | null {
 }
 
 /** limit("тело", "x", a[, dir]) целиком — lim с переходом. */
-const LIMIT_RE = /^limit\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"([A-Za-z][A-Za-z0-9]*)"\s*,\s*(.+?)\s*(?:,\s*[^()]+\s*)?\)$/;
+const LIMIT_RE =
+  /^limit\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"([A-Za-z][A-Za-z0-9]*)"\s*,\s*(.+?)\s*(?:,\s*[^()]+\s*)?\)$/;
 
 function limitTex(expr: string): string | null {
   const m = expr.trim().match(LIMIT_RE);
@@ -955,8 +1247,7 @@ function postprocessTex(tex: string): string {
   // (имя в scope не меняется)
   tex = tex.replace(
     /([A-Za-z]+)\\_([A-Za-z0-9]+)/g,
-    (_, name: string, sub: string) =>
-      `${GREEK_TEX[name] ?? name}_{${GREEK_TEX[sub] ?? sub}}`,
+    (_, name: string, sub: string) => `${GREEK_TEX[name] ?? name}_{${GREEK_TEX[sub] ?? sub}}`,
   );
   // lambda0 → \lambda_{0}: греческое имя с цифровым хвостом без _.
   // Только греческие (q1, v0, log10 не трогаем) и только целый хвост.
@@ -965,16 +1256,10 @@ function postprocessTex(tex: string): string {
     (_, name: string, sub: string) => `${GREEK_TEX[name]}_{${sub}}`,
   );
   // отдельное слово: eps → \epsilon (уже готовые \epsilon, eps_r, eps2 не трогаем)
-  tex = tex.replace(
-    GREEK_WORD_RE,
-    (_, name: string) => GREEK_TEX[name],
-  );
+  tex = tex.replace(GREEK_WORD_RE, (_, name: string) => GREEK_TEX[name]);
   // сырой ^ внутри \text{...} (строковые аргументы limit/nsum) — экранировать,
   // иначе KaTeX падает с textasciicircum
-  tex = tex.replace(
-    /\\text\{([^{}]*)\}/g,
-    (_, inner: string) => `\\text{${escapeLatex(inner)}}`,
-  );
+  tex = tex.replace(/\\text\{([^{}]*)\}/g, (_, inner: string) => `\\text{${escapeLatex(inner)}}`);
   // mathjs сам кладёт \textasciicircum{}/\textasciitilde{} внутрь \mathtt{...} —
   // старый KaTeX их не знает, меняем на \^ / \~
   tex = tex.replace(/\\textasciicircum\{\}/g, '\\^{}').replace(/\\textasciitilde\{\}/g, '\\~{}');
@@ -1023,9 +1308,12 @@ function complexLatex(re: number, im: number): string {
   const r = Math.abs(re) < 1e-12 ? 0 : re;
   const imA = Math.abs(im) < 1e-12 ? 0 : im;
   if (imA === 0) return numLatex(r);
-  const rect = r === 0
-    ? `${numLatex(imA)}j`
-    : imA >= 0 ? `${numLatex(r)}+${numLatex(imA)}j` : `${numLatex(r)}-${numLatex(Math.abs(imA))}j`;
+  const rect =
+    r === 0
+      ? `${numLatex(imA)}j`
+      : imA >= 0
+        ? `${numLatex(r)}+${numLatex(imA)}j`
+        : `${numLatex(r)}-${numLatex(Math.abs(imA))}j`;
   if (complexFmt === 'rect') return rect;
   const { mag, deg } = complexPolar(r, imA);
   const polar = `${numLatex(mag)}\\angle ${numLatex(deg)}^{\\circ}`;
@@ -1053,7 +1341,9 @@ export function valueToLatex(value: unknown): string {
     try {
       const tex = math.parse(value).toTex();
       if (tex && !/\\mathrm\{\\text/.test(tex)) return tex;
-    } catch { /* не математика — ниже как текст */ }
+    } catch {
+      /* не математика — ниже как текст */
+    }
     return `\\text{${escapeLatex(value).slice(0, 120)}}`;
   }
   if (typeof value === 'object' && value !== null && math.isUnit(value)) {
@@ -1080,11 +1370,7 @@ export function valueToLatex(value: unknown): string {
     const total = rowsArr.reduce((s, r) => s + r.length, 0);
     if (total === 0) return '\\text{[] }';
     if (total > 24) {
-      const preview = rowsArr
-        .flat()
-        .slice(0, 6)
-        .map(entryLatex)
-        .join(',\\;');
+      const preview = rowsArr.flat().slice(0, 6).map(entryLatex).join(',\\;');
       return `\\text{[${rowsArr.length}\\times${rowsArr[0]?.length ?? total}]: }${preview},\\;\\dots`;
     }
     const body = rowsArr.map((r) => r.map(entryLatex).join(' & ')).join(' \\\\ ');
@@ -1134,9 +1420,7 @@ function substScalar(v: unknown): string | null {
       const c = v as { re: number; im: number };
       if (Math.abs(c.im) < 1e-12) return String(c.re);
       const imA = Math.abs(c.im);
-      const core = Math.abs(c.re) < 1e-12
-        ? `${imA}i`
-        : `${c.re}${c.im >= 0 ? '+' : '-'}${imA}i`;
+      const core = Math.abs(c.re) < 1e-12 ? `${imA}i` : `${c.re}${c.im >= 0 ? '+' : '-'}${imA}i`;
       return `(${core})`;
     }
   }
@@ -1178,7 +1462,9 @@ export function buildSubstitution(
   fnParams: string[] = [],
   expected?: unknown,
 ): Substitution | null {
-  const expr = stripOnError(rawExpr).replace(/=+\s*$/, '').trim();
+  const expr = stripOnError(rawExpr)
+    .replace(/=+\s*$/, '')
+    .trim();
   if (!expr || expr.includes('=')) return null;
   if (/^[A-Za-z_]\w*$/.test(expr)) return null;
   const excluded = new Set([...BUILTINS, ...fnParams]);
@@ -1242,8 +1528,7 @@ export function buildSubstitution(
   }
   let latex: string;
   try {
-    latex =
-      sigmaTex(text) ?? intTex(text) ?? limitTex(text) ?? postprocessTex(out.toTex());
+    latex = sigmaTex(text) ?? intTex(text) ?? limitTex(text) ?? postprocessTex(out.toTex());
   } catch {
     return null;
   }

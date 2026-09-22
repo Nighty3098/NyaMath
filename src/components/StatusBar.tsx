@@ -80,7 +80,12 @@ export default function StatusBar({ onOpenNavigator }: { onOpenNavigator?: () =>
         {t('sb.calcMs')}: {calcMs.toFixed(1)} {t('sb.ms')}
       </span>
       <span className="math-input tabular-nums whitespace-nowrap">
-        {t('sb.fmt')}: {numFmt.mode === 'auto' ? t('menu.numAuto') : numFmt.mode === 'sig' ? t('sb.sigN', { n: numFmt.digits }) : t('sb.fixN', { n: numFmt.digits })}
+        {t('sb.fmt')}:{' '}
+        {numFmt.mode === 'auto'
+          ? t('menu.numAuto')
+          : numFmt.mode === 'sig'
+            ? t('sb.sigN', { n: numFmt.digits })
+            : t('sb.fixN', { n: numFmt.digits })}
       </span>
       {unitSys !== 'none' && (
         <span className="math-input tabular-nums whitespace-nowrap">
@@ -88,7 +93,8 @@ export default function StatusBar({ onOpenNavigator }: { onOpenNavigator?: () =>
         </span>
       )}
       <span className="whitespace-nowrap">
-        {t('sb.grid')}: {!showGrid ? t('sb.gridOff') : gridSize === 'fine' ? t('sb.gridFine') : t('sb.gridStd')}
+        {t('sb.grid')}:{' '}
+        {!showGrid ? t('sb.gridOff') : gridSize === 'fine' ? t('sb.gridFine') : t('sb.gridStd')}
       </span>
     </footer>
   );

@@ -12,11 +12,13 @@ export function plotBlockToCode(b: MathBlockData, lang: 'ru' | 'en' = 'ru'): str
   const xmin = b.plotXmin ?? -10;
   const xmax = b.plotXmax ?? 10;
   const lines = [
-    L ? '// NyaMath plot: вставь выражение в новый plot-блок, выставь диапазон' : '// NyaMath plot: paste into a new plot block, set the range',
+    L
+      ? '// NyaMath plot: вставь выражение в новый plot-блок, выставь диапазон'
+      : '// NyaMath plot: paste into a new plot block, set the range',
     `expression: ${fn}`,
     `x: [${xmin}, ${xmax}]`,
     `projection: ${b.plotProj === 'polar' ? 'polar' : 'xy'} | trace: ${traceOf(b)} | logx: ${b.plotLogx === true ? 'on' : 'off'}`,
-    `grid: ${b.plotGrid ?? true ? 'on' : 'off'} | legend: ${b.plotLegend ?? true ? 'on' : 'off'}`,
+    `grid: ${(b.plotGrid ?? true) ? 'on' : 'off'} | legend: ${(b.plotLegend ?? true) ? 'on' : 'off'}`,
   ];
   const title = (b.plotTitle ?? '').trim();
   if (title) lines.push(`title: ${title}`);
@@ -43,13 +45,24 @@ function axisLabel(label: string | undefined, unit: string | undefined): string 
 /** Поля plot-блока для дублирования (всё кроме id/позиции/результатов). */
 export function plotBlockPatch(b: MathBlockData): Partial<MathBlockData> {
   const patch: Partial<MathBlockData> = {
-    rawInput: 'plot', kind: 'plot',
-    plotFn: b.plotFn, plotXmin: b.plotXmin, plotXmax: b.plotXmax,
-    plotProj: b.plotProj, plotTrace: b.plotTrace, plotErr: b.plotErr,
-    plotLogx: b.plotLogx, plotXUnit: b.plotXUnit, plotYUnit: b.plotYUnit,
-    plotTitle: b.plotTitle, plotXLabel: b.plotXLabel, plotYLabel: b.plotYLabel,
-    plotGrid: b.plotGrid, plotLegend: b.plotLegend,
-    w: b.w ?? null, h: b.h ?? null,
+    rawInput: 'plot',
+    kind: 'plot',
+    plotFn: b.plotFn,
+    plotXmin: b.plotXmin,
+    plotXmax: b.plotXmax,
+    plotProj: b.plotProj,
+    plotTrace: b.plotTrace,
+    plotErr: b.plotErr,
+    plotLogx: b.plotLogx,
+    plotXUnit: b.plotXUnit,
+    plotYUnit: b.plotYUnit,
+    plotTitle: b.plotTitle,
+    plotXLabel: b.plotXLabel,
+    plotYLabel: b.plotYLabel,
+    plotGrid: b.plotGrid,
+    plotLegend: b.plotLegend,
+    w: b.w ?? null,
+    h: b.h ?? null,
   };
   // undefined и null не тащим — addPlotBlock зальёт дефолты
   for (const k of Object.keys(patch) as (keyof typeof patch)[]) {

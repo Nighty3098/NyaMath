@@ -4,9 +4,21 @@ import { recalculateAll, type MathBlockData } from './dependencies';
 let id = 0;
 function block(y: number, patch: Partial<MathBlockData> = {}): MathBlockData {
   return {
-    id: `fe${id++}`, x: 80, y, rawInput: '', displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind: 'math', plotPreview: null, ...patch,
+    id: `fe${id++}`,
+    x: 80,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind: 'math',
+    plotPreview: null,
+    ...patch,
   };
 }
 
@@ -65,15 +77,10 @@ describe('fem: beamKe/beamFe/barKe', () => {
   });
 
   it('beamFe: сумма = qL, моменты ±qL²/12', () => {
-    const out = sheet([
-      'Fe := beamFe(1000, 2)',
-      'Fe[1]+Fe[3] =',
-      'Fe[2] =',
-      'Fe[4] =',
-    ]);
+    const out = sheet(['Fe := beamFe(1000, 2)', 'Fe[1]+Fe[3] =', 'Fe[2] =', 'Fe[4] =']);
     expect(Math.abs(numOf(out[1]) - 2000)).toBeLessThan(1e-6);
-    expect(Math.abs(numOf(out[2]) - 1000 * 4 / 12) / (1000 * 4 / 12)).toBeLessThan(1e-9);
-    expect(Math.abs(numOf(out[3]) + 1000 * 4 / 12) / (1000 * 4 / 12)).toBeLessThan(1e-9);
+    expect(Math.abs(numOf(out[2]) - (1000 * 4) / 12) / ((1000 * 4) / 12)).toBeLessThan(1e-9);
+    expect(Math.abs(numOf(out[3]) + (1000 * 4) / 12) / ((1000 * 4) / 12)).toBeLessThan(1e-9);
   });
 
   it('консоль из 1 элемента: МКЭ = аналитике F·L³/3EJ', () => {

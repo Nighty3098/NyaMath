@@ -1,8 +1,34 @@
-import { buildSubstitution, createBaseScope, compilePlotExpr, envTag, evaluateLine, extractDependencies, formatResult, isValidVarName, parseLine, preprocessJ, preprocessRanges, splitOffUnit, stripOnError, toLatex, valueToLatex, type Scope } from './mathEngine';
+import {
+  buildSubstitution,
+  createBaseScope,
+  compilePlotExpr,
+  envTag,
+  evaluateLine,
+  extractDependencies,
+  formatResult,
+  isValidVarName,
+  parseLine,
+  preprocessJ,
+  preprocessRanges,
+  splitOffUnit,
+  stripOnError,
+  toLatex,
+  valueToLatex,
+  type Scope,
+} from './mathEngine';
 import { resetSolverTrace, takeSolverTrace } from './numeric';
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
-import { parseSimDef, runSim, runSimAsync, isSimCancel, yieldSlice, type SimResult, type SimSolver, type SimMode } from './simEngine';
+import {
+  parseSimDef,
+  runSim,
+  runSimAsync,
+  isSimCancel,
+  yieldSlice,
+  type SimResult,
+  type SimSolver,
+  type SimMode,
+} from './simEngine';
 import { t } from '../i18n';
 
 export interface MathBlockData {
@@ -226,10 +252,17 @@ function simDepsKey(b: MathBlockData): string {
 export function blockDeps(b: MathBlockData): string[] {
   let key: string | null;
   switch (b.kind) {
-    case 'math': key = `m:${b.rawInput}`; break;
-    case 'program': key = `p:${b.rawInput}`; break;
-    case 'sim': key = simDepsKey(b); break;
-    default: return []; // slider/plot/plot3d/contour/text: зависимостей нет
+    case 'math':
+      key = `m:${b.rawInput}`;
+      break;
+    case 'program':
+      key = `p:${b.rawInput}`;
+      break;
+    case 'sim':
+      key = simDepsKey(b);
+      break;
+    default:
+      return []; // slider/plot/plot3d/contour/text: зависимостей нет
   }
   const hit = blockDepsCache.get(key);
   if (hit) return hit.slice();
@@ -241,11 +274,20 @@ export function blockDeps(b: MathBlockData): string[] {
 export function blockDefs(b: MathBlockData): string[] {
   let key: string | null;
   switch (b.kind) {
-    case 'math': key = `m:${b.rawInput}`; break;
-    case 'program': key = `pe:${b.exportName ?? ''}`; break;
-    case 'sim': key = `se:${b.simExport ?? ''}`; break;
-    case 'slider': key = `sl:${b.sliderVar ?? ''}`; break;
-    default: return [];
+    case 'math':
+      key = `m:${b.rawInput}`;
+      break;
+    case 'program':
+      key = `pe:${b.exportName ?? ''}`;
+      break;
+    case 'sim':
+      key = `se:${b.simExport ?? ''}`;
+      break;
+    case 'slider':
+      key = `sl:${b.sliderVar ?? ''}`;
+      break;
+    default:
+      return [];
   }
   const hit = blockDefsCache.get(key);
   if (hit) return hit.slice();
@@ -275,7 +317,9 @@ function computeBlockDeps(b: MathBlockData): string[] {
     try {
       const p = parseLine(src);
       for (const d of extractDependencies(p.expr, p.fnParams)) deps.add(d);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   return [...deps];
 }
@@ -300,7 +344,9 @@ function computeBlockDefs(b: MathBlockData): string[] {
     try {
       const p = parseLine(t);
       if (p.kind === 'assign' && p.definedVar) defs.push(p.definedVar);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   return defs;
 }
@@ -312,7 +358,8 @@ export function detectCycles(blocks: MathBlockData[]): Set<string> {
   }
   const adj = new Map<string, string[]>();
   for (const b of blocks) {
-    if (b.kind !== 'math' && b.kind !== 'program' && b.kind !== 'sim' && b.kind !== 'slider') continue;
+    if (b.kind !== 'math' && b.kind !== 'program' && b.kind !== 'sim' && b.kind !== 'slider')
+      continue;
     const deps = new Set<string>();
     for (const d of blockDeps(b)) {
       const target = defMap.get(d);
@@ -354,7 +401,9 @@ function simDeps(b: MathBlockData): string[] {
         for (const d of extractDependencies(p.expr, p.fnParams)) {
           if (!skip?.has(d) && d !== 't') deps.add(d);
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
   };
   if (b.simMode === 'fdtd') {
@@ -366,7 +415,10 @@ function simDeps(b: MathBlockData): string[] {
     return [...deps];
   }
   const states = new Set(
-    (b.simStates ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+    (b.simStates ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
   );
   const texts = [
     b.simDerivs ?? '',
@@ -382,8 +434,15 @@ function simDeps(b: MathBlockData): string[] {
     if (arrow >= 0) {
       texts.push(l.slice(0, arrow));
       texts.push(
-        l.slice(arrow + 2).split(';')
-          .map((a) => a.trim().replace(/^([A-Za-z_]\w*)\s*(:=|=)/, '').replace(/^stop$/i, ''))
+        l
+          .slice(arrow + 2)
+          .split(';')
+          .map((a) =>
+            a
+              .trim()
+              .replace(/^([A-Za-z_]\w*)\s*(:=|=)/, '')
+              .replace(/^stop$/i, ''),
+          )
           .join(';'),
       );
     } else {
@@ -400,7 +459,9 @@ function simDeps(b: MathBlockData): string[] {
           for (const d of extractDependencies(p.expr, p.fnParams)) {
             if (!states.has(d) && d !== 't') deps.add(d);
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     }
   }
@@ -413,9 +474,7 @@ export interface RecalcHooks {
   onSimProgress?: (blockId: string, done: number, total: number | null) => void;
 }
 
-export type RecalcAsyncOutcome =
-  | { cancelled: true }
-  | { cancelled: false; result: RecalcResult };
+export type RecalcAsyncOutcome = { cancelled: true } | { cancelled: false; result: RecalcResult };
 
 interface RecalcCtx {
   ordered: MathBlockData[];
@@ -472,13 +531,35 @@ function createRecalcCtx(list: MathBlockData[], opts?: RecalcOpts): RecalcCtx {
     if (idx < 0) return `${name}:=`;
     return `${name}=>${fpOf(ordered[idx].id)}`;
   };
-  const simConfigFp = (b: MathBlockData): string => JSON.stringify([
-    b.simMode, b.simStates, b.simDerivs, b.simAux, b.simParams, b.simInit,
-    b.simT0, b.simT1, b.simDt, b.simSolver, b.simEvents, b.simX, b.simY,
-    b.simFdtdN, b.simFdtdL, b.simFdtdSteps, b.simFdtdSrc, b.simFdtdFreq,
-    b.simFdtdAmp, b.simFdtdSrcX, b.simFdtdDet, b.simFdtdLayers,
-    b.simExport, b.simSpeed, b.simLoop, b.exportName,
-  ]);
+  const simConfigFp = (b: MathBlockData): string =>
+    JSON.stringify([
+      b.simMode,
+      b.simStates,
+      b.simDerivs,
+      b.simAux,
+      b.simParams,
+      b.simInit,
+      b.simT0,
+      b.simT1,
+      b.simDt,
+      b.simSolver,
+      b.simEvents,
+      b.simX,
+      b.simY,
+      b.simFdtdN,
+      b.simFdtdL,
+      b.simFdtdSteps,
+      b.simFdtdSrc,
+      b.simFdtdFreq,
+      b.simFdtdAmp,
+      b.simFdtdSrcX,
+      b.simFdtdDet,
+      b.simFdtdLayers,
+      b.simExport,
+      b.simSpeed,
+      b.simLoop,
+      b.exportName,
+    ]);
   const fpOf = (id: string): string => {
     const hit = fpMemo.get(id);
     if (hit !== undefined) return hit;
@@ -578,8 +659,10 @@ function createRecalcCtx(list: MathBlockData[], opts?: RecalcOpts): RecalcCtx {
   const reuseHit = (b: MathBlockData, prev: CachedBlock): MathBlockData => {
     const c = prev.block;
     if (
-      c.x !== b.x || c.y !== b.y ||
-      (c.w ?? null) !== (b.w ?? null) || (c.h ?? null) !== (b.h ?? null)
+      c.x !== b.x ||
+      c.y !== b.y ||
+      (c.w ?? null) !== (b.w ?? null) ||
+      (c.h ?? null) !== (b.h ?? null)
     ) {
       allHit.v = false;
       const patched = { ...c, x: b.x, y: b.y, w: b.w, h: b.h };
@@ -613,7 +696,21 @@ function createRecalcCtx(list: MathBlockData[], opts?: RecalcOpts): RecalcCtx {
     if (prev.fp !== key) stale.push(b.id);
     return true;
   };
-  return { ordered, cyclic, langTag, scope, out, allHit, fpOf, simConfigFp, reuseHit, snapBlock, fresh, stale, reuseStale };
+  return {
+    ordered,
+    cyclic,
+    langTag,
+    scope,
+    out,
+    allHit,
+    fpOf,
+    simConfigFp,
+    reuseHit,
+    snapBlock,
+    fresh,
+    stale,
+    reuseStale,
+  };
 }
 
 /** Финал пересчёта: чистка кэша, ссылка на прошлый прогон при полном hit, lastScope. */
@@ -624,7 +721,10 @@ function finishRecalc(ctx: RecalcCtx): RecalcResult {
   for (const id of [...recalcCache.keys()]) {
     if (!out[id]) recalcCache.delete(id);
   }
-  const idsKey = ordered.map((b) => b.id).sort().join(',');
+  const idsKey = ordered
+    .map((b) => b.id)
+    .sort()
+    .join(',');
   let record = out;
   let changed = true;
   if (ctx.allHit.v && idsKey === lastIdsKey) {
@@ -737,230 +837,242 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
     return;
   }
   if (b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'text' || b.kind === 'contour') {
-      const pkey = `${langTag}|${fpOf(b.id)}`;
-      const pprev = recalcCache.get(b.id);
-      if (pprev && pprev.fp === pkey) {
-        out[b.id] = reuseHit(b, pprev);
-        return;
-      }
-      ctx.allHit.v = false;
-      cur.error = null;
-      cur.dependencies = [];
-      cur.definedVar = null;
-      cur.isOutput = false;
-      cur.displayLatex = b.rawInput;
-      cur.visualize = null;
-      snapBlock(cur, pkey);
-      return;
-    }
-    if (cyclic.has(b.id)) {
-      cur.error = t('e.cyclicDep');
-      cur.resultStr = '';
-      cur.resultLatex = '';
-      cur.resultValue = null;
-      cur.displayLatex = '';
-      cur.dependencies = [];
-      cur.definedVar = null;
-      cur.isOutput = false;
-      cur.visualize = null;
-      return;
-    }
-    const key = `${langTag}|${fpOf(b.id)}`;
-    const prev = recalcCache.get(b.id);
-    if (prev && prev.fp === key) {
-      out[b.id] = reuseHit(b, prev);
-      for (const [k, v] of Object.entries(prev.writes)) scope[k] = v;
+    const pkey = `${langTag}|${fpOf(b.id)}`;
+    const pprev = recalcCache.get(b.id);
+    if (pprev && pprev.fp === pkey) {
+      out[b.id] = reuseHit(b, pprev);
       return;
     }
     ctx.allHit.v = false;
+    cur.error = null;
+    cur.dependencies = [];
+    cur.definedVar = null;
+    cur.isOutput = false;
+    cur.displayLatex = b.rawInput;
+    cur.visualize = null;
+    snapBlock(cur, pkey);
+    return;
+  }
+  if (cyclic.has(b.id)) {
+    cur.error = t('e.cyclicDep');
+    cur.resultStr = '';
+    cur.resultLatex = '';
+    cur.resultValue = null;
+    cur.displayLatex = '';
+    cur.dependencies = [];
+    cur.definedVar = null;
+    cur.isOutput = false;
+    cur.visualize = null;
+    return;
+  }
+  const key = `${langTag}|${fpOf(b.id)}`;
+  const prev = recalcCache.get(b.id);
+  if (prev && prev.fp === key) {
+    out[b.id] = reuseHit(b, prev);
+    for (const [k, v] of Object.entries(prev.writes)) scope[k] = v;
+    return;
+  }
+  ctx.allHit.v = false;
 
-    // ---------- слайдер: значение ползунка уходит в scope как переменная ----------
-    if (b.kind === 'slider') {
-      cur.dependencies = [];
-      cur.isOutput = true;
-      cur.displayLatex = '';
-      const v = (b.sliderVar ?? '').trim();
-      const lo = b.sliderMin;
-      const hi = b.sliderMax;
-      const badVar = !v || !isValidVarName(v) || v === 'i';
-      if (badVar) {
-        cur.error = t('e.sliderVar');
-      } else if (typeof lo !== 'number' || typeof hi !== 'number' || !isFinite(lo) || !isFinite(hi) || !(hi > lo)) {
-        cur.error = t('e.sliderRange');
-      } else {
-        cur.error = null;
-      }
-      if (cur.error) {
-        cur.resultStr = '';
-        cur.resultLatex = '';
-        cur.resultValue = null;
-        cur.definedVar = null;
-        snapBlock(cur, key);
-        return;
-      }
-      const val = typeof b.sliderVal === 'number' && isFinite(b.sliderVal)
+  // ---------- слайдер: значение ползунка уходит в scope как переменная ----------
+  if (b.kind === 'slider') {
+    cur.dependencies = [];
+    cur.isOutput = true;
+    cur.displayLatex = '';
+    const v = (b.sliderVar ?? '').trim();
+    const lo = b.sliderMin;
+    const hi = b.sliderMax;
+    const badVar = !v || !isValidVarName(v) || v === 'i';
+    if (badVar) {
+      cur.error = t('e.sliderVar');
+    } else if (
+      typeof lo !== 'number' ||
+      typeof hi !== 'number' ||
+      !isFinite(lo) ||
+      !isFinite(hi) ||
+      !(hi > lo)
+    ) {
+      cur.error = t('e.sliderRange');
+    } else {
+      cur.error = null;
+    }
+    if (cur.error) {
+      cur.resultStr = '';
+      cur.resultLatex = '';
+      cur.resultValue = null;
+      cur.definedVar = null;
+      snapBlock(cur, key);
+      return;
+    }
+    const val =
+      typeof b.sliderVal === 'number' && isFinite(b.sliderVal)
         ? Math.min(hi as number, Math.max(lo as number, b.sliderVal))
         : (lo as number);
-      cur.definedVar = v;
-      cur.resultValue = val;
-      cur.resultStr = formatResult(val);
-      cur.resultLatex = valueToLatex(val);
-      scope[v] = val;
-      snapBlock(cur, key);
-      return;
-    }
+    cur.definedVar = v;
+    cur.resultValue = val;
+    cur.resultStr = formatResult(val);
+    cur.resultLatex = valueToLatex(val);
+    scope[v] = val;
+    snapBlock(cur, key);
+    return;
+  }
 
-    // ---------- программный блок ----------
-    if (b.kind === 'program') {
-      const analysis = analyzeProgram(b.rawInput);
-      resetSolverTrace(scope);
-      const r = runProgram(b.rawInput, scope);
-      const st = takeSolverTrace(scope);
-      cur.solverTrace = st.length ? st : null;
-      cur.dependencies = analysis.dependencies;
-      cur.isOutput = true;
-      cur.programTrace = r.trace ?? null;
-      const exp = (b.exportName ?? '').trim();
-      cur.definedVar = exp && isValidVarName(exp) ? exp : null;
-      if (r.error) {
-        cur.error = r.error;
-        cur.resultStr = '';
-        cur.resultLatex = '';
-        cur.resultValue = null;
-      } else {
-        cur.error = null;
-        cur.resultValue = r.value;
-        cur.resultStr = formatResult(r.value);
-        cur.resultLatex = valueToLatex(r.value);
-        if (cur.definedVar) scope[cur.definedVar] = r.value;
-      }
-      cur.displayLatex = '';
-      snapBlock(cur, key);
-      return;
-    }
-
-    // ---------- симуляция (sync: через runSim) ----------
-    if (b.kind === 'sim') {
-      const parsed = parseSimInput(b);
-      simHead(b, cur);
-      if (parsed.error || !parsed.def) {
-        simFail(cur, parsed.error);
-      } else {
-        resetSolverTrace(scope);
-        simApply(cur, ctx, runSim(parsed.def, scope));
-        const sst = takeSolverTrace(scope);
-        cur.solverTrace = sst.length ? sst : null;
-      }
-      cur.displayLatex = '';
-      snapBlock(cur, key);
-      return;
-    }
-
-    // ---------- обычный мат-блок ----------
-    const lines = b.rawInput.split('\n');
-    // канал лога решателей на этот блок (общий массив в scope — см. numeric.ts)
+  // ---------- программный блок ----------
+  if (b.kind === 'program') {
+    const analysis = analyzeProgram(b.rawInput);
     resetSolverTrace(scope);
-    // индекс последней содержательной строки: scope ДО неё — для подстановки значений
-    let lastIdx = -1;
-    lines.forEach((ln, i) => {
-      const tt = ln.trim();
-      if (tt !== '' && !tt.startsWith('//') && !tt.startsWith('#')) lastIdx = i;
-    });
-    let scopeBeforeLast: Scope | null = null;
-    let lastValue: unknown = null;
-    let lastError: string | null = null;
-    let lastOk = true;
-    const allDeps = new Set<string>();
-    let definedVar: string | null = null;
-    let lastKind: 'assign' | 'output' | 'eval' = 'eval';
-    let lastP: ReturnType<typeof parseLine> | null = null;
-    const texParts: string[] = [];
-    for (let li = 0; li < lines.length; li++) {
-      const line = lines[li];
-      const t = line.trim();
-      if (t === '' || t.startsWith('//') || t.startsWith('#')) continue;
-      if (li === lastIdx) scopeBeforeLast = { ...scope };
-      try {
-        const p = parseLine(t);
-        for (const d of extractDependencies(p.expr, p.fnParams)) allDeps.add(d);
-        if (p.kind === 'assign' && p.definedVar) definedVar = p.definedVar;
-        lastKind = p.kind;
-        lastP = p;
-        texParts.push(toLatex(t));
-      } catch { /* ignore */ }
-      const r = evaluateLine(line, scope);
-      if (r.error) {
-        lastError = r.error;
-        lastValue = null;
-        lastOk = false;
-      } else if (lastError === null) {
-        lastValue = r.value;
-        lastOk = true;
-      }
-    }
-    cur.dependencies = [...allDeps];
-    cur.definedVar = definedVar;
-    // `delta := atan(x) =` — присваивание с показом результата
-    cur.isOutput = lastKind === 'output' || lastKind === 'eval' || (lastP?.kind === 'assign' && lastP.show);
-    cur.displayLatex = texParts.join(' \\\\ ');
-    cur.plotPreview = null;
-    cur.visualize = detectVisualize(lastP, lastError, definedVar, lastValue);
-
-    // ----- Автографик -----
-    // 1) определение функции одной переменной: f(t) := t^2 → превью;
-    // 2) последняя строка упала, но читается как функция от x: sin(x) = → превью вместо ошибки.
-    let sampledParam: string | null = null;
-    if (lastP?.kind === 'assign' && lastP.isFunctionDef && lastP.fnParams.length === 1) {
-      const param = lastP.fnParams[0];
-      const bodyX = lastP.expr.replace(new RegExp(`\\b${param}\\b`, 'g'), 'x');
-      const s = sampleExpression(lastP.expr, scope, { varName: param, label: `${lastP.definedVar}(${param})` });
-      if (s) {
-        cur.plotPreview = { ...s, expr: bodyX };
-        sampledParam = param;
-      }
-    } else if (!lastOk && lastError && lastP) {
-      const cand =
-        lastP.kind === 'assign' ? lastP.expr.replace(/=+\s*$/, '').trim() : lastP.expr;
-      if (cand) {
-        const s = sampleExpression(cand, scope, { label: cand });
-        if (s) {
-          cur.plotPreview = s;
-          sampledParam = 'x';
-          // выражение осмысленно как график — ошибку не показываем
-          lastError = null;
-          lastValue = null;
-        }
-      }
-    }
-    if (sampledParam) {
-      cur.dependencies = cur.dependencies.filter((d) => d !== sampledParam && d !== 'x');
-    }
-    // лог решателей блока — ПОСЛЕ автографика: сэмплинг тоже считает в этом scope.
-    // Забираем и при ошибке сходимости (диагностика вместо тишины).
-    const str = takeSolverTrace(scope);
-    cur.solverTrace = str.length ? str : null;
-
-    if (lastError) {
-      cur.error = lastError;
+    const r = runProgram(b.rawInput, scope);
+    const st = takeSolverTrace(scope);
+    cur.solverTrace = st.length ? st : null;
+    cur.dependencies = analysis.dependencies;
+    cur.isOutput = true;
+    cur.programTrace = r.trace ?? null;
+    const exp = (b.exportName ?? '').trim();
+    cur.definedVar = exp && isValidVarName(exp) ? exp : null;
+    if (r.error) {
+      cur.error = r.error;
       cur.resultStr = '';
       cur.resultLatex = '';
       cur.resultValue = null;
     } else {
       cur.error = null;
-      cur.resultValue = lastValue;
-      cur.resultStr = formatResult(lastValue);
-      cur.resultLatex = valueToLatex(lastValue);
-      // подстановка Calcpad-стиля для выводимой последней строки
-      // (`F := m*a =` → `2 * 5`); определения функций и молчаливые присваивания пропускаем
-      if (cur.isOutput && lastP && !lastP.isFunctionDef && scopeBeforeLast) {
-        const sub = buildSubstitution(lastP.expr, scopeBeforeLast, lastP.fnParams ?? [], lastValue);
-        if (sub) {
-          cur.substStr = sub.text;
-          cur.substLatex = sub.latex;
-        }
+      cur.resultValue = r.value;
+      cur.resultStr = formatResult(r.value);
+      cur.resultLatex = valueToLatex(r.value);
+      if (cur.definedVar) scope[cur.definedVar] = r.value;
+    }
+    cur.displayLatex = '';
+    snapBlock(cur, key);
+    return;
+  }
+
+  // ---------- симуляция (sync: через runSim) ----------
+  if (b.kind === 'sim') {
+    const parsed = parseSimInput(b);
+    simHead(b, cur);
+    if (parsed.error || !parsed.def) {
+      simFail(cur, parsed.error);
+    } else {
+      resetSolverTrace(scope);
+      simApply(cur, ctx, runSim(parsed.def, scope));
+      const sst = takeSolverTrace(scope);
+      cur.solverTrace = sst.length ? sst : null;
+    }
+    cur.displayLatex = '';
+    snapBlock(cur, key);
+    return;
+  }
+
+  // ---------- обычный мат-блок ----------
+  const lines = b.rawInput.split('\n');
+  // канал лога решателей на этот блок (общий массив в scope — см. numeric.ts)
+  resetSolverTrace(scope);
+  // индекс последней содержательной строки: scope ДО неё — для подстановки значений
+  let lastIdx = -1;
+  lines.forEach((ln, i) => {
+    const tt = ln.trim();
+    if (tt !== '' && !tt.startsWith('//') && !tt.startsWith('#')) lastIdx = i;
+  });
+  let scopeBeforeLast: Scope | null = null;
+  let lastValue: unknown = null;
+  let lastError: string | null = null;
+  let lastOk = true;
+  const allDeps = new Set<string>();
+  let definedVar: string | null = null;
+  let lastKind: 'assign' | 'output' | 'eval' = 'eval';
+  let lastP: ReturnType<typeof parseLine> | null = null;
+  const texParts: string[] = [];
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li];
+    const t = line.trim();
+    if (t === '' || t.startsWith('//') || t.startsWith('#')) continue;
+    if (li === lastIdx) scopeBeforeLast = { ...scope };
+    try {
+      const p = parseLine(t);
+      for (const d of extractDependencies(p.expr, p.fnParams)) allDeps.add(d);
+      if (p.kind === 'assign' && p.definedVar) definedVar = p.definedVar;
+      lastKind = p.kind;
+      lastP = p;
+      texParts.push(toLatex(t));
+    } catch {
+      /* ignore */
+    }
+    const r = evaluateLine(line, scope);
+    if (r.error) {
+      lastError = r.error;
+      lastValue = null;
+      lastOk = false;
+    } else if (lastError === null) {
+      lastValue = r.value;
+      lastOk = true;
+    }
+  }
+  cur.dependencies = [...allDeps];
+  cur.definedVar = definedVar;
+  // `delta := atan(x) =` — присваивание с показом результата
+  cur.isOutput =
+    lastKind === 'output' || lastKind === 'eval' || (lastP?.kind === 'assign' && lastP.show);
+  cur.displayLatex = texParts.join(' \\\\ ');
+  cur.plotPreview = null;
+  cur.visualize = detectVisualize(lastP, lastError, definedVar, lastValue);
+
+  // ----- Автографик -----
+  // 1) определение функции одной переменной: f(t) := t^2 → превью;
+  // 2) последняя строка упала, но читается как функция от x: sin(x) = → превью вместо ошибки.
+  let sampledParam: string | null = null;
+  if (lastP?.kind === 'assign' && lastP.isFunctionDef && lastP.fnParams.length === 1) {
+    const param = lastP.fnParams[0];
+    const bodyX = lastP.expr.replace(new RegExp(`\\b${param}\\b`, 'g'), 'x');
+    const s = sampleExpression(lastP.expr, scope, {
+      varName: param,
+      label: `${lastP.definedVar}(${param})`,
+    });
+    if (s) {
+      cur.plotPreview = { ...s, expr: bodyX };
+      sampledParam = param;
+    }
+  } else if (!lastOk && lastError && lastP) {
+    const cand = lastP.kind === 'assign' ? lastP.expr.replace(/=+\s*$/, '').trim() : lastP.expr;
+    if (cand) {
+      const s = sampleExpression(cand, scope, { label: cand });
+      if (s) {
+        cur.plotPreview = s;
+        sampledParam = 'x';
+        // выражение осмысленно как график — ошибку не показываем
+        lastError = null;
+        lastValue = null;
       }
     }
-    snapBlock(cur, key);
+  }
+  if (sampledParam) {
+    cur.dependencies = cur.dependencies.filter((d) => d !== sampledParam && d !== 'x');
+  }
+  // лог решателей блока — ПОСЛЕ автографика: сэмплинг тоже считает в этом scope.
+  // Забираем и при ошибке сходимости (диагностика вместо тишины).
+  const str = takeSolverTrace(scope);
+  cur.solverTrace = str.length ? str : null;
+
+  if (lastError) {
+    cur.error = lastError;
+    cur.resultStr = '';
+    cur.resultLatex = '';
+    cur.resultValue = null;
+  } else {
+    cur.error = null;
+    cur.resultValue = lastValue;
+    cur.resultStr = formatResult(lastValue);
+    cur.resultLatex = valueToLatex(lastValue);
+    // подстановка Calcpad-стиля для выводимой последней строки
+    // (`F := m*a =` → `2 * 5`); определения функций и молчаливые присваивания пропускаем
+    if (cur.isOutput && lastP && !lastP.isFunctionDef && scopeBeforeLast) {
+      const sub = buildSubstitution(lastP.expr, scopeBeforeLast, lastP.fnParams ?? [], lastValue);
+      if (sub) {
+        cur.substStr = sub.text;
+        cur.substLatex = sub.latex;
+      }
+    }
+  }
+  snapBlock(cur, key);
 }
 
 /** Разобрать поля sim-блока в SimDef (общее для sync/async, #6). */
@@ -997,7 +1109,7 @@ function simHead(b: MathBlockData, cur: MathBlockData): void {
   cur.isOutput = true;
   const exp = (b.simExport ?? '').trim();
   // в FDTD-режиме экспортировать нечего — финального вектора нет
-  cur.definedVar = (b.simMode === 'fdtd' || !exp || !isValidVarName(exp)) ? null : exp;
+  cur.definedVar = b.simMode === 'fdtd' || !exp || !isValidVarName(exp) ? null : exp;
 }
 
 /** Ошибка разбора sim-конфига (общее, #6). */
@@ -1027,7 +1139,12 @@ function simApply(cur: MathBlockData, ctx: RecalcCtx, r: SimResult): void {
 }
 
 /** Один sim-блок асинхронно: чанки runSimAsync + прогресс (#6). */
-async function computeSimAsync(b: MathBlockData, ctx: RecalcCtx, key: string, hooks: RecalcHooks): Promise<void> {
+async function computeSimAsync(
+  b: MathBlockData,
+  ctx: RecalcCtx,
+  key: string,
+  hooks: RecalcHooks,
+): Promise<void> {
   if (ctx.reuseStale(b)) return;
   const cur = ctx.out[b.id];
   cur.solverTrace = null;

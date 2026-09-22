@@ -12,7 +12,11 @@ function sortedBlocks(blocks: Record<string, MathBlockData>): MathBlockData[] {
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function commentText(raw: string): string {
@@ -28,7 +32,10 @@ function mathPara(b: MathBlockData): string {
 }
 
 /** Лист → Word-HTML документ (MIME application/msword, расширение .doc). */
-export function blocksToWordHtml(blocks: Record<string, MathBlockData>, lang: 'ru' | 'en' = 'ru'): string {
+export function blocksToWordHtml(
+  blocks: Record<string, MathBlockData>,
+  lang: 'ru' | 'en' = 'ru',
+): string {
   const L = lang === 'ru';
   const title = 'NyaMath report';
   const date = new Date().toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US');
@@ -40,17 +47,24 @@ export function blocksToWordHtml(blocks: Record<string, MathBlockData>, lang: 'r
     } else if (b.kind === 'math' || b.kind === 'program' || b.kind === 'slider') {
       if (b.kind === 'program') {
         body.push(`<pre>${esc(b.rawInput).slice(0, 2000)}</pre>`);
-        if ((b.resultStr || '').trim()) body.push(`<p class="math">→ ${esc(b.resultStr.trim()).slice(0, 300)}</p>`);
+        if ((b.resultStr || '').trim())
+          body.push(`<p class="math">→ ${esc(b.resultStr.trim()).slice(0, 300)}</p>`);
         else if (b.error) body.push(`<p class="err">⚠ ${esc(b.error).slice(0, 300)}</p>`);
       } else if (b.kind === 'slider') {
-        body.push(`<p class="math">${esc(b.sliderVar ?? 'k')} = ${esc((b.resultStr || '—').slice(0, 120))}</p>`);
+        body.push(
+          `<p class="math">${esc(b.sliderVar ?? 'k')} = ${esc((b.resultStr || '—').slice(0, 120))}</p>`,
+        );
       } else {
         body.push(mathPara(b));
       }
     } else if (b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'contour') {
-      body.push(`<p class="fig">[${L ? 'Рисунок' : 'Figure'}: ${esc((b.plotFn ?? '').slice(0, 200))}]</p>`);
+      body.push(
+        `<p class="fig">[${L ? 'Рисунок' : 'Figure'}: ${esc((b.plotFn ?? '').slice(0, 200))}]</p>`,
+      );
     } else if (b.kind === 'sim') {
-      body.push(`<p class="fig">[${L ? 'Моделирование' : 'Simulation'}: ${esc((b.simStates ?? '').slice(0, 120))}]</p>`);
+      body.push(
+        `<p class="fig">[${L ? 'Моделирование' : 'Simulation'}: ${esc((b.simStates ?? '').slice(0, 120))}]</p>`,
+      );
     }
   }
   return [
@@ -71,6 +85,13 @@ export function blocksToWordHtml(blocks: Record<string, MathBlockData>, lang: 'r
   ].join('\n');
 }
 
-export function downloadWordDoc(blocks: Record<string, MathBlockData>, lang: 'ru' | 'en' = 'ru'): void {
-  downloadTextFile('nyamath-report.doc', blocksToWordHtml(blocks, lang), 'application/msword;charset=utf-8');
+export function downloadWordDoc(
+  blocks: Record<string, MathBlockData>,
+  lang: 'ru' | 'en' = 'ru',
+): void {
+  downloadTextFile(
+    'nyamath-report.doc',
+    blocksToWordHtml(blocks, lang),
+    'application/msword;charset=utf-8',
+  );
 }

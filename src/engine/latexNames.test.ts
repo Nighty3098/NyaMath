@@ -39,7 +39,9 @@ describe('latex names', () => {
 
   it('renders numint as ∫ and limit as lim with transition', () => {
     expect(toLatex('numint("(ln(1 + x)/(1 + x^2))", "x", v, d) =')).toContain('\\int_{v}^{d}');
-    expect(toLatex('v := limit("ln((sin(x)/x)+((x^2)/6))", "x", 0) =')).toContain('\\lim_{x \\to 0}');
+    expect(toLatex('v := limit("ln((sin(x)/x)+((x^2)/6))", "x", 0) =')).toContain(
+      '\\lim_{x \\to 0}',
+    );
   });
   it('supports the eps shorthand', () => {
     expect(toLatex('eps_r := 1')).toContain('\\epsilon_{r}');

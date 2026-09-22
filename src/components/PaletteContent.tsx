@@ -1,18 +1,52 @@
 import { useMemo, useState } from 'react';
 import { type Snippet } from '../engine/packs';
 import {
-  listConstEntries, listConstSections, listFormulaSections, listFormulas, listSnippets,
+  listConstEntries,
+  listConstSections,
+  listFormulaSections,
+  listFormulas,
+  listSnippets,
 } from '../lib/db';
 import { useCanvasStore } from '../store/canvasStore';
 import { lx, packName, t, type PackId } from '../i18n';
 import {
-  IChart, IContour, IFormula, IConst, IFx, IGrid,
-  IPlot, IProgram, IScale, ISignal, ISim, IUnits, ICalc, IChip, IField, IZap, IPlay,
+  IChart,
+  IContour,
+  IFormula,
+  IConst,
+  IFx,
+  IGrid,
+  IPlot,
+  IProgram,
+  IScale,
+  ISignal,
+  ISim,
+  IUnits,
+  ICalc,
+  IChip,
+  IField,
+  IZap,
+  IPlay,
 } from './Icon';
 
 export type PaletteVariant = 'functions' | 'formulas' | 'constants';
 
-const PACKS: PackId[] = ['matrices', 'stats', 'uncertainty', 'physics', 'em', 'control', 'materials', 'units', 'calc', 'computing', 'telecom', 'programs', 'plots', 'sim'];
+const PACKS: PackId[] = [
+  'matrices',
+  'stats',
+  'uncertainty',
+  'physics',
+  'em',
+  'control',
+  'materials',
+  'units',
+  'calc',
+  'computing',
+  'telecom',
+  'programs',
+  'plots',
+  'sim',
+];
 
 const PACK_ICONS: Record<PackId, () => React.JSX.Element> = {
   matrices: IGrid,
@@ -60,7 +94,13 @@ interface PalItem {
  * Без оконного хрома (перетаскивание/вкладки/закрытие — снаружи),
  * поэтому переиспользуется и в старом FunctionPalette, и в едином окне.
  */
-export default function PaletteContent({ variant, autoFocus = false }: { variant: PaletteVariant; autoFocus?: boolean }) {
+export default function PaletteContent({
+  variant,
+  autoFocus = false,
+}: {
+  variant: PaletteVariant;
+  autoFocus?: boolean;
+}) {
   const formulas = variant === 'formulas';
   const consts = variant === 'constants';
   const searchId = formulas ? 'formula-search' : consts ? 'const-search' : 'fx-search';
@@ -77,16 +117,16 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
   const sections = formulas
     ? listFormulaSections().map((sec) => ({ id: sec.id, label: lx(sec.label) }))
     : consts
-    ? listConstSections().map((sec) => ({ id: sec.id, label: lx(sec.label) }))
-    : PACKS.map((pack) => ({ id: pack, label: packName(pack) }));
+      ? listConstSections().map((sec) => ({ id: sec.id, label: lx(sec.label) }))
+      : PACKS.map((pack) => ({ id: pack, label: packName(pack) }));
 
   const items = useMemo<PalItem[]>(() => {
     const sectionLabel = (id: string): string =>
       formulas
         ? lx(listFormulaSections().find((sec) => sec.id === id)?.label ?? { ru: id, en: id })
         : consts
-        ? lx(listConstSections().find((sec) => sec.id === id)?.label ?? { ru: id, en: id })
-        : packName(id as PackId);
+          ? lx(listConstSections().find((sec) => sec.id === id)?.label ?? { ru: id, en: id })
+          : packName(id as PackId);
     const all: PalItem[] = formulas
       ? listFormulas().map((f) => ({
           key: f.id,
@@ -102,26 +142,26 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
           kind: 'math' as const,
         }))
       : consts
-      ? listConstEntries().map((k) => ({
-          key: k.id,
-          section: k.section,
-          label: k.label[lang],
-          hint: k.hint[lang],
-          code: k.code,
-          sources: k.sources,
-          kind: 'math' as const,
-        }))
-      : listSnippets().map((s, i) => ({
-          key: `${s.pack}-${i}`,
-          section: s.pack,
-          label: s.label[lang],
-          hint: s.hint[lang],
-          code: s.code,
-          doc: s.doc,
-          kind: s.kind,
-          snippet: s,
-          plot2d: s.plot2d,
-        }));
+        ? listConstEntries().map((k) => ({
+            key: k.id,
+            section: k.section,
+            label: k.label[lang],
+            hint: k.hint[lang],
+            code: k.code,
+            sources: k.sources,
+            kind: 'math' as const,
+          }))
+        : listSnippets().map((s, i) => ({
+            key: `${s.pack}-${i}`,
+            section: s.pack,
+            label: s.label[lang],
+            hint: s.hint[lang],
+            code: s.code,
+            doc: s.doc,
+            kind: s.kind,
+            snippet: s,
+            plot2d: s.plot2d,
+          }));
     const needle = q.trim().toLowerCase();
     if (!needle) return all;
     return all.filter(
@@ -134,8 +174,7 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
         it.sources?.some((src) => src.title.toLowerCase().includes(needle)) ||
         it.vars?.some(
           (v) =>
-            v.name.toLowerCase().includes(needle) ||
-            v.label[lang].toLowerCase().includes(needle),
+            v.name.toLowerCase().includes(needle) || v.label[lang].toLowerCase().includes(needle),
         ),
     );
   }, [q, lang, formulas, consts]);
@@ -152,7 +191,10 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
     const p = place();
     // plot со своими переменными: сначала блоки переменных выше,
     // затем график ниже — он видит их значения и пересчитывается от них
-    const varLines = (s.vars ?? '').split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+    const varLines = (s.vars ?? '')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
     if ((s.kind === 'plot' || s.kind === 'contour') && varLines.length > 0) {
       addBlocks(varLines, p.x, p.y);
       const gy = p.y + 64 * varLines.length;
@@ -171,7 +213,10 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
   const insertFormula = (code: string) => {
     // каждую строку — отдельным блоком: так любую строку можно править точечно,
     // а порядок сверху-вниз сохраняет зависимости между строками
-    const lines = code.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+    const lines = code
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
     if (lines.length <= 1) {
       const p = place();
       addBlock(p.x, p.y, code);
@@ -201,18 +246,28 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
     <div className="flex-1 min-h-0 flex flex-col">
       <div className="flex items-center gap-2 px-3 py-2">
         <label htmlFor={searchId} className="sr-only">
-          {t(formulas ? 'formulaPal.searchLabel' : consts ? 'constPal.searchLabel' : 'pal.searchLabel')}
+          {t(
+            formulas
+              ? 'formulaPal.searchLabel'
+              : consts
+                ? 'constPal.searchLabel'
+                : 'pal.searchLabel',
+          )}
         </label>
         <input
           id={searchId}
           className="nya-input flex-1 min-w-0 min-h-[34px] px-2.5 py-1 text-[13px]"
-          placeholder={t(formulas ? 'formulaPal.searchPh' : consts ? 'constPal.searchPh' : 'pal.searchPh')}
+          placeholder={t(
+            formulas ? 'formulaPal.searchPh' : consts ? 'constPal.searchPh' : 'pal.searchPh',
+          )}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onPointerDown={(e) => e.stopPropagation()}
           autoFocus={autoFocus}
         />
-        <span className="math-input tabular-nums text-[11px] text-[var(--chrome-soft)] shrink-0">{items.length}</span>
+        <span className="math-input tabular-nums text-[11px] text-[var(--chrome-soft)] shrink-0">
+          {items.length}
+        </span>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2">
         {sections.map((sec) => {
@@ -226,7 +281,9 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
                   <SecIcon />
                 </span>
                 {sec.label}
-                <span className="math-input normal-case font-normal tracking-normal opacity-70">{rows.length}</span>
+                <span className="math-input normal-case font-normal tracking-normal opacity-70">
+                  {rows.length}
+                </span>
               </div>
               {rows.map((s) => {
                 const KindIcon = KIND_ICONS[s.kind];
@@ -254,7 +311,10 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
                         <KindIcon />
                       </span>
                       <span className="text-[13px] leading-4 truncate">{s.label}</span>
-                      <span className="ml-auto text-[var(--faint)] group-hover:text-[var(--accent)] group-hover:opacity-100 opacity-0 text-[15px] leading-4 shrink-0 transition-opacity" aria-hidden="true">
+                      <span
+                        className="ml-auto text-[var(--faint)] group-hover:text-[var(--accent)] group-hover:opacity-100 opacity-0 text-[15px] leading-4 shrink-0 transition-opacity"
+                        aria-hidden="true"
+                      >
                         +
                       </span>
                     </div>
@@ -273,7 +333,10 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
                           {t('formulaPal.vars')}
                         </div>
                         {s.vars.map((v) => (
-                          <div key={v.name} className="math-input text-[11px] leading-4 text-[var(--chrome-soft)] truncate">
+                          <div
+                            key={v.name}
+                            className="math-input text-[11px] leading-4 text-[var(--chrome-soft)] truncate"
+                          >
                             <span className="text-[var(--accent)]">{v.name}</span>
                             {' — '}
                             {v.label[lang]}
@@ -282,7 +345,10 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
                       </div>
                     )}
                     {(s.plot2d || s.plot3d || s.sim) && (
-                      <div className="flex flex-wrap gap-1.5 pl-6 mt-1.5" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="flex flex-wrap gap-1.5 pl-6 mt-1.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {s.plot2d && (
                           <button
                             type="button"
@@ -337,7 +403,11 @@ export default function PaletteContent({ variant, autoFocus = false }: { variant
             </div>
           );
         })}
-        {items.length === 0 && <div className="text-[13px] text-[var(--chrome-soft)] p-3">{t(formulas ? 'formulaPal.empty' : consts ? 'constPal.empty' : 'pal.empty')}</div>}
+        {items.length === 0 && (
+          <div className="text-[13px] text-[var(--chrome-soft)] p-3">
+            {t(formulas ? 'formulaPal.empty' : consts ? 'constPal.empty' : 'pal.empty')}
+          </div>
+        )}
       </div>
     </div>
   );

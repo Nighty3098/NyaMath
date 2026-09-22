@@ -2,11 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { parseUnitScale } from './unitScale';
 import { blockDefs, blockDeps, type MathBlockData } from './dependencies';
 
-function block(kind: MathBlockData['kind'], raw: string, patch: Partial<MathBlockData> = {}): MathBlockData {
+function block(
+  kind: MathBlockData['kind'],
+  raw: string,
+  patch: Partial<MathBlockData> = {},
+): MathBlockData {
   return {
-    id: 'nv-t', x: 80, y: 60, rawInput: raw, displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind, plotPreview: null, ...patch,
+    id: 'nv-t',
+    x: 80,
+    y: 60,
+    rawInput: raw,
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind,
+    plotPreview: null,
+    ...patch,
   };
 }
 

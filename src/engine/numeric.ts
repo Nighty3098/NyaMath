@@ -131,7 +131,10 @@ export function newtonSystem(
       checkVec(rp, n);
       for (let i = 0; i < n; i++) J[i][j] = (rp[i] - r[i]) / h;
     }
-    const dx = solveLinear(J, r.map((v) => -v));
+    const dx = solveLinear(
+      J,
+      r.map((v) => -v),
+    );
     // демпфирование: уменьшаем шаг, пока невязка падает
     let lam = 1;
     let xn: number[] = x;
@@ -183,7 +186,10 @@ export function solveLinear(J: number[][], b: number[]): number[] {
 /** Брент на [a,b], нужна смена знака. */
 export function brent(
   f: (x: number) => number,
-  a: number, b: number, tol = 1e-12, maxIter = 100,
+  a: number,
+  b: number,
+  tol = 1e-12,
+  maxIter = 100,
   trace?: TraceFn,
 ): number {
   let fa = f(a);
@@ -244,7 +250,7 @@ export function brent(
     }
     a = b;
     fa = fb;
-    b += Math.abs(d) > tol ? d : (m > 0 ? tol : -tol);
+    b += Math.abs(d) > tol ? d : m > 0 ? tol : -tol;
     fb = f(b);
     if (!isFinite(fb)) throw new Error('Function not finite on bracket');
   }
@@ -278,7 +284,8 @@ export function nelderMead(
   }
   let vals = simplex.map((p) => f(p));
   vals.forEach((v) => {
-    if (typeof v !== 'number' || !isFinite(v)) throw new Error('Function must return finite numbers');
+    if (typeof v !== 'number' || !isFinite(v))
+      throw new Error('Function must return finite numbers');
   });
   const order = () => simplex.map((_, i) => i).sort((a, b) => vals[a] - vals[b]);
   for (let k = 0; k < maxIter; k++) {
@@ -326,7 +333,9 @@ export function nelderMead(
       } else {
         for (let i = 1; i <= n; i++) {
           const ii = idx[i];
-          simplex[ii] = simplex[ii].map((v, j) => simplex[best][j] + sigma * (v - simplex[best][j]));
+          simplex[ii] = simplex[ii].map(
+            (v, j) => simplex[best][j] + sigma * (v - simplex[best][j]),
+          );
           vals[ii] = f(simplex[ii]);
           if (!isFinite(vals[ii])) throw new Error('Function must return finite numbers');
         }
@@ -339,7 +348,11 @@ export function nelderMead(
 
 /** Адаптивный Симпсон (лог: дробины/счётчик f — рекурсия в одну строку итога). */
 export function adaptiveSimpson(
-  f: (x: number) => number, a: number, b: number, tol = 1e-10, maxDepth = 20,
+  f: (x: number) => number,
+  a: number,
+  b: number,
+  tol = 1e-10,
+  maxDepth = 20,
   trace?: TraceFn,
 ): number {
   let evals = 3;
@@ -350,11 +363,21 @@ export function adaptiveSimpson(
   const m = (a + b) / 2;
   const fm = f(m);
   for (const v of [fa, fb, fm]) {
-    if (typeof v !== 'number' || !isFinite(v)) throw new Error('Function must return finite numbers');
+    if (typeof v !== 'number' || !isFinite(v))
+      throw new Error('Function must return finite numbers');
   }
   const whole = ((b - a) / 6) * (fa + 4 * fm + fb);
   trace?.(`[${fmtTrace(a)}, ${fmtTrace(b)}] S0=${fmtTrace(whole)}`);
-  const rec = (x0: number, f0: number, xm: number, fm2: number, x1: number, f1: number, w: number, depth: number): number => {
+  const rec = (
+    x0: number,
+    f0: number,
+    xm: number,
+    fm2: number,
+    x1: number,
+    f1: number,
+    w: number,
+    depth: number,
+  ): number => {
     const m1 = (x0 + xm) / 2;
     const m2 = (xm + x1) / 2;
     const f1v = f(m1);
@@ -382,7 +405,12 @@ export function adaptiveSimpson(
 }
 
 /** Один шаг RK4 для системы (для BVP-стрельбы и тестов). */
-export function rk4Step(F: (t: number, y: number[]) => number[], t: number, y: number[], h: number): number[] {
+export function rk4Step(
+  F: (t: number, y: number[]) => number[],
+  t: number,
+  y: number[],
+  h: number,
+): number[] {
   const k1 = F(t, y);
   const y2 = y.map((v, i) => v + (h / 2) * k1[i]);
   const k2 = F(t + h / 2, y2);

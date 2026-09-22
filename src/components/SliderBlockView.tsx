@@ -11,8 +11,7 @@ interface Props {
   scale: number;
 }
 
-const numOr = (v: unknown, fb: number): number =>
-  typeof v === 'number' && isFinite(v) ? v : fb;
+const numOr = (v: unknown, fb: number): number => (typeof v === 'number' && isFinite(v) ? v : fb);
 
 /**
  * Слайдер параметра: значение ползунка уходит в scope как переменная,
@@ -37,9 +36,8 @@ function SliderBlockView({ block, scale }: Props) {
   const hi = numOr(block.sliderMax, 10);
   const step = numOr(block.sliderStep, (hi - lo) / 100 || 1);
   const okRange = hi > lo && isFinite(step) && step > 0;
-  const val = typeof block.resultValue === 'number' && isFinite(block.resultValue)
-    ? block.resultValue
-    : lo;
+  const val =
+    typeof block.resultValue === 'number' && isFinite(block.resultValue) ? block.resultValue : lo;
   const frac = okRange ? Math.min(1, Math.max(0, (val - lo) / (hi - lo))) : 0;
 
   const snap = (raw: number): number => {
@@ -88,11 +86,7 @@ function SliderBlockView({ block, scale }: Props) {
     }
   };
 
-  const numField = (
-    label: string,
-    value: number,
-    apply: (v: number) => void,
-  ) => (
+  const numField = (label: string, value: number, apply: (v: number) => void) => (
     <label className="inline-flex items-center gap-1 text-[12px] text-[var(--ink-soft)]">
       {label}
       <input
@@ -166,12 +160,16 @@ function SliderBlockView({ block, scale }: Props) {
             className="math-input w-[76px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[14px] text-[var(--ink)] outline-none select-text"
             value={block.sliderVar ?? ''}
             spellCheck={false}
-            onChange={(e) => useCanvasStore.getState().updateSlider(block.id, { sliderVar: e.target.value })}
+            onChange={(e) =>
+              useCanvasStore.getState().updateSlider(block.id, { sliderVar: e.target.value })
+            }
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           />
           <span className="text-[14px] text-[var(--faint)]">=</span>
-          <span className="math-input text-[14px] text-[var(--ink)] truncate">{block.resultStr || '—'}</span>
+          <span className="math-input text-[14px] text-[var(--ink)] truncate">
+            {block.resultStr || '—'}
+          </span>
         </div>
 
         {/* ползунок */}
@@ -220,16 +218,26 @@ function SliderBlockView({ block, scale }: Props) {
         </div>
 
         {/* диапазон и шаг */}
-        <div className="flex items-center gap-2 mt-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
-          {numField(t('slider.min'), lo, (v) => useCanvasStore.getState().updateSlider(block.id, { sliderMin: v }))}
-          {numField(t('slider.max'), hi, (v) => useCanvasStore.getState().updateSlider(block.id, { sliderMax: v }))}
+        <div
+          className="flex items-center gap-2 mt-1.5 flex-wrap"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {numField(t('slider.min'), lo, (v) =>
+            useCanvasStore.getState().updateSlider(block.id, { sliderMin: v }),
+          )}
+          {numField(t('slider.max'), hi, (v) =>
+            useCanvasStore.getState().updateSlider(block.id, { sliderMax: v }),
+          )}
           {numField(t('slider.step'), step, (v) => {
             if (v > 0) useCanvasStore.getState().updateSlider(block.id, { sliderStep: v });
           })}
         </div>
 
         {block.error && (
-          <div className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--danger)] mt-1" role="alert">
+          <div
+            className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--danger)] mt-1"
+            role="alert"
+          >
             <IWarn /> {block.error}
           </div>
         )}

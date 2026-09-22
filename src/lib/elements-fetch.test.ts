@@ -1,26 +1,53 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAll, normalizeElement, renderRow, replaceTopKey } from '../../scripts/fetch-elements.mjs';
+import {
+  normalizeAll,
+  normalizeElement,
+  renderRow,
+  replaceTopKey,
+} from '../../scripts/fetch-elements.mjs';
 import { RU_NAMES } from '../../scripts/element-names.mjs';
 
 const FE = {
-  name: 'Iron', atomic_mass: 55.845, boil: 3134, category: 'transition metal',
-  density: 7.874, discovered_by: 'Ancient', melt: 1811, molar_heat: 25.1,
-  number: 26, period: 4, group: 8, phase: 'Solid',
+  name: 'Iron',
+  atomic_mass: 55.845,
+  boil: 3134,
+  category: 'transition metal',
+  density: 7.874,
+  discovered_by: 'Ancient',
+  melt: 1811,
+  molar_heat: 25.1,
+  number: 26,
+  period: 4,
+  group: 8,
+  phase: 'Solid',
   source: 'https://en.wikipedia.org/wiki/Iron',
   electron_configuration: '1s2 2s2 2p6 3s2 3p6 4s2 3d6',
   electron_configuration_semantic: '[Ar] 3d6 4s2',
-  electronegativity_pauling: 1.83, symbol: 'Fe',
+  electronegativity_pauling: 1.83,
+  symbol: 'Fe',
 };
 
 /** Нормализация датасета элементов (offline, без сети). */
 describe('elements: normalizeElement', () => {
   it('железо: все поля + русское название', () => {
     expect(normalizeElement(FE)).toEqual({
-      number: 26, symbol: 'Fe', name_en: 'Iron', name_ru: 'железо',
-      atomic_mass: 55.845, phase: 'Solid', density: 7.874, melt: 1811,
-      boil: 3134, group_no: 8, period: 4, electron_config: '[Ar] 3d6 4s2',
-      electronegativity: 1.83, molar_heat: 25.1, category: 'transition metal',
-      discovered: 'Ancient', source: 'https://en.wikipedia.org/wiki/Iron',
+      number: 26,
+      symbol: 'Fe',
+      name_en: 'Iron',
+      name_ru: 'железо',
+      atomic_mass: 55.845,
+      phase: 'Solid',
+      density: 7.874,
+      melt: 1811,
+      boil: 3134,
+      group_no: 8,
+      period: 4,
+      electron_config: '[Ar] 3d6 4s2',
+      electronegativity: 1.83,
+      molar_heat: 25.1,
+      category: 'transition metal',
+      discovered: 'Ancient',
+      source: 'https://en.wikipedia.org/wiki/Iron',
     });
   });
 
@@ -34,7 +61,10 @@ describe('elements: normalizeElement', () => {
   });
 
   it('normalizeAll сортирует по номеру', () => {
-    const rows = normalizeAll([{ ...FE, number: 26 }, { ...FE, number: 1, symbol: 'H', name: 'Hydrogen' }]);
+    const rows = normalizeAll([
+      { ...FE, number: 26 },
+      { ...FE, number: 1, symbol: 'H', name: 'Hydrogen' },
+    ]);
     expect(rows.map((r) => r.number)).toEqual([1, 26]);
   });
 

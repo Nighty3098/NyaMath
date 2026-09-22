@@ -18,7 +18,9 @@ export function resolveNodeDbPath(explicit?: string): string {
   for (const p of cands) {
     try {
       if (fs.statSync(p).isFile()) return p;
-    } catch { /* next */ }
+    } catch {
+      /* next */
+    }
   }
   throw new Error(`NyaMath.db not found (tried: ${cands.join(', ')})`);
 }

@@ -1,18 +1,31 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { getLastScope, recalculateAll, type MathBlockData } from '../engine/dependencies';
 import { runWorkerJob } from '../engine/recalc.worker';
-import {
-  _setWorkerFactory,
-  recalcInWorker,
-  type RecalcJobOutcome,
-} from './recalcWorker';
+import { _setWorkerFactory, recalcInWorker, type RecalcJobOutcome } from './recalcWorker';
 import type { WorkerReq } from '../engine/workerProtocol';
 
-function block(suffix: string, kind: MathBlockData['kind'], y: number, patch: Partial<MathBlockData> = {}): MathBlockData {
+function block(
+  suffix: string,
+  kind: MathBlockData['kind'],
+  y: number,
+  patch: Partial<MathBlockData> = {},
+): MathBlockData {
   return {
-    id: `rw-${suffix}`, x: 80, y, rawInput: '', displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind, plotPreview: null, ...patch,
+    id: `rw-${suffix}`,
+    x: 80,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind,
+    plotPreview: null,
+    ...patch,
   };
 }
 
@@ -23,8 +36,11 @@ function snapshot(blocks: Record<string, MathBlockData>) {
   const out: Record<string, unknown> = {};
   for (const [id, b] of Object.entries(blocks)) {
     out[id] = {
-      resultStr: b.resultStr, substStr: b.substStr ?? null, error: b.error,
-      dependencies: b.dependencies, definedVar: b.definedVar,
+      resultStr: b.resultStr,
+      substStr: b.substStr ?? null,
+      error: b.error,
+      dependencies: b.dependencies,
+      definedVar: b.definedVar,
     };
   }
   return out;
@@ -81,7 +97,13 @@ class SlowWorker {
     setTimeout(() => {
       this.onmessage?.({
         data: {
-          type: 'result', jobId, ok: true, blocks: [], scope: {}, changed: false, calcMs: 0,
+          type: 'result',
+          jobId,
+          ok: true,
+          blocks: [],
+          scope: {},
+          changed: false,
+          calcMs: 0,
         },
       });
     }, 300);
@@ -98,7 +120,10 @@ afterEach(() => {
 describe('recalcWorker: forced fallback (null factory)', () => {
   it('совпадает с sync на смешанном документе', async () => {
     _setWorkerFactory(null);
-    const out = (await recalcInWorker(doc(), { lang: 'ru' })) as Extract<RecalcJobOutcome, { status: 'done' }>;
+    const out = (await recalcInWorker(doc(), { lang: 'ru' })) as Extract<
+      RecalcJobOutcome,
+      { status: 'done' }
+    >;
     expect(out.status).toBe('done');
     const sync = recalculateAll(doc());
     expect(snapshot(out.blocks)).toEqual(snapshot(sync.blocks));
@@ -109,9 +134,15 @@ describe('recalcWorker: forced fallback (null factory)', () => {
     _setWorkerFactory(null);
     const sim = block('heavy', 'sim', 60, {
       rawInput: 'sim',
-      simStates: 'x, v', simDerivs: 'v; -x', simInit: '1, 0',
-      simT0: 0, simT1: 5, simDt: 0.02, simSolver: 'rk4',
-      simX: 't', simY: 'x',
+      simStates: 'x, v',
+      simDerivs: 'v; -x',
+      simInit: '1, 0',
+      simT0: 0,
+      simT1: 5,
+      simDt: 0.02,
+      simSolver: 'rk4',
+      simX: 't',
+      simY: 'x',
     });
     const out = await recalcInWorker([sim], { lang: 'ru', timeoutMs: 30000 });
     expect(out.status).toBe('done');
@@ -149,9 +180,15 @@ describe('recalcWorker: protocol via FakeWorker', () => {
     _setWorkerFactory(() => new FakeWorker() as unknown as Worker);
     const sim = block('p', 'sim', 60, {
       rawInput: 'sim',
-      simStates: 'x, v', simDerivs: 'v; -x', simInit: '1, 0',
-      simT0: 0, simT1: 5, simDt: 0.02, simSolver: 'rk4',
-      simX: 't', simY: 'x',
+      simStates: 'x, v',
+      simDerivs: 'v; -x',
+      simInit: '1, 0',
+      simT0: 0,
+      simT1: 5,
+      simDt: 0.02,
+      simSolver: 'rk4',
+      simX: 't',
+      simY: 'x',
     });
     const seen: [number, number | null][] = [];
     const out = await recalcInWorker([sim], {

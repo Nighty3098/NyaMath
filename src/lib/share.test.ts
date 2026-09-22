@@ -13,17 +13,41 @@ import { getDemoLines } from './db';
 const TEST_SCENARIO_LINES = getDemoLines('variant20');
 import type { MathBlockData } from '../engine/dependencies';
 
-function block(id: string, kind: MathBlockData['kind'], y: number, patch: Partial<MathBlockData> = {}): MathBlockData {
+function block(
+  id: string,
+  kind: MathBlockData['kind'],
+  y: number,
+  patch: Partial<MathBlockData> = {},
+): MathBlockData {
   return {
-    id, x: 80, y, rawInput: '', displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind, plotPreview: null, ...patch,
+    id,
+    x: 80,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind,
+    plotPreview: null,
+    ...patch,
   };
 }
 
 describe('phrase codec', () => {
   it('round-trips JSON bytes incl. cyrillic and escapes', () => {
-    const json = JSON.stringify([1, [[60, 0, 'f := 10*10^9 ='], [64, 1, '// Исходные данные "кавычки"'], [128, 4, 's := "a\\nb"']]]);
+    const json = JSON.stringify([
+      1,
+      [
+        [60, 0, 'f := 10*10^9 ='],
+        [64, 1, '// Исходные данные "кавычки"'],
+        [128, 4, 's := "a\\nb"'],
+      ],
+    ]);
     const bytes = new TextEncoder().encode(json);
     expect(new TextDecoder().decode(phraseUnpack(phrasePack(bytes)))).toBe(json);
   });
@@ -41,9 +65,24 @@ describe('encode/decode', () => {
       block('a', 'text', 60, { rawInput: '// Заголовок' }),
       block('b', 'math', 124, { rawInput: 'f := 10*10^9 =' }),
       block('c', 'plot', 188, { rawInput: 'plot', plotFn: 'sin(x)', plotXmin: 0, plotXmax: 1 }),
-      block('d', 'plot3d', 500, { rawInput: 'plot3d', plotFn: 'x+y', plotXmin: 0, plotXmax: 1, plotYmin: 0, plotYmax: 2, plotMode: 'points' }),
+      block('d', 'plot3d', 500, {
+        rawInput: 'plot3d',
+        plotFn: 'x+y',
+        plotXmin: 0,
+        plotXmax: 1,
+        plotYmin: 0,
+        plotYmax: 2,
+        plotMode: 'points',
+      }),
       block('e', 'program', 800, { rawInput: 's := 1\ns', exportName: 'res' }),
-      block('f', 'slider', 1000, { rawInput: 'slider', sliderVar: 'eps_r', sliderMin: 1, sliderMax: 10, sliderStep: 0.1, sliderVal: 3.3 }),
+      block('f', 'slider', 1000, {
+        rawInput: 'slider',
+        sliderVar: 'eps_r',
+        sliderMin: 1,
+        sliderMax: 10,
+        sliderStep: 0.1,
+        sliderVal: 3.3,
+      }),
     ];
     for (const b of list) blocks[b.id] = b;
     const enc = await encodeShare(blocks);
@@ -70,7 +109,13 @@ describe('encode/decode', () => {
       y += 64;
     }
     const pid = `t${n++}`;
-    blocks[pid] = block(pid, 'plot', 120, { x: 560, rawInput: 'plot', plotFn: 'sin(x)', plotXmin: -10, plotXmax: 10 });
+    blocks[pid] = block(pid, 'plot', 120, {
+      x: 560,
+      rawInput: 'plot',
+      plotFn: 'sin(x)',
+      plotXmin: -10,
+      plotXmax: 10,
+    });
     const enc = await encodeShare(blocks);
     expect(enc.template).toBe('ex20');
     expect(enc.param).toBeNull();

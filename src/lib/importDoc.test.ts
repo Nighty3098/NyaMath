@@ -130,7 +130,11 @@ describe('importDoc: Calcpad .cpd', () => {
   it('$Map → contour с диапазонами', () => {
     const r = parseCpd('$Map { sin(x; y) @ x = -5 : 5 & y = -5 : 5 }');
     expect(r.blocks[0]).toMatchObject({
-      kind: 'contour', plotXmin: -5, plotXmax: 5, plotYmin: -5, plotYmax: 5,
+      kind: 'contour',
+      plotXmin: -5,
+      plotXmax: 5,
+      plotYmin: -5,
+      plotYmax: 5,
     });
     expect(r.blocks[0]?.body).toContain('sin(x, y)');
   });

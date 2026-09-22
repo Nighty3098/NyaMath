@@ -129,13 +129,19 @@ export function parseSimDef(raw: {
 }): { def: SimDef | null; error: string | null } {
   const mode: SimMode = raw.mode === 'fdtd' ? 'fdtd' : 'ode';
   if (mode === 'fdtd') return parseFdtdDef(raw);
-  const states = raw.states.split(',').map((s) => s.trim()).filter(Boolean);
+  const states = raw.states
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (!states.length) return { def: null, error: t('e.simNoStates') };
   for (const s of states) {
     if (!VAR_RE.test(s) || s === 't') return { def: null, error: t('e.simBadState', { name: s }) };
   }
   if (new Set(states).size !== states.length) return { def: null, error: t('e.simDupState') };
-  const derivsClean = raw.derivs.split(';').map((s) => s.trim()).filter((s) => s !== '');
+  const derivsClean = raw.derivs
+    .split(';')
+    .map((s) => s.trim())
+    .filter((s) => s !== '');
   if (derivsClean.length !== states.length) {
     return { def: null, error: t('e.simCount', { n: states.length, m: derivsClean.length }) };
   }
@@ -159,7 +165,8 @@ export function parseSimDef(raw: {
   const params = parseAssign(raw.params ?? '');
   if (!params) return { def: null, error: t('e.simBadParams') };
   for (const a of [...aux, ...params]) {
-    if (states.includes(a.name) || a.name === 't') return { def: null, error: t('e.simShadow', { name: a.name }) };
+    if (states.includes(a.name) || a.name === 't')
+      return { def: null, error: t('e.simShadow', { name: a.name }) };
   }
   const { t0, t1, dt } = raw;
   if (![t0, t1, dt].every((v) => typeof v === 'number' && isFinite(v))) {
@@ -172,7 +179,20 @@ export function parseSimDef(raw: {
   if (!events) return { def: null, error: t('e.simBadEvents') };
   if (!events) return { def: null, error: t('e.simBadEvents') };
   return {
-    def: { mode: 'ode', states, derivs: derivsClean, aux, params, init, t0, t1, dt, solver: raw.solver, events, fdtd: null },
+    def: {
+      mode: 'ode',
+      states,
+      derivs: derivsClean,
+      aux,
+      params,
+      init,
+      t0,
+      t1,
+      dt,
+      solver: raw.solver,
+      events,
+      fdtd: null,
+    },
     error: null,
   };
 }
@@ -208,7 +228,10 @@ function parseSimEvents(text: string, states: string[]): SimEvent[] | null {
 }
 
 /** Разбор FDTD-конфигурации (числа уже проверены как числа; слои — выражениями). */
-function parseFdtdDef(raw: Parameters<typeof parseSimDef>[0]): { def: SimDef | null; error: string | null } {
+function parseFdtdDef(raw: Parameters<typeof parseSimDef>[0]): {
+  def: SimDef | null;
+  error: string | null;
+} {
   const f = raw.fdtd;
   const num = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
   const n = num(f?.n);
@@ -221,28 +244,42 @@ function parseFdtdDef(raw: Parameters<typeof parseSimDef>[0]): { def: SimDef | n
   if (n === null || !Number.isInteger(n) || n < 50 || n > MAX_FDTD_CELLS) {
     return { def: null, error: t('e.simFdtdCells', { max: MAX_FDTD_CELLS }) };
   }
-  if (length === null || !(length > 0)) return { def: null, error: t('e.simFdtdNum', { name: 'length' }) };
+  if (length === null || !(length > 0))
+    return { def: null, error: t('e.simFdtdNum', { name: 'length' }) };
   if (steps === null || !Number.isInteger(steps) || steps < 100 || steps > MAX_FDTD_STEPS) {
     return { def: null, error: t('e.simFdtdSteps', { max: MAX_FDTD_STEPS }) };
   }
   const src = f?.src === 'sine' ? 'sine' : 'gauss';
-  if (src === 'sine' && (freq === null || !(freq > 0))) return { def: null, error: t('e.simFdtdNum', { name: 'freq' }) };
+  if (src === 'sine' && (freq === null || !(freq > 0)))
+    return { def: null, error: t('e.simFdtdNum', { name: 'freq' }) };
   if (amp === null || amp === 0) return { def: null, error: t('e.simFdtdNum', { name: 'amp' }) };
-  if (srcX === null || srcX < 0 || srcX > length) return { def: null, error: t('e.simFdtdRange', { name: 'srcX' }) };
+  if (srcX === null || srcX < 0 || srcX > length)
+    return { def: null, error: t('e.simFdtdRange', { name: 'srcX' }) };
   const detV = det ?? 0.85 * length;
-  if (!(detV >= 0 && detV <= length)) return { def: null, error: t('e.simFdtdRange', { name: 'det' }) };
+  if (!(detV >= 0 && detV <= length))
+    return { def: null, error: t('e.simFdtdRange', { name: 'det' }) };
   const layers: SimFdtdLayer[] = [];
   for (const line of (f?.layers ?? '').split('\n')) {
     const l = line.trim();
     if (!l || l.startsWith('//') || l.startsWith('#')) continue;
     const parts = l.split(',').map((s) => s.trim());
-    if (parts.length !== 3 || parts.some((p) => !p)) return { def: null, error: t('e.simFdtdLayers') };
+    if (parts.length !== 3 || parts.some((p) => !p))
+      return { def: null, error: t('e.simFdtdLayers') };
     layers.push({ x0: parts[0], x1: parts[1], eps: parts[2] });
   }
   return {
     def: {
-      mode: 'fdtd', states: [], derivs: [], aux: [], params: [], init: [],
-      t0: 0, t1: 0, dt: 0, solver: 'rk4', events: [],
+      mode: 'fdtd',
+      states: [],
+      derivs: [],
+      aux: [],
+      params: [],
+      init: [],
+      t0: 0,
+      t1: 0,
+      dt: 0,
+      solver: 'rk4',
+      events: [],
       fdtd: { n, length, steps, src, freq: freq ?? 1, amp, srcX, det: detV, layers },
     },
     error: null,
@@ -345,7 +382,8 @@ class TrajBuf {
   setLast(y: ArrayLike<number>): void {
     const off = (this.len - 1) * this.n;
     for (let i = 0; i < this.n; i++) this.data[off + i] = y[i] ?? NaN;
-  }  row(k: number, out: number[]): void {
+  }
+  row(k: number, out: number[]): void {
     const off = k * this.n;
     for (let i = 0; i < this.n; i++) out[i] = this.data[off + i];
   }
@@ -412,7 +450,9 @@ export function yieldSlice(): Promise<void> {
         ch.port2.postMessage(0);
         return;
       }
-    } catch { /* ниже fallback */ }
+    } catch {
+      /* ниже fallback */
+    }
     setTimeout(resolve, 0);
   });
 }
@@ -457,7 +497,17 @@ interface OdeRun {
 
 /** Подготовка прогона: компиляция, scratch-scope, начальные фронты событий. */
 function beginOde(def: SimDef, docScope: Scope): { fail: SimResult } | { run: OdeRun } {
-  const failOf = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+  const failOf = (error: string): SimResult => ({
+    ts: [],
+    series: [],
+    final: [],
+    steps: 0,
+    error,
+    events: [],
+    halted: false,
+    field: null,
+    tEst: null,
+  });
   try {
     // Прекомпиляция всех выражений (#1): дальше только code.evaluate(scratch).
     const cParams = def.params.map((p) => ({ name: p.name, code: reqCode(p.expr), expr: p.expr }));
@@ -531,16 +581,45 @@ function beginOde(def: SimDef, docScope: Scope): { fail: SimResult } | { run: Od
 
     // Пул переиспользуемых векторов (#5): стадии и временные — без аллокаций на шаг.
     const mkVec = (): number[] => new Array<number>(n).fill(0);
-    const pool = { k1: mkVec(), k2: mkVec(), k3: mkVec(), k4: mkVec(), yt: mkVec(), fy: mkVec(), fz: mkVec() };
+    const pool = {
+      k1: mkVec(),
+      k2: mkVec(),
+      k3: mkVec(),
+      k4: mkVec(),
+      yt: mkVec(),
+      fy: mkVec(),
+      fz: mkVec(),
+    };
 
     const run: OdeRun = {
-      def, n, s, cAux, cDerivs, cEvents, traj, fired, prev, y0, pool,
-      refresh, rhsInto, fireEvents, checkFinite,
+      def,
+      n,
+      s,
+      cAux,
+      cDerivs,
+      cEvents,
+      traj,
+      fired,
+      prev,
+      y0,
+      pool,
+      refresh,
+      rhsInto,
+      fireEvents,
+      checkFinite,
       halted: false,
-      total: 0, h: 0, y: y0.slice(), yNext: mkVec(), tt: def.t0, k: 0,
-      rkh: 0, rkIters: 0,
+      total: 0,
+      h: 0,
+      y: y0.slice(),
+      yNext: mkVec(),
+      tt: def.t0,
+      k: 0,
+      rkh: 0,
+      rkIters: 0,
       ks: Array.from({ length: 7 }, () => new Array<number>(n).fill(0)),
-      yt: mkVec(), y5: mkVec(), y4: mkVec(),
+      yt: mkVec(),
+      y5: mkVec(),
+      y4: mkVec(),
     };
     if (def.solver === 'rk45') {
       run.rkh = Math.min(def.dt, (def.t1 - def.t0) / 1000);
@@ -566,7 +645,8 @@ function odeFixedChunk(run: OdeRun, budget: number, sliceMs = Infinity, t0 = 0):
   while (run.k < run.total) {
     if (done >= budget) return false;
     if (def.solver === 'trbdf2') stepTRBDF2(run.rhsInto, run.tt, run.y, run.h, run.yNext, pool);
-    else if (def.solver === 'euler') stepEuler(run.rhsInto, run.tt, run.y, run.h, run.yNext, pool.k1);
+    else if (def.solver === 'euler')
+      stepEuler(run.rhsInto, run.tt, run.y, run.h, run.yNext, pool.k1);
     else stepRK4(run.rhsInto, run.tt, run.y, run.h, run.yNext, pool);
     run.tt = run.k === run.total - 1 ? def.t1 : run.tt + run.h;
     run.checkFinite(run.yNext, run.tt);
@@ -611,11 +691,31 @@ function odeFinish(run: OdeRun): SimResult {
   }));
   traj.row(traj.len - 1, rowTmp);
   const last = rowTmp.slice();
-  return { ts: rts, series, final: last, steps, error: null, events: fired, halted: run.halted, field: null, tEst: null };
+  return {
+    ts: rts,
+    series,
+    final: last,
+    steps,
+    error: null,
+    events: fired,
+    halted: run.halted,
+    field: null,
+    tEst: null,
+  };
 }
 
 function runOde(def: SimDef, docScope: Scope): SimResult {
-  const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+  const fail = (error: string): SimResult => ({
+    ts: [],
+    series: [],
+    final: [],
+    steps: 0,
+    error,
+    events: [],
+    halted: false,
+    field: null,
+    tEst: null,
+  });
   const started = beginOde(def, docScope);
   if ('fail' in started) return started.fail;
   const run = started.run;
@@ -633,7 +733,11 @@ function runOde(def: SimDef, docScope: Scope): SimResult {
 }
 
 /** Асинхронный прогон ODE чанками с прогрессом/отменой (#6). */
-export async function runOdeAsync(def: SimDef, docScope: Scope, hooks: SimHooks = {}): Promise<SimResult> {
+export async function runOdeAsync(
+  def: SimDef,
+  docScope: Scope,
+  hooks: SimHooks = {},
+): Promise<SimResult> {
   const started = beginOde(def, docScope);
   if ('fail' in started) return started.fail;
   const run = started.run;
@@ -643,7 +747,9 @@ export async function runOdeAsync(def: SimDef, docScope: Scope, hooks: SimHooks 
       throwIfCancel(hooks);
       // time-бокс ~8мс: чанки сами останавливаются, прогресс — после каждого
       const t0 = performance.now();
-      const done = adaptive ? odeRk45Chunk(run, Infinity, 8, t0) : odeFixedChunk(run, Infinity, 8, t0);
+      const done = adaptive
+        ? odeRk45Chunk(run, Infinity, 8, t0)
+        : odeFixedChunk(run, Infinity, 8, t0);
       if (adaptive) hooks.onProgress?.(run.traj.len, null);
       else hooks.onProgress?.(run.k, run.total);
       if (done) break;
@@ -652,7 +758,17 @@ export async function runOdeAsync(def: SimDef, docScope: Scope, hooks: SimHooks 
   } catch (e) {
     if (isSimCancel(e)) throw e;
     const ce = e as { msg?: string };
-    const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+    const fail = (error: string): SimResult => ({
+      ts: [],
+      series: [],
+      final: [],
+      steps: 0,
+      error,
+      events: [],
+      halted: false,
+      field: null,
+      tEst: null,
+    });
     return fail(typeof ce?.msg === 'string' ? ce.msg : t('e.lineErrDefault'));
   }
   return odeFinish(run);
@@ -693,7 +809,17 @@ interface FdtdRun {
 
 /** Подготовка FDTD: сетка, слои, источник (ошибки слоёв — сразу fail). */
 function beginFdtd(f: SimFdtd, docScope: Scope): { fail: SimResult } | { run: FdtdRun } {
-  const failOf = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+  const failOf = (error: string): SimResult => ({
+    ts: [],
+    series: [],
+    final: [],
+    steps: 0,
+    error,
+    events: [],
+    halted: false,
+    field: null,
+    tEst: null,
+  });
   try {
     const N = f.n;
     const L = f.length;
@@ -705,8 +831,14 @@ function beginFdtd(f: SimFdtd, docScope: Scope): { fail: SimResult } | { run: Fd
       const x0 = evalExpr(lay.x0, { ...docScope });
       const x1 = evalExpr(lay.x1, { ...docScope });
       const e = evalExpr(lay.eps, { ...docScope });
-      if (!(x0 >= 0 && x1 > x0 && x1 <= L)) throw { msg: t('e.simFdtdLayer', { expr: `${lay.x0}, ${lay.x1}, ${lay.eps}`.slice(0, 60) }) };
-      if (!(e >= 1)) throw { msg: t('e.simFdtdLayer', { expr: `${lay.x0}, ${lay.x1}, ${lay.eps}`.slice(0, 60) }) };
+      if (!(x0 >= 0 && x1 > x0 && x1 <= L))
+        throw {
+          msg: t('e.simFdtdLayer', { expr: `${lay.x0}, ${lay.x1}, ${lay.eps}`.slice(0, 60) }),
+        };
+      if (!(e >= 1))
+        throw {
+          msg: t('e.simFdtdLayer', { expr: `${lay.x0}, ${lay.x1}, ${lay.eps}`.slice(0, 60) }),
+        };
       for (let i = 0; i <= N; i++) {
         const x = i * dx;
         if (x >= x0 && x < x1) eps[i] = e;
@@ -729,7 +861,9 @@ function beginFdtd(f: SimFdtd, docScope: Scope): { fail: SimResult } | { run: Fd
         try {
           const x0 = evalExpr(lay.x0, { ...docScope });
           if (x0 > f.srcX) xs0.push(x0);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
       if (xs0.length) xLayer = Math.min(...xs0);
     }
@@ -747,10 +881,31 @@ function beginFdtd(f: SimFdtd, docScope: Scope): { fail: SimResult } | { run: Fd
     const stride = Math.max(1, Math.ceil(steps / MAX_FDTD_SNAPS));
     return {
       run: {
-        f, N, dx, dt, steps, eps, E, H, Eprev, mur, is, id, iInc,
-        iIncH: Math.min(iInc, N - 1), idH: Math.min(id, N - 1),
-        tRefl, tArr, srcAt, stride,
-        snaps: [], sts: [], incFlux: 0, detFlux: 0, tt: 0, k: 0,
+        f,
+        N,
+        dx,
+        dt,
+        steps,
+        eps,
+        E,
+        H,
+        Eprev,
+        mur,
+        is,
+        id,
+        iInc,
+        iIncH: Math.min(iInc, N - 1),
+        idH: Math.min(id, N - 1),
+        tRefl,
+        tArr,
+        srcAt,
+        stride,
+        snaps: [],
+        sts: [],
+        incFlux: 0,
+        detFlux: 0,
+        tt: 0,
+        k: 0,
       },
     };
   } catch (e) {
@@ -761,7 +916,26 @@ function beginFdtd(f: SimFdtd, docScope: Scope): { fail: SimResult } | { run: Fd
 
 /** Чанк FDTD: до budget шагов или sliceMs. true = готов. Тело шага — как раньше. */
 function fdtdChunk(run: FdtdRun, budget: number, sliceMs = Infinity, t0 = 0): boolean {
-  const { N, dx, dt, steps, eps, E, H, Eprev, mur, is, id, iInc, iIncH, idH, tRefl, tArr, srcAt, stride } = run;
+  const {
+    N,
+    dx,
+    dt,
+    steps,
+    eps,
+    E,
+    H,
+    Eprev,
+    mur,
+    is,
+    id,
+    iInc,
+    iIncH,
+    idH,
+    tRefl,
+    tArr,
+    srcAt,
+    stride,
+  } = run;
   let done = 0;
   for (; run.k < steps; run.k++) {
     if (done >= budget) return false;
@@ -782,7 +956,8 @@ function fdtdChunk(run: FdtdRun, budget: number, sliceMs = Infinity, t0 = 0): bo
     }
     E[0] = E1old + mur * (E[1] - Eprev[0]);
     E[N] = EN1old + mur * (E[N - 1] - Eprev[N]);
-    if (!isFinite(E[0]) || !isFinite(E[N])) throw { msg: t('e.simNan', { state: 'E', t: fmtT(tt) }) };
+    if (!isFinite(E[0]) || !isFinite(E[N]))
+      throw { msg: t('e.simNan', { state: 'E', t: fmtT(tt) }) };
     E[is] += srcAt(tt);
     if (!isFinite(E[is])) throw { msg: t('e.simNan', { state: 'E', t: fmtT(tt) }) };
     if (tRefl <= 0 || tt < tRefl) run.incFlux += E[iInc] * H[iIncH] * dt;
@@ -801,16 +976,34 @@ function fdtdChunk(run: FdtdRun, budget: number, sliceMs = Infinity, t0 = 0): bo
 function fdtdFinish(run: FdtdRun): SimResult {
   const { N, dx, steps, snaps, sts } = run;
   // Оценка прохождения T = поток у детектора / падающий поток
-  const tEst = run.incFlux > 0 ? Number(Math.min(1.5, run.detFlux / run.incFlux).toPrecision(4)) : null;
+  const tEst =
+    run.incFlux > 0 ? Number(Math.min(1.5, run.detFlux / run.incFlux).toPrecision(4)) : null;
   const xs = Array.from({ length: N + 1 }, (_, i) => Number((i * dx).toPrecision(6)));
   return {
-    ts: sts, series: [], final: [], steps, error: null, events: [], halted: false,
-    field: { xs, snaps, ts: sts }, tEst,
+    ts: sts,
+    series: [],
+    final: [],
+    steps,
+    error: null,
+    events: [],
+    halted: false,
+    field: { xs, snaps, ts: sts },
+    tEst,
   };
 }
 
 function runFdtd(f: SimFdtd, docScope: Scope): SimResult {
-  const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+  const fail = (error: string): SimResult => ({
+    ts: [],
+    series: [],
+    final: [],
+    steps: 0,
+    error,
+    events: [],
+    halted: false,
+    field: null,
+    tEst: null,
+  });
   const started = beginFdtd(f, docScope);
   if ('fail' in started) return started.fail;
   try {
@@ -823,7 +1016,11 @@ function runFdtd(f: SimFdtd, docScope: Scope): SimResult {
 }
 
 /** Асинхронный прогон FDTD чанками с прогрессом/отменой (#6). */
-export async function runFdtdAsync(f: SimFdtd, docScope: Scope, hooks: SimHooks = {}): Promise<SimResult> {
+export async function runFdtdAsync(
+  f: SimFdtd,
+  docScope: Scope,
+  hooks: SimHooks = {},
+): Promise<SimResult> {
   const started = beginFdtd(f, docScope);
   if ('fail' in started) return started.fail;
   const run = started.run;
@@ -839,14 +1036,28 @@ export async function runFdtdAsync(f: SimFdtd, docScope: Scope, hooks: SimHooks 
   } catch (e) {
     if (isSimCancel(e)) throw e;
     const ce = e as { msg?: string };
-    const fail = (error: string): SimResult => ({ ts: [], series: [], final: [], steps: 0, error, events: [], halted: false, field: null, tEst: null });
+    const fail = (error: string): SimResult => ({
+      ts: [],
+      series: [],
+      final: [],
+      steps: 0,
+      error,
+      events: [],
+      halted: false,
+      field: null,
+      tEst: null,
+    });
     return fail(typeof ce?.msg === 'string' ? ce.msg : t('e.lineErrDefault'));
   }
   return fdtdFinish(run);
 }
 
 /** Асинхронный runSim: чанки + прогресс + отмена (#6). */
-export async function runSimAsync(def: SimDef, docScope: Scope, hooks: SimHooks = {}): Promise<SimResult> {
+export async function runSimAsync(
+  def: SimDef,
+  docScope: Scope,
+  hooks: SimHooks = {},
+): Promise<SimResult> {
   if (def.mode === 'fdtd' && def.fdtd) return runFdtdAsync(def.fdtd, docScope, hooks);
   return runOdeAsync(def, docScope, hooks);
 }
@@ -858,7 +1069,14 @@ function fmtT(v: number): string {
   return String(Number(v.toPrecision(6)));
 }
 
-function stepEuler(rhs: RhsInto, tt: number, y: ArrayLike<number>, h: number, out: number[], f: number[]): void {
+function stepEuler(
+  rhs: RhsInto,
+  tt: number,
+  y: ArrayLike<number>,
+  h: number,
+  out: number[],
+  f: number[],
+): void {
   rhs(tt, y, f);
   for (let i = 0; i < out.length; i++) out[i] = y[i] + h * f[i];
 }
@@ -879,7 +1097,14 @@ interface OdePool {
  * Стадия 1 — трапеции на γh, стадия 2 — BDF2; γ = 2−√2.
  * Нелинейности — Ньютоном с численной якобианой.
  */
-function stepTRBDF2(rhs: RhsInto, tt: number, y: number[], h: number, out: number[], pool: OdePool): void {
+function stepTRBDF2(
+  rhs: RhsInto,
+  tt: number,
+  y: number[],
+  h: number,
+  out: number[],
+  pool: OdePool,
+): void {
   const n = y.length;
   const gamma = 2 - Math.sqrt(2);
   // Ньютон внутри — как раньше на свежих массивах (итераций мало, доминируют
@@ -901,7 +1126,10 @@ function stepTRBDF2(rhs: RhsInto, tt: number, y: number[], h: number, out: numbe
       }
       let dz: number[];
       try {
-        dz = solveLinear(J, g.map((v) => -v));
+        dz = solveLinear(
+          J,
+          g.map((v) => -v),
+        );
       } catch {
         throw { msg: t('e.simStiffFail') };
       }
@@ -940,7 +1168,7 @@ function stepTRBDF2(rhs: RhsInto, tt: number, y: number[], h: number, out: numbe
   const h1 = gamma * h;
   const h2 = (1 - gamma) * h;
   const r = h2 / h1;
-  const cA = ((1 + r) ** 2) / (1 + 2 * r);
+  const cA = (1 + r) ** 2 / (1 + 2 * r);
   const cB = -(r ** 2) / (1 + 2 * r);
   const cC = ((1 + r) / (1 + 2 * r)) * h2;
   const t2 = tt + h;
@@ -949,12 +1177,19 @@ function stepTRBDF2(rhs: RhsInto, tt: number, y: number[], h: number, out: numbe
       rhs(t2, ww, fz);
       return ww.map((v, i) => v - cA * z[i] - cB * y[i] - cC * fz[i]);
     },
-    z.map((v, i) => v + h2 * (v - y[i]) / h1),
+    z.map((v, i) => v + (h2 * (v - y[i])) / h1),
   );
   for (let i = 0; i < n; i++) out[i] = w[i];
 }
 
-function stepRK4(rhs: RhsInto, tt: number, y: ArrayLike<number>, h: number, out: number[], pool: OdePool): void {
+function stepRK4(
+  rhs: RhsInto,
+  tt: number,
+  y: ArrayLike<number>,
+  h: number,
+  out: number[],
+  pool: OdePool,
+): void {
   const n = out.length;
   const { k1, k2, k3, k4, yt } = pool;
   rhs(tt, y, k1);
@@ -1063,7 +1298,15 @@ export type SimDomain =
   | 'astro';
 
 export const SIM_DOMAINS: SimDomain[] = [
-  'mechanics', 'osc', 'circuits', 'thermo', 'optics', 'chaos', 'nuclear', 'molecular', 'astro',
+  'mechanics',
+  'osc',
+  'circuits',
+  'thermo',
+  'optics',
+  'chaos',
+  'nuclear',
+  'molecular',
+  'astro',
 ];
 
 export interface SimModelParam {

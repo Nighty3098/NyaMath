@@ -1,9 +1,7 @@
 import { useCanvasStore } from '../store/canvasStore';
 import { t } from '../i18n';
 import type { MathBlockData } from '../engine/dependencies';
-import {
-  getActor, mergeBlockMaps, stampOutgoing, type MetaMap, type WireBlock,
-} from './syncCrdt';
+import { getActor, mergeBlockMaps, stampOutgoing, type MetaMap, type WireBlock } from './syncCrdt';
 
 const URL_KEY = 'nyamath-live-url';
 const DEFAULT_URL = 'http://localhost:3777';
@@ -12,7 +10,11 @@ const SEND_DEBOUNCE_MS = 400;
 /** Блоки без пересчитываемых полей — то же slim-правило, что persist/сервер. */
 function slimBlocks(blocks: Record<string, MathBlockData>): MathBlockData[] {
   return Object.values(blocks).map((b) => {
-    const { plotPreview: _pp, simResult: _sr, ...rest } = b as MathBlockData & {
+    const {
+      plotPreview: _pp,
+      simResult: _sr,
+      ...rest
+    } = b as MathBlockData & {
       simResult?: unknown;
     };
     void _pp;
@@ -60,7 +62,10 @@ export function isLiveConnected(): boolean {
 }
 
 /** Проверка сервиса перед подключением: понятная ошибка вместо тишины. */
-export async function testLiveConnection(url: string, timeoutMs = 5000): Promise<{ ok: boolean; info?: string; error?: string }> {
+export async function testLiveConnection(
+  url: string,
+  timeoutMs = 5000,
+): Promise<{ ok: boolean; info?: string; error?: string }> {
   const base = url.replace(/\/$/, '');
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -100,9 +105,11 @@ async function sendNow(): Promise<void> {
     const res = await fetch(`${st.liveUrl.replace(/\/$/, '')}/push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(lastRev >= 0
-        ? { blocks: slim, baseRev: lastRev, meta: curMeta, deleted: curDeleted }
-        : { blocks: slim, meta: curMeta, deleted: curDeleted }),
+      body: JSON.stringify(
+        lastRev >= 0
+          ? { blocks: slim, baseRev: lastRev, meta: curMeta, deleted: curDeleted }
+          : { blocks: slim, meta: curMeta, deleted: curDeleted },
+      ),
     });
     if (res.status === 409) {
       // Конфликт ревизий. Два случая:
@@ -110,7 +117,12 @@ async function sendNow(): Promise<void> {
       // - сервер позади (рестарт, память сброшена): восстанавливаем его force-пушем.
       try {
         const base = st.liveUrl.replace(/\/$/, '');
-        const snap = (await (await fetch(`${base}/snapshot`)).json()) as { rev?: unknown; blocks?: unknown; meta?: unknown; deleted?: unknown };
+        const snap = (await (await fetch(`${base}/snapshot`)).json()) as {
+          rev?: unknown;
+          blocks?: unknown;
+          meta?: unknown;
+          deleted?: unknown;
+        };
         const snapRev = typeof snap.rev === 'number' ? snap.rev : -1;
         if (snapRev >= 0 && snapRev < lastRev) {
           const force = await fetch(`${base}/push`, {
@@ -132,11 +144,21 @@ async function sendNow(): Promise<void> {
       return;
     }
     if (!res.ok) return;
-    const data = (await res.json()) as { rev?: unknown; blocks?: unknown; meta?: unknown; deleted?: unknown };
+    const data = (await res.json()) as {
+      rev?: unknown;
+      blocks?: unknown;
+      meta?: unknown;
+      deleted?: unknown;
+    };
     if (typeof data.rev === 'number') lastRev = data.rev;
     if (data && Array.isArray(data.blocks)) {
       // сервер смёрджил (наш baseRev протух, но meta спасла): принимаем итог
-      applySnapshot(typeof data.rev === 'number' ? data.rev : lastRev, data.blocks, data.meta, data.deleted);
+      applySnapshot(
+        typeof data.rev === 'number' ? data.rev : lastRev,
+        data.blocks,
+        data.meta,
+        data.deleted,
+      );
     } else {
       baseBlocks = slim;
       baseMeta = { ...curMeta };
@@ -163,14 +185,28 @@ function rebaseFromStore(meta: MetaMap, deleted: MetaMap): void {
  *  сливаются, а не затираются. Без меток (legacy) — замена как раньше.
  *  lastSyncedJson — уже нормализованный (после migrate), иначе
  *  migrate-добавки вроде disabled:false дают вечный ping-pong. */
-function applySnapshot(rev: number, incoming: unknown, inMeta?: unknown, inDeleted?: unknown): void {
+function applySnapshot(
+  rev: number,
+  incoming: unknown,
+  inMeta?: unknown,
+  inDeleted?: unknown,
+): void {
   if (typeof rev === 'number' && rev >= 0 && rev <= lastRev) return;
   applying = true;
   try {
     if (inMeta && typeof inMeta === 'object') {
       const st = useCanvasStore.getState();
       const local = slimBlocks(st.blocks) as unknown as WireBlock[];
-      const merged = mergeBlockMaps(baseBlocks, baseMeta, local, curMeta, incoming, inMeta, curDeleted, inDeleted);
+      const merged = mergeBlockMaps(
+        baseBlocks,
+        baseMeta,
+        local,
+        curMeta,
+        incoming,
+        inMeta,
+        curDeleted,
+        inDeleted,
+      );
       useCanvasStore.getState().applyRemoteBlocks(merged.blocks);
       rebaseFromStore(merged.meta, merged.deleted);
     } else {
@@ -234,9 +270,19 @@ function openStream(base: string, isFallback: boolean): void {
   // только в addEventListener('snapshot').
   const onSnapshot = (ev: Event) => {
     try {
-      const data = JSON.parse((ev as MessageEvent).data) as { rev?: number; blocks?: unknown; meta?: unknown; deleted?: unknown };
+      const data = JSON.parse((ev as MessageEvent).data) as {
+        rev?: number;
+        blocks?: unknown;
+        meta?: unknown;
+        deleted?: unknown;
+      };
       if (!data || !Array.isArray(data.blocks)) return;
-      applySnapshot(typeof data.rev === 'number' ? data.rev : -1, data.blocks, data.meta, data.deleted);
+      applySnapshot(
+        typeof data.rev === 'number' ? data.rev : -1,
+        data.blocks,
+        data.meta,
+        data.deleted,
+      );
     } catch {
       /* битый кадр — ждём следующий */
     }

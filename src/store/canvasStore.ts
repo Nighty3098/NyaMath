@@ -4,10 +4,23 @@ import type { MathBlockData } from '../engine/dependencies';
 import { getDemoItems, getDemoLines, getTemplate } from '../lib/db';
 import { loadTheme, saveTheme, THEMES, type ThemeName } from '../theme';
 import { getSimModel, listSimModels, simModelPatch } from '../engine/simEngine';
-import { separateBlocksVertically, snapToGrid, GRID_STEP_FINE, GRID_STEP_STANDARD } from '../lib/canvasLayout';
+import {
+  separateBlocksVertically,
+  snapToGrid,
+  GRID_STEP_FINE,
+  GRID_STEP_STANDARD,
+} from '../lib/canvasLayout';
 import { getLang, loadLang, setLangState, t, type Lang } from '../i18n';
 import { RECALC_TIMEOUT_MS, recalcInWorker } from '../lib/recalcWorker';
-import { setNumFmt as setEngineNumFmt, setUnitSys as setEngineUnitSys, setComplexFmt as setEngineComplexFmt, type NumFmt, type NumFmtMode, type UnitSys, type ComplexFmt } from '../engine/mathEngine';
+import {
+  setNumFmt as setEngineNumFmt,
+  setUnitSys as setEngineUnitSys,
+  setComplexFmt as setEngineComplexFmt,
+  type NumFmt,
+  type NumFmtMode,
+  type UnitSys,
+  type ComplexFmt,
+} from '../engine/mathEngine';
 import { engineMismatch, parseDocFile } from '../lib/docFile';
 import { ENGINE_VERSION } from '../engine/version';
 
@@ -28,7 +41,9 @@ function loadGrid(): boolean {
 function saveGrid(v: boolean) {
   try {
     localStorage.setItem(GRID_KEY, v ? '1' : '0');
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 const ELEM_OPEN_KEY = 'nyamath-elem-open';
@@ -44,7 +59,9 @@ function loadElemOpen(): boolean {
 function saveElemOpen() {
   try {
     localStorage.setItem(ELEM_OPEN_KEY, useCanvasStore.getState().elemPaletteOpen ? '1' : '0');
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 function loadGridSize(): 'standard' | 'fine' {
@@ -58,7 +75,9 @@ function loadGridSize(): 'standard' | 'fine' {
 function saveGridSize(v: 'standard' | 'fine') {
   try {
     localStorage.setItem(GRID_SIZE_KEY, v);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 const NUMFMT_KEY = 'nyamath-num-fmt';
@@ -84,7 +103,9 @@ function loadNumFmt(): NumFmt {
 function saveNumFmt(f: NumFmt) {
   try {
     localStorage.setItem(NUMFMT_KEY, JSON.stringify(f));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 const UNITSYS_KEY = 'nyamath-unit-sys';
@@ -96,14 +117,18 @@ function loadUnitSys(): UnitSys {
       setEngineUnitSys(raw);
       return raw;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return 'none';
 }
 
 function saveUnitSys(s: UnitSys) {
   try {
     localStorage.setItem(UNITSYS_KEY, s);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 const COMPLEXFMT_KEY = 'nyamath-complex-fmt';
@@ -115,14 +140,18 @@ function loadComplexFmt(): ComplexFmt {
       setEngineComplexFmt(raw);
       return raw;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return 'rect';
 }
 
 function saveComplexFmt(f: ComplexFmt) {
   try {
     localStorage.setItem(COMPLEXFMT_KEY, f);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 export interface CanvasState {
@@ -322,8 +351,19 @@ export interface CanvasState {
 
 function blank(id: string, x: number, y: number): MathBlockData {
   return {
-    id, x, y, rawInput: '', displayLatex: '', resultStr: '', resultLatex: '',
-    resultValue: null, error: null, dependencies: [], definedVar: null, isOutput: false, kind: 'math',
+    id,
+    x,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind: 'math',
     plotPreview: null,
   };
 }
@@ -345,22 +385,45 @@ function persist(blocks: Record<string, MathBlockData>) {
     // plotPreview/simResult — пересчитываемые данные, в файл/хранилище не пишем
     const slim = Object.values(blocks).map(({ plotPreview: _pp, simResult: _sr, ...b }) => b);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Привести сырой объект к MathBlockData (миграция старых сохранений и файлов) */
 function migrate(raw: unknown): MathBlockData | null {
   if (!raw || typeof raw !== 'object') return null;
   const b = raw as Partial<MathBlockData>;
-  if (typeof b.x !== 'number' || typeof b.y !== 'number' || typeof b.rawInput !== 'string') return null;
+  if (typeof b.x !== 'number' || typeof b.y !== 'number' || typeof b.rawInput !== 'string')
+    return null;
   const id = typeof b.id === 'string' && b.id ? b.id : uuid();
-  const kind = b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'program' || b.kind === 'text' || b.kind === 'sim' || b.kind === 'contour' || b.kind === 'slider' ? b.kind : 'math';
-  const numOrNull = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
-  const numOrUndef = (v: unknown): number | undefined => (typeof v === 'number' && isFinite(v) ? v : undefined);
+  const kind =
+    b.kind === 'plot' ||
+    b.kind === 'plot3d' ||
+    b.kind === 'program' ||
+    b.kind === 'text' ||
+    b.kind === 'sim' ||
+    b.kind === 'contour' ||
+    b.kind === 'slider'
+      ? b.kind
+      : 'math';
+  const numOrNull = (v: unknown): number | null =>
+    typeof v === 'number' && isFinite(v) ? v : null;
+  const numOrUndef = (v: unknown): number | undefined =>
+    typeof v === 'number' && isFinite(v) ? v : undefined;
   const strOrUndef = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
   const plotProj = b.plotProj === 'polar' || b.plotProj === 'xy' ? b.plotProj : undefined;
-  const plotTrace = b.plotTrace === 'bar' || b.plotTrace === 'stem' || b.plotTrace === 'line' ? b.plotTrace : undefined;
-  const simSolver = b.simSolver === 'euler' || b.simSolver === 'rk4' || b.simSolver === 'rk45' || b.simSolver === 'trbdf2' ? b.simSolver : undefined;
+  const plotTrace =
+    b.plotTrace === 'bar' || b.plotTrace === 'stem' || b.plotTrace === 'line'
+      ? b.plotTrace
+      : undefined;
+  const simSolver =
+    b.simSolver === 'euler' ||
+    b.simSolver === 'rk4' ||
+    b.simSolver === 'rk45' ||
+    b.simSolver === 'trbdf2'
+      ? b.simSolver
+      : undefined;
   const simMode = b.simMode === 'fdtd' ? 'fdtd' : undefined;
   const simFdtdSrc = b.simFdtdSrc === 'sine' ? 'sine' : undefined;
   return {
@@ -376,7 +439,10 @@ function migrate(raw: unknown): MathBlockData | null {
     exportName: typeof b.exportName === 'string' ? b.exportName : undefined,
     plotYmin: numOrUndef(b.plotYmin),
     plotYmax: numOrUndef(b.plotYmax),
-    plotMode: b.plotMode === 'surface' || b.plotMode === 'points' || b.plotMode === 'matrix' ? b.plotMode : undefined,
+    plotMode:
+      b.plotMode === 'surface' || b.plotMode === 'points' || b.plotMode === 'matrix'
+        ? b.plotMode
+        : undefined,
     plotResolution: numOrUndef(b.plotResolution),
     plotWireframe: typeof b.plotWireframe === 'boolean' ? b.plotWireframe : undefined,
     plotProj,
@@ -468,19 +534,22 @@ const DEFAULT_PALETTE_UI: PaletteUi = { mode: 'float', w: 400, h: 560, dockW: 40
 
 function loadPaletteUi(variant: 'functions' | 'formulas' | 'constants' = 'functions'): PaletteUi {
   try {
-    const raw = variant === 'formulas'
-      ? localStorage.getItem(FORMULA_PAL_UI_KEY)
-      : variant === 'constants'
-      ? localStorage.getItem(CONST_PAL_UI_KEY)
-      : localStorage.getItem(PAL_UI_KEY) ?? localStorage.getItem(PAL_UI_KEY_LEGACY);
+    const raw =
+      variant === 'formulas'
+        ? localStorage.getItem(FORMULA_PAL_UI_KEY)
+        : variant === 'constants'
+          ? localStorage.getItem(CONST_PAL_UI_KEY)
+          : (localStorage.getItem(PAL_UI_KEY) ?? localStorage.getItem(PAL_UI_KEY_LEGACY));
     if (!raw) return DEFAULT_PALETTE_UI;
     const p = JSON.parse(raw) as Partial<PaletteUi>;
     // миграция старых угловых режимов: lt/lb → left, rt/rb → right
     const m = p.mode as unknown;
     const mode: PaletteMode =
-      m === 'lt' || m === 'lb' || m === 'left' ? 'left'
-      : m === 'rt' || m === 'rb' || m === 'right' ? 'right'
-      : 'float';
+      m === 'lt' || m === 'lb' || m === 'left'
+        ? 'left'
+        : m === 'rt' || m === 'rb' || m === 'right'
+          ? 'right'
+          : 'float';
     const num = (v: unknown, lo: number, hi: number, fb: number): number =>
       typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fb;
     return {
@@ -515,7 +584,14 @@ interface UnifiedUi {
   tab: PaletteTab;
 }
 
-const DEFAULT_UNIFIED_UI: UnifiedUi = { mode: 'float', w: 400, h: 560, dockW: 400, open: false, tab: 'functions' };
+const DEFAULT_UNIFIED_UI: UnifiedUi = {
+  mode: 'float',
+  w: 400,
+  h: 560,
+  dockW: 400,
+  open: false,
+  tab: 'functions',
+};
 
 function loadUnifiedUi(): UnifiedUi {
   const num = (v: unknown, lo: number, hi: number, fb: number): number =>
@@ -527,7 +603,9 @@ function loadUnifiedUi(): UnifiedUi {
       const m = p.mode as unknown;
       const mode: PaletteMode = m === 'left' ? 'left' : m === 'right' ? 'right' : 'float';
       const tab: PaletteTab =
-        p.tab === 'formulas' || p.tab === 'constants' || p.tab === 'variables' ? p.tab : 'functions';
+        p.tab === 'formulas' || p.tab === 'constants' || p.tab === 'variables'
+          ? p.tab
+          : 'functions';
       return {
         mode,
         w: num(p.w, 320, 720, DEFAULT_UNIFIED_UI.w),
@@ -537,19 +615,26 @@ function loadUnifiedUi(): UnifiedUi {
         tab,
       };
     }
-  } catch { /* ignore — упадём в миграцию ниже */ }
+  } catch {
+    /* ignore — упадём в миграцию ниже */
+  }
   // миграция: ни разу не сохраняли unified — смотрим старые ключи
-  const anyOpen = initialPaletteUi.open || initialFormulaPaletteUi.open || initialConstPaletteUi.open;
+  const anyOpen =
+    initialPaletteUi.open || initialFormulaPaletteUi.open || initialConstPaletteUi.open;
   if (!anyOpen) return DEFAULT_UNIFIED_UI;
   const mode: PaletteMode =
-    initialPaletteUi.mode !== 'float' ? initialPaletteUi.mode
-    : initialFormulaPaletteUi.mode !== 'float' ? initialFormulaPaletteUi.mode
-    : initialConstPaletteUi.mode;
-  const tab: PaletteTab =
-    initialPaletteUi.open ? 'functions'
-    : initialFormulaPaletteUi.open ? 'formulas'
-    : initialConstPaletteUi.open ? 'constants'
-    : 'functions';
+    initialPaletteUi.mode !== 'float'
+      ? initialPaletteUi.mode
+      : initialFormulaPaletteUi.mode !== 'float'
+        ? initialFormulaPaletteUi.mode
+        : initialConstPaletteUi.mode;
+  const tab: PaletteTab = initialPaletteUi.open
+    ? 'functions'
+    : initialFormulaPaletteUi.open
+      ? 'formulas'
+      : initialConstPaletteUi.open
+        ? 'constants'
+        : 'functions';
   return {
     mode,
     w: num(initialPaletteUi.w, 320, 720, DEFAULT_UNIFIED_UI.w),
@@ -629,7 +714,10 @@ function pushHistory(get: GetFn, set: SetFn, force = false): void {
 }
 
 /** Одинаковые ли снапшоты (только редактируемые поля; результаты/превью игнорируем). */
-function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathBlockData>): boolean {
+function sameSnapshots(
+  a: Record<string, MathBlockData>,
+  b: Record<string, MathBlockData>,
+): boolean {
   const ka = Object.keys(a);
   const kb = Object.keys(b);
   if (ka.length !== kb.length) return false;
@@ -638,28 +726,66 @@ function sameSnapshots(a: Record<string, MathBlockData>, b: Record<string, MathB
     const y = b[id];
     if (!x || !y) return false;
     if (
-      x.kind !== y.kind || x.x !== y.x || x.y !== y.y || x.rawInput !== y.rawInput ||
-      x.plotFn !== y.plotFn || x.plotXmin !== y.plotXmin || x.plotXmax !== y.plotXmax ||
-      x.plotYmin !== y.plotYmin || x.plotYmax !== y.plotYmax || x.plotMode !== y.plotMode ||
-      x.plotResolution !== y.plotResolution || x.plotWireframe !== y.plotWireframe ||
-      x.plotProj !== y.plotProj || x.plotTrace !== y.plotTrace || x.plotErr !== y.plotErr ||
-      x.plotLogx !== y.plotLogx || x.plotXUnit !== y.plotXUnit || x.plotYUnit !== y.plotYUnit ||
-      x.plotTitle !== y.plotTitle || x.plotXLabel !== y.plotXLabel || x.plotYLabel !== y.plotYLabel ||
-      x.plotGrid !== y.plotGrid || x.plotLegend !== y.plotLegend ||
+      x.kind !== y.kind ||
+      x.x !== y.x ||
+      x.y !== y.y ||
+      x.rawInput !== y.rawInput ||
+      x.plotFn !== y.plotFn ||
+      x.plotXmin !== y.plotXmin ||
+      x.plotXmax !== y.plotXmax ||
+      x.plotYmin !== y.plotYmin ||
+      x.plotYmax !== y.plotYmax ||
+      x.plotMode !== y.plotMode ||
+      x.plotResolution !== y.plotResolution ||
+      x.plotWireframe !== y.plotWireframe ||
+      x.plotProj !== y.plotProj ||
+      x.plotTrace !== y.plotTrace ||
+      x.plotErr !== y.plotErr ||
+      x.plotLogx !== y.plotLogx ||
+      x.plotXUnit !== y.plotXUnit ||
+      x.plotYUnit !== y.plotYUnit ||
+      x.plotTitle !== y.plotTitle ||
+      x.plotXLabel !== y.plotXLabel ||
+      x.plotYLabel !== y.plotYLabel ||
+      x.plotGrid !== y.plotGrid ||
+      x.plotLegend !== y.plotLegend ||
       (x.disabled ?? false) !== (y.disabled ?? false) ||
-      x.exportName !== y.exportName || x.w !== y.w || x.h !== y.h ||
-      x.simModel !== y.simModel || x.simStates !== y.simStates || x.simDerivs !== y.simDerivs ||
-      x.simAux !== y.simAux || x.simParams !== y.simParams || x.simInit !== y.simInit ||
-      x.simT0 !== y.simT0 || x.simT1 !== y.simT1 || x.simDt !== y.simDt ||
-      x.simSolver !== y.simSolver || x.simX !== y.simX || x.simY !== y.simY ||
-      x.simMode !== y.simMode || x.simEvents !== y.simEvents ||
-      x.simFdtdN !== y.simFdtdN || x.simFdtdL !== y.simFdtdL || x.simFdtdSteps !== y.simFdtdSteps ||
-      x.simFdtdSrc !== y.simFdtdSrc || x.simFdtdFreq !== y.simFdtdFreq || x.simFdtdAmp !== y.simFdtdAmp ||
-      x.simFdtdSrcX !== y.simFdtdSrcX || x.simFdtdDet !== y.simFdtdDet || x.simFdtdLayers !== y.simFdtdLayers ||
-      x.simExport !== y.simExport || x.simSpeed !== y.simSpeed || x.simLoop !== y.simLoop ||
-      x.sliderVar !== y.sliderVar || x.sliderMin !== y.sliderMin || x.sliderMax !== y.sliderMax ||
-      x.sliderStep !== y.sliderStep || x.sliderVal !== y.sliderVal
-    ) return false;
+      x.exportName !== y.exportName ||
+      x.w !== y.w ||
+      x.h !== y.h ||
+      x.simModel !== y.simModel ||
+      x.simStates !== y.simStates ||
+      x.simDerivs !== y.simDerivs ||
+      x.simAux !== y.simAux ||
+      x.simParams !== y.simParams ||
+      x.simInit !== y.simInit ||
+      x.simT0 !== y.simT0 ||
+      x.simT1 !== y.simT1 ||
+      x.simDt !== y.simDt ||
+      x.simSolver !== y.simSolver ||
+      x.simX !== y.simX ||
+      x.simY !== y.simY ||
+      x.simMode !== y.simMode ||
+      x.simEvents !== y.simEvents ||
+      x.simFdtdN !== y.simFdtdN ||
+      x.simFdtdL !== y.simFdtdL ||
+      x.simFdtdSteps !== y.simFdtdSteps ||
+      x.simFdtdSrc !== y.simFdtdSrc ||
+      x.simFdtdFreq !== y.simFdtdFreq ||
+      x.simFdtdAmp !== y.simFdtdAmp ||
+      x.simFdtdSrcX !== y.simFdtdSrcX ||
+      x.simFdtdDet !== y.simFdtdDet ||
+      x.simFdtdLayers !== y.simFdtdLayers ||
+      x.simExport !== y.simExport ||
+      x.simSpeed !== y.simSpeed ||
+      x.simLoop !== y.simLoop ||
+      x.sliderVar !== y.sliderVar ||
+      x.sliderMin !== y.sliderMin ||
+      x.sliderMax !== y.sliderMax ||
+      x.sliderStep !== y.sliderStep ||
+      x.sliderVal !== y.sliderVal
+    )
+      return false;
   }
   return true;
 }
@@ -757,13 +883,18 @@ async function runRecalcJob(only?: Set<string>): Promise<void> {
       if (outcome.changed) {
         persist(outcome.blocks);
         const s = useCanvasStore.getState();
-        useCanvasStore.setState({ blocks: outcome.blocks, recalcCounter: s.recalcCounter + 1, calcMs: stampMs(t0) });
+        useCanvasStore.setState({
+          blocks: outcome.blocks,
+          recalcCounter: s.recalcCounter + 1,
+          calcMs: stampMs(t0),
+        });
       }
       // staleIds — всегда (даже при changed=false: видимое свежо, вне экрана старо),
       // но без лишнего ре-рендера при том же наборе
       {
         const sNow = useCanvasStore.getState();
-        const same = sNow.staleIds.length === outcome.staleIds.length &&
+        const same =
+          sNow.staleIds.length === outcome.staleIds.length &&
           sNow.staleIds.every((id, i) => id === outcome.staleIds[i]);
         if (!same || sNow.calcStale) {
           useCanvasStore.setState({ staleIds: outcome.staleIds, calcStale: false });
@@ -854,8 +985,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       paletteH: Math.min(1200, Math.max(320, Math.round(h))),
     }),
   paletteDockW: initialPaletteUi.dockW,
-  setPaletteDockW: (w) =>
-    set({ paletteDockW: Math.min(640, Math.max(280, Math.round(w))) }),
+  setPaletteDockW: (w) => set({ paletteDockW: Math.min(640, Math.max(280, Math.round(w))) }),
   formulaPaletteOpen: initialFormulaPaletteUi.open,
   setFormulaPaletteOpen: (v) => {
     set((s) => ({
@@ -970,8 +1100,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       unifiedH: Math.min(1200, Math.max(320, Math.round(h))),
     }),
   unifiedDockW: initialUnifiedUi.dockW,
-  setUnifiedDockW: (w) =>
-    set({ unifiedDockW: Math.min(640, Math.max(280, Math.round(w))) }),
+  setUnifiedDockW: (w) => set({ unifiedDockW: Math.min(640, Math.max(280, Math.round(w))) }),
   detachedTabs: initialDetachedTabs,
   detachTab: (t) => {
     // вынос — всегда плавающим окном в точке дропа (сторону сбрасываем)
@@ -1125,7 +1254,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   addTextBlock: (x, y) => {
     pushHistory(get, set as SetFn, true);
     const id = uuid();
-    const next: Record<string, MathBlockData> = { ...get().blocks, [id]: { ...blank(id, x, y), kind: 'text', rawInput: '// ' } };
+    const next: Record<string, MathBlockData> = {
+      ...get().blocks,
+      [id]: { ...blank(id, x, y), kind: 'text', rawInput: '// ' },
+    };
     persist(next);
     set({ blocks: next, selectedIds: [id], pendingEditId: id });
     scheduleRecalcAsync(60);
@@ -1163,7 +1295,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn, true);
     const id = uuid();
     const b: MathBlockData = {
-      ...blank(id, x, y), rawInput: 'plot', kind: 'plot', plotFn: fn, plotXmin: -10, plotXmax: 10,
+      ...blank(id, x, y),
+      rawInput: 'plot',
+      kind: 'plot',
+      plotFn: fn,
+      plotXmin: -10,
+      plotXmax: 10,
       w: fitViewportWidth(460),
       ...patch,
     };
@@ -1177,8 +1314,15 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn, true);
     const id = uuid();
     const b: MathBlockData = {
-      ...blank(id, x, y), rawInput: 'contour', kind: 'contour', plotFn: fn,
-      plotXmin: -5, plotXmax: 5, plotYmin: -5, plotYmax: 5, plotResolution: 48,
+      ...blank(id, x, y),
+      rawInput: 'contour',
+      kind: 'contour',
+      plotFn: fn,
+      plotXmin: -5,
+      plotXmax: 5,
+      plotYmin: -5,
+      plotYmax: 5,
+      plotResolution: 48,
       w: fitViewportWidth(460),
     };
     const next = { ...get().blocks, [id]: b };
@@ -1191,9 +1335,17 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn, true);
     const id = uuid();
     const b: MathBlockData = {
-      ...blank(id, x, y), rawInput: 'plot3d', kind: 'plot3d', plotFn: fn,
-      plotXmin: -5, plotXmax: 5, plotYmin: -5, plotYmax: 5,
-      plotMode: 'auto', plotResolution: 48, plotWireframe: false,
+      ...blank(id, x, y),
+      rawInput: 'plot3d',
+      kind: 'plot3d',
+      plotFn: fn,
+      plotXmin: -5,
+      plotXmax: 5,
+      plotYmin: -5,
+      plotYmax: 5,
+      plotMode: 'auto',
+      plotResolution: 48,
+      plotWireframe: false,
       w: fitViewportWidth(560),
     };
     const next = { ...get().blocks, [id]: b };
@@ -1206,7 +1358,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn, true);
     const id = uuid();
     const b: MathBlockData = {
-      ...blank(id, x, y), rawInput: raw, kind: 'program', exportName,
+      ...blank(id, x, y),
+      rawInput: raw,
+      kind: 'program',
+      exportName,
     };
     const next = { ...get().blocks, [id]: b };
     persist(next);
@@ -1219,7 +1374,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const id = uuid();
     const m = getSimModel(modelId) ?? getSimModel('pendulum') ?? listSimModels()[0];
     const b: MathBlockData = {
-      ...blank(id, x, y), rawInput: 'sim', kind: 'sim', simExport: '', simSpeed: 1, simLoop: true,
+      ...blank(id, x, y),
+      rawInput: 'sim',
+      kind: 'sim',
+      simExport: '',
+      simSpeed: 1,
+      simLoop: true,
       w: fitViewportWidth(560),
       ...simModelPatch(m),
     };
@@ -1235,15 +1395,21 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn);
     // если сменили модель на custom вручную — сбросить привязку (чтобы селект показал Custom)
     set({ blocks: { ...get().blocks, [id]: { ...cur, ...patch } } });
-  scheduleRecalcAsync(200);
+    scheduleRecalcAsync(200);
   },
 
   addSliderBlock: (x, y) => {
     pushHistory(get, set as SetFn, true);
     const id = uuid();
     const b: MathBlockData = {
-      ...blank(id, x, y), rawInput: 'slider', kind: 'slider',
-      sliderVar: 'k', sliderMin: 0, sliderMax: 10, sliderStep: 0.5, sliderVal: 5,
+      ...blank(id, x, y),
+      rawInput: 'slider',
+      kind: 'slider',
+      sliderVar: 'k',
+      sliderMin: 0,
+      sliderMax: 10,
+      sliderStep: 0.5,
+      sliderVal: 5,
     };
     const next = { ...get().blocks, [id]: b };
     persist(next);
@@ -1256,7 +1422,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const cur = get().blocks[id];
     if (!cur || cur.kind !== 'slider') return;
     set({ blocks: { ...get().blocks, [id]: { ...cur, sliderVal: val } } });
-  scheduleRecalcAsync(120);
+    scheduleRecalcAsync(120);
   },
 
   updateSlider: (id, patch) => {
@@ -1273,7 +1439,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     if (!cur) return;
     pushHistory(get, set as SetFn);
     set({ blocks: { ...get().blocks, [id]: { ...cur, rawInput: raw } } });
-  scheduleRecalcAsync(150);
+    scheduleRecalcAsync(150);
   },
 
   setExportName: (id, name) => {
@@ -1296,7 +1462,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     pushHistory(get, set as SetFn, true);
     set({ blocks: { ...get().blocks, [id]: { ...cur, x: p.x, y: p.y } } });
     // порядок сверху-вниз зависит от Y → пересчёт после перемещения
-  scheduleRecalcAsync(250);
+    scheduleRecalcAsync(250);
   },
 
   /** Финал перетаскивания тени: разом ставим координаты, один пересчёт + persist.
@@ -1326,7 +1492,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   commitDrag: () => {
     // координаты/размеры могли измениться → финальный пересчёт + сохранение
-  scheduleRecalcAsync(60);
+    scheduleRecalcAsync(60);
   },
 
   sizeTo: (id, w, h) => {
@@ -1362,7 +1528,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   selectMany: (ids) => set({ selectedIds: [...new Set(ids)].filter((id) => get().blocks[id]) }),
   toggleSelect: (id) =>
     set((s) => ({
-      selectedIds: s.selectedIds.includes(id) ? s.selectedIds.filter((s2) => s2 !== id) : [...s.selectedIds, id],
+      selectedIds: s.selectedIds.includes(id)
+        ? s.selectedIds.filter((s2) => s2 !== id)
+        : [...s.selectedIds, id],
     })),
 
   toggleGrid: () =>
@@ -1457,7 +1625,14 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   clear: () => {
     pushHistory(get, set as SetFn, true);
     persist({});
-    set({ blocks: {}, selectedIds: [], hoveredVar: null, editingId: null, kbInsert: null, staleIds: [] });
+    set({
+      blocks: {},
+      selectedIds: [],
+      hoveredVar: null,
+      editingId: null,
+      kbInsert: null,
+      staleIds: [],
+    });
   },
 
   loadTestScenario: () => {
@@ -1475,10 +1650,23 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     }
     const pid = uuid();
     rec[pid] = {
-      ...blank(pid, 560, 120), rawInput: 'plot', kind: 'plot', plotFn: 'sin(x)', plotXmin: -10, plotXmax: 10,
+      ...blank(pid, 560, 120),
+      rawInput: 'plot',
+      kind: 'plot',
+      plotFn: 'sin(x)',
+      plotXmin: -10,
+      plotXmax: 10,
     };
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, editingId: null, kbInsert: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
+    set((s) => ({
+      blocks: rec,
+      selectedIds: [],
+      hoveredVar: null,
+      editingId: null,
+      kbInsert: null,
+      recalcCounter: s.recalcCounter + 1,
+      staleIds: [],
+    }));
     scheduleRecalcAsync(60);
   },
 
@@ -1498,11 +1686,23 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     }
     const pid = uuid();
     rec[pid] = {
-      ...blank(pid, 560, 140), rawInput: 'plot', kind: 'plot',
-      plotFn: 'sin(w*x); cos(x)', plotXmin: -10, plotXmax: 10,
+      ...blank(pid, 560, 140),
+      rawInput: 'plot',
+      kind: 'plot',
+      plotFn: 'sin(w*x); cos(x)',
+      plotXmin: -10,
+      plotXmax: 10,
     };
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, editingId: null, kbInsert: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
+    set((s) => ({
+      blocks: rec,
+      selectedIds: [],
+      hoveredVar: null,
+      editingId: null,
+      kbInsert: null,
+      recalcCounter: s.recalcCounter + 1,
+      staleIds: [],
+    }));
     scheduleRecalcAsync(60);
   },
 
@@ -1517,13 +1717,30 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     mk(80, 60, 'a := 2');
     mk(80, 124, 'f(x) := a*x^2');
     mk(80, 188, 'slider', {
-      kind: 'slider', sliderVar: 'a', sliderMin: -5, sliderMax: 5, sliderStep: 0.1, sliderVal: 2,
+      kind: 'slider',
+      sliderVar: 'a',
+      sliderMin: -5,
+      sliderMax: 5,
+      sliderStep: 0.1,
+      sliderVal: 2,
     });
     mk(560, 120, 'plot', {
-      kind: 'plot', plotFn: 'f(x)', plotXmin: -10, plotXmax: 10, w: fitViewportWidth(460),
+      kind: 'plot',
+      plotFn: 'f(x)',
+      plotXmin: -10,
+      plotXmax: 10,
+      w: fitViewportWidth(460),
     });
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, editingId: null, kbInsert: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
+    set((s) => ({
+      blocks: rec,
+      selectedIds: [],
+      hoveredVar: null,
+      editingId: null,
+      kbInsert: null,
+      recalcCounter: s.recalcCounter + 1,
+      staleIds: [],
+    }));
     scheduleRecalcAsync(60);
   },
 
@@ -1543,14 +1760,19 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         next[bid] = { ...blank(bid, p.x, p.y + k * 64), rawInput: ln.raw, kind: 'text' };
       } else if (ln.kind === 'program') {
         next[bid] = {
-          ...blank(bid, p.x, p.y + k * dy), rawInput: ln.raw, kind: 'program',
+          ...blank(bid, p.x, p.y + k * dy),
+          rawInput: ln.raw,
+          kind: 'program',
           exportName: ln.exportName ?? '',
         };
       } else if (ln.kind === 'plot') {
         next[bid] = {
-          ...blank(bid, p.x, p.y + k * 64), rawInput: 'plot', kind: 'plot',
+          ...blank(bid, p.x, p.y + k * 64),
+          rawInput: 'plot',
+          kind: 'plot',
           plotFn: ln.plotFn ?? 'sin(x)',
-          plotXmin: ln.plotXmin ?? -10, plotXmax: ln.plotXmax ?? 10,
+          plotXmin: ln.plotXmin ?? -10,
+          plotXmax: ln.plotXmax ?? 10,
           ...(ln.plotLogx ? { plotLogx: true } : {}),
         };
       } else {
@@ -1581,14 +1803,31 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     if (!Object.keys(rec).length) return { ok: false, message: t('doc.noBlocks') };
     pushHistory(get, set as SetFn, true);
     persist(rec);
-    set((s) => ({ blocks: rec, selectedIds: [], hoveredVar: null, editingId: null, kbInsert: null, recalcCounter: s.recalcCounter + 1, staleIds: [] }));
+    set((s) => ({
+      blocks: rec,
+      selectedIds: [],
+      hoveredVar: null,
+      editingId: null,
+      kbInsert: null,
+      recalcCounter: s.recalcCounter + 1,
+      staleIds: [],
+    }));
     scheduleRecalcAsync(60);
     // major-расхождение — предупреждение; minor — тихая пометка версии файла
     const mismatch = engineMismatch(parsed.engine);
-    const warn = mismatch ?? (parsed.engine && parsed.engine !== ENGINE_VERSION
-      ? t('doc.engineWarn', { v: parsed.engine })
-      : '');
-    return { ok: true, message: t('doc.loaded', { n: Object.keys(rec).length, bad: bad ? t('doc.loadedBad', { bad }) : '', warn }) };
+    const warn =
+      mismatch ??
+      (parsed.engine && parsed.engine !== ENGINE_VERSION
+        ? t('doc.engineWarn', { v: parsed.engine })
+        : '');
+    return {
+      ok: true,
+      message: t('doc.loaded', {
+        n: Object.keys(rec).length,
+        bad: bad ? t('doc.loadedBad', { bad }) : '',
+        warn,
+      }),
+    };
   },
 
   liveConnected: false,
@@ -1655,30 +1894,59 @@ scheduleRecalcAsync(30);
 export function savePaletteUi(variant: 'functions' | 'formulas' | 'constants' = 'functions') {
   try {
     const s = useCanvasStore.getState();
-    const ui: PaletteUi = variant === 'formulas'
-      ? { mode: s.formulaPaletteMode, w: s.formulaPaletteW, h: s.formulaPaletteH, dockW: s.formulaPaletteDockW, open: s.formulaPaletteOpen }
-      : variant === 'constants'
-      ? { mode: s.constPaletteMode, w: s.constPaletteW, h: s.constPaletteH, dockW: s.constPaletteDockW, open: s.constPaletteOpen }
-      : { mode: s.paletteMode, w: s.paletteW, h: s.paletteH, dockW: s.paletteDockW, open: s.paletteOpen };
+    const ui: PaletteUi =
+      variant === 'formulas'
+        ? {
+            mode: s.formulaPaletteMode,
+            w: s.formulaPaletteW,
+            h: s.formulaPaletteH,
+            dockW: s.formulaPaletteDockW,
+            open: s.formulaPaletteOpen,
+          }
+        : variant === 'constants'
+          ? {
+              mode: s.constPaletteMode,
+              w: s.constPaletteW,
+              h: s.constPaletteH,
+              dockW: s.constPaletteDockW,
+              open: s.constPaletteOpen,
+            }
+          : {
+              mode: s.paletteMode,
+              w: s.paletteW,
+              h: s.paletteH,
+              dockW: s.paletteDockW,
+              open: s.paletteOpen,
+            };
     localStorage.setItem(
-      variant === 'formulas' ? FORMULA_PAL_UI_KEY : variant === 'constants' ? CONST_PAL_UI_KEY : PAL_UI_KEY,
+      variant === 'formulas'
+        ? FORMULA_PAL_UI_KEY
+        : variant === 'constants'
+          ? CONST_PAL_UI_KEY
+          : PAL_UI_KEY,
       JSON.stringify(ui),
     );
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Сохранить вынесенные вкладки (по окончании tear-off/attach/закрытия). */
 export function saveDetachedTabs() {
   try {
     localStorage.setItem(DETACHED_KEY, JSON.stringify(useCanvasStore.getState().detachedTabs));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Сохранить стороны док-панелей вынесенных вкладок. */
 export function saveDetachedSide() {
   try {
     localStorage.setItem(DETACHED_SIDE_KEY, JSON.stringify(useCanvasStore.getState().detachedSide));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 export function isUnifiedPaletteOpen(s: {
   paletteOpen: boolean;
@@ -1687,7 +1955,13 @@ export function isUnifiedPaletteOpen(s: {
   elemPaletteOpen: boolean;
   scopeMonOpen: boolean;
 }): boolean {
-  return s.paletteOpen || s.formulaPaletteOpen || s.constPaletteOpen || s.elemPaletteOpen || s.scopeMonOpen;
+  return (
+    s.paletteOpen ||
+    s.formulaPaletteOpen ||
+    s.constPaletteOpen ||
+    s.elemPaletteOpen ||
+    s.scopeMonOpen
+  );
 }
 
 /** Сохранить геометрию и вкладку единого окна (по окончании жеста + при смене вкладок). */
@@ -1703,5 +1977,7 @@ export function saveUnifiedUi() {
       tab: s.paletteTab,
     };
     localStorage.setItem(UNIFIED_UI_KEY, JSON.stringify(ui));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }

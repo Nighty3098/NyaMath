@@ -9,7 +9,9 @@ export function saveDetachedPos(tab: PaletteTab, x: number, y: number) {
     const nx = Math.min(Math.max(-320, Math.round(x)), Math.max(0, window.innerWidth - 80));
     const ny = Math.min(Math.max(0, Math.round(y)), Math.max(0, window.innerHeight - 60));
     localStorage.setItem(POS_PREFIX + tab, JSON.stringify({ x: nx, y: ny }));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function loadDetachedPos(tab: PaletteTab): { x: number; y: number } {
@@ -37,8 +39,14 @@ export function loadDetachedSize(tab: PaletteTab): { w: number; h: number } {
     if (!raw) return fallback;
     const p = JSON.parse(raw) as { w?: unknown; h?: unknown };
     return {
-      w: typeof p.w === 'number' && isFinite(p.w) ? Math.min(720, Math.max(320, Math.round(p.w))) : fallback.w,
-      h: typeof p.h === 'number' && isFinite(p.h) ? Math.min(1200, Math.max(320, Math.round(p.h))) : fallback.h,
+      w:
+        typeof p.w === 'number' && isFinite(p.w)
+          ? Math.min(720, Math.max(320, Math.round(p.w)))
+          : fallback.w,
+      h:
+        typeof p.h === 'number' && isFinite(p.h)
+          ? Math.min(1200, Math.max(320, Math.round(p.h)))
+          : fallback.h,
     };
   } catch {
     return fallback;
@@ -48,7 +56,9 @@ export function loadDetachedSize(tab: PaletteTab): { w: number; h: number } {
 export function saveDetachedSize(tab: PaletteTab, w: number, h: number) {
   try {
     localStorage.setItem(SIZE_PREFIX + tab, JSON.stringify({ w: Math.round(w), h: Math.round(h) }));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 const DOCKW_PREFIX = 'nyamath-detached-dockw-';
@@ -60,7 +70,9 @@ export function loadDetachedDockW(tab: PaletteTab): number {
     const raw = localStorage.getItem(DOCKW_PREFIX + tab);
     if (!raw) return fallback;
     const v = JSON.parse(raw) as unknown;
-    return typeof v === 'number' && isFinite(v) ? Math.min(640, Math.max(280, Math.round(v))) : fallback;
+    return typeof v === 'number' && isFinite(v)
+      ? Math.min(640, Math.max(280, Math.round(v)))
+      : fallback;
   } catch {
     return fallback;
   }
@@ -68,6 +80,11 @@ export function loadDetachedDockW(tab: PaletteTab): number {
 
 export function saveDetachedDockW(tab: PaletteTab, w: number) {
   try {
-    localStorage.setItem(DOCKW_PREFIX + tab, JSON.stringify(Math.min(640, Math.max(280, Math.round(w)))));
-  } catch { /* ignore */ }
+    localStorage.setItem(
+      DOCKW_PREFIX + tab,
+      JSON.stringify(Math.min(640, Math.max(280, Math.round(w)))),
+    );
+  } catch {
+    /* ignore */
+  }
 }

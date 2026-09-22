@@ -36,7 +36,12 @@ export function blocksToMarkdown(blocks: Record<string, MathBlockData>): string 
         out.push('```', b.rawInput, '```', b.resultStr ? `Result: \`${b.resultStr}\`` : '', '');
       } else {
         const line = mathLine(b);
-        if (line) out.push(`$$${line}$$`, b.resultStr && !b.isOutput ? `Result: \`${b.resultStr}\`` : '', '');
+        if (line)
+          out.push(
+            `$$${line}$$`,
+            b.resultStr && !b.isOutput ? `Result: \`${b.resultStr}\`` : '',
+            '',
+          );
       }
     } else if (b.kind === 'plot' || b.kind === 'plot3d' || b.kind === 'contour') {
       out.push(`> Plot: \`${b.plotFn ?? ''}\` (see PNG export for the figure)`, '');
@@ -46,7 +51,12 @@ export function blocksToMarkdown(blocks: Record<string, MathBlockData>): string 
       out.push(`$$${b.sliderVar ?? 'k'} = ${b.resultStr || '—'}$$\n`);
     }
   }
-  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  return (
+    out
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim() + '\n'
+  );
 }
 
 /** Лист → standalone LaTeX-статья (amsmath). */

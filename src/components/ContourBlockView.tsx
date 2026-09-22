@@ -1,14 +1,14 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { useDocScope } from "./useDocScope";
-import { useDebouncedValue } from "./useDebouncedValue";
-import { samplePlot3d } from "../engine/plot3dSample";
-import { useCanvasStore } from "../store/canvasStore";
-import { plotPalettes } from "../theme";
-import type { MathBlockData } from "../engine/dependencies";
-import { useRegionDrag, useRegionResize } from "./useRegionDrag";
-import { ISave, IWarn, IX } from "./Icon";
-import { t } from "../i18n";
-import { exportSvgElementToPng, safeFilename } from "../lib/exportFiles";
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { useDocScope } from './useDocScope';
+import { useDebouncedValue } from './useDebouncedValue';
+import { samplePlot3d } from '../engine/plot3dSample';
+import { useCanvasStore } from '../store/canvasStore';
+import { plotPalettes } from '../theme';
+import type { MathBlockData } from '../engine/dependencies';
+import { useRegionDrag, useRegionResize } from './useRegionDrag';
+import { ISave, IWarn, IX } from './Icon';
+import { t } from '../i18n';
+import { exportSvgElementToPng, safeFilename } from '../lib/exportFiles';
 
 const W = 460;
 const H = 300;
@@ -21,9 +21,9 @@ const LEVELS = 10;
 const RESAMPLE_DEBOUNCE_MS = 150;
 
 const fmtTick = (v: number) => {
-  if (v === 0) return "0";
+  if (v === 0) return '0';
   const a = Math.abs(v);
-  if (a >= 1000 || a < 0.01) return v.toExponential(0).replace("e", "e");
+  if (a >= 1000 || a < 0.01) return v.toExponential(0).replace('e', 'e');
   return String(Number(v.toPrecision(4)));
 };
 
@@ -36,7 +36,7 @@ function isolines(
   X: (x: number) => number,
   Y: (y: number) => number,
 ): string {
-  let d = "";
+  let d = '';
   const seg = (x1: number, y1: number, x2: number, y2: number) => {
     d += `M${X(x1).toFixed(1)},${Y(y1).toFixed(1)}L${X(x2).toFixed(1)},${Y(y2).toFixed(1)}`;
   };
@@ -126,13 +126,7 @@ function isolines(
   return d;
 }
 
-function ContourBlockView({
-  block,
-  scale,
-}: {
-  block: MathBlockData;
-  scale: number;
-}) {
+function ContourBlockView({ block, scale }: { block: MathBlockData; scale: number }) {
   const removeBlock = useCanvasStore((s) => s.removeBlock);
   const boxRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
@@ -140,23 +134,14 @@ function ContourBlockView({
   const svgRef = useRef<SVGSVGElement | null>(null);
   // Замер хрома вместо магической константы (см. PlotBlockView): иначе зазор внизу.
   const [chromeH, setChromeH] = useState(108);
-  const { onGripDown, onGripMove, onGripUp } = useRegionDrag(
-    block.id,
-    scale,
-    false,
-  );
-  const { onResizeDown, onResizeMove, onResizeUp } = useRegionResize(
-    block.id,
-    scale,
-    boxRef,
-    {
-      height: true,
-      minW: 320,
-      maxW: 1200,
-      minH: 300,
-      maxH: 1400,
-    },
-  );
+  const { onGripDown, onGripMove, onGripUp } = useRegionDrag(block.id, scale, false);
+  const { onResizeDown, onResizeMove, onResizeUp } = useRegionResize(block.id, scale, boxRef, {
+    height: true,
+    minW: 320,
+    maxW: 1200,
+    minH: 300,
+    maxH: 1400,
+  });
   const updatePlot = useCanvasStore((s) => s.updatePlot);
   const select = useCanvasStore((s) => s.select);
   const toggleSelect = useCanvasStore((s) => s.toggleSelect);
@@ -167,19 +152,16 @@ function ContourBlockView({
   useCanvasStore((s) => s.lang);
   const pal = plotPalettes[theme];
 
-  const fnText = block.plotFn ?? "sin(sqrt(x^2+y^2))";
+  const fnText = block.plotFn ?? 'sin(sqrt(x^2+y^2))';
   const xmin = block.plotXmin ?? -5;
   const xmax = block.plotXmax ?? 5;
   const ymin = block.plotYmin ?? -5;
   const ymax = block.plotYmax ?? 5;
-  const res = Math.min(
-    100,
-    Math.max(8, Math.round(block.plotResolution ?? 48)),
-  );
+  const res = Math.min(100, Math.max(8, Math.round(block.plotResolution ?? 48)));
   const pw = block.w ?? W;
   const ph = Math.max(180, (block.h ?? H + chromeH) - chromeH);
   const showGrid = block.plotGrid ?? true;
-  const title = (block.plotTitle ?? "").trim();
+  const title = (block.plotTitle ?? '').trim();
   // Scope последнего пересчёта стора (#2): без повторного recalculateAll.
   const base = useDocScope(blocks);
   // Дебаунс + превью (#8): пока документ «живой» — половинная сетка,
@@ -190,7 +172,7 @@ function ContourBlockView({
   const data = useMemo(() => {
     if (!(xmin < xmax) || !(ymin < ymax))
       return {
-        err: t("p2.needRange"),
+        err: t('p2.needRange'),
         levels: [] as { v: number; d: string; color: string }[],
         zmin: 0,
         zmax: 0,
@@ -202,11 +184,11 @@ function ContourBlockView({
         ymin,
         ymax,
         res: effRes,
-        mode: "surface",
+        mode: 'surface',
       });
-      if (!s || s.mode !== "surface")
+      if (!s || s.mode !== 'surface')
         return {
-          err: t("p3.noDataHint"),
+          err: t('p3.noDataHint'),
           levels: [] as { v: number; d: string; color: string }[],
           zmin: 0,
           zmax: 0,
@@ -215,7 +197,7 @@ function ContourBlockView({
       let zmax = -Infinity;
       for (const row of s.zs) {
         for (const z of row) {
-          if (typeof z === "number" && isFinite(z)) {
+          if (typeof z === 'number' && isFinite(z)) {
             if (z < zmin) zmin = z;
             if (z > zmax) zmax = z;
           }
@@ -223,15 +205,13 @@ function ContourBlockView({
       }
       if (!(zmax > zmin))
         return {
-          err: t("p3.noData"),
+          err: t('p3.noData'),
           levels: [] as { v: number; d: string; color: string }[],
           zmin,
           zmax,
         };
-      const X = (x: number) =>
-        PAD_L + ((x - xmin) / (xmax - xmin)) * (pw - PAD_L - PAD_R);
-      const Y = (y: number) =>
-        ph - PAD_B - ((y - ymin) / (ymax - ymin)) * (ph - PAD_T - PAD_B);
+      const X = (x: number) => PAD_L + ((x - xmin) / (xmax - xmin)) * (pw - PAD_L - PAD_R);
+      const Y = (y: number) => ph - PAD_B - ((y - ymin) / (ymax - ymin)) * (ph - PAD_T - PAD_B);
       const levels = [];
       for (let k = 0; k < LEVELS; k++) {
         const v = zmin + ((zmax - zmin) * (k + 1)) / (LEVELS + 1);
@@ -256,11 +236,7 @@ function ContourBlockView({
 
   useEffect(() => {
     const measure = () => {
-      setChromeH(
-        (headRef.current?.offsetHeight ?? 0) +
-          (footRef.current?.offsetHeight ?? 0) +
-          12,
-      );
+      setChromeH((headRef.current?.offsetHeight ?? 0) + (footRef.current?.offsetHeight ?? 0) + 12);
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -272,13 +248,11 @@ function ContourBlockView({
   /** PNG снимок отрендеренного SVG (×2) */
   const doExportPng = () => {
     if (!svgRef.current || data.err) {
-      alert(t("p3.noData"));
+      alert(t('p3.noData'));
       return;
     }
-    const name = safeFilename(title || fnText, "contour");
-    void exportSvgElementToPng(svgRef.current, `${name}.png`).catch(() =>
-      alert(t("p3.noData")),
-    );
+    const name = safeFilename(title || fnText, 'contour');
+    void exportSvgElementToPng(svgRef.current, `${name}.png`).catch(() => alert(t('p3.noData')));
   };
 
   return (
@@ -289,15 +263,13 @@ function ContourBlockView({
         left: block.x,
         top: block.y,
         width: pw,
-        height: data.err ? "auto" : ph + chromeH,
+        height: data.err ? 'auto' : ph + chromeH,
       }}
     >
       <div
         data-block-id={block.id}
         className={`nya-block relative w-full h-full rounded-xl px-3 py-2 flex flex-col bg-[var(--sheet)] group ${
-          selected
-            ? "outline outline-2 outline-offset-2 outline-[var(--accent-line)]"
-            : ""
+          selected ? 'outline outline-2 outline-offset-2 outline-[var(--accent-line)]' : ''
         }`}
         onClick={(e) => {
           e.stopPropagation();
@@ -318,7 +290,7 @@ function ContourBlockView({
               contour
             </span>
             <label htmlFor={`contourfn-${block.id}`} className="sr-only">
-              {t("ctr.fnLabel")}
+              {t('ctr.fnLabel')}
             </label>
             <input
               id={`contourfn-${block.id}`}
@@ -328,7 +300,7 @@ function ContourBlockView({
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               spellCheck={false}
-              title={t("ctr.fnTitle")}
+              title={t('ctr.fnTitle')}
             />
             <button
               type="button"
@@ -338,8 +310,8 @@ function ContourBlockView({
                 doExportPng();
               }}
               onPointerDown={(e) => e.stopPropagation()}
-              title={t("p2.png")}
-              aria-label={t("p2.png")}
+              title={t('p2.png')}
+              aria-label={t('p2.png')}
             >
               <ISave />
             </button>
@@ -348,64 +320,56 @@ function ContourBlockView({
               className="p-1.5 text-[var(--faint)] hover:text-[var(--danger)] cursor-pointer"
               onClick={() => removeBlock(block.id)}
               onPointerDown={(e) => e.stopPropagation()}
-              aria-label={t("ctr.delete")}
+              aria-label={t('ctr.delete')}
             >
               <IX />
             </button>
           </div>
           <div className="flex items-center gap-2 flex-wrap text-[12px] text-[var(--ink-soft)] mb-1 print:hidden">
             <label>
-              xmin{" "}
+              xmin{' '}
               <input
                 type="number"
-                aria-label={t("p3.xmin")}
+                aria-label={t('p3.xmin')}
                 className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
                 value={xmin}
-                onChange={(e) =>
-                  updatePlot(block.id, { plotXmin: Number(e.target.value) })
-                }
+                onChange={(e) => updatePlot(block.id, { plotXmin: Number(e.target.value) })}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               />
             </label>
             <label>
-              xmax{" "}
+              xmax{' '}
               <input
                 type="number"
-                aria-label={t("p3.xmax")}
+                aria-label={t('p3.xmax')}
                 className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
                 value={xmax}
-                onChange={(e) =>
-                  updatePlot(block.id, { plotXmax: Number(e.target.value) })
-                }
+                onChange={(e) => updatePlot(block.id, { plotXmax: Number(e.target.value) })}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               />
             </label>
             <label>
-              ymin{" "}
+              ymin{' '}
               <input
                 type="number"
-                aria-label={t("p3.ymin")}
+                aria-label={t('p3.ymin')}
                 className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
                 value={ymin}
-                onChange={(e) =>
-                  updatePlot(block.id, { plotYmin: Number(e.target.value) })
-                }
+                onChange={(e) => updatePlot(block.id, { plotYmin: Number(e.target.value) })}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               />
             </label>
             <label>
-              ymax{" "}
+              ymax{' '}
               <input
                 type="number"
-                aria-label={t("p3.ymax")}
+                aria-label={t('p3.ymax')}
                 className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
                 value={ymax}
-                onChange={(e) =>
-                  updatePlot(block.id, { plotYmax: Number(e.target.value) })
-                }
+                onChange={(e) => updatePlot(block.id, { plotYmax: Number(e.target.value) })}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               />
@@ -421,10 +385,7 @@ function ContourBlockView({
           )}
         </div>
         {data.err ? (
-          <div
-            className="flex items-center gap-1.5 text-[var(--danger)] text-[12px]"
-            role="alert"
-          >
+          <div className="flex items-center gap-1.5 text-[var(--danger)] text-[12px]" role="alert">
             <IWarn /> {data.err}
           </div>
         ) : (
@@ -435,7 +396,7 @@ function ContourBlockView({
             className="rounded-lg border border-[var(--line)]"
             style={{ background: pal.svgBg }}
             role="img"
-            aria-label={t("ctr.aria", { fn: fnText })}
+            aria-label={t('ctr.aria', { fn: fnText })}
           >
             {showGrid && (
               <g>
@@ -470,22 +431,10 @@ function ContourBlockView({
               stroke={pal.frame}
             />
             {data.levels.map((l, i) =>
-              l.d ? (
-                <path
-                  key={i}
-                  d={l.d}
-                  fill="none"
-                  stroke={l.color}
-                  strokeWidth={1.5}
-                />
-              ) : null,
+              l.d ? <path key={i} d={l.d} fill="none" stroke={l.color} strokeWidth={1.5} /> : null,
             )}
             {/* легенда уровней: min / mid / max */}
-            {[
-              0,
-              Math.floor(data.levels.length / 2),
-              data.levels.length - 1,
-            ].map((li, k) => {
+            {[0, Math.floor(data.levels.length / 2), data.levels.length - 1].map((li, k) => {
               const l = data.levels[li];
               if (!l || !l.d) return null;
               return (
@@ -498,12 +447,7 @@ function ContourBlockView({
                     stroke={l.color}
                     strokeWidth={2.5}
                   />
-                  <text
-                    x={PAD_L + 30}
-                    y={PAD_T + 15 + k * 15}
-                    fontSize={10}
-                    fill={pal.legend}
-                  >
+                  <text x={PAD_L + 30} y={PAD_T + 15 + k * 15} fontSize={10} fill={pal.legend}>
                     {fmtTick(l.v)}
                   </text>
                 </g>
@@ -511,16 +455,12 @@ function ContourBlockView({
             })}
           </svg>
         )}
-        <div
-          ref={footRef}
-          className="text-[11px] text-[var(--faint)] mt-1 truncate"
-        >
-          {t("ctr.footer", { fn: fnText })} •{" "}
-          {data.levels.filter((l) => l.d).length}/{LEVELS}
+        <div ref={footRef} className="text-[11px] text-[var(--faint)] mt-1 truncate">
+          {t('ctr.footer', { fn: fnText })} • {data.levels.filter((l) => l.d).length}/{LEVELS}
         </div>
         <span
           className="absolute -right-3 -bottom-3 w-7 h-7 cursor-nwse-resize touch-none select-none"
-          title={t("ctr.resize")}
+          title={t('ctr.resize')}
           onPointerDown={onResizeDown}
           onPointerMove={onResizeMove}
           onPointerUp={onResizeUp}

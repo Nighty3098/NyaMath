@@ -136,29 +136,51 @@ export function startSyncServer(
         try {
           const body = await readBody(req);
           const data: unknown = JSON.parse(body);
-          if (!data || typeof data !== 'object' || !Array.isArray((data as { blocks?: unknown }).blocks)) {
+          if (
+            !data ||
+            typeof data !== 'object' ||
+            !Array.isArray((data as { blocks?: unknown }).blocks)
+          ) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: false, error: 'Ожидается {blocks: [...]}' }));
             return;
           }
           const rawBaseRev = (data as { baseRev?: unknown }).baseRev;
-          const baseRev = typeof rawBaseRev === 'number' && Number.isFinite(rawBaseRev) ? rawBaseRev : undefined;
+          const baseRev =
+            typeof rawBaseRev === 'number' && Number.isFinite(rawBaseRev) ? rawBaseRev : undefined;
           const inBlocks = (data as { blocks: unknown[] }).blocks;
           const inMeta = (data as { meta?: unknown }).meta;
           const inDeleted = (data as { deleted?: unknown }).deleted;
           const out = handlers.applyPush(inBlocks, baseRev, inMeta, inDeleted);
           broadcast();
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(out.merged
-            ? { ok: true, rev: out.rev, blocks: out.merged.blocks, meta: out.merged.meta, deleted: out.merged.deleted }
-            : { ok: true, rev: out.rev }));
+          res.end(
+            JSON.stringify(
+              out.merged
+                ? {
+                    ok: true,
+                    rev: out.rev,
+                    blocks: out.merged.blocks,
+                    meta: out.merged.meta,
+                    deleted: out.merged.deleted,
+                  }
+                : { ok: true, rev: out.rev },
+            ),
+          );
         } catch (e) {
-          const status = typeof (e as { status?: unknown })?.status === 'number'
-            ? (e as { status: number }).status
-            : 400;
+          const status =
+            typeof (e as { status?: unknown })?.status === 'number'
+              ? (e as { status: number }).status
+              : 400;
           const current = handlers.getStatus() as { rev?: unknown };
           res.writeHead(status, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, error: e instanceof Error ? e.message : String(e), rev: current.rev }));
+          res.end(
+            JSON.stringify({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+              rev: current.rev,
+            }),
+          );
         }
         return;
       }

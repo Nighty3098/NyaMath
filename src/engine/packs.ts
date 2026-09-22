@@ -5,13 +5,24 @@
 import type { MathJsInstance, MathNode } from 'mathjs';
 import { t, type LText, type PackId } from '../i18n';
 import {
-  MAT_PROP_KEYS, findMaterial, getConstant, listMaterials, matPropName,
+  MAT_PROP_KEYS,
+  findMaterial,
+  getConstant,
+  listMaterials,
+  matPropName,
   type MatPropKey,
 } from '../lib/db';
 import { getCompiledPre, preprocessJ, preprocessRanges } from './mathEngine';
 import {
-  adaptiveSimpson, brent, compactTrace, fmtTrace, nelderMead, newtonSystem,
-  pushSolverTrace, rk4Step, vecTrace,
+  adaptiveSimpson,
+  brent,
+  compactTrace,
+  fmtTrace,
+  nelderMead,
+  newtonSystem,
+  pushSolverTrace,
+  rk4Step,
+  vecTrace,
 } from './numeric';
 
 export type Scope = Record<string, unknown>;
@@ -58,8 +69,13 @@ export function buildPackScope(math: MathJsInstance): Scope {
     // Fast-path (#D): целочисленная монотонная последовательность — концы
     // ограничивают все значения; при |v| < 1e12 (≤12 цифр) toPrecision(12)
     // тождественен, поэтому результат бит-идентичен медленному пути.
-    if (Number.isInteger(A) && Number.isInteger(B) && Number.isInteger(S)
-        && Math.abs(A) < 1e12 && Math.abs(B) < 1e12) {
+    if (
+      Number.isInteger(A) &&
+      Number.isInteger(B) &&
+      Number.isInteger(S) &&
+      Math.abs(A) < 1e12 &&
+      Math.abs(B) < 1e12
+    ) {
       const out = new Array<number>(n);
       for (let k = 0; k < n; k++) out[k] = A + k * S;
       return math.matrix(out);
@@ -151,14 +167,22 @@ export function buildPackScope(math: MathJsInstance): Scope {
       } catch {
         throw new Error(t('e.simEval', { expr: expr.slice(0, 60) }));
       }
-      if (typeof v !== 'number' || !isFinite(v)) throw new Error(t('e.simNotNum', { expr: expr.slice(0, 60) }));
+      if (typeof v !== 'number' || !isFinite(v))
+        throw new Error(t('e.simNotNum', { expr: expr.slice(0, 60) }));
       return v;
     };
   };
   // (разовые вычисления — напрямую через numEvaluator в местах вызова)
   /** Ньютон для системы строк; strict=false → minerr (вернуть последнее). Лог — в scope. */
-  const solveEqs = (eqs: string[], vars: string[], guess: number[], scope: Scope, strict: boolean): number[] => {
-    if (!eqs.length || eqs.length !== vars.length || guess.length !== vars.length) throw new Error(t('e.calcArgs'));
+  const solveEqs = (
+    eqs: string[],
+    vars: string[],
+    guess: number[],
+    scope: Scope,
+    strict: boolean,
+  ): number[] => {
+    if (!eqs.length || eqs.length !== vars.length || guess.length !== vars.length)
+      throw new Error(t('e.calcArgs'));
     if (vars.some((v) => !/^[A-Za-z_]\w*$/.test(v))) throw new Error(t('e.calcArgs'));
     const evs = eqs.map((e) => numEvaluator(e, scope));
     const F = (x: number[]): number[] => {
@@ -177,7 +201,10 @@ export function buildPackScope(math: MathJsInstance): Scope {
       }
     };
     const head = `solve [${vars.join(', ')}] from ${vecTrace(guess)}`;
-    const attempt = (maxIter: number, tol: number): { ok: boolean; x: number[]; iters: number; lines: string[] } => {
+    const attempt = (
+      maxIter: number,
+      tol: number,
+    ): { ok: boolean; x: number[]; iters: number; lines: string[] } => {
       const lines: string[] = [];
       try {
         const r = newtonSystem(F, guess, maxIter, tol, (l) => lines.push(l));
@@ -324,7 +351,9 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const rest = c
         .map((cc, i) => ({ cc, i }))
         .filter(({ cc }) => Math.abs(cc) > 1e-9)
-        .map(({ cc, i }) => (i === 0 ? `${fmtC(cc)}` : i === 1 ? `${fmtC(cc)}*${v}` : `${fmtC(cc)}*${v}^${i}`))
+        .map(({ cc, i }) =>
+          i === 0 ? `${fmtC(cc)}` : i === 1 ? `${fmtC(cc)}*${v}` : `${fmtC(cc)}*${v}^${i}`,
+        )
         .join(' + ')
         .replace(/\+ -/g, '- ');
       parts.push(`(${rest || '1'})`);
@@ -342,7 +371,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
   const symbolicIntegrate = (expr: string, v: string): string => {
     if (!/^[A-Za-z_]\w*$/.test(v)) throw new Error(t('e.calcArgs'));
     const node = math.parse(expr);
-    const W = (s: string): string => (s.includes('+') || s.includes('-') || s.includes(' ') ? `(${s})` : s);
+    const W = (s: string): string =>
+      s.includes('+') || s.includes('-') || s.includes(' ') ? `(${s})` : s;
     const integ = (n: unknown): string => {
       const nn = n as {
         isOperatorNode?: boolean;
@@ -445,7 +475,12 @@ export function buildPackScope(math: MathJsInstance): Scope {
   };
 
   const sameSymbol = (n: unknown, v: string): boolean => {
-    const s = n as { isSymbolNode?: boolean; isParenthesisNode?: boolean; name?: string; args?: unknown[] };
+    const s = n as {
+      isSymbolNode?: boolean;
+      isParenthesisNode?: boolean;
+      name?: string;
+      args?: unknown[];
+    };
     if (s.isParenthesisNode) return sameSymbol(s.args?.[0], v);
     return !!s.isSymbolNode && s.name === v;
   };
@@ -457,7 +492,12 @@ export function buildPackScope(math: MathJsInstance): Scope {
   };
 
   const numVal = (n: unknown): number => {
-    const s = n as { isConstantNode?: boolean; isParenthesisNode?: boolean; value?: unknown; args?: unknown[] };
+    const s = n as {
+      isConstantNode?: boolean;
+      isParenthesisNode?: boolean;
+      value?: unknown;
+      args?: unknown[];
+    };
     if (s.isParenthesisNode) return numVal(s.args?.[0]);
     return Number(s.value);
   };
@@ -499,7 +539,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
 
   const truncI = (v: unknown): number => {
     const n = Number(v);
-    if (typeof v === 'boolean' || !isFinite(n) || Math.floor(n) !== n) throw new Error(t('e.calcArgs'));
+    if (typeof v === 'boolean' || !isFinite(n) || Math.floor(n) !== n)
+      throw new Error(t('e.calcArgs'));
     return n;
   };
   const optInt = (v: unknown, dflt: number): number => (v === undefined ? dflt : truncI(v));
@@ -540,7 +581,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
     const body = conv(Math.abs(n)).padStart(W, '0');
     return (n < 0 ? '-' : '') + body;
   };
-  const stripPrefix = (s: string, p: string): string => (s.toLowerCase().startsWith(p) ? s.slice(p.length) : s);
+  const stripPrefix = (s: string, p: string): string =>
+    s.toLowerCase().startsWith(p) ? s.slice(p.length) : s;
   const cleanIntStr = (v: unknown): string => String(v).replace(/[\s_]/g, '');
 
   const erfImpl = (x: number): number => {
@@ -549,7 +591,9 @@ export function buildPackScope(math: MathJsInstance): Scope {
     const tt = 1 / (1 + 0.3275911 * ax);
     const y =
       1 -
-      (((((1.061405429 * tt - 1.453152027) * tt + 1.421413741) * tt - 0.284496736) * tt + 0.254829592) * tt) *
+      ((((1.061405429 * tt - 1.453152027) * tt + 1.421413741) * tt - 0.284496736) * tt +
+        0.254829592) *
+        tt *
         Math.exp(-ax * ax);
     return s * y;
   };
@@ -634,12 +678,17 @@ export function buildPackScope(math: MathJsInstance): Scope {
     const rows2: number[][] = Array.isArray(arr[0])
       ? (arr as unknown[][]).map((r) => r.map(Number))
       : [(arr as unknown[]).map(Number)];
-    if (!rows2.length || !rows2[0].length || rows2.some((r) => r.length !== rows2[0].length || r.some((z) => !isFinite(z)))) {
+    if (
+      !rows2.length ||
+      !rows2[0].length ||
+      rows2.some((r) => r.length !== rows2[0].length || r.some((z) => !isFinite(z)))
+    ) {
       throw new Error(t('e.calcArgs'));
     }
     return rows2;
   };
-  const frobNorm = (a: number[][]): number => Math.sqrt(a.reduce((s, r) => s + r.reduce((s2, z) => s2 + z * z, 0), 0));
+  const frobNorm = (a: number[][]): number =>
+    Math.sqrt(a.reduce((s, r) => s + r.reduce((s2, z) => s2 + z * z, 0), 0));
 
   const rankImpl = (m: unknown, tol?: unknown): number => {
     const a = to2D(m).map((r) => r.slice());
@@ -722,7 +771,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
   };
   /** Скаляр → скаляр; массив/матрица → поэлементно (mathjs Matrix). */
   const asArrAny = <T>(w: unknown, f: (x: number) => T): T | T[] => {
-    if (Array.isArray(w)) return math.matrix((w as unknown[]).map((z) => f(Number(z))) as never) as unknown as T[];
+    if (Array.isArray(w))
+      return math.matrix((w as unknown[]).map((z) => f(Number(z))) as never) as unknown as T[];
     if (w !== null && typeof w === 'object' && 'toArray' in (w as object)) {
       const flat = ((w as { toArray: () => unknown }).toArray() as unknown[]).flat(Infinity);
       return math.matrix(flat.map((z) => f(Number(z))) as never) as unknown as T[];
@@ -731,15 +781,35 @@ export function buildPackScope(math: MathJsInstance): Scope {
   };
 
   const PROP_ALIASES: Array<[string, MatPropKey]> = [
-    ['sigma', 'sigma'], ['conductivity', 'sigma'], ['cond', 'sigma'],
-    ['rho', 'rho'], ['density', 'rho'],
-    ['epsr', 'eps_r'], ['epsilonr', 'eps_r'], ['permittivity', 'eps_r'], ['dielectricconstant', 'eps_r'], ['dk', 'eps_r'],
-    ['mur', 'mu_r'], ['permeability', 'mu_r'],
-    ['alphares', 'alpha_res'], ['alphatemp', 'alpha_res'], ['tcr', 'alpha_res'], ['alpha', 'alpha_res'],
-    ['melting', 'melting'], ['meltingpoint', 'melting'], ['melt', 'melting'],
-    ['ct', 'ct'], ['thermalconductivity', 'ct'], ['lambda', 'ct'], ['ktherm', 'ct'],
-    ['cp', 'cp'], ['specificheat', 'cp'], ['heatcapacity', 'cp'],
-    ['bandgap', 'bandgap'], ['eg', 'bandgap'], ['gap', 'bandgap'],
+    ['sigma', 'sigma'],
+    ['conductivity', 'sigma'],
+    ['cond', 'sigma'],
+    ['rho', 'rho'],
+    ['density', 'rho'],
+    ['epsr', 'eps_r'],
+    ['epsilonr', 'eps_r'],
+    ['permittivity', 'eps_r'],
+    ['dielectricconstant', 'eps_r'],
+    ['dk', 'eps_r'],
+    ['mur', 'mu_r'],
+    ['permeability', 'mu_r'],
+    ['alphares', 'alpha_res'],
+    ['alphatemp', 'alpha_res'],
+    ['tcr', 'alpha_res'],
+    ['alpha', 'alpha_res'],
+    ['melting', 'melting'],
+    ['meltingpoint', 'melting'],
+    ['melt', 'melting'],
+    ['ct', 'ct'],
+    ['thermalconductivity', 'ct'],
+    ['lambda', 'ct'],
+    ['ktherm', 'ct'],
+    ['cp', 'cp'],
+    ['specificheat', 'cp'],
+    ['heatcapacity', 'cp'],
+    ['bandgap', 'bandgap'],
+    ['eg', 'bandgap'],
+    ['gap', 'bandgap'],
   ];
   const matPropKeyOf = (s: string): MatPropKey | undefined => {
     const n = s.toLowerCase().replace(/[^a-z0-9]/gi, '');
@@ -780,11 +850,12 @@ export function buildPackScope(math: MathJsInstance): Scope {
     if (!(w > 0 && h > 0 && er > 1)) throw new Error(t('e.calcArgs'));
     const wh = w / h;
     if (wh <= 1) {
-      const ee = (er + 1) / 2 + ((er - 1) / 2) * (1 / Math.sqrt(1 + 12 / wh) + 0.04 * (1 - wh) ** 2);
+      const ee =
+        (er + 1) / 2 + ((er - 1) / 2) * (1 / Math.sqrt(1 + 12 / wh) + 0.04 * (1 - wh) ** 2);
       return (60 / Math.sqrt(ee)) * Math.log(8 / wh + 0.25 * wh);
     }
-    const ee = (er + 1) / 2 + ((er - 1) / 2) / Math.sqrt(1 + 12 / wh);
-    return 120 * Math.PI / (Math.sqrt(ee) * (wh + 1.393 + 0.667 * Math.log(wh + 1.444)));
+    const ee = (er + 1) / 2 + (er - 1) / 2 / Math.sqrt(1 + 12 / wh);
+    return (120 * Math.PI) / (Math.sqrt(ee) * (wh + 1.393 + 0.667 * Math.log(wh + 1.444)));
   };
 
   const crc16Impl = (s: string): number => {
@@ -806,7 +877,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
   })();
   const crc32Impl = (s: string): number => {
     let crc = 0xffffffff;
-    for (let i = 0; i < s.length; i++) crc = CRC32_TAB[(crc ^ s.charCodeAt(i)) & 0xff] ^ (crc >>> 8);
+    for (let i = 0; i < s.length; i++)
+      crc = CRC32_TAB[(crc ^ s.charCodeAt(i)) & 0xff] ^ (crc >>> 8);
     return (crc ^ 0xffffffff) >>> 0;
   };
   const fnv1aImpl = (s: string): number => {
@@ -822,24 +894,42 @@ export function buildPackScope(math: MathJsInstance): Scope {
   /** Обратная стандартная нормальная CDF, q∈(0,1). Алгоритм Acklam. */
   const normInvCdf = (q: number): number => {
     if (!(q > 0 && q < 1)) throw new Error(t('e.calcArgs'));
-    const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269, -30.66479806614716, 2.506628277459239];
-    const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
-    const c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+    const a = [
+      -39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269,
+      -30.66479806614716, 2.506628277459239,
+    ];
+    const b = [
+      -54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972,
+      -13.28068155288572,
+    ];
+    const c = [
+      -0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734,
+      4.374664141464968, 2.938163982698783,
+    ];
     const d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
     const plow = 0.02425;
     const phigh = 1 - plow;
     let x: number;
     if (q < plow) {
       x = Math.sqrt(-2 * Math.log(q));
-      return (((((c[0] * x + c[1]) * x + c[2]) * x + c[3]) * x + c[4]) * x + c[5]) / ((((d[0] * x + d[1]) * x + d[2]) * x + d[3]) * x + 1);
+      return (
+        (((((c[0] * x + c[1]) * x + c[2]) * x + c[3]) * x + c[4]) * x + c[5]) /
+        ((((d[0] * x + d[1]) * x + d[2]) * x + d[3]) * x + 1)
+      );
     }
     if (q <= phigh) {
       x = q - 0.5;
       const r = x * x;
-      return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * x / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+      return (
+        ((((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * x) /
+        (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1)
+      );
     }
     x = Math.sqrt(-2 * Math.log(1 - q));
-    return -(((((c[0] * x + c[1]) * x + c[2]) * x + c[3]) * x + c[4]) * x + c[5]) / ((((d[0] * x + d[1]) * x + d[2]) * x + d[3]) * x + 1);
+    return (
+      -(((((c[0] * x + c[1]) * x + c[2]) * x + c[3]) * x + c[4]) * x + c[5]) /
+      ((((d[0] * x + d[1]) * x + d[2]) * x + d[3]) * x + 1)
+    );
   };
   /**
    * Односторонняя обратная CDF Стьюдента F⁻¹(q; ν).
@@ -865,10 +955,13 @@ export function buildPackScope(math: MathJsInstance): Scope {
     const n2 = N * N;
     const n3 = n2 * N;
     const n4 = n3 * N;
-    return z + (z3 + z) / (4 * N)
-      + (5 * z5 + 16 * z3 + 3 * z) / (96 * n2)
-      + (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * n3)
-      + (79 * z9 + 779 * z7 + 1482 * z5 - 1920 * z3 - 945 * z) / (92160 * n4);
+    return (
+      z +
+      (z3 + z) / (4 * N) +
+      (5 * z5 + 16 * z3 + 3 * z) / (96 * n2) +
+      (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * n3) +
+      (79 * z9 + 779 * z7 + 1482 * z5 - 1920 * z3 - 945 * z) / (92160 * n4)
+    );
   };
   /** Округление неопределённости ВВЕРХ до 2 значащих цифр (консервативно, GUM 7.2.6). */
   const uncUp2 = (U: number): number => {
@@ -908,7 +1001,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
     // Своя единица: defunit("smoot", "1.7*m") — дальше smoot как обычная единица
     defunit: (name: unknown, def: unknown) => {
       const nm = String(name);
-      if (!/^[A-Za-z_µΩ][A-Za-z_0-9µΩ]*$/.test(nm)) throw new Error(t('e.badUnitName', { name: nm }));
+      if (!/^[A-Za-z_µΩ][A-Za-z_0-9µΩ]*$/.test(nm))
+        throw new Error(t('e.badUnitName', { name: nm }));
       math.createUnit(nm, String(def));
       return math.unit(String(def));
     },
@@ -1247,7 +1341,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const v = needStr(evNode(args[1], scope));
       const at = needNum(evNode(args[2], scope));
       const hArg = args.length > 3 ? evNode(args[3], scope) : null;
-      const h = hArg === null ? Math.cbrt(Number.EPSILON) * Math.max(1, Math.abs(at)) : needNum(hArg);
+      const h =
+        hArg === null ? Math.cbrt(Number.EPSILON) * Math.max(1, Math.abs(at)) : needNum(hArg);
       if (!/^[A-Za-z_]\w*$/.test(v) || !(h > 0)) throw new Error(t('e.calcArgs'));
       const ev = numEvaluator(expr, scope);
       const f = (x: number): number => ev({ [v]: x });
@@ -1333,7 +1428,10 @@ export function buildPackScope(math: MathJsInstance): Scope {
     // lsolve([[3,-1],[1,2]], [5,5]) — точное решение СЛАУ
     lsolve: (A: unknown, b: unknown) => {
       try {
-        const r = math.lusolve(A as never, (b as never[]).length !== undefined ? (b as never) : b as never) as unknown as { toArray: () => unknown };
+        const r = math.lusolve(
+          A as never,
+          (b as never[]).length !== undefined ? (b as never) : (b as never),
+        ) as unknown as { toArray: () => unknown };
         const arr = (r.toArray() as unknown[]).flat(Infinity).map(Number);
         return math.matrix(arr);
       } catch {
@@ -1362,7 +1460,10 @@ export function buildPackScope(math: MathJsInstance): Scope {
         const Xm = math.matrix(X as never);
         const yv = math.matrix(y as never);
         const Xt = math.transpose(Xm);
-        const beta = math.lusolve(math.multiply(Xt, Xm) as never, math.multiply(Xt, yv) as never) as unknown as { toArray: () => unknown };
+        const beta = math.lusolve(
+          math.multiply(Xt, Xm) as never,
+          math.multiply(Xt, yv) as never,
+        ) as unknown as { toArray: () => unknown };
         return math.matrix((beta.toArray() as unknown[]).flat(Infinity).map(Number));
       } catch {
         throw new Error(t('e.calcNoConv'));
@@ -1372,13 +1473,23 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const xs = asArrD(x).map(Number);
       const ys = asArrD(y).map(Number);
       const deg = Math.floor(Number(n));
-      if (xs.length !== ys.length || xs.length < 2 || !xs.every(isFinite) || !ys.every(isFinite) || !(deg >= 1) || deg >= xs.length) {
+      if (
+        xs.length !== ys.length ||
+        xs.length < 2 ||
+        !xs.every(isFinite) ||
+        !ys.every(isFinite) ||
+        !(deg >= 1) ||
+        deg >= xs.length
+      ) {
         throw new Error(t('e.calcArgs'));
       }
       const V = xs.map((xi) => Array.from({ length: deg + 1 }, (_, p) => xi ** p));
       try {
         const Vt = math.transpose(math.matrix(V));
-        const beta = math.lusolve(math.multiply(Vt, math.matrix(V)) as never, math.multiply(Vt, math.matrix(ys)) as never) as unknown as { toArray: () => unknown };
+        const beta = math.lusolve(
+          math.multiply(Vt, math.matrix(V)) as never,
+          math.multiply(Vt, math.matrix(ys)) as never,
+        ) as unknown as { toArray: () => unknown };
         return math.matrix((beta.toArray() as unknown[]).flat(Infinity).map(Number));
       } catch {
         throw new Error(t('e.calcNoConv'));
@@ -1411,7 +1522,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
     bitnot: (a: unknown, w?: unknown) => {
       const W = optInt(w, 8);
       checkWidth(W);
-      return (~u32of(a)) & maskOf(W);
+      return ~u32of(a) & maskOf(W);
     },
     shl: (a: unknown, n: unknown) => (u32of(a) << (truncI(n) & 31)) >>> 0,
     shr: (a: unknown, n: unknown) => u32of(a) >>> (truncI(n) & 31),
@@ -1589,7 +1700,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const ev = numEvaluator(expr, scope);
       const f = (x: number): number => ev({ [v]: x });
       const sc = Math.max(1, Math.abs(a));
-      const probe = (fn: (x: number) => number, h: number, side: number): number => fn(a + side * h * sc);
+      const probe = (fn: (x: number) => number, h: number, side: number): number =>
+        fn(a + side * h * sc);
       const converge = (fn: (x: number) => number): number => {
         try {
           return convergeGrid(fn);
@@ -1645,7 +1757,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
           const t2 = t1.slice(0, -1).map((r, k) => (16 * t1[k + 1] - r) / 15);
           const last = t2[t2.length - 1];
           const prev = t2[t2.length - 2];
-          if (Math.abs(last - prev) > 1e-3 * (1 + Math.abs(last))) throw new Error(t('e.calcNoConv'));
+          if (Math.abs(last - prev) > 1e-3 * (1 + Math.abs(last)))
+            throw new Error(t('e.calcNoConv'));
           // субпикоскоп — честный ноль, а не шум экстраполяции
           const snapped = Math.abs(last) < 1e-12 ? 0 : last;
           cand = side === sides[0] ? snapped : (cand + snapped) / 2;
@@ -1659,8 +1772,13 @@ export function buildPackScope(math: MathJsInstance): Scope {
         let num = '';
         let den = '';
         try {
-          const root = math.parse(expr) as unknown as { type?: string; op?: string; args?: unknown[] };
-          if (root?.type !== 'OperatorNode' || root.op !== '/' || root.args?.length !== 2) throw new Error('no');
+          const root = math.parse(expr) as unknown as {
+            type?: string;
+            op?: string;
+            args?: unknown[];
+          };
+          if (root?.type !== 'OperatorNode' || root.op !== '/' || root.args?.length !== 2)
+            throw new Error('no');
           num = String(root.args[0]);
           den = String(root.args[1]);
         } catch {
@@ -1708,7 +1826,11 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const expr = needStr(evNode(args[0], scope));
       const vars = needStrVec(evNode(args[1], scope));
       const pt = needNumVec(evNode(args[2], scope));
-      if (!vars.length || vars.length !== pt.length || vars.some((x) => !/^[A-Za-z_]\w*$/.test(x))) {
+      if (
+        !vars.length ||
+        vars.length !== pt.length ||
+        vars.some((x) => !/^[A-Za-z_]\w*$/.test(x))
+      ) {
         throw new Error(t('e.calcArgs'));
       }
       const at = numEvaluator(expr, scope);
@@ -1735,7 +1857,9 @@ export function buildPackScope(math: MathJsInstance): Scope {
     // eigen([[2,1],[1,2]]) → [3, 1]
     eigen: (A: unknown) => {
       try {
-        const ev = (math as unknown as { eigs: (m: unknown) => { values: unknown } }).eigs(A as never);
+        const ev = (math as unknown as { eigs: (m: unknown) => { values: unknown } }).eigs(
+          A as never,
+        );
         const arr = asArrD(ev.values);
         return math.matrix(arr as never);
       } catch {
@@ -1749,12 +1873,16 @@ export function buildPackScope(math: MathJsInstance): Scope {
       if (a.some((r) => r.length !== n)) throw new Error(t('e.calcArgs'));
       try {
         // точное 2-нормное число: σmax/σmin через собственные числа AᵀA
-        const AtA = a.map((_, i) => a.map((__, j) => {
-          let s = 0;
-          for (let k = 0; k < n; k++) s += a[k][i] * a[k][j];
-          return s;
-        }));
-        const ev = (math as unknown as { eigs: (m: unknown) => { values: unknown } }).eigs(math.matrix(AtA));
+        const AtA = a.map((_, i) =>
+          a.map((__, j) => {
+            let s = 0;
+            for (let k = 0; k < n; k++) s += a[k][i] * a[k][j];
+            return s;
+          }),
+        );
+        const ev = (math as unknown as { eigs: (m: unknown) => { values: unknown } }).eigs(
+          math.matrix(AtA),
+        );
         const lam = asArrD(ev.values).map((z) => {
           const c = toC(z);
           if (Math.abs(c.im) > 1e-9 * Math.max(1, Math.abs(c.re))) throw new Error('complex-eig');
@@ -1776,7 +1904,10 @@ export function buildPackScope(math: MathJsInstance): Scope {
       if (typeof p === 'string' && p.toLowerCase() === 'inf') return Math.max(...f.map(Math.abs));
       const q = Number(p);
       if (!isFinite(q) || q <= 0) throw new Error(t('e.calcArgs'));
-      return Math.pow(f.reduce((s, z) => s + Math.abs(z) ** q, 0), 1 / q);
+      return Math.pow(
+        f.reduce((s, z) => s + Math.abs(z) ** q, 0),
+        1 / q,
+      );
     },
     matNormF: (A: unknown) => frobNorm(to2D(A)),
     cNK: (n: unknown, k: unknown) => {
@@ -1811,7 +1942,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const K = truncI(k);
       const N = truncI(n);
       const P = needNum(p);
-      if (N < 0 || N > 10000 || K < 0 || K > N || !(P >= 0 && P <= 1)) throw new Error(t('e.calcArgs'));
+      if (N < 0 || N > 10000 || K < 0 || K > N || !(P >= 0 && P <= 1))
+        throw new Error(t('e.calcArgs'));
       return cNKImpl(N, K) * P ** K * (1 - P) ** (N - K);
     },
     poissonPmf: (k: unknown, lam: unknown) => {
@@ -1892,7 +2024,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const mm = needNum(M);
       const rr = needNum(r);
       if (!(mm > 0 && rr > 0)) throw new Error(t('e.calcArgs'));
-      return Math.sqrt(6.6743e-11 * mm / rr);
+      return Math.sqrt((6.6743e-11 * mm) / rr);
     },
     escapeVel: (M: unknown, r: unknown) => {
       const mm = needNum(M);
@@ -1904,7 +2036,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const rr = needNum(r);
       const mm = needNum(M);
       if (!(rr > 0 && mm > 0)) throw new Error(t('e.calcArgs'));
-      return 2 * Math.PI * Math.sqrt((rr ** 3) / (6.6743e-11 * mm));
+      return 2 * Math.PI * Math.sqrt(rr ** 3 / (6.6743e-11 * mm));
     },
     dopplerSnd: (f: unknown, vs: unknown, vo?: unknown, c?: unknown) => {
       const ff = needNum(f);
@@ -1983,7 +2115,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
     },
     // vswr(0.2) или vswr(75, 50)
     vswr: (a: unknown, b?: unknown) => {
-      const g = b === undefined ? cAbs(a) : cAbs((S.gammaZL as (x: unknown, y: unknown) => unknown)(a, b));
+      const g =
+        b === undefined ? cAbs(a) : cAbs((S.gammaZL as (x: unknown, y: unknown) => unknown)(a, b));
       if (!(g >= 0)) throw new Error(t('e.calcArgs'));
       if (g >= 1) return Infinity;
       return (1 + g) / (1 - g);
@@ -2012,7 +2145,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
       return ETA0 * Math.sqrt(mr / er);
     },
     // propConst(3.3, 0.012, 10e9) → [alpha, beta]
-    propConst: (epsR: unknown, tanD: unknown, f: unknown, muR?: unknown) => propConstImpl(epsR, tanD, f, muR),
+    propConst: (epsR: unknown, tanD: unknown, f: unknown, muR?: unknown) =>
+      propConstImpl(epsR, tanD, f, muR),
     attenDb: (alpha: unknown, len: unknown) => needNum(alpha) * needNum(len) * 8.686,
     phaseDeg: (beta: unknown, len: unknown) => (needNum(beta) * needNum(len) * 180) / Math.PI,
     // коаксиал: a — внутр. радиус, b — внешний (м); ёмкость/индуктивность на метр
@@ -2021,13 +2155,13 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const aa = needNum(a);
       const bb = needNum(b);
       if (!(er > 0 && aa > 0 && bb > aa)) throw new Error(t('e.calcArgs'));
-      return ((2 * Math.PI * EPS0 * er) / Math.log(bb / aa));
+      return (2 * Math.PI * EPS0 * er) / Math.log(bb / aa);
     },
     coaxInd: (a: unknown, b: unknown) => {
       const aa = needNum(a);
       const bb = needNum(b);
       if (!(aa > 0 && bb > aa)) throw new Error(t('e.calcArgs'));
-      return ((MU0 / (2 * Math.PI)) * Math.log(bb / aa));
+      return (MU0 / (2 * Math.PI)) * Math.log(bb / aa);
     },
     coaxZ: (epsR: unknown, a: unknown, b: unknown) => {
       const er = needNum(epsR);
@@ -2068,22 +2202,22 @@ export function buildPackScope(math: MathJsInstance): Scope {
     coulombF: (q1: unknown, q2: unknown, r: unknown) => {
       const rr = needNum(r);
       if (!(rr > 0)) throw new Error(t('e.calcArgs'));
-      return ((needNum(q1) * needNum(q2)) / (4 * Math.PI * EPS0 * rr * rr));
+      return (needNum(q1) * needNum(q2)) / (4 * Math.PI * EPS0 * rr * rr);
     },
     ePointQ: (q: unknown, r: unknown) => {
       const rr = needNum(r);
       if (!(rr > 0)) throw new Error(t('e.calcArgs'));
-      return (needNum(q) / (4 * Math.PI * EPS0 * rr * rr));
+      return needNum(q) / (4 * Math.PI * EPS0 * rr * rr);
     },
     bWire: (I: unknown, r: unknown) => {
       const rr = needNum(r);
       if (!(rr > 0)) throw new Error(t('e.calcArgs'));
-      return ((MU0 * needNum(I)) / (2 * Math.PI * rr));
+      return (MU0 * needNum(I)) / (2 * Math.PI * rr);
     },
     cycFreq: (q: unknown, B: unknown, m: unknown) => {
       const mm = needNum(m);
       if (!(mm > 0)) throw new Error(t('e.calcArgs'));
-      return (Math.abs(needNum(q) * needNum(B)) / (2 * Math.PI * mm));
+      return Math.abs(needNum(q) * needNum(B)) / (2 * Math.PI * mm);
     },
     // Фриис: Pt — Вт, Gt/Gr — разы, lam/d — м → Pr, Вт
     friisPr: (Pt: unknown, Gt: unknown, Gr: unknown, lam: unknown, d: unknown) => {
@@ -2093,7 +2227,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const l = needNum(lam);
       const dd = needNum(d);
       if (!(pt >= 0 && gt > 0 && gr > 0 && l > 0 && dd > 0)) throw new Error(t('e.calcArgs'));
-      return pt * gt * gr * ((l / (4 * Math.PI * dd)) ** 2);
+      return pt * gt * gr * (l / (4 * Math.PI * dd)) ** 2;
     },
     friisDb: (PtDbm: unknown, GtDb: unknown, GrDb: unknown, f: unknown, d: unknown) => {
       const pt = needNum(PtDbm);
@@ -2152,7 +2286,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const qq = needNum(q);
       const l = needNum(L);
       if (!(isFinite(qq) && l > 0)) throw new Error(t('e.calcArgs'));
-      return math.matrix([qq * l / 2, qq * l * l / 12, qq * l / 2, -qq * l * l / 12]);
+      return math.matrix([(qq * l) / 2, (qq * l * l) / 12, (qq * l) / 2, (-qq * l * l) / 12]);
     },
     // Стержень на растяжение–сжатие: ke = EA/L · [[1, −1], [−1, 1]].
     barKe: (E: unknown, A: unknown, L: unknown) => {
@@ -2161,7 +2295,10 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const l = needNum(L);
       if (!(e > 0 && a > 0 && l > 0)) throw new Error(t('e.calcArgs'));
       const k = (e * a) / l;
-      return math.matrix([[k, -k], [-k, k]]);
+      return math.matrix([
+        [k, -k],
+        [-k, k],
+      ]);
     },
 
     // ---------- САУ / АЧХ-ФЧХ (Bode) ----------
@@ -2195,7 +2332,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const lo = needNum(wmin);
       const hi = needNum(wmax);
       const nn = n === undefined ? 200 : needNum(n);
-      if (!(lo > 0 && hi > lo && Number.isInteger(nn) && nn >= 3 && nn <= 1000)) throw new Error(t('e.calcArgs'));
+      if (!(lo > 0 && hi > lo && Number.isInteger(nn) && nn >= 3 && nn <= 1000))
+        throw new Error(t('e.calcArgs'));
       const out: number[] = new Array(nn);
       const llo = Math.log(lo);
       const lhi = Math.log(hi);
@@ -2209,7 +2347,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const nn = n === undefined ? 200 : needNum(n);
       const N = coefArr(num);
       const D = coefArr(den);
-      if (!(lo > 0 && hi > lo && Number.isInteger(nn) && nn >= 3 && nn <= 1000)) throw new Error(t('e.calcArgs'));
+      if (!(lo > 0 && hi > lo && Number.isInteger(nn) && nn >= 3 && nn <= 1000))
+        throw new Error(t('e.calcArgs'));
       const llo = Math.log(lo);
       const lhi = Math.log(hi);
       const rows: number[][] = [];
@@ -2318,7 +2457,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
     kCov: (nu: unknown, P?: unknown) => {
       const N = Number(nu);
       const PP = P === undefined ? 0.95 : needNum(P);
-      if (typeof nu === 'boolean' || !(N > 0) || !(PP > 0 && PP < 1)) throw new Error(t('e.calcArgs'));
+      if (typeof nu === 'boolean' || !(N > 0) || !(PP > 0 && PP < 1))
+        throw new Error(t('e.calcArgs'));
       return tStudCdf((1 + PP) / 2, N); // GUM G.6.4: k = t_p(νeff)
     },
     uExpand: (uc: unknown, k: unknown) => {
@@ -2339,13 +2479,18 @@ export function buildPackScope(math: MathJsInstance): Scope {
     //   [y_mean, u_y, U95]
     uMC: raw((args, _m, scope) => {
       const model = needStr(evNode(args[0], scope));
-      const N = args.length > 2 && evNode(args[2], scope) !== null ? needNum(evNode(args[2], scope)) : 200000;
-      const seed = args.length > 3 && evNode(args[3], scope) !== null ? needNum(evNode(args[3], scope)) : null;
+      const N =
+        args.length > 2 && evNode(args[2], scope) !== null
+          ? needNum(evNode(args[2], scope))
+          : 200000;
+      const seed =
+        args.length > 3 && evNode(args[3], scope) !== null ? needNum(evNode(args[3], scope)) : null;
       // Разбор матрицы входов: имена берутся как символы из AST (без вычисления),
       // чтобы запись [[R1, 100, 1, "rect"]] работала без предобъявления R1.
       type Cell = { type: 'name' | 'num' | 'str' | 'other'; value: string | number | null };
       const astCell = (n: MathNode): Cell => {
-        if (n.type === 'SymbolNode') return { type: 'name', value: (n as unknown as { name: string }).name };
+        if (n.type === 'SymbolNode')
+          return { type: 'name', value: (n as unknown as { name: string }).name };
         const v = (n as { value?: unknown }).value;
         if (n.type === 'ConstantNode' && typeof v === 'number') return { type: 'num', value: v };
         if (n.type === 'ConstantNode' && typeof v === 'string') return { type: 'str', value: v };
@@ -2384,7 +2529,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
         } else if (r.length > 3 && r[3] && r[3].type !== 'other') {
           throw new Error(t('e.calcArgs'));
         }
-        if (!(u >= 0) || !['norm', 'rect', 'tri', 'ushape'].includes(dist)) throw new Error(t('e.calcArgs'));
+        if (!(u >= 0) || !['norm', 'rect', 'tri', 'ushape'].includes(dist))
+          throw new Error(t('e.calcArgs'));
         return { name, mean, u, dist };
       };
       let inputs: ReturnType<typeof rowInputs>[];
@@ -2396,7 +2542,9 @@ export function buildPackScope(math: MathJsInstance): Scope {
         const M0 = evNode(args[1], scope);
         let a: unknown;
         if (M0 !== null && typeof M0 === 'object' && 'toArray' in (M0 as object)) {
-          a = ((M0 as { toArray: () => unknown }).toArray() as unknown[]).map((r) => (Array.isArray(r) ? [...r] : [r]));
+          a = ((M0 as { toArray: () => unknown }).toArray() as unknown[]).map((r) =>
+            Array.isArray(r) ? [...r] : [r],
+          );
         } else if (Array.isArray(M0)) {
           a = (M0 as unknown[]).map((r) => (Array.isArray(r) ? [...r] : [r]));
         } else {
@@ -2404,20 +2552,25 @@ export function buildPackScope(math: MathJsInstance): Scope {
         }
         inputs = (a as unknown[][]).map((r) => {
           const c0 = String(r[0]);
-          const cell0: Cell = /^[A-Za-z_]\w*$/.test(c0) ? { type: 'name', value: c0 } : { type: 'str', value: c0 };
+          const cell0: Cell = /^[A-Za-z_]\w*$/.test(c0)
+            ? { type: 'name', value: c0 }
+            : { type: 'str', value: c0 };
           return rowInputs([
             cell0,
             { type: 'other', value: r[1] as number },
             { type: 'other', value: r[2] as number },
-            r.length > 3 && r[3] !== undefined ? { type: 'str', value: String(r[3]) } : { type: 'other', value: null },
+            r.length > 3 && r[3] !== undefined
+              ? { type: 'str', value: String(r[3]) }
+              : { type: 'other', value: null },
           ]);
         });
       }
-      if (!inputs.length || !Number.isInteger(N) || N < 100 || N > 2000000) throw new Error(t('e.calcArgs'));
+      if (!inputs.length || !Number.isInteger(N) || N < 100 || N > 2000000)
+        throw new Error(t('e.calcArgs'));
       const ev = numEvaluator(model, scope);
       // mulberry32 — детерминированный PRNG; gaussian — Box–Muller на той же ленте
       const makePrng = (): (() => number) => {
-        let s = (seed === null ? (Math.random() * 0xffffffff) >>> 0 : (seed >>> 0)) || 0x9e3779b9;
+        let s = (seed === null ? (Math.random() * 0xffffffff) >>> 0 : seed >>> 0) || 0x9e3779b9;
         return () => {
           s = (s + 0x6d2b79f5) >>> 0;
           let x = s;
@@ -2468,7 +2621,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
       for (let i = 0; i < N; i++) s2 += (ys[i] - mean) * (ys[i] - mean);
       const uy = Math.sqrt(s2 / (N - 1)); // GUM-S1 8.3: стандартная неопределённость
       const sorted = Array.from(ys).sort((p, q) => p - q);
-      const pct = (p: number): number => sorted[Math.min(N - 1, Math.max(0, Math.round(p * (N - 1))))];
+      const pct = (p: number): number =>
+        sorted[Math.min(N - 1, Math.max(0, Math.round(p * (N - 1))))];
       const lo = pct(0.025);
       const hi = pct(0.975);
       return math.matrix([mean, uy, (hi - lo) / 2]); // GUM-S1 7.10: 95% интервал
@@ -2477,7 +2631,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const SS = needNum(S);
       const N = needNum(n);
       const PP = P === undefined ? 0.95 : needNum(P);
-      if (!(SS >= 0) || !Number.isInteger(N) || N < 2 || !(PP > 0 && PP < 1)) throw new Error(t('e.calcArgs'));
+      if (!(SS >= 0) || !Number.isInteger(N) || N < 2 || !(PP > 0 && PP < 1))
+        throw new Error(t('e.calcArgs'));
       return tStudCdf((1 + PP) / 2, N - 1) * (SS / Math.sqrt(N)); // ГОСТ 8.736: ε = t·S(x̄)
     },
     thetaComb: (v: unknown) => {
@@ -2530,7 +2685,9 @@ export function buildPackScope(math: MathJsInstance): Scope {
       // p лабораторий × n параллелей (строки — лаборатории). Схема 5725-2.
       let a: unknown;
       if (M !== null && typeof M === 'object' && 'toArray' in (M as object)) {
-        a = ((M as { toArray: () => unknown }).toArray() as unknown[]).map((r) => (Array.isArray(r) ? [...r] : [r]));
+        a = ((M as { toArray: () => unknown }).toArray() as unknown[]).map((r) =>
+          Array.isArray(r) ? [...r] : [r],
+        );
       } else if (Array.isArray(M)) {
         a = (M as unknown[]).map((r) => (Array.isArray(r) ? [...r] : [r]));
       } else {
@@ -2544,7 +2701,9 @@ export function buildPackScope(math: MathJsInstance): Scope {
       }
       const means = rows.map((r) => r.reduce((s, z) => s + z, 0) / n);
       const grand = means.reduce((s, z) => s + z, 0) / p;
-      const MSe = rows.reduce((s, r, i) => s + r.reduce((t, z) => t + (z - means[i]) ** 2, 0), 0) / (p * (n - 1));
+      const MSe =
+        rows.reduce((s, r, i) => s + r.reduce((t, z) => t + (z - means[i]) ** 2, 0), 0) /
+        (p * (n - 1));
       const MSb = (n * means.reduce((s, m) => s + (m - grand) ** 2, 0)) / (p - 1);
       const sr = Math.sqrt(MSe);
       const sL = Math.sqrt(Math.max(0, (MSb - MSe) / n));
@@ -2593,7 +2752,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
     histC: (v: unknown, nbins?: unknown) => {
       const f = asArrD(v).map(Number);
       const nb = optInt(nbins, 10);
-      if (!f.length || f.some((z) => !isFinite(z)) || nb < 1 || nb > 1000) throw new Error(t('e.calcArgs'));
+      if (!f.length || f.some((z) => !isFinite(z)) || nb < 1 || nb > 1000)
+        throw new Error(t('e.calcArgs'));
       const lo = Math.min(...f);
       const hi = Math.max(...f);
       const counts = new Array<number>(nb).fill(0);
@@ -2626,7 +2786,11 @@ export function buildPackScope(math: MathJsInstance): Scope {
     return [v];
   }
 
-  function sumProdArgs(args: MathNode[], scope: Scope, allowInf = false): [string, string, number, number] {
+  function sumProdArgs(
+    args: MathNode[],
+    scope: Scope,
+    allowInf = false,
+  ): [string, string, number, number] {
     const expr = needStr(evNode(args[0], scope));
     const v = needStr(evNode(args[1], scope));
     const numOrInf = (u: unknown): number => {
@@ -2657,52 +2821,231 @@ export function buildPackScope(math: MathJsInstance): Scope {
 
 /** Имена паков — исключаются из зависимостей (встроенные). */
 export const PACK_NAMES = [
-  'seq', 'linspace', 'rows', 'cols', 'rms', 'sinc', 'augment', 'zscore',
-  'c_light', 'mu_0', 'eps_0', 'h_planck', 'hbar', 'k_B', 'q_e', 'N_A', 'G_const', 'm_e', 'm_p',
-  'm_n', 'u_mass', 'alpha', 'alpha_inv', 'mu_B', 'mu_N', 'R_inf', 'a0', 'r_e', 'lam_compton',
-  'Z_0', 'F_const',
-  'R_gas', 'sigma_sb', 'g_std', 'atm_pa', 'au_m', 'ly_m',
-  'dB', 'dBV', 'idB', 'dBm', 'WdBm', 'lambda_f', 'fspl', 'fspl_dB', 'defunit',
-  'convertTo', 'inUnits', 'hasUnit',
-  'simplify', 'sderiv', 'expand', 'sfactor', 'sint',
-  'nlsolve', 'find', 'minerr', 'minimize', 'maximize', 'root', 'bvp',
-  'ndiff', 'nint', 'nsum', 'nprod', 'numdiff', 'numint', 'numsum', 'numprod',
-  'lsolve', 'polyroots', 'linfit', 'polyfit',
+  'seq',
+  'linspace',
+  'rows',
+  'cols',
+  'rms',
+  'sinc',
+  'augment',
+  'zscore',
+  'c_light',
+  'mu_0',
+  'eps_0',
+  'h_planck',
+  'hbar',
+  'k_B',
+  'q_e',
+  'N_A',
+  'G_const',
+  'm_e',
+  'm_p',
+  'm_n',
+  'u_mass',
+  'alpha',
+  'alpha_inv',
+  'mu_B',
+  'mu_N',
+  'R_inf',
+  'a0',
+  'r_e',
+  'lam_compton',
+  'Z_0',
+  'F_const',
+  'R_gas',
+  'sigma_sb',
+  'g_std',
+  'atm_pa',
+  'au_m',
+  'ly_m',
+  'dB',
+  'dBV',
+  'idB',
+  'dBm',
+  'WdBm',
+  'lambda_f',
+  'fspl',
+  'fspl_dB',
+  'defunit',
+  'convertTo',
+  'inUnits',
+  'hasUnit',
+  'simplify',
+  'sderiv',
+  'expand',
+  'sfactor',
+  'sint',
+  'nlsolve',
+  'find',
+  'minerr',
+  'minimize',
+  'maximize',
+  'root',
+  'bvp',
+  'ndiff',
+  'nint',
+  'nsum',
+  'nprod',
+  'numdiff',
+  'numint',
+  'numsum',
+  'numprod',
+  'lsolve',
+  'polyroots',
+  'linfit',
+  'polyfit',
   // вычислительная техника
-  'dec2bin', 'dec2hex', 'dec2oct', 'bin2dec', 'hex2dec', 'oct2dec',
-  'bitand', 'bitor', 'bitxor', 'bitnot', 'shl', 'shr', 'rol', 'ror',
-  'popcount', 'parity', 'hammdist', 'isPow2', 'nextPow2', 'bytesFmt',
-  'adcSNR', 'adcLevels', 'quantStep', 'shannonCap', 'thermalNoiseV',
-  'fnv1a', 'crc16', 'crc32', 'lfsrSeq',
+  'dec2bin',
+  'dec2hex',
+  'dec2oct',
+  'bin2dec',
+  'hex2dec',
+  'oct2dec',
+  'bitand',
+  'bitor',
+  'bitxor',
+  'bitnot',
+  'shl',
+  'shr',
+  'rol',
+  'ror',
+  'popcount',
+  'parity',
+  'hammdist',
+  'isPow2',
+  'nextPow2',
+  'bytesFmt',
+  'adcSNR',
+  'adcLevels',
+  'quantStep',
+  'shannonCap',
+  'thermalNoiseV',
+  'fnv1a',
+  'crc16',
+  'crc32',
+  'lfsrSeq',
   // высшая математика
-  'taylor', 'limit', 'numgrad', 'dft', 'idft', 'dftMag',
-  'eigen', 'rankMat', 'condNum', 'vecNorm', 'matNormF',
-  'cNK', 'pNK', 'erf', 'normpdf', 'normcdf', 'binomPmf', 'poissonPmf',
-  'interpLin', 'polyvalM', 'trapzY', 'trapzXY',
+  'taylor',
+  'limit',
+  'numgrad',
+  'dft',
+  'idft',
+  'dftMag',
+  'eigen',
+  'rankMat',
+  'condNum',
+  'vecNorm',
+  'matNormF',
+  'cNK',
+  'pNK',
+  'erf',
+  'normpdf',
+  'normcdf',
+  'binomPmf',
+  'poissonPmf',
+  'interpLin',
+  'polyvalM',
+  'trapzY',
+  'trapzXY',
   // физика
-  'kinE', 'potE', 'momP', 'orbitVel', 'escapeVel', 'orbitPeriod',
-  'dopplerSnd', 'gammaRel', 'deBroglie', 'photonE', 'decayN', 'half2lam',
-  'blackbodyP', 'rcTau', 'lcFreq', 'rlcQ',
+  'kinE',
+  'potE',
+  'momP',
+  'orbitVel',
+  'escapeVel',
+  'orbitPeriod',
+  'dopplerSnd',
+  'gammaRel',
+  'deBroglie',
+  'photonE',
+  'decayN',
+  'half2lam',
+  'blackbodyP',
+  'rcTau',
+  'lcFreq',
+  'rlcQ',
   // ЭМ поля
-  'eta0', 'gammaZL', 'vswr', 'reflPow', 'transPow', 'zinLine',
-  'skinDepth', 'waveImp', 'propConst', 'attenDb', 'phaseDeg',
-  'coaxCap', 'coaxInd', 'coaxZ', 'plateCap', 'solenoidL', 'microstripZ',
-  'wgCutoff', 'wgLambda', 'coulombF', 'ePointQ', 'bWire', 'cycFreq',
-  'friisPr', 'friisDb', 'sMag2db', 'db2mag',
-  'argDeg', 'fromPolar',
-  'beamKe', 'beamFe', 'barKe',
+  'eta0',
+  'gammaZL',
+  'vswr',
+  'reflPow',
+  'transPow',
+  'zinLine',
+  'skinDepth',
+  'waveImp',
+  'propConst',
+  'attenDb',
+  'phaseDeg',
+  'coaxCap',
+  'coaxInd',
+  'coaxZ',
+  'plateCap',
+  'solenoidL',
+  'microstripZ',
+  'wgCutoff',
+  'wgLambda',
+  'coulombF',
+  'ePointQ',
+  'bWire',
+  'cycFreq',
+  'friisPr',
+  'friisDb',
+  'sMag2db',
+  'db2mag',
+  'argDeg',
+  'fromPolar',
+  'beamKe',
+  'beamFe',
+  'barKe',
   // САУ / АЧХ-ФЧХ (Bode)
-  'bodeH', 'bodeMagDb', 'bodePhaseDeg', 'bodeFreqs', 'bode',
+  'bodeH',
+  'bodeMagDb',
+  'bodePhaseDeg',
+  'bodeFreqs',
+  'bode',
   // материалы (справочник)
-  'matlist', 'matType', 'matProp', 'matProps', 'matHas',
+  'matlist',
+  'matType',
+  'matProp',
+  'matProps',
+  'matHas',
   // программирование: строки/массивы
-  'chrU', 'ordU', 'strlenU', 'strUpper', 'strLower', 'substrU',
-  'splitStr', 'joinStr', 'parseNum', 'uniqueVals', 'histC',
+  'chrU',
+  'ordU',
+  'strlenU',
+  'strUpper',
+  'strLower',
+  'substrU',
+  'splitStr',
+  'joinStr',
+  'parseNum',
+  'uniqueVals',
+  'histC',
   // неопределённость измерений (GUM / МИ / ПМГ / 5725 / 21748)
-  'uMean', 'nuMean', 'uRect', 'uTri', 'uNorm', 'uUshape', 'uComb', 'nuEff',
-  'normQuant', 'tStud', 'kCov', 'uExpand', 'uncRound', 'resRound', 'uMC',
-  'confEps', 'thetaComb', 'deltaComb', 'pmgSumAbs', 'pmgRSS', 'pmgExpand',
-  'repLim', 'uTopDown', 'prec5725',
+  'uMean',
+  'nuMean',
+  'uRect',
+  'uTri',
+  'uNorm',
+  'uUshape',
+  'uComb',
+  'nuEff',
+  'normQuant',
+  'tStud',
+  'kCov',
+  'uExpand',
+  'uncRound',
+  'resRound',
+  'uMC',
+  'confEps',
+  'thetaComb',
+  'deltaComb',
+  'pmgSumAbs',
+  'pmgRSS',
+  'pmgExpand',
+  'repLim',
+  'uTopDown',
+  'prec5725',
 ];
 
 /* ---------------- Палитра вставки ---------------- */

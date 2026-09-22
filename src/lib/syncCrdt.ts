@@ -61,7 +61,10 @@ export function canon(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(canon).join(',')}]`;
   if (typeof v === 'object') {
     const o = v as Record<string, unknown>;
-    return `{${Object.keys(o).sort().map((k) => `${JSON.stringify(k)}:${canon(o[k])}`).join(',')}}`;
+    return `{${Object.keys(o)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${canon(o[k])}`)
+      .join(',')}}`;
   }
   const s = JSON.stringify(v);
   return s === undefined ? 'null' : s;
@@ -102,7 +105,8 @@ export function saneMeta(m: unknown): MetaMap {
     if (v && typeof v === 'object') {
       const c = (v as { clock?: unknown }).clock;
       const a = (v as { actor?: unknown }).actor;
-      if (typeof c === 'number' && isFinite(c) && typeof a === 'string') out[k] = { clock: c, actor: a };
+      if (typeof c === 'number' && isFinite(c) && typeof a === 'string')
+        out[k] = { clock: c, actor: a };
     }
   }
   return out;
@@ -163,9 +167,11 @@ export function mergeBlockMaps(
       const lEdit = l && lCh ? (lMeta[id] ?? bMeta[id]) : undefined;
       const rEdit = r && rCh ? (rMeta[id] ?? bMeta[id]) : undefined;
       const winner =
-        lEdit && isNewer(lEdit, t) && (!rEdit || !isNewer(rEdit, lEdit)) ? { b: l as WireBlock, m: lEdit }
-        : rEdit && isNewer(rEdit, t) ? { b: r as WireBlock, m: rEdit }
-          : null;
+        lEdit && isNewer(lEdit, t) && (!rEdit || !isNewer(rEdit, lEdit))
+          ? { b: l as WireBlock, m: lEdit }
+          : rEdit && isNewer(rEdit, t)
+            ? { b: r as WireBlock, m: rEdit }
+            : null;
       if (winner) {
         out.set(id, winner.b);
         outMeta[id] = winner.m;
@@ -196,7 +202,7 @@ export function mergeBlockMaps(
       const lm = lMeta[id];
       const rm = rMeta[id];
       const useR = !l ? true : !r ? false : isNewer(rm, lm) ? true : isNewer(lm, rm) ? false : true;
-      const win = useR ? r as WireBlock : l as WireBlock;
+      const win = useR ? (r as WireBlock) : (l as WireBlock);
       out.set(id, win);
       const wm = useR ? rm : lm;
       if (wm) outMeta[id] = wm;
@@ -218,7 +224,9 @@ export function mergeBlockMaps(
   }
 
   // кап tombstones: самые старые — вон (живые id уже вычищены выше)
-  const tombIds = Object.entries(tomb).sort((a, b) => a[1].clock - b[1].clock || (a[1].actor < b[1].actor ? -1 : 1));
+  const tombIds = Object.entries(tomb).sort(
+    (a, b) => a[1].clock - b[1].clock || (a[1].actor < b[1].actor ? -1 : 1),
+  );
   while (tombIds.length > TOMB_CAP) {
     const drop = tombIds.shift();
     if (drop) delete tomb[drop[0]];

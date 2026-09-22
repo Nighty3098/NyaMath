@@ -2,13 +2,20 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { compilePlotExpr, evaluateLine, preprocessJ, preprocessRanges } from '../engine/mathEngine';
 import { parseUnitScale } from '../engine/unitScale';
 import type { EvalFunction } from 'mathjs';
-import { useDocScope } from './useDocScope';import { useCanvasStore } from '../store/canvasStore';
+import { useDocScope } from './useDocScope';
+import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
 import { t } from '../i18n';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IGrip, ISave, ITable, ITune, IWarn, IX } from './Icon';
-import { columnsToCsv, copyTextToClipboard, downloadTextFile, exportSvgElementToPng, safeFilename } from '../lib/exportFiles';
+import {
+  columnsToCsv,
+  copyTextToClipboard,
+  downloadTextFile,
+  exportSvgElementToPng,
+  safeFilename,
+} from '../lib/exportFiles';
 import { plotBlockToCode } from '../lib/plotCode';
 
 const W = 460;
@@ -161,8 +168,26 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   // Scope последнего пересчёта стора (#2): без повторного recalculateAll.
   const base = useDocScope(blocks);
 
-  const { series, ymin, ymax, err, xticks, yticks, polar, raw: table } = useMemo(() => {
-    const fail = (e: string) => ({ series: [] as Series[], ymin: -1, ymax: 1, err: e, xticks: [] as number[], yticks: [] as number[], polar: null as PolarGrid | null, raw: [] as RawRow[] });
+  const {
+    series,
+    ymin,
+    ymax,
+    err,
+    xticks,
+    yticks,
+    polar,
+    raw: table,
+  } = useMemo(() => {
+    const fail = (e: string) => ({
+      series: [] as Series[],
+      ymin: -1,
+      ymax: 1,
+      err: e,
+      xticks: [] as number[],
+      yticks: [] as number[],
+      polar: null as PolarGrid | null,
+      raw: [] as RawRow[],
+    });
     try {
       const exprs = fnText
         .split(/[;\n]/)
@@ -262,7 +287,12 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
         raw.push({ expr, xs, ys, es });
       });
 
-      if (!allY.length) return { ...fail(t('p2.noData')), series: raw.map((r): Series => ({ expr: r.expr, color: '', d: '', dashed: true })), raw };
+      if (!allY.length)
+        return {
+          ...fail(t('p2.noData')),
+          series: raw.map((r): Series => ({ expr: r.expr, color: '', d: '', dashed: true })),
+          raw,
+        };
       let lo = Math.min(...allY);
       let hi = Math.max(...allY);
       if (lo === hi) {
@@ -285,12 +315,20 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             if (isFinite(y)) maxR = Math.max(maxR, Math.abs(y));
           }
         }
-        if (!(maxR > 0)) return { ...fail(t('p2.noData')), series: raw.map((r): Series => ({ expr: r.expr, color: '', d: '', dashed: true })), raw };
+        if (!(maxR > 0))
+          return {
+            ...fail(t('p2.noData')),
+            series: raw.map((r): Series => ({ expr: r.expr, color: '', d: '', dashed: true })),
+            raw,
+          };
         const cx = PAD_L + (pw - PAD_L - PAD_R) / 2;
         const cy = padT + (ph - padT - PAD_B) / 2;
         const R = (Math.min(pw - PAD_L - PAD_R, ph - padT - PAD_B) / 2 - 8) / maxR;
         polarInfo = { cx, cy, R, maxR };
-        const P = (th: number, r: number): [number, number] => [cx + r * Math.cos(th) * R, cy - r * Math.sin(th) * R];
+        const P = (th: number, r: number): [number, number] => [
+          cx + r * Math.cos(th) * R,
+          cy - r * Math.sin(th) * R,
+        ];
         raw.forEach((r, si) => {
           let d = '';
           const errs: Series['errs'] = [];
@@ -307,7 +345,16 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           });
           out.push({ expr: r.expr, color: pal.series[si % pal.series.length], d, errs });
         });
-        return { series: out, ymin: -maxR, ymax: maxR, err: null as string | null, xticks: [], yticks: [], polar: polarInfo, raw };
+        return {
+          series: out,
+          ymin: -maxR,
+          ymax: maxR,
+          err: null as string | null,
+          xticks: [],
+          yticks: [],
+          polar: polarInfo,
+          raw,
+        };
       }
 
       // декартова проекция
@@ -318,7 +365,8 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           out.push({ expr: r.expr, color, d: '', dashed: true });
           return;
         }
-        const idxMode = r.xs[0] === 0 && r.xs[r.xs.length - 1] === r.xs.length - 1 && r.xs.length !== N_PTS;
+        const idxMode =
+          r.xs[0] === 0 && r.xs[r.xs.length - 1] === r.xs.length - 1 && r.xs.length !== N_PTS;
         const XX = idxMode
           ? (x: number) => PAD_L + (x / Math.max(1, r.xs[r.xs.length - 1])) * (pw - PAD_L - PAD_R)
           : X;
@@ -338,7 +386,12 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             const cx = XX(r.xs[idx]) - slot / 2 + (si + 0.5) * (slot / raw.length);
             const yBase = Y(baseY);
             const yTop = Y(y);
-            bars.push({ x: cx - bw / 2, y: Math.min(yBase, yTop), w: bw, h: Math.abs(yTop - yBase) });
+            bars.push({
+              x: cx - bw / 2,
+              y: Math.min(yBase, yTop),
+              w: bw,
+              h: Math.abs(yTop - yBase),
+            });
             const e = r.es[idx];
             if (e !== null && e > 0) {
               const y1 = Y(y - e);
@@ -378,7 +431,16 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           out.push({ expr: r.expr, color, d, errs });
         }
       });
-      return { series: out, ymin: lo, ymax: hi, err: null as string | null, xticks: logx ? logTicks(xmin, xmax) : niceTicks(xmin, xmax), yticks: niceTicks(lo, hi), polar: null, raw };
+      return {
+        series: out,
+        ymin: lo,
+        ymax: hi,
+        err: null as string | null,
+        xticks: logx ? logTicks(xmin, xmax) : niceTicks(xmin, xmax),
+        yticks: niceTicks(lo, hi),
+        polar: null,
+        raw,
+      };
     } catch (e) {
       return fail(e instanceof Error ? e.message : String(e));
     }
@@ -405,7 +467,9 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
       alert(t('p2.noData'));
       return;
     }
-    void exportSvgElementToPng(svgRef.current, `${baseName}.png`).catch(() => alert(t('p2.noData')));
+    void exportSvgElementToPng(svgRef.current, `${baseName}.png`).catch(() =>
+      alert(t('p2.noData')),
+    );
   };
 
   /** CSV: x + по колонке y на серию (дырки — пустые ячейки) */
@@ -426,7 +490,11 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   const svgW = pw - 24;
   const legY = padT + 12;
 
-  const renderErrors = (list: NonNullable<Series['errs']> | undefined, color: string, key: string | number) => {
+  const renderErrors = (
+    list: NonNullable<Series['errs']> | undefined,
+    color: string,
+    key: string | number,
+  ) => {
     if (!list?.length) return null;
     return (
       <g key={`e${key}`} stroke={color} strokeWidth={1} opacity={0.75}>
@@ -442,7 +510,11 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   };
 
   return (
-    <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: err ? 'auto' : ph + chromeH }}>
+    <div
+      ref={boxRef}
+      className="absolute z-10"
+      style={{ left: block.x, top: block.y, width: pw, height: err ? 'auto' : ph + chromeH }}
+    >
       <div
         data-block-id={block.id}
         className={`nya-block relative w-full h-full rounded-xl px-3 py-2 flex flex-col bg-[var(--sheet)] group ${
@@ -455,319 +527,344 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
         }}
       >
         <div ref={headRef}>
-        <div
-          className="flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing select-none print:hidden"
-          onPointerDown={onGripDown}
-          onPointerMove={onGripMove}
-          onPointerUp={onGripUp}
-          onPointerCancel={onGripUp}
-          onDoubleClick={(e) => e.stopPropagation()}
-        >
-          <span className="text-[var(--faint)] inline-flex" aria-hidden="true">
-            <IGrip />
-          </span>
-          <span className="text-[11px] uppercase tracking-wider text-[var(--accent-ink)]">plot</span>
-          <label htmlFor={`plotfn-${block.id}`} className="sr-only">
-            {t('p2.fnLabel')}
-          </label>
-          <input
-            id={`plotfn-${block.id}`}
-            className="math-input flex-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-2 py-0.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent-line)] select-text"
-            value={fnText}
-            onChange={(e) => updatePlot(block.id, { plotFn: e.target.value })}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-            spellCheck={false}
-            title={t('p2.fnTitle')}
-          />
-          <button
-            type="button"
-            className="p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              doExportPng();
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            title={t('p2.png')}
-            aria-label={t('p2.png')}
+          <div
+            className="flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing select-none print:hidden"
+            onPointerDown={onGripDown}
+            onPointerMove={onGripMove}
+            onPointerUp={onGripUp}
+            onPointerCancel={onGripUp}
+            onDoubleClick={(e) => e.stopPropagation()}
           >
-            <ISave />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              doExportCsv();
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            title={t('p2.csv')}
-            aria-label={t('p2.csv')}
-          >
-            <ITable />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 text-[var(--faint)] hover:text-[var(--danger)] cursor-pointer"
-            onClick={() => removeBlock(block.id)}
-            onPointerDown={(e) => e.stopPropagation()}
-            aria-label={t('p2.delete')}
-          >
-            <IX />
-          </button>
-        </div>
-        <div className="flex items-center gap-1.5 text-[12px] text-[var(--ink-soft)] mb-1 flex-wrap print:hidden">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 min-h-[28px] px-2 rounded-lg cursor-pointer transition-colors duration-150 ease-out active:scale-[0.97]"
-            style={{ background: optsOpen ? 'var(--accent-soft)' : 'transparent', color: optsOpen ? 'var(--accent-ink)' : 'inherit' }}
-            aria-expanded={optsOpen}
-            aria-controls={`plot-opts-${block.id}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setOptsOpen((v) => !v);
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            title={t('p2.moreOptions')}
-          >
-            <ITune />
-            <span className="hidden sm:inline">{t('p2.options')}</span>
-          </button>
-          <label>
-            xmin{' '}
+            <span className="text-[var(--faint)] inline-flex" aria-hidden="true">
+              <IGrip />
+            </span>
+            <span className="text-[11px] uppercase tracking-wider text-[var(--accent-ink)]">
+              plot
+            </span>
+            <label htmlFor={`plotfn-${block.id}`} className="sr-only">
+              {t('p2.fnLabel')}
+            </label>
             <input
-              type="number"
-              aria-label={t('p2.xmin')}
-              className="w-[70px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
-              value={xmin}
-              onChange={(e) => updatePlot(block.id, { plotXmin: Number(e.target.value) })}
+              id={`plotfn-${block.id}`}
+              className="math-input flex-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-2 py-0.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent-line)] select-text"
+              value={fnText}
+              onChange={(e) => updatePlot(block.id, { plotFn: e.target.value })}
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
+              spellCheck={false}
+              title={t('p2.fnTitle')}
             />
-          </label>
-          <label>
-            xmax{' '}
-            <input
-              type="number"
-              aria-label={t('p2.xmax')}
-              className="w-[70px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
-              value={xmax}
-              onChange={(e) => updatePlot(block.id, { plotXmax: Number(e.target.value) })}
+            <button
+              type="button"
+              className="p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                doExportPng();
+              }}
               onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </label>
-          <span className="ml-auto math-input text-[11px] text-[var(--faint)]">
-            {proj === 'polar' ? `r ≤ ${fmtTick(polar?.maxR ?? ymax)}` : `y ∈ [${fmtTick(ymin)}, ${fmtTick(ymax)}]`}
-          </span>
-        </div>
-        {optsOpen && (
-          <div id={`plot-opts-${block.id}`} className="flex items-center gap-2 text-[12px] text-[var(--ink-soft)] mb-1 flex-wrap print:hidden">
-            <label title={t('p2.proj')}>
-              {t('p2.proj')}{' '}
-              <select
-                aria-label={t('p2.proj')}
-                className="min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1 text-[var(--ink)]"
-                value={proj}
-                onChange={(e) => updatePlot(block.id, { plotProj: e.target.value as 'xy' | 'polar' })}
+              title={t('p2.png')}
+              aria-label={t('p2.png')}
+            >
+              <ISave />
+            </button>
+            <button
+              type="button"
+              className="p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                doExportCsv();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              title={t('p2.csv')}
+              aria-label={t('p2.csv')}
+            >
+              <ITable />
+            </button>
+            <button
+              type="button"
+              className="p-1.5 text-[var(--faint)] hover:text-[var(--danger)] cursor-pointer"
+              onClick={() => removeBlock(block.id)}
+              onPointerDown={(e) => e.stopPropagation()}
+              aria-label={t('p2.delete')}
+            >
+              <IX />
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5 text-[12px] text-[var(--ink-soft)] mb-1 flex-wrap print:hidden">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 min-h-[28px] px-2 rounded-lg cursor-pointer transition-colors duration-150 ease-out active:scale-[0.97]"
+              style={{
+                background: optsOpen ? 'var(--accent-soft)' : 'transparent',
+                color: optsOpen ? 'var(--accent-ink)' : 'inherit',
+              }}
+              aria-expanded={optsOpen}
+              aria-controls={`plot-opts-${block.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOptsOpen((v) => !v);
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              title={t('p2.moreOptions')}
+            >
+              <ITune />
+              <span className="hidden sm:inline">{t('p2.options')}</span>
+            </button>
+            <label>
+              xmin{' '}
+              <input
+                type="number"
+                aria-label={t('p2.xmin')}
+                className="w-[70px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                value={xmin}
+                onChange={(e) => updatePlot(block.id, { plotXmin: Number(e.target.value) })}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
-              >
-                <option value="xy">{t('p2.projXy')}</option>
-                <option value="polar">{t('p2.projPolar')}</option>
-              </select>
+              />
             </label>
-            {proj === 'xy' && (
-              <label title={t('p2.trace')}>
-                {t('p2.trace')}{' '}
+            <label>
+              xmax{' '}
+              <input
+                type="number"
+                aria-label={t('p2.xmax')}
+                className="w-[70px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                value={xmax}
+                onChange={(e) => updatePlot(block.id, { plotXmax: Number(e.target.value) })}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </label>
+            <span className="ml-auto math-input text-[11px] text-[var(--faint)]">
+              {proj === 'polar'
+                ? `r ≤ ${fmtTick(polar?.maxR ?? ymax)}`
+                : `y ∈ [${fmtTick(ymin)}, ${fmtTick(ymax)}]`}
+            </span>
+          </div>
+          {optsOpen && (
+            <div
+              id={`plot-opts-${block.id}`}
+              className="flex items-center gap-2 text-[12px] text-[var(--ink-soft)] mb-1 flex-wrap print:hidden"
+            >
+              <label title={t('p2.proj')}>
+                {t('p2.proj')}{' '}
                 <select
-                  aria-label={t('p2.trace')}
+                  aria-label={t('p2.proj')}
                   className="min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1 text-[var(--ink)]"
-                  value={trace}
-                  onChange={(e) => updatePlot(block.id, { plotTrace: e.target.value as 'line' | 'bar' | 'stem' })}
+                  value={proj}
+                  onChange={(e) =>
+                    updatePlot(block.id, { plotProj: e.target.value as 'xy' | 'polar' })
+                  }
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <option value="line">{t('p2.traceLine')}</option>
-                  <option value="bar">{t('p2.traceBar')}</option>
-                  <option value="stem">{t('p2.traceStem')}</option>
+                  <option value="xy">{t('p2.projXy')}</option>
+                  <option value="polar">{t('p2.projPolar')}</option>
                 </select>
               </label>
-            )}
-            {proj === 'xy' && (
-              <label title={t('p2.errTitle')}>
-                ±{' '}
+              {proj === 'xy' && (
+                <label title={t('p2.trace')}>
+                  {t('p2.trace')}{' '}
+                  <select
+                    aria-label={t('p2.trace')}
+                    className="min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1 text-[var(--ink)]"
+                    value={trace}
+                    onChange={(e) =>
+                      updatePlot(block.id, { plotTrace: e.target.value as 'line' | 'bar' | 'stem' })
+                    }
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <option value="line">{t('p2.traceLine')}</option>
+                    <option value="bar">{t('p2.traceBar')}</option>
+                    <option value="stem">{t('p2.traceStem')}</option>
+                  </select>
+                </label>
+              )}
+              {proj === 'xy' && (
+                <label title={t('p2.errTitle')}>
+                  ±{' '}
+                  <input
+                    className="w-[110px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                    value={block.plotErr ?? ''}
+                    placeholder={t('p2.errPh')}
+                    aria-label={t('p2.errExpr')}
+                    onChange={(e) => updatePlot(block.id, { plotErr: e.target.value })}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    spellCheck={false}
+                  />
+                </label>
+              )}
+              <label className="inline-flex items-center gap-1 cursor-pointer">
                 <input
-                  className="w-[110px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
-                  value={block.plotErr ?? ''}
-                  placeholder={t('p2.errPh')}
-                  aria-label={t('p2.errExpr')}
-                  onChange={(e) => updatePlot(block.id, { plotErr: e.target.value })}
+                  type="checkbox"
+                  className="w-4 h-4 accent-current"
+                  checked={showGrid}
+                  aria-label={t('p2.grid')}
+                  onChange={(e) => updatePlot(block.id, { plotGrid: e.target.checked })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                {t('p2.grid')}
+              </label>
+              {proj === 'xy' && (
+                <label
+                  title={t('p2.logx')}
+                  className="inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 accent-current"
+                    checked={logx}
+                    aria-label={t('p2.logx')}
+                    onChange={(e) => updatePlot(block.id, { plotLogx: e.target.checked })}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  {t('p2.logx')}
+                </label>
+              )}
+              <label className="inline-flex items-center gap-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-current"
+                  checked={showLegend}
+                  aria-label={t('p2.legend')}
+                  onChange={(e) => updatePlot(block.id, { plotLegend: e.target.checked })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                {t('p2.legend')}
+              </label>
+              <label className="flex-1 min-w-[120px]">
+                {t('p2.title')}{' '}
+                <input
+                  className="w-full max-w-[220px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                  value={block.plotTitle ?? ''}
+                  placeholder={t('p2.titlePh')}
+                  aria-label={t('p2.title')}
+                  onChange={(e) => updatePlot(block.id, { plotTitle: e.target.value })}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                   spellCheck={false}
                 />
               </label>
-            )}
-            <label className="inline-flex items-center gap-1 cursor-pointer">
-              <input
-                type="checkbox"
-                className="w-4 h-4 accent-current"
-                checked={showGrid}
-                aria-label={t('p2.grid')}
-                onChange={(e) => updatePlot(block.id, { plotGrid: e.target.checked })}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-              />
-              {t('p2.grid')}
-            </label>
-            {proj === 'xy' && (
-              <label title={t('p2.logx')} className="inline-flex items-center gap-1 cursor-pointer">
+              <label>
+                X{' '}
                 <input
-                  type="checkbox"
-                  className="w-4 h-4 accent-current"
-                  checked={logx}
-                  aria-label={t('p2.logx')}
-                  onChange={(e) => updatePlot(block.id, { plotLogx: e.target.checked })}
+                  className="w-[80px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                  value={block.plotXLabel ?? ''}
+                  placeholder="x"
+                  aria-label={t('p2.xLabel')}
+                  onChange={(e) => updatePlot(block.id, { plotXLabel: e.target.value })}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
+                  spellCheck={false}
                 />
-                {t('p2.logx')}
               </label>
-            )}
-            <label className="inline-flex items-center gap-1 cursor-pointer">
-              <input
-                type="checkbox"
-                className="w-4 h-4 accent-current"
-                checked={showLegend}
-                aria-label={t('p2.legend')}
-                onChange={(e) => updatePlot(block.id, { plotLegend: e.target.checked })}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-              />
-              {t('p2.legend')}
-            </label>
-            <label className="flex-1 min-w-[120px]">
-              {t('p2.title')}{' '}
-              <input
-                className="w-full max-w-[220px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
-                value={block.plotTitle ?? ''}
-                placeholder={t('p2.titlePh')}
-                aria-label={t('p2.title')}
-                onChange={(e) => updatePlot(block.id, { plotTitle: e.target.value })}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                spellCheck={false}
-              />
-            </label>
-            <label>
-              X{' '}
-              <input
-                className="w-[80px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
-                value={block.plotXLabel ?? ''}
-                placeholder="x"
-                aria-label={t('p2.xLabel')}
-                onChange={(e) => updatePlot(block.id, { plotXLabel: e.target.value })}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                spellCheck={false}
-              />
-            </label>
-            <label title={t('p2.xUnit')}>
-              <input
-                className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
-                value={xUnitRaw}
-                placeholder={t('p2.xUnit')}
-                aria-label={t('p2.xUnit')}
-                onChange={(e) => updatePlot(block.id, { plotXUnit: e.target.value })}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                spellCheck={false}
-              />
-            </label>
-            <label>
-              Y{' '}
-              <input
-                className="w-[80px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
-                value={block.plotYLabel ?? ''}
-                placeholder="y"
-                aria-label={t('p2.yLabel')}
-                onChange={(e) => updatePlot(block.id, { plotYLabel: e.target.value })}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                spellCheck={false}
-              />
-            </label>
-            <label title={t('p2.yUnit')}>
-              <input
-                className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
-                value={yUnitRaw}
-                placeholder={t('p2.yUnit')}
-                aria-label={t('p2.yUnit')}
-                onChange={(e) => updatePlot(block.id, { plotYUnit: e.target.value })}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                spellCheck={false}
-              />
-            </label>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 min-h-[32px] px-2 rounded-lg cursor-pointer"
-              style={{ background: codeOpen ? 'var(--accent-soft)' : 'transparent', color: codeOpen ? 'var(--accent-ink)' : 'inherit' }}
-              aria-expanded={codeOpen}
-              onClick={(e) => {
-                e.stopPropagation();
-                setCodeOpen((v) => !v);
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              title={t('p2.codeHint')}
-            >
-              {'</>'}
-              <span className="hidden sm:inline">{t('p2.showCode')}</span>
-            </button>
-          </div>
-        )}
-        {codeOpen && (
-          <div className="mb-1 rounded-lg border border-[var(--line)] bg-[var(--input-bg)] p-2 print:hidden">
-            <pre className="max-h-[140px] overflow-auto whitespace-pre-wrap text-[11px] leading-5 text-[var(--ink)] select-text" title={t('p2.codeHint')}>
-              {plotBlockToCode(block, useCanvasStore.getState().lang)}
-            </pre>
-            <div className="mt-1.5 flex items-center gap-2">
+              <label title={t('p2.xUnit')}>
+                <input
+                  className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                  value={xUnitRaw}
+                  placeholder={t('p2.xUnit')}
+                  aria-label={t('p2.xUnit')}
+                  onChange={(e) => updatePlot(block.id, { plotXUnit: e.target.value })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  spellCheck={false}
+                />
+              </label>
+              <label>
+                Y{' '}
+                <input
+                  className="w-[80px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                  value={block.plotYLabel ?? ''}
+                  placeholder="y"
+                  aria-label={t('p2.yLabel')}
+                  onChange={(e) => updatePlot(block.id, { plotYLabel: e.target.value })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  spellCheck={false}
+                />
+              </label>
+              <label title={t('p2.yUnit')}>
+                <input
+                  className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                  value={yUnitRaw}
+                  placeholder={t('p2.yUnit')}
+                  aria-label={t('p2.yUnit')}
+                  onChange={(e) => updatePlot(block.id, { plotYUnit: e.target.value })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  spellCheck={false}
+                />
+              </label>
               <button
                 type="button"
-                className="min-h-[32px] px-2.5 rounded-lg bg-[var(--accent-soft)] text-[var(--accent-ink)] text-[12px] cursor-pointer"
+                className="inline-flex items-center gap-1 min-h-[32px] px-2 rounded-lg cursor-pointer"
+                style={{
+                  background: codeOpen ? 'var(--accent-soft)' : 'transparent',
+                  color: codeOpen ? 'var(--accent-ink)' : 'inherit',
+                }}
+                aria-expanded={codeOpen}
                 onClick={(e) => {
                   e.stopPropagation();
-                  void copyTextToClipboard(plotBlockToCode(block, useCanvasStore.getState().lang)).then((ok) => {
-                    if (ok) {
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 1600);
-                    }
-                  });
+                  setCodeOpen((v) => !v);
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
+                title={t('p2.codeHint')}
               >
-                {copied ? t('p2.copied') : t('p2.copyCode')}
-              </button>
-              <button
-                type="button"
-                className="min-h-[32px] px-2.5 rounded-lg border border-[var(--line)] text-[12px] text-[var(--ink-soft)] cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  duplicatePlot(block.id);
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                title={t('p2.duplicate')}
-              >
-                {t('p2.duplicate')}
+                {'</>'}
+                <span className="hidden sm:inline">{t('p2.showCode')}</span>
               </button>
             </div>
+          )}
+          {codeOpen && (
+            <div className="mb-1 rounded-lg border border-[var(--line)] bg-[var(--input-bg)] p-2 print:hidden">
+              <pre
+                className="max-h-[140px] overflow-auto whitespace-pre-wrap text-[11px] leading-5 text-[var(--ink)] select-text"
+                title={t('p2.codeHint')}
+              >
+                {plotBlockToCode(block, useCanvasStore.getState().lang)}
+              </pre>
+              <div className="mt-1.5 flex items-center gap-2">
+                <button
+                  type="button"
+                  className="min-h-[32px] px-2.5 rounded-lg bg-[var(--accent-soft)] text-[var(--accent-ink)] text-[12px] cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void copyTextToClipboard(
+                      plotBlockToCode(block, useCanvasStore.getState().lang),
+                    ).then((ok) => {
+                      if (ok) {
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1600);
+                      }
+                    });
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  {copied ? t('p2.copied') : t('p2.copyCode')}
+                </button>
+                <button
+                  type="button"
+                  className="min-h-[32px] px-2.5 rounded-lg border border-[var(--line)] text-[12px] text-[var(--ink-soft)] cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    duplicatePlot(block.id);
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  title={t('p2.duplicate')}
+                >
+                  {t('p2.duplicate')}
+                </button>
+              </div>
+            </div>
+          )}
+          {/* заголовок для печати (контролы выше скрыты в print) */}
+          <div className="hidden print:block text-[13px] font-medium text-[var(--ink)] mb-1">
+            {title || fnText}
           </div>
-        )}
-        {/* заголовок для печати (контролы выше скрыты в print) */}
-        <div className="hidden print:block text-[13px] font-medium text-[var(--ink)] mb-1">
-          {title || fnText}
-        </div>
         </div>
         {err ? (
           <div className="flex items-center gap-1.5 text-[var(--danger)] text-[12px]" role="alert">
@@ -781,18 +878,43 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             className="rounded-lg border border-[var(--line)]"
             style={{ background: pal.svgBg }}
             role="img"
-            aria-label={t('p2.aria', { fn: fnText, lo: fmtTick(-polar.maxR), hi: fmtTick(polar.maxR), x0: xmin, x1: xmax })}
+            aria-label={t('p2.aria', {
+              fn: fnText,
+              lo: fmtTick(-polar.maxR),
+              hi: fmtTick(polar.maxR),
+              x0: xmin,
+              x1: xmax,
+            })}
           >
             {title && (
-              <text x={svgW / 2} y={15} fontSize={13} fontWeight={600} fill={pal.legend} textAnchor="middle">
+              <text
+                x={svgW / 2}
+                y={15}
+                fontSize={13}
+                fontWeight={600}
+                fill={pal.legend}
+                textAnchor="middle"
+              >
                 {title}
               </text>
             )}
             {/* полярная сетка: окружности + спицы каждые 30° */}
             {[0.25, 0.5, 0.75, 1].map((f) => (
               <g key={f}>
-                <circle cx={polar.cx} cy={polar.cy} r={polar.R * polar.maxR * f} fill="none" stroke={pal.grid} strokeOpacity={pal.gridOpacity} />
-                <text x={polar.cx + 3} y={polar.cy - polar.R * polar.maxR * f + 10} fontSize={9} fill={pal.tick}>
+                <circle
+                  cx={polar.cx}
+                  cy={polar.cy}
+                  r={polar.R * polar.maxR * f}
+                  fill="none"
+                  stroke={pal.grid}
+                  strokeOpacity={pal.gridOpacity}
+                />
+                <text
+                  x={polar.cx + 3}
+                  y={polar.cy - polar.R * polar.maxR * f + 10}
+                  fontSize={9}
+                  fill={pal.tick}
+                >
                   {fmtTick(polar.maxR * f)}
                 </text>
               </g>
@@ -804,8 +926,21 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
                 const y2 = polar.cy - Math.sin(a) * polar.R * polar.maxR;
                 return (
                   <g key={deg}>
-                    <line x1={polar.cx} y1={polar.cy} x2={x2} y2={y2} stroke={pal.grid} strokeOpacity={pal.gridOpacity} />
-                    <text x={polar.cx + Math.cos(a) * (polar.R * polar.maxR + 10)} y={polar.cy - Math.sin(a) * (polar.R * polar.maxR + 10) + 3} fontSize={9} fill={pal.tick} textAnchor="middle">
+                    <line
+                      x1={polar.cx}
+                      y1={polar.cy}
+                      x2={x2}
+                      y2={y2}
+                      stroke={pal.grid}
+                      strokeOpacity={pal.gridOpacity}
+                    />
+                    <text
+                      x={polar.cx + Math.cos(a) * (polar.R * polar.maxR + 10)}
+                      y={polar.cy - Math.sin(a) * (polar.R * polar.maxR + 10) + 3}
+                      fontSize={9}
+                      fill={pal.tick}
+                      textAnchor="middle"
+                    >
                       {deg}°
                     </text>
                   </g>
@@ -818,7 +953,14 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             {showLegend &&
               series.map((s, i) => (
                 <g key={`l${i}`}>
-                  <line x1={PAD_L + 8} y1={legY + i * 15} x2={PAD_L + 26} y2={legY + i * 15} stroke={s.color} strokeWidth={2.5} />
+                  <line
+                    x1={PAD_L + 8}
+                    y1={legY + i * 15}
+                    x2={PAD_L + 26}
+                    y2={legY + i * 15}
+                    stroke={s.color}
+                    strokeWidth={2.5}
+                  />
                   <text x={PAD_L + 30} y={legY + 3 + i * 15} fontSize={10} fill={pal.legend}>
                     {s.expr.length > 34 ? s.expr.slice(0, 34) + '…' : s.expr}
                   </text>
@@ -833,10 +975,23 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             className="rounded-lg border border-[var(--line)]"
             style={{ background: pal.svgBg }}
             role="img"
-            aria-label={t('p2.aria', { fn: fnText, lo: fmtTick(ymin), hi: fmtTick(ymax), x0: xmin, x1: xmax })}
+            aria-label={t('p2.aria', {
+              fn: fnText,
+              lo: fmtTick(ymin),
+              hi: fmtTick(ymax),
+              x0: xmin,
+              x1: xmax,
+            })}
           >
             {title && (
-              <text x={svgW / 2} y={15} fontSize={13} fontWeight={600} fill={pal.legend} textAnchor="middle">
+              <text
+                x={svgW / 2}
+                y={15}
+                fontSize={13}
+                fontWeight={600}
+                fill={pal.legend}
+                textAnchor="middle"
+              >
                 {title}
               </text>
             )}
@@ -844,8 +999,21 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             {showGrid &&
               xticks.map((v) => (
                 <g key={`x${v}`}>
-                  <line x1={X(v)} y1={padT} x2={X(v)} y2={ph - PAD_B} stroke={pal.grid} strokeOpacity={pal.gridOpacity} />
-                  <text x={X(v)} y={ph - PAD_B + 14} fontSize={9} fill={pal.tick} textAnchor="middle">
+                  <line
+                    x1={X(v)}
+                    y1={padT}
+                    x2={X(v)}
+                    y2={ph - PAD_B}
+                    stroke={pal.grid}
+                    strokeOpacity={pal.gridOpacity}
+                  />
+                  <text
+                    x={X(v)}
+                    y={ph - PAD_B + 14}
+                    fontSize={9}
+                    fill={pal.tick}
+                    textAnchor="middle"
+                  >
                     {fmtTick(v / xU.scale)}
                   </text>
                 </g>
@@ -853,17 +1021,49 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             {showGrid &&
               yticks.map((v) => (
                 <g key={`y${v}`}>
-                  <line x1={PAD_L} y1={Y(v)} x2={pw - PAD_R} y2={Y(v)} stroke={pal.grid} strokeOpacity={pal.gridOpacity} />
+                  <line
+                    x1={PAD_L}
+                    y1={Y(v)}
+                    x2={pw - PAD_R}
+                    y2={Y(v)}
+                    stroke={pal.grid}
+                    strokeOpacity={pal.gridOpacity}
+                  />
                   <text x={PAD_L - 5} y={Y(v) + 3} fontSize={9} fill={pal.tick} textAnchor="end">
                     {fmtTick(v / yU.scale)}
                   </text>
                 </g>
               ))}
             {/* нулевые оси */}
-            {zeroY !== null && <line x1={PAD_L} y1={zeroY} x2={pw - PAD_R} y2={zeroY} stroke={pal.axis} strokeWidth={1.2} />}
-            {zeroX !== null && <line x1={zeroX} y1={padT} x2={zeroX} y2={ph - PAD_B} stroke={pal.axis} strokeWidth={1.2} />}
+            {zeroY !== null && (
+              <line
+                x1={PAD_L}
+                y1={zeroY}
+                x2={pw - PAD_R}
+                y2={zeroY}
+                stroke={pal.axis}
+                strokeWidth={1.2}
+              />
+            )}
+            {zeroX !== null && (
+              <line
+                x1={zeroX}
+                y1={padT}
+                x2={zeroX}
+                y2={ph - PAD_B}
+                stroke={pal.axis}
+                strokeWidth={1.2}
+              />
+            )}
             {/* рамка */}
-            <rect x={PAD_L} y={padT} width={pw - PAD_L - PAD_R} height={ph - padT - PAD_B} fill="none" stroke={pal.frame} />
+            <rect
+              x={PAD_L}
+              y={padT}
+              width={pw - PAD_L - PAD_R}
+              height={ph - padT - PAD_B}
+              fill="none"
+              stroke={pal.frame}
+            />
             {series.map((s, i) =>
               s.d ? <path key={i} d={s.d} fill="none" stroke={s.color} strokeWidth={2} /> : null,
             )}
@@ -871,7 +1071,13 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
               s.bars?.length ? (
                 <g key={`b${i}`} fill={s.color} opacity={0.85}>
                   {s.bars.map((b, k) => (
-                    <rect key={k} x={b.x} y={b.y} width={Math.max(1, b.w)} height={Math.max(1, b.h)} />
+                    <rect
+                      key={k}
+                      x={b.x}
+                      y={b.y}
+                      width={Math.max(1, b.w)}
+                      height={Math.max(1, b.h)}
+                    />
                   ))}
                 </g>
               ) : null,
@@ -883,7 +1089,14 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
                     <line key={k} x1={st.x1} y1={st.y1} x2={st.x2} y2={st.y2} />
                   ))}
                   {s.stems.map((st, k) => (
-                    <circle key={`m${k}`} cx={st.x2} cy={st.y2} r={2.5} fill={s.color} stroke="none" />
+                    <circle
+                      key={`m${k}`}
+                      cx={st.x2}
+                      cy={st.y2}
+                      r={2.5}
+                      fill={s.color}
+                      stroke="none"
+                    />
                   ))}
                 </g>
               ) : null,
@@ -896,7 +1109,14 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
               </text>
             )}
             {yAxisLabel && (
-              <text x={12} y={padT + 4} fontSize={10} fill={pal.tick} textAnchor="start" transform={`rotate(-90 12 ${padT + 4})`}>
+              <text
+                x={12}
+                y={padT + 4}
+                fontSize={10}
+                fill={pal.tick}
+                textAnchor="start"
+                transform={`rotate(-90 12 ${padT + 4})`}
+              >
                 {yAxisLabel}
               </text>
             )}
@@ -904,7 +1124,14 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             {showLegend &&
               series.map((s, i) => (
                 <g key={`l${i}`}>
-                  <line x1={PAD_L + 8} y1={legY + i * 15} x2={PAD_L + 26} y2={legY + i * 15} stroke={s.color} strokeWidth={2.5} />
+                  <line
+                    x1={PAD_L + 8}
+                    y1={legY + i * 15}
+                    x2={PAD_L + 26}
+                    y2={legY + i * 15}
+                    stroke={s.color}
+                    strokeWidth={2.5}
+                  />
                   <text x={PAD_L + 30} y={legY + 3 + i * 15} fontSize={10} fill={pal.legend}>
                     {s.expr.length > 34 ? s.expr.slice(0, 34) + '…' : s.expr}
                   </text>
@@ -916,7 +1143,10 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
           {t('p2.footer', { fn: fnText, x0: xmin, x1: xmax })}
         </div>
         {unitBad && (
-          <div className="text-[10px] text-[var(--danger)]/80 truncate flex items-center gap-1" title={t('p2.badUnit', { u: !xU.ok ? xUnitRaw : yUnitRaw })}>
+          <div
+            className="text-[10px] text-[var(--danger)]/80 truncate flex items-center gap-1"
+            title={t('p2.badUnit', { u: !xU.ok ? xUnitRaw : yUnitRaw })}
+          >
             <IWarn /> {t('p2.badUnit', { u: !xU.ok ? xUnitRaw : yUnitRaw })}
           </div>
         )}

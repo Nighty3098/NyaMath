@@ -21,7 +21,8 @@ function detect(): Lang {
   try {
     const v = localStorage.getItem(LANG_KEY) ?? localStorage.getItem(LANG_KEY_LEGACY);
     if (v === 'ru' || v === 'en') return v;
-    if (typeof navigator !== 'undefined' && navigator.language?.toLowerCase().startsWith('ru')) return 'ru';
+    if (typeof navigator !== 'undefined' && navigator.language?.toLowerCase().startsWith('ru'))
+      return 'ru';
     return 'en';
   } catch {
     return 'ru';
@@ -41,7 +42,9 @@ export function setLangState(l: Lang) {
   current = l;
   try {
     localStorage.setItem(LANG_KEY, l);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   if (typeof document !== 'undefined') document.documentElement.lang = l;
 }
 
@@ -142,10 +145,13 @@ const ru = {
   'live.off': 'Live-сервис недоступен',
   'live.urlPrompt': 'Адрес live-сервиса:',
   'live.noConn': 'Нет соединения — запущен ли сервис? (node mcp/dist/index.js --port=3777)',
-  'live.checkFail': 'Сервис недоступен по адресу {url}\nОшибка: {error}\n\nПроверьте:\n1) запущен ли MCP с флагом --port (npm run dev поднимает сам);\n2) тот ли порт (занятый порт роняет сервис — смотрите лог [mcp]);\n3) блокировщики в браузере.',
+  'live.checkFail':
+    'Сервис недоступен по адресу {url}\nОшибка: {error}\n\nПроверьте:\n1) запущен ли MCP с флагом --port (npm run dev поднимает сам);\n2) тот ли порт (занятый порт роняет сервис — смотрите лог [mcp]);\n3) блокировщики в браузере.',
 
-  'share.copied': 'Ссылка скопирована: блоков {n}, длина URL {chars}. Отправь её — откроется тот же лист.',
-  'share.copyManual': 'Не смог скопировать автоматически. Ссылка (блоков {n}, символов {chars}):\n{url}',
+  'share.copied':
+    'Ссылка скопирована: блоков {n}, длина URL {chars}. Отправь её — откроется тот же лист.',
+  'share.copyManual':
+    'Не смог скопировать автоматически. Ссылка (блоков {n}, символов {chars}):\n{url}',
   'share.empty': 'Нечего отправлять: холст пустой.',
   'share.failed': 'Не удалось упаковать документ для ссылки.',
   'share.longWarn': ' Внимание: ссылка длинная ({chars} символов) — мессенджер может её обрезать.',
@@ -244,8 +250,10 @@ const ru = {
   'palTab.tearHint': 'Потяните вкладку наружу — отдельное окно',
   'detached.backHint': 'Вернуть обратно: бросьте на палитры или двойной клик по шапке',
 
-  'c.aria': 'Бесконечный рабочий лист: двойной клик создаёт блок, перетаскивание с зажатой кнопкой выделяет',
-  'c.title': 'ЛКМ-drag — выделение • Space/MMB/RMB — панорама • колесо — панорама • Ctrl+колесо — зум • двойной клик — новый блок',
+  'c.aria':
+    'Бесконечный рабочий лист: двойной клик создаёт блок, перетаскивание с зажатой кнопкой выделяет',
+  'c.title':
+    'ЛКМ-drag — выделение • Space/MMB/RMB — панорама • колесо — панорама • Ctrl+колесо — зум • двойной клик — новый блок',
   'c.emptyNew': 'Двойной клик — новый блок',
   'c.emptyNewTouch': 'Дабл-тап — новый блок • один палец — панорама • два — зум',
   'c.emptyAssign': 'присваивание',
@@ -318,7 +326,8 @@ const ru = {
   'el.densitySolid': 'г/см³',
   'el.meltShort': 'Tпл',
   'el.boilShort': 'Tкип',
-  'm.groupHint': 'Выделите и нажмите ( / ^ • Ctrl+Space — расширить выделение • : — это := • F12 — ассистент' ,
+  'm.groupHint':
+    'Выделите и нажмите ( / ^ • Ctrl+Space — расширить выделение • : — это := • F12 — ассистент',
   'm.disable': 'Отключить из расчёта',
   'm.enable': 'Вернуть в расчёт',
   'm.disabled': 'отключён из расчёта',
@@ -383,7 +392,8 @@ const ru = {
   'ctr.resize': 'Потянуть — размер блока',
 
   'p3.fnLabel': 'Выражение 3D: f(x,y), матрица N×3 или X; Y; Z',
-  'p3.fnTitle': 'f(x,y) — поверхность • матрица N×3 — точки • матрица M×N — высоты • X; Y; Z — точки',
+  'p3.fnTitle':
+    'f(x,y) — поверхность • матрица N×3 — точки • матрица M×N — высоты • X; Y; Z — точки',
   'p3.delete': 'Удалить 3D-график',
   'p3.xmin': 'Минимум x',
   'p3.xmax': 'Максимум x',
@@ -396,12 +406,14 @@ const ru = {
   'p3.wire': 'Каркас поверх',
   'p3.wireLabel': 'каркас',
   'p3.noData': 'Нет данных',
-  'p3.noDataHint': 'Нет 3D-данных: f(x,y) → поверхность • матрица N×3 → точки • матрица M×N — высоты • X; Y; Z → точки',
+  'p3.noDataHint':
+    'Нет 3D-данных: f(x,y) → поверхность • матрица N×3 → точки • матрица M×N — высоты • X; Y; Z → точки',
   'p3.needRange': 'Нужно xmin < xmax и ymin < ymax',
   'p3.aria': '3D-график {fn}, режим {mode}. {sub}',
   'p3.points': 'точек: {n} • z ∈ [{lo}, {hi}]',
   'p3.grid': 'сетка {c}×{r} • z ∈ [{lo}, {hi}]',
-  'p3.footer': 'drag — вращать • колесо — зум • ПКМ — панорама • навести — координаты • видит все переменные',
+  'p3.footer':
+    'drag — вращать • колесо — зум • ПКМ — панорама • навести — координаты • видит все переменные',
   'p3.resize': 'Потянуть — размер 3D-блока',
 
   'g.title': 'Программный блок: if/for/while (клик — редактировать • Shift+клик — в выделение)',
@@ -611,7 +623,7 @@ const en: Record<StrKey, string> = {
   'scopeMon.title': 'Telemetry',
   'scopeMon.aria': 'Live sheet variables',
   'scopeMon.close': 'Close telemetry',
-  'scopeMon.empty': 'No variables yet — define something with :=' ,
+  'scopeMon.empty': 'No variables yet — define something with :=',
   'calc.ok': 'no errors',
   'calc.errors': 'errors: {n}',
   'menu.variables': 'Variables',
@@ -644,9 +656,11 @@ const en: Record<StrKey, string> = {
   'live.off': 'Live service unavailable',
   'live.urlPrompt': 'Live service URL:',
   'live.noConn': 'No connection — is the service running? (node mcp/dist/index.js --port=3777)',
-  'live.checkFail': 'Service unreachable at {url}\nError: {error}\n\nCheck:\n1) MCP started with --port (npm run dev does it);\n2) the port is right (a busy port kills the service — see [mcp] log);\n3) browser blockers.',
+  'live.checkFail':
+    'Service unreachable at {url}\nError: {error}\n\nCheck:\n1) MCP started with --port (npm run dev does it);\n2) the port is right (a busy port kills the service — see [mcp] log);\n3) browser blockers.',
 
-  'share.copied': 'Link copied: {n} blocks, URL length {chars}. Send it — the same sheet will open.',
+  'share.copied':
+    'Link copied: {n} blocks, URL length {chars}. Send it — the same sheet will open.',
   'share.copyManual': 'Could not copy automatically. Link ({n} blocks, {chars} chars):\n{url}',
   'share.empty': 'Nothing to send: the canvas is empty.',
   'share.failed': 'Could not pack the document into a link.',
@@ -746,8 +760,10 @@ const en: Record<StrKey, string> = {
   'palTab.tearHint': 'Drag the tab out for a separate window',
   'detached.backHint': 'Dock back: drop onto the palette or double-click the header',
 
-  'c.aria': 'Infinite worksheet: double-click creates a block, dragging with a pressed button selects',
-  'c.title': 'LMB-drag — select • Space/MMB/RMB — pan • wheel — pan • Ctrl+wheel — zoom • double-click — new block',
+  'c.aria':
+    'Infinite worksheet: double-click creates a block, dragging with a pressed button selects',
+  'c.title':
+    'LMB-drag — select • Space/MMB/RMB — pan • wheel — pan • Ctrl+wheel — zoom • double-click — new block',
   'c.emptyNew': 'Double-click — new block',
   'c.emptyNewTouch': 'Double-tap — new block • one finger — pan • two — zoom',
   'c.emptyAssign': 'assignment',
@@ -820,7 +836,8 @@ const en: Record<StrKey, string> = {
   'el.densitySolid': 'g/cm³',
   'el.meltShort': 'Tm',
   'el.boilShort': 'Tb',
-  'm.groupHint': 'Select and press ( / ^ • Ctrl+Space — expand selection • : means := • F12 — assistant' ,
+  'm.groupHint':
+    'Select and press ( / ^ • Ctrl+Space — expand selection • : means := • F12 — assistant',
   'm.disable': 'Disable evaluation',
   'm.enable': 'Enable evaluation',
   'm.disabled': 'excluded from calculation',
@@ -898,12 +915,14 @@ const en: Record<StrKey, string> = {
   'p3.wire': 'Wireframe overlay',
   'p3.wireLabel': 'wireframe',
   'p3.noData': 'No data',
-  'p3.noDataHint': 'No 3D data: f(x,y) → surface • N×3 matrix — points • M×N matrix — heights • X; Y; Z — points',
+  'p3.noDataHint':
+    'No 3D data: f(x,y) → surface • N×3 matrix — points • M×N matrix — heights • X; Y; Z — points',
   'p3.needRange': 'Need xmin < xmax and ymin < ymax',
   'p3.aria': '3D plot {fn}, mode {mode}. {sub}',
   'p3.points': 'points: {n} • z ∈ [{lo}, {hi}]',
   'p3.grid': 'grid {c}×{r} • z ∈ [{lo}, {hi}]',
-  'p3.footer': 'drag — rotate • wheel — zoom • RMB — pan • hover — coordinates • sees all variables',
+  'p3.footer':
+    'drag — rotate • wheel — zoom • RMB — pan • hover — coordinates • sees all variables',
   'p3.resize': 'Drag — 3D block size',
 
   'g.title': 'Program block: if/for/while (click — edit • Shift+click — add to selection)',
@@ -1080,7 +1099,21 @@ export function themeLabel(id: ThemeName): string {
   return themeNames[id][current];
 }
 
-export type PackId = 'matrices' | 'stats' | 'uncertainty' | 'physics' | 'telecom' | 'programs' | 'plots' | 'sim' | 'units' | 'calc' | 'computing' | 'em' | 'control' | 'materials';
+export type PackId =
+  | 'matrices'
+  | 'stats'
+  | 'uncertainty'
+  | 'physics'
+  | 'telecom'
+  | 'programs'
+  | 'plots'
+  | 'sim'
+  | 'units'
+  | 'calc'
+  | 'computing'
+  | 'em'
+  | 'control'
+  | 'materials';
 
 const packNames: Record<PackId, { ru: string; en: string }> = {
   matrices: { ru: 'Матрицы', en: 'Matrices' },

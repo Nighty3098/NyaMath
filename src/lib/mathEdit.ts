@@ -93,7 +93,10 @@ export function wrapSelection(
   }
 }
 
-const OPEN = new Map([[')', '('], [']', '[']]);
+const OPEN = new Map([
+  [')', '('],
+  [']', '['],
+]);
 
 const isTokChar = (ch: string): boolean => /[A-Za-z0-9_.]/.test(ch);
 
@@ -139,7 +142,10 @@ function enclosingBrackets(
       // снимаем до парной открывающей
       let found = -1;
       for (let k = stack.length - 1; k >= 0; k--) {
-        if (stack[k].ch === open) { found = k; break; }
+        if (stack[k].ch === open) {
+          found = k;
+          break;
+        }
       }
       if (found < 0) continue;
       const { pos } = stack[found];

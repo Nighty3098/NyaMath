@@ -30,11 +30,16 @@ export async function saveDocument(blocks: Record<string, MathBlockData>): Promi
     // Firefox/Safari: сайты не могут открыть системный диалог (API не поддерживается).
     // Диалог появится, если в браузере включено «всегда спрашивать, куда сохранять».
     try {
-      if (!localStorage.getItem('nya-save-hint-shown') && !localStorage.getItem('weng-save-hint-shown')) {
+      if (
+        !localStorage.getItem('nya-save-hint-shown') &&
+        !localStorage.getItem('weng-save-hint-shown')
+      ) {
         localStorage.setItem('nya-save-hint-shown', '1');
         alert(t('save.hint'));
       }
-    } catch { /* localStorage недоступен — просто скачиваем */ }
+    } catch {
+      /* localStorage недоступен — просто скачиваем */
+    }
   }
   const blob = new Blob([payload], { type: 'application/json' });
   const a = document.createElement('a');

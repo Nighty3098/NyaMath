@@ -5,9 +5,20 @@ import { setNumFmt } from './mathEngine';
 let id = 0;
 function block(y: number, rawInput: string): MathBlockData {
   return {
-    id: `nf${id++}`, x: 80, y, rawInput, displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind: 'math', plotPreview: null,
+    id: `nf${id++}`,
+    x: 80,
+    y,
+    rawInput,
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind: 'math',
+    plotPreview: null,
   };
 }
 

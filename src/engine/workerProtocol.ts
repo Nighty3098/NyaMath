@@ -44,14 +44,7 @@ export interface SerNonFinite {
   s: string;
 }
 export type SerVal =
-  | number
-  | string
-  | boolean
-  | null
-  | SerComplex
-  | SerUnit
-  | SerMatrix
-  | SerNonFinite;
+  number | string | boolean | null | SerComplex | SerUnit | SerMatrix | SerNonFinite;
 /** Вложенность матриц — обычные массивы (structured clone их умеет). */
 export type SerNode = SerVal | SerNode[];
 
@@ -163,19 +156,65 @@ function deserializeNode(s: SerNode): unknown {
 /* ---------------- slim-вход (только поля ввода) ---------------- */
 
 const SLIM_KEYS = [
-  'id', 'x', 'y', 'rawInput', 'kind', 'disabled', 'w', 'h',
-  'sliderVar', 'sliderMin', 'sliderMax', 'sliderStep', 'sliderVal',
-  'plotFn', 'plotXmin', 'plotXmax', 'plotProj', 'plotTrace', 'plotErr',
-  'plotLogx', 'plotXUnit', 'plotYUnit', 'plotTitle', 'plotXLabel',
-  'plotYLabel', 'plotGrid', 'plotLegend',
-  'plotYmin', 'plotYmax', 'plotMode', 'plotResolution', 'plotWireframe',
+  'id',
+  'x',
+  'y',
+  'rawInput',
+  'kind',
+  'disabled',
+  'w',
+  'h',
+  'sliderVar',
+  'sliderMin',
+  'sliderMax',
+  'sliderStep',
+  'sliderVal',
+  'plotFn',
+  'plotXmin',
+  'plotXmax',
+  'plotProj',
+  'plotTrace',
+  'plotErr',
+  'plotLogx',
+  'plotXUnit',
+  'plotYUnit',
+  'plotTitle',
+  'plotXLabel',
+  'plotYLabel',
+  'plotGrid',
+  'plotLegend',
+  'plotYmin',
+  'plotYmax',
+  'plotMode',
+  'plotResolution',
+  'plotWireframe',
   'exportName',
-  'simMode', 'simModel', 'simStates', 'simDerivs', 'simAux', 'simParams',
-  'simInit', 'simT0', 'simT1', 'simDt', 'simSolver', 'simEvents',
-  'simX', 'simY',
-  'simFdtdN', 'simFdtdL', 'simFdtdSteps', 'simFdtdSrc', 'simFdtdFreq',
-  'simFdtdAmp', 'simFdtdSrcX', 'simFdtdDet', 'simFdtdLayers',
-  'simExport', 'simSpeed', 'simLoop',
+  'simMode',
+  'simModel',
+  'simStates',
+  'simDerivs',
+  'simAux',
+  'simParams',
+  'simInit',
+  'simT0',
+  'simT1',
+  'simDt',
+  'simSolver',
+  'simEvents',
+  'simX',
+  'simY',
+  'simFdtdN',
+  'simFdtdL',
+  'simFdtdSteps',
+  'simFdtdSrc',
+  'simFdtdFreq',
+  'simFdtdAmp',
+  'simFdtdSrcX',
+  'simFdtdDet',
+  'simFdtdLayers',
+  'simExport',
+  'simSpeed',
+  'simLoop',
 ] as const;
 
 export type SlimBlock = Pick<MathBlockData, (typeof SLIM_KEYS)[number]>;
@@ -221,10 +260,7 @@ export function collectDefLines(blocks: MathBlockData[]): string[] {
  * Пересобрать живой scope главного потока: база + def-строки
  * (custom units раньше скаляров — revive Unit их требует; тела функций ленивые).
  */
-export function rebuildMainScope(
-  ser: Record<string, SerVal | null>,
-  defLines: string[],
-): Scope {
+export function rebuildMainScope(ser: Record<string, SerVal | null>, defLines: string[]): Scope {
   const base = createBaseScope();
   for (const line of defLines) {
     try {
@@ -269,22 +305,22 @@ export type WorkerOutBlock = Omit<MathBlockData, 'resultValue'> & {
 
 export type WorkerMsgToMain =
   | {
-    type: 'progress';
-    jobId: number;
-    done: number;
-    total: number;
-    simId: string | null;
-    simDone: number;
-    simTotal: number | null;
-  }
+      type: 'progress';
+      jobId: number;
+      done: number;
+      total: number;
+      simId: string | null;
+      simDone: number;
+      simTotal: number | null;
+    }
   | {
-    type: 'result';
-    jobId: number;
-    ok: true;
-    blocks: WorkerOutBlock[];
-    scope: Record<string, SerVal | null>;
-    changed: boolean;
-    calcMs: number;
-    staleIds: string[];
-  }
+      type: 'result';
+      jobId: number;
+      ok: true;
+      blocks: WorkerOutBlock[];
+      scope: Record<string, SerVal | null>;
+      changed: boolean;
+      calcMs: number;
+      staleIds: string[];
+    }
   | { type: 'result'; jobId: number; ok: false; error: string };

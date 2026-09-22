@@ -227,10 +227,16 @@ export function runProgram(
     const preConv = convUnit ? preprocessRanges(preprocessJ(convLhs, false)) : '';
     const fbPre = fallback ? preprocessRanges(preprocessJ(fallback, false)) : '';
     const p: ExprPrep = {
-      main, fallback, convLhs, convUnit,
-      preMain, codeMain: getCompiledPre(preMain),
-      preConv, codeConv: convUnit ? getCompiledPre(preConv) : null,
-      fbPre, fbCode: fallback ? getCompiledPre(fbPre) : null,
+      main,
+      fallback,
+      convLhs,
+      convUnit,
+      preMain,
+      codeMain: getCompiledPre(preMain),
+      preConv,
+      codeConv: convUnit ? getCompiledPre(preConv) : null,
+      fbPre,
+      fbCode: fallback ? getCompiledPre(fbPre) : null,
     };
     prepCache.set(expr, p);
     return p;
@@ -295,7 +301,10 @@ export function runProgram(
   };
   const doTrace = (text: string): void => {
     if (traceLog.length >= 50) return;
-    const parts = text.split(',').map((s) => s.trim()).filter(Boolean);
+    const parts = text
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     for (const p of parts) {
       let v: unknown = null;
       try {
@@ -321,7 +330,8 @@ export function runProgram(
   const toArray = (v: unknown, lineNo: number): unknown[] => {
     if (typeof v === 'number') {
       const n = Math.floor(v);
-      if (!isFinite(n) || n < 0 || n > MAX_FOR) throw { line: lineNo, msg: t('e.forNumber', { max: MAX_FOR }) };
+      if (!isFinite(n) || n < 0 || n > MAX_FOR)
+        throw { line: lineNo, msg: t('e.forNumber', { max: MAX_FOR }) };
       return Array.from({ length: n }, (_, k) => k + 1);
     }
     if (math.isMatrix(v)) return (v as { toArray: () => unknown[] }).toArray().flat(Infinity);
@@ -474,7 +484,11 @@ export function runProgram(
     throw { line: lineNo, msg: t('e.noEnd') };
   };
   const findEnd = blockEnd;
-  const findIfBounds = (from: number, end: number, lineNo: number): { elseIdx: number; endIdx: number } => {
+  const findIfBounds = (
+    from: number,
+    end: number,
+    lineNo: number,
+  ): { elseIdx: number; endIdx: number } => {
     let depth = 0;
     let elseIdx = -1;
     for (let k = from + 1; k < end; k++) {
@@ -499,9 +513,19 @@ export function runProgram(
   } catch (e) {
     const ce = e as { line?: number; msg?: string };
     if (ce && typeof ce.line === 'number') {
-      return { value: null, error: t('e.lineErr', { line: ce.line, msg: ce.msg ?? t('e.lineErrDefault') }), errorLine: ce.line, trace: traceLog.length ? [...traceLog] : null };
+      return {
+        value: null,
+        error: t('e.lineErr', { line: ce.line, msg: ce.msg ?? t('e.lineErrDefault') }),
+        errorLine: ce.line,
+        trace: traceLog.length ? [...traceLog] : null,
+      };
     }
-    return { value: null, error: humanizeMathError(e), errorLine: null, trace: traceLog.length ? [...traceLog] : null };
+    return {
+      value: null,
+      error: humanizeMathError(e),
+      errorLine: null,
+      trace: traceLog.length ? [...traceLog] : null,
+    };
   }
 }
 

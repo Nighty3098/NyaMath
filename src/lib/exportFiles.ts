@@ -16,7 +16,11 @@ export function downloadBlob(blob: Blob, filename: string): void {
 }
 
 /** Скачать текстовый файл (CSV, LaTeX, …). */
-export function downloadTextFile(filename: string, text: string, mime = 'text/plain;charset=utf-8'): void {
+export function downloadTextFile(
+  filename: string,
+  text: string,
+  mime = 'text/plain;charset=utf-8',
+): void {
   downloadBlob(new Blob([text], { type: mime }), filename);
 }
 
@@ -38,7 +42,9 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     return true;
-  } catch { /* fallback ниже */ }
+  } catch {
+    /* fallback ниже */
+  }
   try {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -73,7 +79,11 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
  * Отрендеренный <svg> → PNG-файл (scale 2 по умолчанию для чёткости).
  * Добавляет viewBox и фон, чтобы PNG совпадал с видом на экране.
  */
-export async function exportSvgElementToPng(svg: SVGSVGElement, filename: string, scale = 2): Promise<void> {
+export async function exportSvgElementToPng(
+  svg: SVGSVGElement,
+  filename: string,
+  scale = 2,
+): Promise<void> {
   const w = Math.max(1, Math.round(Number(svg.getAttribute('width')) || svg.clientWidth || 600));
   const h = Math.max(1, Math.round(Number(svg.getAttribute('height')) || svg.clientHeight || 400));
   const bg = svg.style.backgroundColor || getComputedStyle(svg).backgroundColor;

@@ -1,20 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import { useCanvasStore, type PaletteTab } from "../store/canvasStore";
-import { t } from "../i18n";
-import {
-  IConst,
-  IField,
-  IFx,
-  IFormula,
-  IGrip,
-  IResize,
-  ISignal,
-  IX,
-} from "./Icon";
-import { hideGhostFixed, moveGhostFixed, showGhostFixed } from "./dragGhost";
-import PaletteContent from "./PaletteContent";
-import ElementsContent from "./ElementsContent";
-import VariablesContent from "./VariablesContent";
+import { useEffect, useRef, useState } from 'react';
+import { useCanvasStore, type PaletteTab } from '../store/canvasStore';
+import { t } from '../i18n';
+import { IConst, IField, IFx, IFormula, IGrip, IResize, ISignal, IX } from './Icon';
+import { hideGhostFixed, moveGhostFixed, showGhostFixed } from './dragGhost';
+import PaletteContent from './PaletteContent';
+import ElementsContent from './ElementsContent';
+import VariablesContent from './VariablesContent';
 import {
   loadDetachedDockW,
   loadDetachedPos,
@@ -22,7 +13,7 @@ import {
   saveDetachedDockW,
   saveDetachedPos,
   saveDetachedSize,
-} from "../lib/detachedPos";
+} from '../lib/detachedPos';
 
 /** Зона прилипания к краям экрана, px */
 const SNAP_ZONE = 28;
@@ -34,18 +25,18 @@ const META: Record<
   {
     icon: () => React.JSX.Element;
     menuKey:
-      | "menu.palette"
-      | "menu.formulaPalette"
-      | "menu.constPalette"
-      | "menu.elemPalette"
-      | "menu.scopeMon";
+      | 'menu.palette'
+      | 'menu.formulaPalette'
+      | 'menu.constPalette'
+      | 'menu.elemPalette'
+      | 'menu.scopeMon';
   }
 > = {
-  functions: { icon: IFx, menuKey: "menu.palette" },
-  formulas: { icon: IFormula, menuKey: "menu.formulaPalette" },
-  constants: { icon: IConst, menuKey: "menu.constPalette" },
-  elements: { icon: IField, menuKey: "menu.elemPalette" },
-  variables: { icon: ISignal, menuKey: "menu.scopeMon" },
+  functions: { icon: IFx, menuKey: 'menu.palette' },
+  formulas: { icon: IFormula, menuKey: 'menu.formulaPalette' },
+  constants: { icon: IConst, menuKey: 'menu.constPalette' },
+  elements: { icon: IField, menuKey: 'menu.elemPalette' },
+  variables: { icon: ISignal, menuKey: 'menu.scopeMon' },
 };
 
 /**
@@ -67,11 +58,11 @@ export default function DetachedTabWindow({
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
   const side = useCanvasStore((s) => s.detachedSide[tab]);
-  const docked = side === "left" || side === "right";
+  const docked = side === 'left' || side === 'right';
   const [pos, setPos] = useState(() => loadDetachedPos(tab));
   const [size, setSize] = useState(() => loadDetachedSize(tab));
   const [dockW, setDockW] = useState(() => loadDetachedDockW(tab));
-  const [snap, setSnap] = useState<"left" | "right" | null>(null);
+  const [snap, setSnap] = useState<'left' | 'right' | null>(null);
   const dragRef = useRef<{
     px: number;
     py: number;
@@ -95,10 +86,10 @@ export default function DetachedTabWindow({
 
   const close = () => {
     const st = useCanvasStore.getState();
-    if (tab === "functions") st.setPaletteOpen(false);
-    else if (tab === "formulas") st.setFormulaPaletteOpen(false);
-    else if (tab === "constants") st.setConstPaletteOpen(false);
-    else if (tab === "elements") st.toggleElemPalette();
+    if (tab === 'functions') st.setPaletteOpen(false);
+    else if (tab === 'formulas') st.setFormulaPaletteOpen(false);
+    else if (tab === 'constants') st.setConstPaletteOpen(false);
+    else if (tab === 'elements') st.toggleElemPalette();
     else if (st.scopeMonOpen) st.toggleScopeMon();
   };
 
@@ -121,9 +112,9 @@ export default function DetachedTabWindow({
       moveGhostFixed(dx, dy);
       setSnap(
         e.clientX <= SNAP_ZONE
-          ? "left"
+          ? 'left'
           : e.clientX >= window.innerWidth - SNAP_ZONE
-            ? "right"
+            ? 'right'
             : null,
       );
     };
@@ -132,19 +123,13 @@ export default function DetachedTabWindow({
       dragRef.current = null;
       if (!d?.moved) return;
       hideGhostFixed();
-      const nx = Math.min(
-        Math.max(-320, e.clientX - d.gx),
-        window.innerWidth - 80,
-      );
-      const ny = Math.min(
-        Math.max(0, e.clientY - d.gy),
-        window.innerHeight - 60,
-      );
+      const nx = Math.min(Math.max(-320, e.clientX - d.gx), window.innerWidth - 80);
+      const ny = Math.min(Math.max(0, e.clientY - d.gy), window.innerHeight - 60);
       const snapped =
         e.clientX <= SNAP_ZONE
-          ? "left"
+          ? 'left'
           : e.clientX >= window.innerWidth - SNAP_ZONE
-            ? "right"
+            ? 'right'
             : null;
       setSnap(null);
       const st = useCanvasStore.getState();
@@ -156,7 +141,7 @@ export default function DetachedTabWindow({
         return;
       }
       // бросили на единое окно — вернуть вкладку в общий ряд
-      const root = document.querySelector("[data-unified-palette]");
+      const root = document.querySelector('[data-unified-palette]');
       const r = root?.getBoundingClientRect();
       if (
         r &&
@@ -171,21 +156,21 @@ export default function DetachedTabWindow({
       // в чистом поле — плавающее окно; тянули док — открепляем
       setPos({ x: nx, y: ny });
       saveDetachedPos(tab, nx, ny);
-      st.setDetachedSide(tab, "float");
+      st.setDetachedSide(tab, 'float');
     };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
     return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
       hideGhostFixed();
     };
   }, [tab]);
 
   const startDrag = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest("button")) return;
+    if ((e.target as HTMLElement).closest('button')) return;
     e.preventDefault();
     const rect = rootRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -208,8 +193,8 @@ export default function DetachedTabWindow({
       type="button"
       className="nya-tbtn w-8 h-8 shrink-0"
       onClick={close}
-      aria-label={t("palTab.closeAll")}
-      title={t("palTab.closeAll")}
+      aria-label={t('palTab.closeAll')}
+      title={t('palTab.closeAll')}
     >
       <IX />
     </button>
@@ -220,7 +205,7 @@ export default function DetachedTabWindow({
       className="flex items-center gap-2 px-3 py-2.5 select-none cursor-grab active:cursor-grabbing touch-none"
       onPointerDown={startDrag}
       onDoubleClick={dockBack}
-      title={`${title} · ${t("detached.backHint")}`}
+      title={`${title} · ${t('detached.backHint')}`}
     >
       <span
         className="text-[var(--faint)] text-[13px] leading-none tracking-tighter shrink-0"
@@ -231,24 +216,22 @@ export default function DetachedTabWindow({
       <span className="text-[var(--accent)] shrink-0" aria-hidden="true">
         <Icon />
       </span>
-      <span className="flex-1 min-w-0 truncate text-[13px] font-medium">
-        {title}
-      </span>
+      <span className="flex-1 min-w-0 truncate text-[13px] font-medium">{title}</span>
       {closeBtn}
     </div>
   );
 
   const content =
-    tab === "variables" ? (
+    tab === 'variables' ? (
       <VariablesContent onOpenNavigator={onOpenNavigator} />
-    ) : tab === "elements" ? (
+    ) : tab === 'elements' ? (
       <ElementsContent />
     ) : (
       <PaletteContent variant={tab} />
     );
 
   const onKey = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
+    if (e.key === 'Escape') {
       e.stopPropagation();
       close();
     }
@@ -259,8 +242,8 @@ export default function DetachedTabWindow({
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label={t("pal.resize")}
-        title={t("pal.resize")}
+        aria-label={t('pal.resize')}
+        title={t('pal.resize')}
         className="w-[7px] shrink-0 cursor-ew-resize hover:bg-white/10 active:bg-white/15 touch-none"
         onPointerDown={(e) => {
           dockResizeRef.current = { start: e.clientX, size: dockW };
@@ -271,10 +254,7 @@ export default function DetachedTabWindow({
           if (!st) return;
           const dx = e.clientX - st.start;
           setDockW(
-            Math.min(
-              640,
-              Math.max(280, Math.round(st.size + (side === "left" ? dx : -dx))),
-            ),
+            Math.min(640, Math.max(280, Math.round(st.size + (side === 'left' ? dx : -dx)))),
           );
         }}
         onPointerUp={() => {
@@ -290,19 +270,19 @@ export default function DetachedTabWindow({
       <div
         ref={rootRef}
         className={`h-full shrink-0 flex items-stretch bg-[var(--chrome)] text-[var(--chrome-ink)] ${
-          side === "left" ? "border-r" : "border-l"
+          side === 'left' ? 'border-r' : 'border-l'
         } border-[var(--chrome-line)]`}
-        style={{ width: dockW, order: side === "left" ? 1 : 3 }}
+        style={{ width: dockW, order: side === 'left' ? 1 : 3 }}
         role="complementary"
         aria-label={title}
         onKeyDown={onKey}
       >
-        {side === "right" && gutter}
+        {side === 'right' && gutter}
         <div className="flex-1 min-w-0 flex flex-col min-h-0">
           {header}
           {content}
         </div>
-        {side === "left" && gutter}
+        {side === 'left' && gutter}
       </div>
     );
   }
@@ -314,9 +294,9 @@ export default function DetachedTabWindow({
         <div
           aria-hidden="true"
           className={`fixed z-40 pointer-events-none border-2 border-dashed border-[var(--accent-line)] bg-[var(--accent-soft)] ${
-            snap === "left"
-              ? "left-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-r-xl"
-              : "right-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-l-xl"
+            snap === 'left'
+              ? 'left-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-r-xl'
+              : 'right-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-l-xl'
           }`}
         />
       )}
@@ -339,8 +319,8 @@ export default function DetachedTabWindow({
         <span
           role="separator"
           aria-orientation="horizontal"
-          aria-label={t("pal.resize")}
-          title={t("pal.resize")}
+          aria-label={t('pal.resize')}
+          title={t('pal.resize')}
           className="absolute -right-2 -bottom-2 p-1.5 cursor-nwse-resize text-[var(--faint)] hover:text-[var(--accent-line)] select-none touch-none"
           onPointerDown={(e) => {
             e.stopPropagation();
@@ -356,14 +336,8 @@ export default function DetachedTabWindow({
             const st = resizeRef.current;
             if (!st) return;
             setSize({
-              w: Math.min(
-                720,
-                Math.max(320, Math.round(st.w + (e.clientX - st.x))),
-              ),
-              h: Math.min(
-                1200,
-                Math.max(320, Math.round(st.h + (e.clientY - st.y))),
-              ),
+              w: Math.min(720, Math.max(320, Math.round(st.w + (e.clientX - st.x)))),
+              h: Math.min(1200, Math.max(320, Math.round(st.h + (e.clientY - st.y)))),
             });
           }}
           onPointerUp={() => {

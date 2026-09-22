@@ -222,14 +222,24 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
       disposables.push(g);
       const mesh = new THREE.Mesh(
         g,
-        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.08, side: THREE.DoubleSide }),
+        new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          roughness: 0.55,
+          metalness: 0.08,
+          side: THREE.DoubleSide,
+        }),
       );
       scene.add(mesh);
       rayTargets = [mesh];
       if (wire) {
         const wmesh = new THREE.Mesh(
           g,
-          new THREE.MeshBasicMaterial({ wireframe: true, color: new THREE.Color(pal.legend).getHex(), transparent: true, opacity: 0.22 }),
+          new THREE.MeshBasicMaterial({
+            wireframe: true,
+            color: new THREE.Color(pal.legend).getHex(),
+            transparent: true,
+            opacity: 0.22,
+          }),
         );
         wmesh.position.z = 0.001;
         scene.add(wmesh);
@@ -264,7 +274,14 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
     const ray = new THREE.Raycaster();
     if (ray.params.Points) ray.params.Points.threshold = 0.14;
     const tip = tipRef.current;
-    const showTip = (clientX: number, clientY: number, x: number, y: number, z: number, extra?: string) => {
+    const showTip = (
+      clientX: number,
+      clientY: number,
+      x: number,
+      y: number,
+      z: number,
+      extra?: string,
+    ) => {
       if (!tip || !host) return;
       const r = host.getBoundingClientRect();
       tip.style.display = 'block';
@@ -296,7 +313,14 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
         }
       }
       const v = hit.point;
-      showTip(e.clientX, e.clientY, unx(v.x), uny(v.y), unz(v.z), sample.mode === 'surface' ? sample.expr : undefined);
+      showTip(
+        e.clientX,
+        e.clientY,
+        unx(v.x),
+        uny(v.y),
+        unz(v.z),
+        sample.mode === 'surface' ? sample.expr : undefined,
+      );
     };
     renderer.domElement.addEventListener('pointermove', onMove);
     renderer.domElement.addEventListener('pointerleave', hideTip);
@@ -345,11 +369,25 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
     sample?.mode === 'points'
       ? t('p3.points', { n: sample.pts.length, lo: fmt(sample.zmin), hi: fmt(sample.zmax) })
       : sample
-        ? t('p3.grid', { c: sample.cols, r: sample.rows, lo: fmt(sample.zmin), hi: fmt(sample.zmax) })
+        ? t('p3.grid', {
+            c: sample.cols,
+            r: sample.rows,
+            lo: fmt(sample.zmin),
+            hi: fmt(sample.zmax),
+          })
         : '';
 
   return (
-    <div ref={boxRef} className="absolute z-10" style={{ left: block.x, top: block.y, width: pw, height: err || !sample ? 'auto' : ph + chromeH }}>
+    <div
+      ref={boxRef}
+      className="absolute z-10"
+      style={{
+        left: block.x,
+        top: block.y,
+        width: pw,
+        height: err || !sample ? 'auto' : ph + chromeH,
+      }}
+    >
       <div
         data-block-id={block.id}
         className={`nya-block relative w-full h-full rounded-xl px-3 py-2 flex flex-col bg-[var(--sheet)] group ${
@@ -362,61 +400,143 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
         }}
       >
         <div ref={headRef}>
-        <div
-          className="flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing select-none"
-          onPointerDown={onGripDown}
-          onPointerMove={onGripMove}
-          onPointerUp={onGripUp}
-          onPointerCancel={onGripUp}
-          onDoubleClick={(e) => e.stopPropagation()}
-        >
-          <span className="text-[var(--faint)] inline-flex" aria-hidden="true"><IGrip /></span>
-          <span className="text-[11px] uppercase tracking-wider text-[var(--accent-ink)]">plot3d</span>
-          <label htmlFor={`plot3dfn-${block.id}`} className="sr-only">{t('p3.fnLabel')}</label>
-          <input
-            id={`plot3dfn-${block.id}`}
-            className="math-input flex-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-2 py-0.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent-line)] select-text"
-            value={fnText}
-            onChange={(e) => updatePlot(block.id, { plotFn: e.target.value })}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-            spellCheck={false}
-            title={t('p3.fnTitle')}
-          />
-          <button
-            type="button"
-            className="p-1.5 text-[var(--faint)] hover:text-[var(--danger)] cursor-pointer"
-            onClick={() => removeBlock(block.id)}
-            onPointerDown={(e) => e.stopPropagation()}
-            aria-label={t('p3.delete')}
+          <div
+            className="flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing select-none"
+            onPointerDown={onGripDown}
+            onPointerMove={onGripMove}
+            onPointerUp={onGripUp}
+            onPointerCancel={onGripUp}
+            onDoubleClick={(e) => e.stopPropagation()}
           >
-            <IX />
-          </button>
-        </div>
+            <span className="text-[var(--faint)] inline-flex" aria-hidden="true">
+              <IGrip />
+            </span>
+            <span className="text-[11px] uppercase tracking-wider text-[var(--accent-ink)]">
+              plot3d
+            </span>
+            <label htmlFor={`plot3dfn-${block.id}`} className="sr-only">
+              {t('p3.fnLabel')}
+            </label>
+            <input
+              id={`plot3dfn-${block.id}`}
+              className="math-input flex-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-2 py-0.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent-line)] select-text"
+              value={fnText}
+              onChange={(e) => updatePlot(block.id, { plotFn: e.target.value })}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              spellCheck={false}
+              title={t('p3.fnTitle')}
+            />
+            <button
+              type="button"
+              className="p-1.5 text-[var(--faint)] hover:text-[var(--danger)] cursor-pointer"
+              onClick={() => removeBlock(block.id)}
+              onPointerDown={(e) => e.stopPropagation()}
+              aria-label={t('p3.delete')}
+            >
+              <IX />
+            </button>
+          </div>
 
-        <div className="flex items-center gap-2 flex-wrap text-[12px] text-[var(--ink-soft)] mb-1">
-          <label>xmin <input type="number" aria-label={t('p3.xmin')} className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={xmin} onChange={(e) => updatePlot(block.id, { plotXmin: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-          <label>xmax <input type="number" aria-label={t('p3.xmax')} className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={xmax} onChange={(e) => updatePlot(block.id, { plotXmax: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-          <label>ymin <input type="number" aria-label={t('p3.ymin')} className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={ymin} onChange={(e) => updatePlot(block.id, { plotYmin: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-          <label>ymax <input type="number" aria-label={t('p3.ymax')} className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={ymax} onChange={(e) => updatePlot(block.id, { plotYmax: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-          <label>{t('p3.modeLabel')}
-            <select aria-label={t('p3.mode')} className="ml-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)]" value={mode} onChange={(e) => updatePlot(block.id, { plotMode: e.target.value as Plot3dMode })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-              <option value="auto">auto</option>
-              <option value="surface">surface</option>
-              <option value="points">points</option>
-              <option value="matrix">matrix</option>
-            </select>
-          </label>
-          <label>{t('p3.resLabel')} <input type="number" aria-label={t('p3.res')} min={N_MIN} max={N_MAX} step={1} className="w-[60px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text" value={res} onChange={(e) => updatePlot(block.id, { plotResolution: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-          <label className="inline-flex items-center gap-1 cursor-pointer">
-            <input type="checkbox" aria-label={t('p3.wire')} className="w-4 h-4 accent-[var(--accent-line)]" checked={wire} onChange={(e) => updatePlot(block.id, { plotWireframe: e.target.checked })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} />
-            {t('p3.wireLabel')}
-          </label>
-        </div>
+          <div className="flex items-center gap-2 flex-wrap text-[12px] text-[var(--ink-soft)] mb-1">
+            <label>
+              xmin{' '}
+              <input
+                type="number"
+                aria-label={t('p3.xmin')}
+                className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                value={xmin}
+                onChange={(e) => updatePlot(block.id, { plotXmin: Number(e.target.value) })}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </label>
+            <label>
+              xmax{' '}
+              <input
+                type="number"
+                aria-label={t('p3.xmax')}
+                className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                value={xmax}
+                onChange={(e) => updatePlot(block.id, { plotXmax: Number(e.target.value) })}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </label>
+            <label>
+              ymin{' '}
+              <input
+                type="number"
+                aria-label={t('p3.ymin')}
+                className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                value={ymin}
+                onChange={(e) => updatePlot(block.id, { plotYmin: Number(e.target.value) })}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </label>
+            <label>
+              ymax{' '}
+              <input
+                type="number"
+                aria-label={t('p3.ymax')}
+                className="w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                value={ymax}
+                onChange={(e) => updatePlot(block.id, { plotYmax: Number(e.target.value) })}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </label>
+            <label>
+              {t('p3.modeLabel')}
+              <select
+                aria-label={t('p3.mode')}
+                className="ml-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)]"
+                value={mode}
+                onChange={(e) => updatePlot(block.id, { plotMode: e.target.value as Plot3dMode })}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <option value="auto">auto</option>
+                <option value="surface">surface</option>
+                <option value="points">points</option>
+                <option value="matrix">matrix</option>
+              </select>
+            </label>
+            <label>
+              {t('p3.resLabel')}{' '}
+              <input
+                type="number"
+                aria-label={t('p3.res')}
+                min={N_MIN}
+                max={N_MAX}
+                step={1}
+                className="w-[60px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                value={res}
+                onChange={(e) => updatePlot(block.id, { plotResolution: Number(e.target.value) })}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </label>
+            <label className="inline-flex items-center gap-1 cursor-pointer">
+              <input
+                type="checkbox"
+                aria-label={t('p3.wire')}
+                className="w-4 h-4 accent-[var(--accent-line)]"
+                checked={wire}
+                onChange={(e) => updatePlot(block.id, { plotWireframe: e.target.checked })}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              />
+              {t('p3.wireLabel')}
+            </label>
+          </div>
         </div>
 
         {err || !sample ? (
-          <div className="flex items-center gap-1.5 text-[var(--danger)] text-[12px]" role="alert"><IWarn /> {err ?? t('p3.noData')}</div>
+          <div className="flex items-center gap-1.5 text-[var(--danger)] text-[12px]" role="alert">
+            <IWarn /> {err ?? t('p3.noData')}
+          </div>
         ) : (
           <div
             ref={viewRef}
@@ -432,7 +552,13 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
               className="math-input absolute z-10 hidden pointer-events-none text-[11px] leading-4 px-2 py-1 rounded-md border border-[var(--line)]"
               style={{ display: 'none', background: 'var(--chrome)', color: 'var(--chrome-ink)' }}
             />
-            <div className="absolute left-2 top-1.5 math-input text-[10px] px-1.5 py-0.5 rounded pointer-events-none" style={{ background: 'color-mix(in srgb, var(--chrome) 78%, transparent)', color: 'var(--chrome-ink)' }}>
+            <div
+              className="absolute left-2 top-1.5 math-input text-[10px] px-1.5 py-0.5 rounded pointer-events-none"
+              style={{
+                background: 'color-mix(in srgb, var(--chrome) 78%, transparent)',
+                color: 'var(--chrome-ink)',
+              }}
+            >
               {sample.mode} • {sub}
             </div>
           </div>

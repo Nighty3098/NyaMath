@@ -110,7 +110,10 @@ describe('NyaMath.db integrity', () => {
   it('checked-in NyaMath.db matches db/seed.json (npm run seed)', () => {
     const root = path.resolve(path.dirname(dbPath()), '..');
     const schema = fs.readFileSync(path.join(root, 'db', 'schema.sql'), 'utf-8');
-    const seed = JSON.parse(fs.readFileSync(path.join(root, 'db', 'seed.json'), 'utf-8')) as Record<string, Array<Record<string, unknown>>>;
+    const seed = JSON.parse(fs.readFileSync(path.join(root, 'db', 'seed.json'), 'utf-8')) as Record<
+      string,
+      Array<Record<string, unknown>>
+    >;
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'nyadb-'));
     const rebuilt = path.join(tmp, 'NyaMath.db');
     try {
@@ -124,7 +127,9 @@ describe('NyaMath.db integrity', () => {
       for (const [table, rows] of Object.entries(seed)) {
         if (!rows.length) continue;
         const cols = Object.keys(rows[0] ?? {});
-        const stmt = db.prepare(`INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`);
+        const stmt = db.prepare(
+          `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+        );
         for (const r of rows) stmt.run(...cols.map((k) => toSql(r[k])));
       }
       const live = new DatabaseSync(dbPath(), { readOnly: true });

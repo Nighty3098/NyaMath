@@ -33,7 +33,13 @@ import { engineMismatch, parseDocFile, serializeDocFile } from '../../src/lib/do
 import { slimText, unifiedDiff } from '../../src/lib/slimDiff.js';
 import { parseCpd, parseSmXml, type ImportBlock } from '../../src/lib/importDoc.js';
 import { startSyncServer } from './syncServer.js';
-import { canon, mergeBlockMaps, saneMeta, type MetaMap, type WireBlock } from '../../src/lib/syncCrdt.js';
+import {
+  canon,
+  mergeBlockMaps,
+  saneMeta,
+  type MetaMap,
+  type WireBlock,
+} from '../../src/lib/syncCrdt.js';
 import { getDemoItems, getDemoLines } from '../../src/lib/db.js';
 
 /* ---------------- состояние документа ---------------- */
@@ -64,11 +70,27 @@ function snapHistory(): void {
   if (syncHistory.length > SYNC_HIST_CAP) syncHistory.shift();
 }
 
-function blank(id: string, x: number, y: number, kind: MathBlockData['kind'] = 'math'): MathBlockData {
+function blank(
+  id: string,
+  x: number,
+  y: number,
+  kind: MathBlockData['kind'] = 'math',
+): MathBlockData {
   return {
-    id, x, y, rawInput: '', displayLatex: '', resultStr: '', resultLatex: '',
-    resultValue: null, error: null, dependencies: [], definedVar: null,
-    isOutput: false, kind, plotPreview: null,
+    id,
+    x,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind,
+    plotPreview: null,
   };
 }
 
@@ -94,7 +116,11 @@ function refresh(): void {
 /** Блоки без пересчитываемых полей — для файла и realtime-рассылки. */
 function slimBlocks(): MathBlockData[] {
   return blocks.map((b) => {
-    const { plotPreview: _pp, simResult: _sr, ...rest } = b as MathBlockData & {
+    const {
+      plotPreview: _pp,
+      simResult: _sr,
+      ...rest
+    } = b as MathBlockData & {
       simResult?: unknown;
     };
     void _pp;
@@ -106,15 +132,26 @@ function slimBlocks(): MathBlockData[] {
 function validateBlock(raw: unknown): MathBlockData | null {
   if (!raw || typeof raw !== 'object') return null;
   const b = raw as Partial<MathBlockData>;
-  if (typeof b['x'] !== 'number' || typeof b['y'] !== 'number' || typeof b['rawInput'] !== 'string') return null;
+  if (typeof b['x'] !== 'number' || typeof b['y'] !== 'number' || typeof b['rawInput'] !== 'string')
+    return null;
   const id = typeof b['id'] === 'string' && b['id'] ? b['id'] : uuid();
   const kind: MathBlockData['kind'] =
-    b['kind'] === 'plot' || b['kind'] === 'plot3d' || b['kind'] === 'program' || b['kind'] === 'text' || b['kind'] === 'slider' || b['kind'] === 'sim' || b['kind'] === 'contour' ? b['kind'] : 'math';
-  const numOrUndef = (v: unknown): number | undefined => (typeof v === 'number' && isFinite(v) ? v : undefined);
+    b['kind'] === 'plot' ||
+    b['kind'] === 'plot3d' ||
+    b['kind'] === 'program' ||
+    b['kind'] === 'text' ||
+    b['kind'] === 'slider' ||
+    b['kind'] === 'sim' ||
+    b['kind'] === 'contour'
+      ? b['kind']
+      : 'math';
+  const numOrUndef = (v: unknown): number | undefined =>
+    typeof v === 'number' && isFinite(v) ? v : undefined;
   return {
     ...blank(id, b['x'], b['y'], kind),
     ...b,
-    id, kind,
+    id,
+    kind,
     resultLatex: b['resultLatex'] ?? '',
     isOutput: b['isOutput'] ?? false,
     // Как браузерный migrate: всегда boolean, иначе JSON-эхо
@@ -122,7 +159,10 @@ function validateBlock(raw: unknown): MathBlockData | null {
     disabled: (b as { disabled?: unknown })['disabled'] === true,
     plotPreview: null,
     exportName: typeof b['exportName'] === 'string' ? b['exportName'] : undefined,
-    plotMode: b['plotMode'] === 'surface' || b['plotMode'] === 'points' || b['plotMode'] === 'matrix' ? b['plotMode'] : undefined,
+    plotMode:
+      b['plotMode'] === 'surface' || b['plotMode'] === 'points' || b['plotMode'] === 'matrix'
+        ? b['plotMode']
+        : undefined,
     plotResolution: numOrUndef(b['plotResolution']),
     plotWireframe: typeof b['plotWireframe'] === 'boolean' ? b['plotWireframe'] : undefined,
     sliderVar: typeof b['sliderVar'] === 'string' ? b['sliderVar'] : undefined,
@@ -177,7 +217,10 @@ function ok(data: unknown): CallToolResult {
 }
 
 function fail(message: string): CallToolResult {
-  return { content: [{ type: 'text', text: JSON.stringify({ ok: false, error: message }) }], isError: true };
+  return {
+    content: [{ type: 'text', text: JSON.stringify({ ok: false, error: message }) }],
+    isError: true,
+  };
 }
 
 /** Прореживание массива точек до maxPoints (равномерно). */
@@ -198,9 +241,19 @@ server.tool(
   'Состояние документа: число блоков, ошибки, число переменных в scope, путь файла',
   {},
   async (): Promise<CallToolResult> => {
-    const errors = blocks.filter((b) => b.error).map((b) => ({ id: b.id, rawInput: b.rawInput.split('\n')[0], error: b.error }));
+    const errors = blocks
+      .filter((b) => b.error)
+      .map((b) => ({ id: b.id, rawInput: b.rawInput.split('\n')[0], error: b.error }));
     const vars = Object.keys(lastScope).filter((k) => !['i', 'j'].includes(k));
-    return ok({ blocks: blocks.length, errors, errorCount: errors.length, variables: vars.length, pendingAsks: pendingAsks.size, docPath, engine: ENGINE_VERSION });
+    return ok({
+      blocks: blocks.length,
+      errors,
+      errorCount: errors.length,
+      variables: vars.length,
+      pendingAsks: pendingAsks.size,
+      docPath,
+      engine: ENGINE_VERSION,
+    });
   },
 );
 
@@ -208,13 +261,22 @@ server.tool(
   'nya_list_blocks',
   'Список блоков документа (id, тип, позиция, ввод, переменная, ошибка, результат)',
   {
-    kind: z.enum(['math', 'text', 'plot', 'plot3d', 'program', 'slider']).optional().describe('Фильтр по типу'),
+    kind: z
+      .enum(['math', 'text', 'plot', 'plot3d', 'program', 'slider'])
+      .optional()
+      .describe('Фильтр по типу'),
     limit: z.number().int().min(1).max(1000).default(200),
     offset: z.number().int().min(0).default(0),
   },
   async ({ kind, limit, offset }): Promise<CallToolResult> => {
-    const list = (kind ? blocks.filter((b) => b.kind === kind) : blocks).slice(offset, offset + limit);
-    return ok({ total: kind ? blocks.filter((b) => b.kind === kind).length : blocks.length, blocks: list.map(summarize) });
+    const list = (kind ? blocks.filter((b) => b.kind === kind) : blocks).slice(
+      offset,
+      offset + limit,
+    );
+    return ok({
+      total: kind ? blocks.filter((b) => b.kind === kind).length : blocks.length,
+      blocks: list.map(summarize),
+    });
   },
 );
 
@@ -249,14 +311,31 @@ const AddBlockShape = {
   kind: z.enum(['math', 'text', 'plot', 'plot3d', 'program', 'slider']).default('math'),
   x: z.number().default(80),
   y: z.number().default(80),
-  rawInput: z.string().default('').describe('Текст блока; для math: "f := 10*10^9", "Z_c_abs =", "f(x) := sin(x)"'),
-  plotFn: z.string().optional().describe('Для plot: "sin(x); cos(x/2)", для plot3d: "sin(sqrt(x^2+y^2))", матрица N×3, "X; Y; Z"'),
+  rawInput: z
+    .string()
+    .default('')
+    .describe('Текст блока; для math: "f := 10*10^9", "Z_c_abs =", "f(x) := sin(x)"'),
+  plotFn: z
+    .string()
+    .optional()
+    .describe(
+      'Для plot: "sin(x); cos(x/2)", для plot3d: "sin(sqrt(x^2+y^2))", матрица N×3, "X; Y; Z"',
+    ),
   plotXmin: z.number().optional(),
   plotXmax: z.number().optional(),
   plotYmin: z.number().optional().describe('Для plot3d: минимум y'),
   plotYmax: z.number().optional().describe('Для plot3d: максимум y'),
-  plotMode: z.enum(['auto', 'surface', 'points', 'matrix']).optional().describe('Для plot3d: режим'),
-  plotResolution: z.number().int().min(8).max(100).optional().describe('Для plot3d: разрешение сетки'),
+  plotMode: z
+    .enum(['auto', 'surface', 'points', 'matrix'])
+    .optional()
+    .describe('Для plot3d: режим'),
+  plotResolution: z
+    .number()
+    .int()
+    .min(8)
+    .max(100)
+    .optional()
+    .describe('Для plot3d: разрешение сетки'),
   plotWireframe: z.boolean().optional().describe('Для plot3d: каркас поверх поверхности'),
   exportName: z.string().optional().describe('Для program: переменная результата'),
   sliderVar: z.string().optional().describe('Для slider: имя переменной'),
@@ -275,8 +354,21 @@ server.tool(
     const is3d = args.kind === 'plot3d';
     const b: MathBlockData = {
       ...blank(id, args.x, args.y, args.kind),
-      rawInput: args.kind === 'plot' ? 'plot' : is3d ? 'plot3d' : args.kind === 'slider' ? 'slider' : args.rawInput,
-      plotFn: args.plotFn ?? (args.kind === 'plot' ? args.rawInput || 'sin(x)' : is3d ? args.rawInput || 'sin(sqrt(x^2+y^2))' : undefined),
+      rawInput:
+        args.kind === 'plot'
+          ? 'plot'
+          : is3d
+            ? 'plot3d'
+            : args.kind === 'slider'
+              ? 'slider'
+              : args.rawInput,
+      plotFn:
+        args.plotFn ??
+        (args.kind === 'plot'
+          ? args.rawInput || 'sin(x)'
+          : is3d
+            ? args.rawInput || 'sin(sqrt(x^2+y^2))'
+            : undefined),
       plotXmin: args.plotXmin ?? (is3d ? -5 : undefined),
       plotXmax: args.plotXmax ?? (is3d ? 5 : undefined),
       plotYmin: args.plotYmin ?? (is3d ? -5 : undefined),
@@ -318,7 +410,24 @@ server.tool(
     sliderStep: z.number().optional(),
     sliderVal: z.number().optional(),
   },
-  async ({ id, rawInput, plotFn, plotXmin, plotXmax, plotYmin, plotYmax, plotMode, plotResolution, plotWireframe, exportName, sliderVar, sliderMin, sliderMax, sliderStep, sliderVal }): Promise<CallToolResult> => {
+  async ({
+    id,
+    rawInput,
+    plotFn,
+    plotXmin,
+    plotXmax,
+    plotYmin,
+    plotYmax,
+    plotMode,
+    plotResolution,
+    plotWireframe,
+    exportName,
+    sliderVar,
+    sliderMin,
+    sliderMax,
+    sliderStep,
+    sliderVal,
+  }): Promise<CallToolResult> => {
     const b = find(id);
     if (!b) return fail(`Блок ${id} не найден`);
     if (rawInput !== undefined) b.rawInput = rawInput;
@@ -358,7 +467,12 @@ server.tool(
 server.tool(
   'nya_move_blocks',
   'Пакетное перемещение нескольких блоков [{id, x, y}]',
-  { moves: z.array(z.object({ id: z.string(), x: z.number(), y: z.number() })).min(1).max(500) },
+  {
+    moves: z
+      .array(z.object({ id: z.string(), x: z.number(), y: z.number() }))
+      .min(1)
+      .max(500),
+  },
   async ({ moves }): Promise<CallToolResult> => {
     const missing = moves.filter((m) => !find(m.id)).map((m) => m.id);
     if (missing.length) return fail(`Не найдены блоки: ${missing.join(', ')}`);
@@ -375,7 +489,11 @@ server.tool(
 server.tool(
   'nya_resize_block',
   'Ручной размер блока: w — ширина, h — высота графика (null = авто)',
-  { id: z.string(), w: z.number().positive().nullable().optional(), h: z.number().positive().nullable().optional() },
+  {
+    id: z.string(),
+    w: z.number().positive().nullable().optional(),
+    h: z.number().positive().nullable().optional(),
+  },
   async ({ id, w, h }): Promise<CallToolResult> => {
     const b = find(id);
     if (!b) return fail(`Блок ${id} не найден`);
@@ -424,7 +542,13 @@ server.tool(
     // шаговый лог решателей — агент видит итерации бесплатно (ответ Symbolab)
     const trace = takeSolverTrace(scope);
     if (r.error) return ok({ result: null, formatted: '', latex: '', error: r.error, trace });
-    return ok({ result: formatResult(r.value), formatted: formatResult(r.value), latex: valueToLatex(r.value), error: null, trace });
+    return ok({
+      result: formatResult(r.value),
+      formatted: formatResult(r.value),
+      latex: valueToLatex(r.value),
+      error: null,
+      trace,
+    });
   },
 );
 
@@ -461,11 +585,21 @@ server.tool(
     'покажите его человеку и верните ответ через nya_answer. Ответ можно записать в переменную документа (var)',
   {
     question: z.string().min(1).describe('Вопрос пользователю'),
-    options: z.array(z.string().min(1).max(200)).min(1).max(20).optional().describe('Варианты ответа (если выбранного ответа нет — свободный текст)'),
-    var: z.string().regex(/^[A-Za-z_]\w*$/).optional().describe('Имя переменной, в которую записать ответ (var := ответ)'),
+    options: z
+      .array(z.string().min(1).max(200))
+      .min(1)
+      .max(20)
+      .optional()
+      .describe('Варианты ответа (если выбранного ответа нет — свободный текст)'),
+    var: z
+      .string()
+      .regex(/^[A-Za-z_]\w*$/)
+      .optional()
+      .describe('Имя переменной, в которую записать ответ (var := ответ)'),
   },
   async ({ question, options, var: varName }): Promise<CallToolResult> => {
-    if (pendingAsks.size >= 50) return fail('Слишком много необработанных вопросов — ответьте на них через nya_answer');
+    if (pendingAsks.size >= 50)
+      return fail('Слишком много необработанных вопросов — ответьте на них через nya_answer');
     let id = `ask-${uuid().slice(0, 8)}`;
     while (pendingAsks.has(id)) id = `ask-${uuid().slice(0, 8)}`;
     const ask: PendingAsk = {
@@ -503,7 +637,9 @@ server.tool(
       }
     }
     if (ask.var) {
-      const val = /^[+-]?(\d+([.,]\d*)?|\.\d+)([eE][+-]?\d+)?$/.test(answer.trim()) ? Number(answer.replace(',', '.')) : answer;
+      const val = /^[+-]?(\d+([.,]\d*)?|\.\d+)([eE][+-]?\d+)?$/.test(answer.trim())
+        ? Number(answer.replace(',', '.'))
+        : answer;
       const literal = typeof val === 'number' ? String(val) : JSON.stringify(answer);
       const id2 = uuid();
       const y = blocks.length ? Math.max(...blocks.map((b) => b.y)) + 64 : 60;
@@ -533,12 +669,20 @@ function pendingScopeGet(name: string | null): string | null {
 server.tool(
   'nya_get_plot_data',
   'Данные графика: серии точек [{expr, xs, ys}]. Для plot-блока — его серии; для math-блока с автографиком — превью',
-  { id: z.string().describe('ID plot- или math-блока'), max_points: z.number().int().min(8).max(1000).default(120) },
+  {
+    id: z.string().describe('ID plot- или math-блока'),
+    max_points: z.number().int().min(8).max(1000).default(120),
+  },
   async ({ id, max_points }): Promise<CallToolResult> => {
     const b = find(id);
     if (!b) return fail(`Блок ${id} не найден`);
     if (b.kind === 'plot') {
-      const s = samplePlotBlock(b.plotFn ?? 'sin(x)', lastScope, b.plotXmin ?? -10, b.plotXmax ?? 10);
+      const s = samplePlotBlock(
+        b.plotFn ?? 'sin(x)',
+        lastScope,
+        b.plotXmin ?? -10,
+        b.plotXmax ?? 10,
+      );
       if (!s) return fail('Нет данных: проверьте выражения и диапазон');
       return ok({
         kind: 'plot',
@@ -546,7 +690,12 @@ server.tool(
         xmax: b.plotXmax ?? 10,
         ymin: s.ymin,
         ymax: s.ymax,
-        series: s.series.map((ser) => ({ expr: ser.expr, indexMode: ser.indexMode, xs: stride(ser.xs, max_points), ys: stride(ser.ys, max_points) })),
+        series: s.series.map((ser) => ({
+          expr: ser.expr,
+          indexMode: ser.indexMode,
+          xs: stride(ser.xs, max_points),
+          ys: stride(ser.ys, max_points),
+        })),
       });
     }
     if (!b.plotPreview) return fail('У блока нет автографика (не функция от x)');
@@ -568,7 +717,10 @@ server.tool(
 server.tool(
   'nya_get_plot3d_data',
   'Данные 3D-блока: поверхность {gx, gy, zs} или точки [{x,y,z}] + границы. Для plot3d-блока',
-  { id: z.string().describe('ID plot3d-блока'), max_points: z.number().int().min(8).max(4000).default(2500) },
+  {
+    id: z.string().describe('ID plot3d-блока'),
+    max_points: z.number().int().min(8).max(4000).default(2500),
+  },
   async ({ id, max_points }): Promise<CallToolResult> => {
     const b = find(id);
     if (!b) return fail(`Блок ${id} не найден`);
@@ -584,9 +736,17 @@ server.tool(
     if (!s) return fail('Нет 3D-данных: проверьте выражение и диапазоны');
     if (s.mode === 'points') {
       return ok({
-        kind: 'plot3d', mode: 'points', expr: s.expr,
-        xmin: s.xmin, xmax: s.xmax, ymin: s.ymin, ymax: s.ymax, zmin: s.zmin, zmax: s.zmax,
-        count: s.pts.length, pts: stride(s.pts, max_points),
+        kind: 'plot3d',
+        mode: 'points',
+        expr: s.expr,
+        xmin: s.xmin,
+        xmax: s.xmax,
+        ymin: s.ymin,
+        ymax: s.ymax,
+        zmin: s.zmin,
+        zmax: s.zmax,
+        count: s.pts.length,
+        pts: stride(s.pts, max_points),
       });
     }
     // surface: прореживаем сетку до max_points
@@ -603,9 +763,20 @@ server.tool(
       zs.push(row);
     }
     return ok({
-      kind: 'plot3d', mode: 'surface', expr: s.expr,
-      xmin: s.xmin, xmax: s.xmax, ymin: s.ymin, ymax: s.ymax, zmin: s.zmin, zmax: s.zmax,
-      cols: gx.length, rows: gy.length, gx, gy, zs,
+      kind: 'plot3d',
+      mode: 'surface',
+      expr: s.expr,
+      xmin: s.xmin,
+      xmax: s.xmax,
+      ymin: s.ymin,
+      ymax: s.ymax,
+      zmin: s.zmin,
+      zmax: s.zmax,
+      cols: gx.length,
+      rows: gy.length,
+      gx,
+      gy,
+      zs,
     });
   },
 );
@@ -635,7 +806,15 @@ server.tool(
       docPath = p;
       refresh();
       const mismatch = engineMismatch(parsed.engine);
-      return ok({ ok: true, blocks: blocks.length, skipped: bad, docPath, engine: parsed.engine, legacy: parsed.legacy, engineMismatch: mismatch });
+      return ok({
+        ok: true,
+        blocks: blocks.length,
+        skipped: bad,
+        docPath,
+        engine: parsed.engine,
+        legacy: parsed.legacy,
+        engineMismatch: mismatch,
+      });
     } catch (e) {
       return fail(`Не удалось открыть: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -650,7 +829,11 @@ server.tool(
     const target = p ?? docPath ?? path.resolve(process.cwd(), 'nyamath-doc.json');
     try {
       const slim = blocks.map((b) => {
-        const { plotPreview: _pp, simResult: _sr, ...rest } = b as MathBlockData & {
+        const {
+          plotPreview: _pp,
+          simResult: _sr,
+          ...rest
+        } = b as MathBlockData & {
           simResult?: unknown;
         };
         void _pp;
@@ -676,14 +859,23 @@ server.tool(
       let y = 60;
       for (const line of getDemoLines('variant20')) {
         const id = uuid();
-        rec.push({ ...blank(id, 80, y), rawInput: line, kind: line.startsWith('//') ? 'text' : 'math' });
+        rec.push({
+          ...blank(id, 80, y),
+          rawInput: line,
+          kind: line.startsWith('//') ? 'text' : 'math',
+        });
         y += 64;
       }
     } else {
       let y = 60;
       for (const item of getDemoItems('advanced')) {
         const id = uuid();
-        rec.push({ ...blank(id, 80, y), rawInput: item.raw, kind: item.kind, exportName: item.exportName ?? '' });
+        rec.push({
+          ...blank(id, 80, y),
+          rawInput: item.raw,
+          kind: item.kind,
+          exportName: item.exportName ?? '',
+        });
         y += item.kind === 'program' ? 210 : 64;
       }
     }
@@ -700,7 +892,9 @@ server.tool(
   {},
   async (): Promise<CallToolResult> => {
     refresh();
-    const errors = blocks.filter((b) => b.error).map((b) => ({ id: b.id, rawInput: b.rawInput.split('\n')[0], error: b.error }));
+    const errors = blocks
+      .filter((b) => b.error)
+      .map((b) => ({ id: b.id, rawInput: b.rawInput.split('\n')[0], error: b.error }));
     return ok({ blocks: blocks.length, errorCount: errors.length, errors });
   },
 );
@@ -709,7 +903,10 @@ server.tool(
   'nya_sync_pull',
   'Забрать холст с sync-сервиса (то, что видит пользователь в браузере) в эту сессию. Заменяет блоки, пересчёт автоматический',
   {
-    url: z.string().optional().describe('Sync-сервис (по умолчанию NYAMATH_SYNC_URL или http://localhost:3777)'),
+    url: z
+      .string()
+      .optional()
+      .describe('Sync-сервис (по умолчанию NYAMATH_SYNC_URL или http://localhost:3777)'),
   },
   async ({ url }): Promise<CallToolResult> => {
     let base: string;
@@ -735,7 +932,14 @@ server.tool(
     refresh();
     syncBaseRev = typeof snap.rev === 'number' ? snap.rev : null;
     const errs = blocks.filter((b) => b.error).length;
-    return ok({ ok: true, url: base, rev: snap.rev, blocks: blocks.length, skipped: bad, errors: errs });
+    return ok({
+      ok: true,
+      url: base,
+      rev: snap.rev,
+      blocks: blocks.length,
+      skipped: bad,
+      errors: errs,
+    });
   },
 );
 
@@ -743,8 +947,16 @@ server.tool(
   'nya_sync_push',
   'Отправить холст этой сессии на sync-сервис — пользователь мгновенно увидит изменения в браузере (там пересчёт + рассылка)',
   {
-    url: z.string().optional().describe('Sync-сервис (по умолчанию NYAMATH_SYNC_URL или http://localhost:3777)'),
-    force: z.boolean().optional().describe('true — перезаписать даже при конфликте ревизий (по умолчанию пуш отклоняется, если холст на сервисе новее pull)'),
+    url: z
+      .string()
+      .optional()
+      .describe('Sync-сервис (по умолчанию NYAMATH_SYNC_URL или http://localhost:3777)'),
+    force: z
+      .boolean()
+      .optional()
+      .describe(
+        'true — перезаписать даже при конфликте ревизий (по умолчанию пуш отклоняется, если холст на сервисе новее pull)',
+      ),
   },
   async ({ url, force }): Promise<CallToolResult> => {
     let base: string;
@@ -754,7 +966,11 @@ server.tool(
       return fail(e instanceof Error ? e.message : String(e));
     }
     try {
-      const rev = await pushSnapshot(base, slimBlocks(), force ? undefined : (syncBaseRev ?? undefined));
+      const rev = await pushSnapshot(
+        base,
+        slimBlocks(),
+        force ? undefined : (syncBaseRev ?? undefined),
+      );
       syncBaseRev = rev;
       return ok({ ok: true, url: base, rev, blocks: blocks.length });
     } catch (e) {
@@ -762,7 +978,9 @@ server.tool(
       // Конфликт optimistic concurrency: сервер новее нашего pull —
       // не затираем молча, просим pull + повтор.
       if (/CONFLICT|baseRev/i.test(msg)) {
-        return fail(`${msg}. Сделайте nya_sync_pull и повторите правку поверх свежего холста (или push с force:true).`);
+        return fail(
+          `${msg}. Сделайте nya_sync_pull и повторите правку поверх свежего холста (или push с force:true).`,
+        );
       }
       return fail(msg);
     }
@@ -773,14 +991,24 @@ server.tool(
   'nya_diff',
   'Git-friendly diff документа: канонический slim-текст (блок = строка) + unified diff против файла или пустого',
   {
-    against: z.enum(['file', 'empty']).default('file').describe('С чем сравнить: file — сохранённый файл, empty — весь документ как добавления'),
+    against: z
+      .enum(['file', 'empty'])
+      .default('file')
+      .describe('С чем сравнить: file — сохранённый файл, empty — весь документ как добавления'),
     path: z.string().optional().describe('Файл для сравнения (по умолчанию текущий docPath)'),
   },
   async ({ against, path: p }): Promise<CallToolResult> => {
     const cur = slimText(blocks);
     if (against === 'empty') {
       const d = unifiedDiff([], cur);
-      return ok({ base: 'empty', current: `${blocks.length} blocks`, additions: d.additions, deletions: d.deletions, truncated: d.truncated, diff: d.text || '(no changes)' });
+      return ok({
+        base: 'empty',
+        current: `${blocks.length} blocks`,
+        additions: d.additions,
+        deletions: d.deletions,
+        truncated: d.truncated,
+        diff: d.text || '(no changes)',
+      });
     }
     const target = p ?? docPath;
     if (!target) return fail('Нет файла для сравнения: укажите path или сохраните документ');
@@ -803,8 +1031,13 @@ server.tool(
     }
     const d = unifiedDiff(slimText(rec), cur);
     return ok({
-      base: target, engine: parsed.engine, baseBlocks: rec.length, currentBlocks: blocks.length,
-      additions: d.additions, deletions: d.deletions, truncated: d.truncated,
+      base: target,
+      engine: parsed.engine,
+      baseBlocks: rec.length,
+      currentBlocks: blocks.length,
+      additions: d.additions,
+      deletions: d.deletions,
+      truncated: d.truncated,
       diff: d.text || '(no changes)',
     });
   },
@@ -832,14 +1065,24 @@ function importBlocks(items: ImportBlock[], y0: number, dy: number): MathBlockDa
       rec.push({ ...blank(id, ib.x || p.x, p.y), kind: 'text', rawInput: ib.body });
     } else if (ib.kind === 'plot') {
       rec.push({
-        ...blank(id, ib.x || p.x, p.y), kind: 'plot', rawInput: 'plot', plotFn: ib.body,
-        plotXmin: ib.plotXmin ?? -10, plotXmax: ib.plotXmax ?? 10,
+        ...blank(id, ib.x || p.x, p.y),
+        kind: 'plot',
+        rawInput: 'plot',
+        plotFn: ib.body,
+        plotXmin: ib.plotXmin ?? -10,
+        plotXmax: ib.plotXmax ?? 10,
       });
     } else {
       rec.push({
-        ...blank(id, ib.x || p.x, p.y), kind: 'contour', rawInput: 'contour', plotFn: ib.body,
-        plotXmin: ib.plotXmin ?? -5, plotXmax: ib.plotXmax ?? 5,
-        plotYmin: ib.plotYmin ?? -5, plotYmax: ib.plotYmax ?? 5, plotResolution: 48,
+        ...blank(id, ib.x || p.x, p.y),
+        kind: 'contour',
+        rawInput: 'contour',
+        plotFn: ib.body,
+        plotXmin: ib.plotXmin ?? -5,
+        plotXmax: ib.plotXmax ?? 5,
+        plotYmin: ib.plotYmin ?? -5,
+        plotYmax: ib.plotYmax ?? 5,
+        plotResolution: 48,
       });
     }
   }
@@ -864,14 +1107,16 @@ server.tool(
     } catch (e) {
       return fail(`Не могу прочитать ${p}: ${e instanceof Error ? e.message : String(e)}`);
     }
-    if (text.startsWith('PK\x03\x04')) return fail('.smz (zip) не поддерживается — распакуйте в .sm');
+    if (text.startsWith('PK\x03\x04'))
+      return fail('.smz (zip) не поддерживается — распакуйте в .sm');
     const ext = path.extname(p).toLowerCase();
     const fmt = format === 'auto' ? (ext === '.sm' ? 'sm' : 'cpd') : format;
     const parsed = fmt === 'sm' ? parseSmXml(text) : parseCpd(text);
     if (!parsed.blocks.length) {
       return fail(`Нечего импортировать: ${parsed.notes.join('; ') || 'пустой файл'}`);
     }
-    if (parsed.blocks.length > 500) return fail(`Слишком много блоков (${parsed.blocks.length} > 500)`);
+    if (parsed.blocks.length > 500)
+      return fail(`Слишком много блоков (${parsed.blocks.length} > 500)`);
     const startY = y0 ?? (blocks.length ? Math.max(...blocks.map((b) => b.y)) + 72 : 60);
     const rec = importBlocks(parsed.blocks, startY, dy);
     blocks.push(...rec);
@@ -881,8 +1126,14 @@ server.tool(
       if (find(b.id)?.error) errors++;
     }
     return ok({
-      imported: rec.length, errors, notes: parsed.notes, format: parsed.format, y0: startY,
-      hint: errors ? 'Часть блоков с ошибками — проверьте nya_get_block по первым строкам' : undefined,
+      imported: rec.length,
+      errors,
+      notes: parsed.notes,
+      format: parsed.format,
+      y0: startY,
+      hint: errors
+        ? 'Часть блоков с ошибками — проверьте nya_get_block по первым строкам'
+        : undefined,
     });
   },
 );
@@ -928,7 +1179,12 @@ async function main(): Promise<void> {
   const port = Number(portRaw);
   if (portRaw && Number.isInteger(port) && port >= 0 && port <= 65535) {
     const sync = startSyncServer(port, {
-      getSnapshot: () => ({ rev, blocks: slimBlocks(), meta: { ...serverMeta }, deleted: { ...serverDeleted } }),
+      getSnapshot: () => ({
+        rev,
+        blocks: slimBlocks(),
+        meta: { ...serverMeta },
+        deleted: { ...serverDeleted },
+      }),
       applyPush: (raw, baseRev, inMeta, inDeleted) => {
         const peerMeta = saneMeta(inMeta);
         const peerDeleted = saneMeta(inDeleted);
@@ -949,15 +1205,21 @@ async function main(): Promise<void> {
         if (typeof baseRev === 'number' && baseRev !== rev && hasMeta) {
           const ancestor = syncHistory.find((h) => h.rev === baseRev);
           if (!ancestor) {
-            const err = new Error(`CONFLICT: baseRev=${baseRev} слишком стар (rev=${rev}), заберите snapshot`);
+            const err = new Error(
+              `CONFLICT: baseRev=${baseRev} слишком стар (rev=${rev}), заберите snapshot`,
+            );
             (err as { status?: number }).status = 409;
             throw err;
           }
           const merged = mergeBlockMaps(
-            ancestor.blocks, ancestor.meta,
-            slimBlocks(), serverMeta,
-            rec as unknown as WireBlock[], peerMeta,
-            serverDeleted, peerDeleted,
+            ancestor.blocks,
+            ancestor.meta,
+            slimBlocks(),
+            serverMeta,
+            rec as unknown as WireBlock[],
+            peerMeta,
+            serverDeleted,
+            peerDeleted,
           );
           const mrec: MathBlockData[] = [];
           for (const item of merged.blocks) {
@@ -968,14 +1230,26 @@ async function main(): Promise<void> {
           serverMeta = merged.meta;
           serverDeleted = merged.deleted;
           refresh();
-          return { rev, merged: { rev, blocks: slimBlocks(), meta: { ...serverMeta }, deleted: { ...serverDeleted } } };
+          return {
+            rev,
+            merged: {
+              rev,
+              blocks: slimBlocks(),
+              meta: { ...serverMeta },
+              deleted: { ...serverDeleted },
+            },
+          };
         }
         // fast path: свежий baseRev или безусловный push — принять как есть.
         // Метки: входящие — за свои блоки; legacy-пушам без meta наследуем
         // старые метки контентно-совпадающих блоков (иначе сервер выигрывал
         // бы все будущие конфликты просто за счёт свежего штампа).
         const stripCmp = (x: MathBlockData): unknown => {
-          const { plotPreview: _p, simResult: _s, ...rest } = x as MathBlockData & { simResult?: unknown };
+          const {
+            plotPreview: _p,
+            simResult: _s,
+            ...rest
+          } = x as MathBlockData & { simResult?: unknown };
           void _p;
           void _s;
           return rest;

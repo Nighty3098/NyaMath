@@ -5,9 +5,21 @@ import { compactTrace } from './numeric';
 let id = 0;
 function block(y: number, patch: Partial<MathBlockData> = {}): MathBlockData {
   return {
-    id: `st${id++}`, x: 80, y, rawInput: '', displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind: 'math', plotPreview: null, ...patch,
+    id: `st${id++}`,
+    x: 80,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind: 'math',
+    plotPreview: null,
+    ...patch,
   };
 }
 
@@ -77,9 +89,7 @@ describe('solverTrace: math blocks', () => {
   });
 
   it('bvp: стрельба-секущие', () => {
-    const out = recalc([
-      block(60, { rawInput: 'S := bvp("0", "x", 0, 1, 0, 1) =' }),
-    ]);
+    const out = recalc([block(60, { rawInput: 'S := bvp("0", "x", 0, 1, 0, 1) =' })]);
     expect(out[0].error).toBeNull();
     const tr = out[0].solverTrace ?? [];
     expect(tr[0]).toContain('bvp');

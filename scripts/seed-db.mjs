@@ -19,7 +19,9 @@ const seed = JSON.parse(fs.readFileSync(seedPath, 'utf-8'));
 
 try {
   fs.unlinkSync(outPath);
-} catch { /* ignore */ }
+} catch {
+  /* ignore */
+}
 
 const db = new DatabaseSync(outPath);
 db.exec(schema);
@@ -28,7 +30,9 @@ let total = 0;
 for (const [table, rows] of Object.entries(seed)) {
   if (!Array.isArray(rows) || !rows.length) continue;
   const cols = Object.keys(rows[0]);
-  const stmt = db.prepare(`INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`);
+  const stmt = db.prepare(
+    `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+  );
   for (const r of rows) stmt.run(...cols.map((k) => r[k] ?? null));
   total += rows.length;
   console.log(`${table}: ${rows.length}`);

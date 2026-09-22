@@ -5,10 +5,20 @@ import { getFormula } from '../lib/db';
 let id = 0;
 function toBlocks(code: string): MathBlockData[] {
   return code.split('\n').map((raw, k) => ({
-    id: `pf${id++}`, x: 80, y: 60 + k * 64, rawInput: raw,
-    displayLatex: '', resultStr: '', resultLatex: '', resultValue: null,
-    error: null, dependencies: [], definedVar: null, isOutput: false,
-    kind: 'math', plotPreview: null,
+    id: `pf${id++}`,
+    x: 80,
+    y: 60 + k * 64,
+    rawInput: raw,
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind: 'math',
+    plotPreview: null,
   }));
 }
 
@@ -17,7 +27,10 @@ function calcFormula(fid: string): Record<string, MathBlockData> {
   if (!f) throw new Error(`no formula ${fid}`);
   const r = recalculateAll(toBlocks(f.code));
   const errs = Object.values(r.blocks).filter((b) => b.error);
-  expect(errs.map((b) => `${b.rawInput} ⟹ ${b.error}`), fid).toEqual([]);
+  expect(
+    errs.map((b) => `${b.rawInput} ⟹ ${b.error}`),
+    fid,
+  ).toEqual([]);
   return r.blocks;
 }
 

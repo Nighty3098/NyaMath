@@ -12,7 +12,8 @@ describe('constants catalog', () => {
     for (const c of entries) {
       expect(ids.has(c.section), `${c.id}: unknown section ${c.section}`).toBe(true);
       expect(c.sources.length, `${c.id}: no sources`).toBeGreaterThan(0);
-      for (const src of c.sources) expect(src.url.startsWith('http'), `${c.id}: bad url`).toBe(true);
+      for (const src of c.sources)
+        expect(src.url.startsWith('http'), `${c.id}: bad url`).toBe(true);
       expect(c.code.length, `${c.id}: empty code`).toBeGreaterThan(0);
     }
     const cid = new Set(entries.map((c) => c.id));
@@ -34,9 +35,19 @@ describe('constants catalog', () => {
     expect(entries.length).toBeGreaterThan(0);
     for (const c of entries) {
       const block = {
-        id: `k-${c.id}`, x: 0, y: 0, rawInput: c.code, displayLatex: '', resultStr: '',
-        resultLatex: '', resultValue: null, error: null,
-        dependencies: [], definedVar: null, isOutput: true, kind: 'math' as const,
+        id: `k-${c.id}`,
+        x: 0,
+        y: 0,
+        rawInput: c.code,
+        displayLatex: '',
+        resultStr: '',
+        resultLatex: '',
+        resultValue: null,
+        error: null,
+        dependencies: [],
+        definedVar: null,
+        isOutput: true,
+        kind: 'math' as const,
       };
       const res = recalculateAll([block]);
       const b = res.blocks[`k-${c.id}`];

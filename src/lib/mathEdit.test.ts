@@ -4,31 +4,41 @@ import { expandSelection, insertSnippet, skipCloser, wrapSelection } from './mat
 describe('editing: wrap selection with operator', () => {
   it('parens keep the selection on the group (chaining)', () => {
     expect(wrapSelection('19+52', 0, 5, 'parens')).toEqual({
-      value: '(19+52)', start: 0, end: 7,
+      value: '(19+52)',
+      start: 0,
+      end: 7,
     });
   });
 
   it('slash makes a fraction with cursor in the denominator', () => {
     expect(wrapSelection('19+52', 0, 5, 'fraction')).toEqual({
-      value: '(19+52)/()', start: 9, end: 9,
+      value: '(19+52)/()',
+      start: 9,
+      end: 9,
     });
   });
 
   it('caret makes a power with cursor in the exponent', () => {
     expect(wrapSelection('19+52', 0, 5, 'power')).toEqual({
-      value: '(19+52)^()', start: 9, end: 9,
+      value: '(19+52)^()',
+      start: 9,
+      end: 9,
     });
   });
 
   it('wraps a middle group without touching the rest', () => {
     expect(wrapSelection('1+19+52+3', 2, 7, 'parens')).toEqual({
-      value: '1+(19+52)+3', start: 2, end: 9,
+      value: '1+(19+52)+3',
+      start: 2,
+      end: 9,
     });
   });
 
   it('sqrt wraps and keeps chaining selection', () => {
     expect(wrapSelection('52', 0, 2, 'sqrt')).toEqual({
-      value: 'sqrt(52)', start: 0, end: 8,
+      value: 'sqrt(52)',
+      start: 0,
+      end: 8,
     });
   });
 

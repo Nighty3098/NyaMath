@@ -4,9 +4,20 @@ import { recalculateAll, type MathBlockData } from './dependencies';
 let id = 0;
 function calc(rawInput: string) {
   const b: MathBlockData = {
-    id: `l${id++}`, x: 80, y: 60, rawInput, displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind: 'math', plotPreview: null,
+    id: `l${id++}`,
+    x: 80,
+    y: 60,
+    rawInput,
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind: 'math',
+    plotPreview: null,
   };
   return recalculateAll([b]).blocks[b.id];
 }

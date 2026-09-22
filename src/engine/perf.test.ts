@@ -10,9 +10,20 @@ describe('perf: big sheet budget', () => {
   it('300 блоков: холодный в бюджете, повтор — кэш-хит', () => {
     let n = 0;
     const block = (y: number, rawInput: string): MathBlockData => ({
-      id: `perf${n++}`, x: 80, y, rawInput, displayLatex: '', resultStr: '',
-      resultLatex: '', resultValue: null, error: null, dependencies: [],
-      definedVar: null, isOutput: false, kind: 'math', plotPreview: null,
+      id: `perf${n++}`,
+      x: 80,
+      y,
+      rawInput,
+      displayLatex: '',
+      resultStr: '',
+      resultLatex: '',
+      resultValue: null,
+      error: null,
+      dependencies: [],
+      definedVar: null,
+      isOutput: false,
+      kind: 'math',
+      plotPreview: null,
     });
     const list: MathBlockData[] = [block(60, 'v0 := 1')];
     for (let i = 1; i < 300; i++) {

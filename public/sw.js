@@ -39,25 +39,29 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).then((res) => {
-        if (res && res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put('/index.html', copy));
-        }
-        return res;
-      }).catch(() => caches.match('/index.html')),
+      fetch(request)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put('/index.html', copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match('/index.html')),
     );
     return;
   }
   event.respondWith(
     caches.match(request).then((hit) => {
-      const net = fetch(request).then((res) => {
-        if (res && res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, copy));
-        }
-        return res;
-      }).catch(() => hit);
+      const net = fetch(request)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(request, copy));
+          }
+          return res;
+        })
+        .catch(() => hit);
       return hit || net;
     }),
   );

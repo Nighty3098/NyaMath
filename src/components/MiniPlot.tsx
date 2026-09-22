@@ -20,7 +20,8 @@ function MiniPlot({ sample }: { sample: PlotSample }) {
   const color = pal.series[0];
 
   const X = (x: number) => PL + ((x - sample.xmin) / (sample.xmax - sample.xmin)) * (VW - PL - PR);
-  const Y = (y: number) => VH - PB - ((y - sample.ymin) / (sample.ymax - sample.ymin)) * (VH - PT - PB);
+  const Y = (y: number) =>
+    VH - PB - ((y - sample.ymin) / (sample.ymax - sample.ymin)) * (VH - PT - PB);
 
   let d = '';
   sample.ys.forEach((y, k) => {
@@ -48,7 +49,14 @@ function MiniPlot({ sample }: { sample: PlotSample }) {
       {zeroY !== null && (
         <line x1={PL} y1={zeroY} x2={VW - PR} y2={zeroY} stroke={pal.axis} strokeWidth={1} />
       )}
-      <rect x={PL} y={PT} width={VW - PL - PR} height={VH - PT - PB} fill="none" stroke={pal.frame} />
+      <rect
+        x={PL}
+        y={PT}
+        width={VW - PL - PR}
+        height={VH - PT - PB}
+        fill="none"
+        stroke={pal.frame}
+      />
       {d ? <path d={d} fill="none" stroke={color} strokeWidth={2} /> : null}
       {/* подпись серии + диапазон */}
       <circle cx={PL + 8} cy={PT + 10} r={3} fill={color} />

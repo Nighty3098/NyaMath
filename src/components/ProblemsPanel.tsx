@@ -18,7 +18,10 @@ export default function ProblemsPanel({ onClose }: { onClose: () => void }) {
   useCanvasStore((s) => s.lang);
 
   const errs = useMemo(
-    () => Object.values(blocks).filter((b) => b.error).sort((a, b) => a.y - b.y),
+    () =>
+      Object.values(blocks)
+        .filter((b) => b.error)
+        .sort((a, b) => a.y - b.y),
     [blocks],
   );
 
@@ -53,15 +56,16 @@ export default function ProblemsPanel({ onClose }: { onClose: () => void }) {
               title={t('nv.goto')}
               className="w-full flex items-baseline gap-2 px-3 py-[6px] text-left hover:bg-white/5 cursor-pointer"
             >
-              <span className="text-[var(--danger)] inline-flex shrink-0 self-center" aria-hidden="true">
+              <span
+                className="text-[var(--danger)] inline-flex shrink-0 self-center"
+                aria-hidden="true"
+              >
                 <IWarn />
               </span>
               <span className="font-mono text-[12px] text-[var(--chrome-ink)] truncate shrink-0 max-w-[40%]">
                 {snippetOf(b.rawInput)}
               </span>
-              <span className="text-[12px] text-[var(--danger)] truncate flex-1">
-                {b.error}
-              </span>
+              <span className="text-[12px] text-[var(--danger)] truncate flex-1">{b.error}</span>
             </button>
           ))
         )}

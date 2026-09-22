@@ -149,7 +149,9 @@ async function main() {
       return;
     }
     const same = d !== null && d < 1e-12 && cur.kind === kind;
-    report.push(`${same ? 'OK  ' : 'DIFF'} ${name}: seed=${cur.value} nist=${nist.value} kind ${cur.kind}->${kind}`);
+    report.push(
+      `${same ? 'OK  ' : 'DIFF'} ${name}: seed=${cur.value} nist=${nist.value} kind ${cur.kind}->${kind}`,
+    );
     if (!same) {
       if (write) {
         const r = patchEntry(src, name, String(nist.value), kind);
@@ -180,7 +182,9 @@ async function main() {
       continue;
     }
     const same = a.value === t.value;
-    report.push(`${same ? 'OK  ' : 'DIFF'} ${alias}: alias of ${target} (${a.value} vs ${t.value})`);
+    report.push(
+      `${same ? 'OK  ' : 'DIFF'} ${alias}: alias of ${target} (${a.value} vs ${t.value})`,
+    );
     if (!same && write) {
       const r = patchEntry(src, alias, String(t.value), t.kind);
       src = r.src;

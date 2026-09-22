@@ -18,13 +18,19 @@ const SNAP_ZONE = 28;
 const UNDOCK_DIST = 14;
 
 function loadPos(variant: PaletteVariant): { x: number; y: number } {
-  const fallback = variant === 'formulas' ? { x: 48, y: 88 } : variant === 'constants' ? { x: 128, y: 48 } : { x: 8, y: 48 };
-  try {
-    const raw = variant === 'formulas'
-      ? localStorage.getItem(FORMULA_POS_KEY)
+  const fallback =
+    variant === 'formulas'
+      ? { x: 48, y: 88 }
       : variant === 'constants'
-      ? localStorage.getItem(CONST_POS_KEY)
-      : localStorage.getItem(POS_KEY) ?? localStorage.getItem(POS_KEY_LEGACY);
+        ? { x: 128, y: 48 }
+        : { x: 8, y: 48 };
+  try {
+    const raw =
+      variant === 'formulas'
+        ? localStorage.getItem(FORMULA_POS_KEY)
+        : variant === 'constants'
+          ? localStorage.getItem(CONST_POS_KEY)
+          : (localStorage.getItem(POS_KEY) ?? localStorage.getItem(POS_KEY_LEGACY));
     if (!raw) return fallback;
     const p = JSON.parse(raw) as { x?: unknown; y?: unknown };
     if (typeof p.x !== 'number' || typeof p.y !== 'number') return fallback;
@@ -46,12 +52,24 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
   const formulas = variant === 'formulas';
   const consts = variant === 'constants';
   const posKey = formulas ? FORMULA_POS_KEY : consts ? CONST_POS_KEY : POS_KEY;
-  const setPaletteOpen = useCanvasStore((s) => (formulas ? s.setFormulaPaletteOpen : consts ? s.setConstPaletteOpen : s.setPaletteOpen));
-  const mode = useCanvasStore((s) => (formulas ? s.formulaPaletteMode : consts ? s.constPaletteMode : s.paletteMode));
-  const setPaletteMode = useCanvasStore((s) => (formulas ? s.setFormulaPaletteMode : consts ? s.setConstPaletteMode : s.setPaletteMode));
-  const palW = useCanvasStore((s) => (formulas ? s.formulaPaletteW : consts ? s.constPaletteW : s.paletteW));
-  const palH = useCanvasStore((s) => (formulas ? s.formulaPaletteH : consts ? s.constPaletteH : s.paletteH));
-  const setPaletteSize = useCanvasStore((s) => (formulas ? s.setFormulaPaletteSize : consts ? s.setConstPaletteSize : s.setPaletteSize));
+  const setPaletteOpen = useCanvasStore((s) =>
+    formulas ? s.setFormulaPaletteOpen : consts ? s.setConstPaletteOpen : s.setPaletteOpen,
+  );
+  const mode = useCanvasStore((s) =>
+    formulas ? s.formulaPaletteMode : consts ? s.constPaletteMode : s.paletteMode,
+  );
+  const setPaletteMode = useCanvasStore((s) =>
+    formulas ? s.setFormulaPaletteMode : consts ? s.setConstPaletteMode : s.setPaletteMode,
+  );
+  const palW = useCanvasStore((s) =>
+    formulas ? s.formulaPaletteW : consts ? s.constPaletteW : s.paletteW,
+  );
+  const palH = useCanvasStore((s) =>
+    formulas ? s.formulaPaletteH : consts ? s.constPaletteH : s.paletteH,
+  );
+  const setPaletteSize = useCanvasStore((s) =>
+    formulas ? s.setFormulaPaletteSize : consts ? s.setConstPaletteSize : s.setPaletteSize,
+  );
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
   const [pos, setPos] = useState(() => loadPos(variant));
@@ -59,11 +77,16 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
   // перетаскивание окна: живёт в ref'е, едет только лёгкая тень (как у блоков),
   // оригинал стоит на месте до отпускания — ноль ре-рендеров в ходе жеста
   const dragRef = useRef<{
-    px: number; py: number;
-    ox: number; oy: number;
-    gx: number; gy: number;
-    w: number; h: number;
-    fromDock: boolean; moved: boolean;
+    px: number;
+    py: number;
+    ox: number;
+    oy: number;
+    gx: number;
+    gy: number;
+    w: number;
+    h: number;
+    fromDock: boolean;
+    moved: boolean;
   } | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const resizeRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -90,9 +113,11 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
       moveGhostFixed(dx, dy);
       // подсветка зоны прилипания: ближе к левому краю → left, правому → right
       setSnap(
-        e.clientX <= SNAP_ZONE ? 'left'
-        : e.clientX >= window.innerWidth - SNAP_ZONE ? 'right'
-        : null,
+        e.clientX <= SNAP_ZONE
+          ? 'left'
+          : e.clientX >= window.innerWidth - SNAP_ZONE
+            ? 'right'
+            : null,
       );
     };
     const onUp = (e: PointerEvent) => {
@@ -115,14 +140,14 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
                   { mode: st.constPaletteMode, set: st.setConstPaletteMode },
                 ]
               : variant === 'formulas'
-              ? [
-                  { mode: st.paletteMode, set: st.setPaletteMode },
-                  { mode: st.constPaletteMode, set: st.setConstPaletteMode },
-                ]
-              : [
-                  { mode: st.paletteMode, set: st.setPaletteMode },
-                  { mode: st.formulaPaletteMode, set: st.setFormulaPaletteMode },
-                ];
+                ? [
+                    { mode: st.paletteMode, set: st.setPaletteMode },
+                    { mode: st.constPaletteMode, set: st.setConstPaletteMode },
+                  ]
+                : [
+                    { mode: st.paletteMode, set: st.setPaletteMode },
+                    { mode: st.formulaPaletteMode, set: st.setFormulaPaletteMode },
+                  ];
           for (const o of others) {
             if (o.mode === s) o.set(paired);
           }
@@ -134,7 +159,9 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
           setPos({ x: nx, y: ny });
           try {
             localStorage.setItem(posKey, JSON.stringify({ x: nx, y: ny }));
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
         return null;
       });
@@ -159,10 +186,14 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
         const rect = rootRef.current?.getBoundingClientRect();
         if (!rect) return;
         dragRef.current = {
-          px: e.clientX, py: e.clientY,
-          ox: rect.left, oy: rect.top,
-          gx: e.clientX - rect.left, gy: e.clientY - rect.top,
-          w: rect.width, h: rect.height,
+          px: e.clientX,
+          py: e.clientY,
+          ox: rect.left,
+          oy: rect.top,
+          gx: e.clientX - rect.left,
+          gy: e.clientY - rect.top,
+          w: rect.width,
+          h: rect.height,
           fromDock: docked,
           moved: false,
         };
@@ -207,15 +238,21 @@ export default function FunctionPalette({ variant = 'functions' }: { variant?: P
         <div
           aria-hidden="true"
           className={`fixed z-40 pointer-events-none border-2 border-dashed border-[var(--accent-line)] bg-[var(--accent-soft)] ${
-            snap === 'left' ? 'left-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-r-xl'
-            : 'right-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-l-xl'
+            snap === 'left'
+              ? 'left-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-r-xl'
+              : 'right-0 top-11 bottom-0 w-[300px] max-w-[40vw] rounded-l-xl'
           }`}
         />
       )}
       <div
         ref={rootRef}
         className="nya-palette-float fixed z-50 flex flex-col rounded-xl border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)]"
-        style={{ left: pos.x, top: pos.y, width: palW, height: Math.min(palH, window.innerHeight - pos.y - 8) }}
+        style={{
+          left: pos.x,
+          top: pos.y,
+          width: palW,
+          height: Math.min(palH, window.innerHeight - pos.y - 8),
+        }}
         role="dialog"
         aria-label={t(formulas ? 'formulaPal.aria' : 'pal.aria')}
         onKeyDown={(e) => {

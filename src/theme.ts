@@ -42,7 +42,12 @@ export const THEMES: ThemeMeta[] = [
   { id: 'graph', kind: 'light' },
 ];
 
-const LIGHT: ReadonlySet<ThemeName> = new Set(['gruvbox-light', 'nord-light', 'github-light', 'graph']);
+const LIGHT: ReadonlySet<ThemeName> = new Set([
+  'gruvbox-light',
+  'nord-light',
+  'github-light',
+  'graph',
+]);
 
 /** Светлая ли тема (для сетки Canvas и прочих ветвлений «светлое/тёмное»). */
 export function isLightTheme(t: ThemeName): boolean {
@@ -197,5 +202,7 @@ export function loadTheme(): ThemeName {
 export function saveTheme(t: ThemeName) {
   try {
     localStorage.setItem(KEY, t);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }

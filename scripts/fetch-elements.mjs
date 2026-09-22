@@ -41,7 +41,8 @@ export function normalizeElement(e) {
     boil: numOrNull(e.boil),
     group_no: numOrNull(e.group),
     period: numOrNull(e.period),
-    electron_config: strOrNull(e.electron_configuration_semantic) ?? strOrNull(e.electron_configuration),
+    electron_config:
+      strOrNull(e.electron_configuration_semantic) ?? strOrNull(e.electron_configuration),
     electronegativity: numOrNull(e.electronegativity_pauling),
     molar_heat: numOrNull(e.molar_heat),
     category: strOrNull(e.category),
@@ -158,7 +159,11 @@ async function main() {
   const same =
     cur.length === rows.length &&
     rows.every((r, k) => JSON.stringify(cur[k]) === JSON.stringify({ ...r }));
-  console.log(same ? 'seed.json elements up to date' : `seed.json elements differ (${cur.length} -> ${rows.length})`);
+  console.log(
+    same
+      ? 'seed.json elements up to date'
+      : `seed.json elements differ (${cur.length} -> ${rows.length})`,
+  );
   if (!same) {
     if (!write) {
       process.exitCode = 2;

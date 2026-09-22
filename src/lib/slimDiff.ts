@@ -49,9 +49,7 @@ export function diffLine(b: MathBlockData): string {
 
 /** Весь документ каноническим JSONL, сверху-вниз (порядок вычислений). */
 export function slimText(blocks: MathBlockData[]): string[] {
-  return [...blocks]
-    .sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y))
-    .map(diffLine);
+  return [...blocks].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y)).map(diffLine);
 }
 
 /** LCS-таблица с капом: большие документы — позиционное сравнение. */
@@ -62,7 +60,10 @@ function lcsTable(a: string[], b: string[]): number[][] | null {
   );
   for (let i = a.length - 1; i >= 0; i--) {
     for (let j = b.length - 1; j >= 0; j--) {
-      dp[i][j] = a[i] === b[j] ? (dp[i + 1][j + 1] ?? 0) + 1 : Math.max(dp[i + 1][j] ?? 0, dp[i][j + 1] ?? 0);
+      dp[i][j] =
+        a[i] === b[j]
+          ? (dp[i + 1][j + 1] ?? 0) + 1
+          : Math.max(dp[i + 1][j] ?? 0, dp[i][j + 1] ?? 0);
     }
   }
   return dp;
@@ -127,7 +128,10 @@ const DIFF_CONTEXT = 3;
 const DIFF_MAX_LINES = 200;
 
 /** Unified diff с контекстом 3 и капом 200 строк. */
-export function unifiedDiff(base: string[], cur: string[]): { text: string; additions: number; deletions: number; truncated: boolean } {
+export function unifiedDiff(
+  base: string[],
+  cur: string[],
+): { text: string; additions: number; deletions: number; truncated: boolean } {
   const ops = diffOps(base, cur);
   let additions = 0;
   let deletions = 0;
@@ -162,8 +166,8 @@ export function unifiedDiff(base: string[], cur: string[]): { text: string; addi
     // номера строк (1-based) по каждой стороне
     const first = ops[k] as Op;
     const prev = k > 0 ? (ops[k - 1] as Op) : null;
-    const bs = first.ai >= 0 ? first.ai + 1 : (prev && prev.ai >= 0 ? prev.ai + 2 : 1);
-    const cs = first.bi >= 0 ? first.bi + 1 : (prev && prev.bi >= 0 ? prev.bi + 2 : 1);
+    const bs = first.ai >= 0 ? first.ai + 1 : prev && prev.ai >= 0 ? prev.ai + 2 : 1;
+    const cs = first.bi >= 0 ? first.bi + 1 : prev && prev.bi >= 0 ? prev.bi + 2 : 1;
     let bc = 0;
     let cc = 0;
     const body: string[] = [];
@@ -184,6 +188,7 @@ export function unifiedDiff(base: string[], cur: string[]): { text: string; addi
     if (truncated) break;
     k = e;
   }
-  if (truncated) out.push(`... truncated (${additions} addition(s), ${deletions} deletion(s) total)`);
+  if (truncated)
+    out.push(`... truncated (${additions} addition(s), ${deletions} deletion(s) total)`);
   return { text: out.join('\n'), additions, deletions, truncated };
 }

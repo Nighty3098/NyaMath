@@ -18,7 +18,7 @@ npm run lint     # oxlint
 
 `npm run dev` сначала собирает `mcp/dist`, затем поднимает MCP-сервис
 (`--port=$NYAMATH_PORT`, по умолчанию `3777`) рядом с vite: агент через
-stdio и приложение через *View → Live sync* видят один документ в реалтайме.
+stdio и приложение через _View → Live sync_ видят один документ в реалтайме.
 
 ## Features
 
@@ -29,7 +29,7 @@ stdio и приложение через *View → Live sync* видят оди�
   surfaces/point clouds, PNG/CSV export.
 - **Program blocks** with step debugger, **simulations** (RK4/RK45/TR-BDF2, events, FDTD waves).
 - **Units** via mathjs (`m/s`, `GHz`, `mm`, `ohm`, `degC`…), custom units via `defunit`.
-- **Serverless sharing**: *File → Share link* packs the sheet into a URL fragment
+- **Serverless sharing**: _File → Share link_ packs the sheet into a URL fragment
   (`#d=…`, slim tuples → phrase dictionary → deflate-raw → base64url, `&lang=` included);
   pristine examples share as tiny `#t=ex20` links. No backend involved.
 - **Project files**: save/open JSON, print/PDF, undo/redo, themes, RU/EN interface.
@@ -103,27 +103,27 @@ formulas and programs).
 
 ### Tools (21)
 
-| Tool | What it does |
-|---|---|
-| `nya_status` | Document state: block count, errors, scope variable count, file path |
-| `nya_list_blocks` | Block list (`kind` filter, `limit`/`offset`) |
-| `nya_get_block` | Full block: result, LaTeX, dependencies, auto-plot preview meta |
-| `nya_add_block` | New block (`math`/`text`/`plot`/`plot3d`/`program`/`slider` + fields) |
-| `nya_update_block` | Edit content / plotFn / range / exportName |
-| `nya_move_block` / `nya_move_blocks` | Positions (affect evaluation order!) |
-| `nya_resize_block` | Manual size `w`/`h` |
-| `nya_remove_block` / `nya_clear` | Removal (clear requires `confirm: true`) |
-| `nya_evaluate` | Evaluate an expression in the live scope (read-only) + solver-step trace |
-| `nya_get_scope` | All variables → values (solution check) |
-| `nya_get_plot_data` | Point series of a 2D plot or auto-plot (`max_points`, downsampling) |
-| `nya_get_plot3d_data` | Surface grid / points of a 3D block (`max_points`, downsampling) |
-| `nya_open` / `nya_save` | Project file with engine-version header (validation, migration, legacy arrays) |
-| `nya_load_example` | `variant20` (electrodynamics) or `advanced` (matrices/programs) |
-| `nya_recalc` | Force recalculation |
-| `nya_sync_pull` / `nya_sync_push` | Pull the canvas the user sees into this session / push it back live to the browser |
-| `nya_diff` | Git-friendly slim diff (canonical JSONL + unified hunks vs file/empty) |
-| `nya_import` | Import SMath `.sm` (XML/RPN) or Calcpad `.cpd`/`.txt` worksheets |
-| `nya_ask` / `nya_answer` | Ask the user a question (with optional answer `options`), record the reply. `var` writes the answer into the document scope (`var := answer`, numeric when it parses as a number) |
+| Tool                                 | What it does                                                                                                                                                                      |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nya_status`                         | Document state: block count, errors, scope variable count, file path                                                                                                              |
+| `nya_list_blocks`                    | Block list (`kind` filter, `limit`/`offset`)                                                                                                                                      |
+| `nya_get_block`                      | Full block: result, LaTeX, dependencies, auto-plot preview meta                                                                                                                   |
+| `nya_add_block`                      | New block (`math`/`text`/`plot`/`plot3d`/`program`/`slider` + fields)                                                                                                             |
+| `nya_update_block`                   | Edit content / plotFn / range / exportName                                                                                                                                        |
+| `nya_move_block` / `nya_move_blocks` | Positions (affect evaluation order!)                                                                                                                                              |
+| `nya_resize_block`                   | Manual size `w`/`h`                                                                                                                                                               |
+| `nya_remove_block` / `nya_clear`     | Removal (clear requires `confirm: true`)                                                                                                                                          |
+| `nya_evaluate`                       | Evaluate an expression in the live scope (read-only) + solver-step trace                                                                                                          |
+| `nya_get_scope`                      | All variables → values (solution check)                                                                                                                                           |
+| `nya_get_plot_data`                  | Point series of a 2D plot or auto-plot (`max_points`, downsampling)                                                                                                               |
+| `nya_get_plot3d_data`                | Surface grid / points of a 3D block (`max_points`, downsampling)                                                                                                                  |
+| `nya_open` / `nya_save`              | Project file with engine-version header (validation, migration, legacy arrays)                                                                                                    |
+| `nya_load_example`                   | `variant20` (electrodynamics) or `advanced` (matrices/programs)                                                                                                                   |
+| `nya_recalc`                         | Force recalculation                                                                                                                                                               |
+| `nya_sync_pull` / `nya_sync_push`    | Pull the canvas the user sees into this session / push it back live to the browser                                                                                                |
+| `nya_diff`                           | Git-friendly slim diff (canonical JSONL + unified hunks vs file/empty)                                                                                                            |
+| `nya_import`                         | Import SMath `.sm` (XML/RPN) or Calcpad `.cpd`/`.txt` worksheets                                                                                                                  |
+| `nya_ask` / `nya_answer`             | Ask the user a question (with optional answer `options`), record the reply. `var` writes the answer into the document scope (`var := answer`, numeric when it parses as a number) |
 
 Resource `nya://document` — JSON summary of the document.
 
@@ -146,14 +146,14 @@ NYAMATH_PORT=3777 node mcp/dist/index.js   # or: node mcp/dist/index.js --port=3
 
 This enables a dependency-free HTTP layer next to stdio:
 
-| Endpoint      | What it does                                              |
-|---------------|-----------------------------------------------------------|
-| `GET /events` | SSE stream — `snapshot` frames on every document change   |
-| `POST /push`  | UI pushes its document `{blocks: [...]}` (validated)      |
+| Endpoint        | What it does                                            |
+| --------------- | ------------------------------------------------------- |
+| `GET /events`   | SSE stream — `snapshot` frames on every document change |
+| `POST /push`    | UI pushes its document `{blocks: [...]}` (validated)    |
 | `GET /snapshot` | Current `{rev, blocks}` (slim, no plot previews)        |
-| `GET /status` | `{rev, blocks, docPath}`                                  |
+| `GET /status`   | `{rev, blocks, docPath}`                                |
 
-In the app: *View → Live sync* (or the status dot in the toolbar), enter the
+In the app: _View → Live sync_ (or the status dot in the toolbar), enter the
 service URL once. After that:
 
 - every agent tool call recalculates and broadcasts → the canvas updates live;

@@ -15,7 +15,9 @@ const check = (cond, label) => {
   console.log(`ok: ${label}`);
 };
 
-const proc = spawn(process.execPath, [serverPath, '--port=0'], { stdio: ['ignore', 'ignore', 'pipe'] });
+const proc = spawn(process.execPath, [serverPath, '--port=0'], {
+  stdio: ['ignore', 'ignore', 'pipe'],
+});
 let base = '';
 await new Promise((resolve, reject) => {
   const timer = setTimeout(() => reject(new Error('sync server did not start')), 15000);
@@ -31,27 +33,34 @@ await new Promise((resolve, reject) => {
 });
 check(base.startsWith('http://localhost:'), `sync listening at ${base}`);
 
-const push = (body) => fetch(`${base}/push`, {
-  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-}).then((x) => x.json().then((j) => ({ status: x.status, ...j })));
+const push = (body) =>
+  fetch(`${base}/push`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then((x) => x.json().then((j) => ({ status: x.status, ...j })));
 const snap = () => fetch(`${base}/snapshot`).then((x) => x.json());
 
 try {
   // 1. seed: два блока, legacy-push без meta
-  let r = await push({ blocks: [
-    { id: 'a', x: 80, y: 60, rawInput: 'x := 1', kind: 'math' },
-    { id: 'b', x: 80, y: 124, rawInput: 'y := 2', kind: 'math' },
-  ] });
+  let r = await push({
+    blocks: [
+      { id: 'a', x: 80, y: 60, rawInput: 'x := 1', kind: 'math' },
+      { id: 'b', x: 80, y: 124, rawInput: 'y := 2', kind: 'math' },
+    ],
+  });
   check(r.ok === true, `seed accepted rev=${r.rev}`);
   const r1 = r.rev;
   let s = await snap();
   check(s.blocks.length === 2 && s.meta && s.meta.a && s.meta.b, 'snapshot carries meta');
 
   // 2. серверная правка B (агент): fast-path без baseRev
-  r = await push({ blocks: [
-    { id: 'a', x: 80, y: 60, rawInput: 'x := 1', kind: 'math' },
-    { id: 'b', x: 80, y: 124, rawInput: 'y := 20', kind: 'math' },
-  ] });
+  r = await push({
+    blocks: [
+      { id: 'a', x: 80, y: 60, rawInput: 'x := 1', kind: 'math' },
+      { id: 'b', x: 80, y: 124, rawInput: 'y := 20', kind: 'math' },
+    ],
+  });
   check(r.ok === true && r.rev > r1, `server-side edit rev=${r.rev}`);
 
   // 3. браузер со stale baseRev правит ДРУГОЙ блок (A) + свежие часы → мёрж, не 409

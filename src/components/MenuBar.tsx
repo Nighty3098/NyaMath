@@ -7,7 +7,13 @@ import { downloadWordDoc } from '../lib/wordExport';
 import { SHARE_WARN_CHARS, shareDocument } from '../lib/share';
 import { THEMES } from '../theme';
 import { t, themeLabel, type Lang, type StrKey } from '../i18n';
-import { connectLive, disconnectLive, getLiveUrl, setLiveUrl, testLiveConnection } from '../lib/liveSync';
+import {
+  connectLive,
+  disconnectLive,
+  getLiveUrl,
+  setLiveUrl,
+  testLiveConnection,
+} from '../lib/liveSync';
 import { listTemplates } from '../lib/db';
 
 /** Пункты подменю шаблонов ГОСТ (пусто, если БД недоступна). */
@@ -31,8 +37,32 @@ function templateSectionLabel(section: string): string {
   return s === key ? section : s;
 }
 import {
-  IConst, IField, IFx, IFormula, IGrid, IOpen, IPlot, IPlot3d, IPrint, IProgram,
-  IRecalc, IRedo, ISave, ISim, IUndo, IWarn, ICheck, IPlay, IX, IZap, ISun, IMoon, ICopy, ISignal, IDemo, IScale,
+  IConst,
+  IField,
+  IFx,
+  IFormula,
+  IGrid,
+  IOpen,
+  IPlot,
+  IPlot3d,
+  IPrint,
+  IProgram,
+  IRecalc,
+  IRedo,
+  ISave,
+  ISim,
+  IUndo,
+  IWarn,
+  ICheck,
+  IPlay,
+  IX,
+  IZap,
+  ISun,
+  IMoon,
+  ICopy,
+  ISignal,
+  IDemo,
+  IScale,
 } from './Icon';
 
 interface MenuBarProps {
@@ -75,7 +105,12 @@ function atCross(): { x: number; y: number } {
  * вынесенные undo/redo/пересчёт и тихий статус листа.
  * Клик — открыть, наведение при открытом — переключить, Esc/клик мимо — закрыть.
  */
-export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, onOpenProblems }: MenuBarProps) {
+export default function MenuBar({
+  onOpenFile,
+  onShowWelcome,
+  onOpenNavigator,
+  onOpenProblems,
+}: MenuBarProps) {
   const blocks = useCanvasStore((s) => s.blocks);
   const addBlock = useCanvasStore((s) => s.addBlock);
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
@@ -200,7 +235,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
     }
     try {
       const r = await shareDocument(cur, useCanvasStore.getState().lang);
-      const warn = r.urlLength > SHARE_WARN_CHARS ? t('share.longWarn', { chars: r.urlLength }) : '';
+      const warn =
+        r.urlLength > SHARE_WARN_CHARS ? t('share.longWarn', { chars: r.urlLength }) : '';
       if (r.copied) alert(t('share.copied', { n: r.count, chars: r.urlLength }) + warn);
       else prompt(t('share.copyManual', { n: r.count, chars: r.urlLength, url: '' }), r.url);
     } catch {
@@ -239,31 +275,116 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
       id: 'file',
       label: t('menu.file'),
       items: [
-        { id: 'save', icon: <ISave />, label: t('menu.save'), hint: 'Ctrl+S', action: run(() => void saveDocument(blocks)) },
+        {
+          id: 'save',
+          icon: <ISave />,
+          label: t('menu.save'),
+          hint: 'Ctrl+S',
+          action: run(() => void saveDocument(blocks)),
+        },
         { id: 'open', icon: <IOpen />, label: t('menu.open'), action: run(onOpenFile) },
-        { id: 'share', icon: <ICopy />, label: t('menu.share'), action: run(() => void shareCurrentSheet()) },
+        {
+          id: 'share',
+          icon: <ICopy />,
+          label: t('menu.share'),
+          action: run(() => void shareCurrentSheet()),
+        },
         { sep: true },
-        { id: 'print-color', icon: <IPrint />, label: t('menu.printColor'), hint: 'Ctrl+P', action: run(() => printDocument('color')) },
-        { id: 'print-bw', icon: <IPrint />, label: t('menu.printBw'), action: run(() => printDocument('bw')) },
-        { id: 'export-md', icon: <ICopy />, label: t('menu.exportMd'), action: run(() => downloadMarkdown(blocks)) },
-        { id: 'export-tex', icon: <ICopy />, label: t('menu.exportTex'), action: run(() => downloadLatexReport(blocks)) },
-        { id: 'export-doc', icon: <ICopy />, label: t('menu.exportDoc'), action: run(() => downloadWordDoc(blocks, lang)) },
+        {
+          id: 'print-color',
+          icon: <IPrint />,
+          label: t('menu.printColor'),
+          hint: 'Ctrl+P',
+          action: run(() => printDocument('color')),
+        },
+        {
+          id: 'print-bw',
+          icon: <IPrint />,
+          label: t('menu.printBw'),
+          action: run(() => printDocument('bw')),
+        },
+        {
+          id: 'export-md',
+          icon: <ICopy />,
+          label: t('menu.exportMd'),
+          action: run(() => downloadMarkdown(blocks)),
+        },
+        {
+          id: 'export-tex',
+          icon: <ICopy />,
+          label: t('menu.exportTex'),
+          action: run(() => downloadLatexReport(blocks)),
+        },
+        {
+          id: 'export-doc',
+          icon: <ICopy />,
+          label: t('menu.exportDoc'),
+          action: run(() => downloadWordDoc(blocks, lang)),
+        },
         { sep: true },
-        { id: 'clear', icon: <IX />, label: t('menu.clear'), danger: true, action: run(() => { if (confirm(t('confirm.clear'))) clear(); }) },
+        {
+          id: 'clear',
+          icon: <IX />,
+          label: t('menu.clear'),
+          danger: true,
+          action: run(() => {
+            if (confirm(t('confirm.clear'))) clear();
+          }),
+        },
       ],
     },
     {
       id: 'insert',
       label: t('menu.insert'),
       items: [
-        { id: 'ins-math', icon: <IFormula />, label: t('menu.insMath'), action: run(insertAt((x, y) => addBlock(x, y))) },
-        { id: 'ins-text', icon: <IFormula />, label: t('menu.insText'), action: run(insertAt((x, y) => addTextBlock(x, y))) },
-        { id: 'ins-plot', icon: <IPlot />, label: t('menu.insPlot'), action: run(insertAt((x, y) => addPlotBlock(x, y))) },
-        { id: 'ins-contour', icon: <IPlot />, label: t('menu.insContour'), action: run(insertAt((x, y) => addContourBlock(x, y))) },
-        { id: 'ins-3d', icon: <IPlot3d />, label: t('menu.ins3d'), action: run(insertAt((x, y) => addPlot3dBlock(x, y))) },
-        { id: 'ins-prog', icon: <IProgram />, label: t('menu.insProg'), action: run(insertAt((x, y) => addProgramBlock(x, y))) },
-        { id: 'ins-slider', icon: <ISignal />, label: t('menu.insSlider'), action: run(insertAt((x, y) => addSliderBlock(x, y))) },
-        { id: 'ins-sim', icon: <ISim />, label: t('menu.insSim'), action: run(insertAt((x, y) => addSimBlock(x, y))) },
+        {
+          id: 'ins-math',
+          icon: <IFormula />,
+          label: t('menu.insMath'),
+          action: run(insertAt((x, y) => addBlock(x, y))),
+        },
+        {
+          id: 'ins-text',
+          icon: <IFormula />,
+          label: t('menu.insText'),
+          action: run(insertAt((x, y) => addTextBlock(x, y))),
+        },
+        {
+          id: 'ins-plot',
+          icon: <IPlot />,
+          label: t('menu.insPlot'),
+          action: run(insertAt((x, y) => addPlotBlock(x, y))),
+        },
+        {
+          id: 'ins-contour',
+          icon: <IPlot />,
+          label: t('menu.insContour'),
+          action: run(insertAt((x, y) => addContourBlock(x, y))),
+        },
+        {
+          id: 'ins-3d',
+          icon: <IPlot3d />,
+          label: t('menu.ins3d'),
+          action: run(insertAt((x, y) => addPlot3dBlock(x, y))),
+        },
+        {
+          id: 'ins-prog',
+          icon: <IProgram />,
+          label: t('menu.insProg'),
+          action: run(insertAt((x, y) => addProgramBlock(x, y))),
+        },
+        {
+          id: 'ins-slider',
+          icon: <ISignal />,
+          label: t('menu.insSlider'),
+          action: run(insertAt((x, y) => addSliderBlock(x, y))),
+        },
+        {
+          id: 'ins-sim',
+          icon: <ISim />,
+          label: t('menu.insSim'),
+          action: run(insertAt((x, y) => addSimBlock(x, y))),
+        },
       ],
     },
     {
@@ -271,55 +392,207 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
       label: t('menu.view'),
       items: [
         {
-          id: 'grid-sub', icon: <IGrid />, label: t('menu.grid'), children: [
-            { id: 'grid-std', icon: <IGrid />, label: t('menu.gridStandard'), checked: showGrid && gridSize === 'standard', action: run(() => setGridSize('standard')) },
-            { id: 'grid-fine', icon: <IGrid />, label: t('menu.gridFine'), checked: showGrid && gridSize === 'fine', action: run(() => setGridSize('fine')) },
-            { id: 'grid-off', icon: <IGrid />, label: t('menu.gridOff'), checked: !showGrid, action: run(() => setGridVisible(false)) },
+          id: 'grid-sub',
+          icon: <IGrid />,
+          label: t('menu.grid'),
+          children: [
+            {
+              id: 'grid-std',
+              icon: <IGrid />,
+              label: t('menu.gridStandard'),
+              checked: showGrid && gridSize === 'standard',
+              action: run(() => setGridSize('standard')),
+            },
+            {
+              id: 'grid-fine',
+              icon: <IGrid />,
+              label: t('menu.gridFine'),
+              checked: showGrid && gridSize === 'fine',
+              action: run(() => setGridSize('fine')),
+            },
+            {
+              id: 'grid-off',
+              icon: <IGrid />,
+              label: t('menu.gridOff'),
+              checked: !showGrid,
+              action: run(() => setGridVisible(false)),
+            },
             { sep: true },
-            { id: 'separate', icon: <IGrid />, label: t('menu.separate'), action: run(separateRegions) },
+            {
+              id: 'separate',
+              icon: <IGrid />,
+              label: t('menu.separate'),
+              action: run(separateRegions),
+            },
           ],
         },
         {
-          id: 'fmt-sub', icon: <IFx />, label: t('menu.numFmt'), children: [
-            { id: 'fmt-auto', label: t('menu.numAuto'), checked: numFmt.mode === 'auto', action: run(() => setNumFmt({ mode: 'auto', digits: numFmt.digits })) },
-            { id: 'fmt-sig', label: t('menu.numSig'), checked: numFmt.mode === 'sig', action: run(() => setNumFmt({ mode: 'sig', digits: numFmt.digits })) },
-            { id: 'fmt-fixed', label: t('menu.numFixed'), checked: numFmt.mode === 'fixed', action: run(() => setNumFmt({ mode: 'fixed', digits: numFmt.digits })) },
+          id: 'fmt-sub',
+          icon: <IFx />,
+          label: t('menu.numFmt'),
+          children: [
+            {
+              id: 'fmt-auto',
+              label: t('menu.numAuto'),
+              checked: numFmt.mode === 'auto',
+              action: run(() => setNumFmt({ mode: 'auto', digits: numFmt.digits })),
+            },
+            {
+              id: 'fmt-sig',
+              label: t('menu.numSig'),
+              checked: numFmt.mode === 'sig',
+              action: run(() => setNumFmt({ mode: 'sig', digits: numFmt.digits })),
+            },
+            {
+              id: 'fmt-fixed',
+              label: t('menu.numFixed'),
+              checked: numFmt.mode === 'fixed',
+              action: run(() => setNumFmt({ mode: 'fixed', digits: numFmt.digits })),
+            },
             { sep: true },
             ...[3, 4, 5, 6, 8, 10].map((d): Entry => ({
-              id: `fmt-d${d}`, label: t('menu.numDigits', { n: d }), checked: numFmt.digits === d,
+              id: `fmt-d${d}`,
+              label: t('menu.numDigits', { n: d }),
+              checked: numFmt.digits === d,
               action: run(() => setNumFmt({ mode: numFmt.mode, digits: d })),
             })),
           ],
         },
         {
-          id: 'units-sub', icon: <IScale />, label: t('menu.unitSys'), children: [
-            { id: 'units-none', label: t('menu.unitNone'), checked: unitSys === 'none', action: run(() => setUnitSys('none')) },
-            { id: 'units-si', label: t('menu.unitSI'), checked: unitSys === 'SI', action: run(() => setUnitSys('SI')) },
-            { id: 'units-us', label: t('menu.unitUS'), checked: unitSys === 'US', action: run(() => setUnitSys('US')) },
-            { id: 'units-cgs', label: t('menu.unitCGS'), checked: unitSys === 'CGS', action: run(() => setUnitSys('CGS')) },
+          id: 'units-sub',
+          icon: <IScale />,
+          label: t('menu.unitSys'),
+          children: [
+            {
+              id: 'units-none',
+              label: t('menu.unitNone'),
+              checked: unitSys === 'none',
+              action: run(() => setUnitSys('none')),
+            },
+            {
+              id: 'units-si',
+              label: t('menu.unitSI'),
+              checked: unitSys === 'SI',
+              action: run(() => setUnitSys('SI')),
+            },
+            {
+              id: 'units-us',
+              label: t('menu.unitUS'),
+              checked: unitSys === 'US',
+              action: run(() => setUnitSys('US')),
+            },
+            {
+              id: 'units-cgs',
+              label: t('menu.unitCGS'),
+              checked: unitSys === 'CGS',
+              action: run(() => setUnitSys('CGS')),
+            },
           ],
         },
         {
-          id: 'cx-sub', icon: <ISignal />, label: t('menu.complexFmt'), children: [
-            { id: 'cx-rect', label: t('menu.cxRect'), checked: complexFmt === 'rect', action: run(() => setComplexFmt('rect')) },
-            { id: 'cx-polar', label: t('menu.cxPolar'), checked: complexFmt === 'polar', action: run(() => setComplexFmt('polar')) },
-            { id: 'cx-both', label: t('menu.cxBoth'), checked: complexFmt === 'both', action: run(() => setComplexFmt('both')) },
+          id: 'cx-sub',
+          icon: <ISignal />,
+          label: t('menu.complexFmt'),
+          children: [
+            {
+              id: 'cx-rect',
+              label: t('menu.cxRect'),
+              checked: complexFmt === 'rect',
+              action: run(() => setComplexFmt('rect')),
+            },
+            {
+              id: 'cx-polar',
+              label: t('menu.cxPolar'),
+              checked: complexFmt === 'polar',
+              action: run(() => setComplexFmt('polar')),
+            },
+            {
+              id: 'cx-both',
+              label: t('menu.cxBoth'),
+              checked: complexFmt === 'both',
+              action: run(() => setComplexFmt('both')),
+            },
           ],
         },
-        { id: 'scopemon', icon: <ISignal />, label: t('menu.scopeMon'), hint: 'Ctrl+J', checked: scopeMonOpen, action: run(toggleScopeMon) },
-        { id: 'dis-sel', icon: <IZap />, label: t('menu.toggleDisabled'), disabled: selectedIds.length === 0, action: run(toggleSelectedDisabled) },
-        { id: 'palette', icon: <IFx />, label: t('menu.palette'), checked: paletteOpen, action: run(togglePalette) },
-        { id: 'fpalette', icon: <IFormula />, label: t('menu.formulaPalette'), checked: formulaPaletteOpen, action: run(toggleFormulaPalette) },
-        { id: 'cpalette', icon: <IConst />, label: t('menu.constPalette'), checked: constPaletteOpen, action: run(toggleConstPalette) },
-        { id: 'epalette', icon: <IField />, label: t('menu.elemPalette'), checked: elemPaletteOpen, action: run(toggleElemPalette) },
-        { id: 'live', icon: <ISignal />, label: t('menu.liveSync'), checked: liveConnected, action: run(toggleLive) },
-        { id: 'recalc', icon: <IRecalc />, label: t('menu.recalc'), hint: 'Ctrl+↵', action: run(recalc) },
-        { id: 'variables', icon: <IFx />, label: t('menu.variables'), hint: 'Ctrl+K', action: run(onOpenNavigator) },
-        { id: 'problems', icon: <IWarn />, label: t('menu.problems'), hint: 'Ctrl+Shift+M', action: run(onOpenProblems) },
+        {
+          id: 'scopemon',
+          icon: <ISignal />,
+          label: t('menu.scopeMon'),
+          hint: 'Ctrl+J',
+          checked: scopeMonOpen,
+          action: run(toggleScopeMon),
+        },
+        {
+          id: 'dis-sel',
+          icon: <IZap />,
+          label: t('menu.toggleDisabled'),
+          disabled: selectedIds.length === 0,
+          action: run(toggleSelectedDisabled),
+        },
+        {
+          id: 'palette',
+          icon: <IFx />,
+          label: t('menu.palette'),
+          checked: paletteOpen,
+          action: run(togglePalette),
+        },
+        {
+          id: 'fpalette',
+          icon: <IFormula />,
+          label: t('menu.formulaPalette'),
+          checked: formulaPaletteOpen,
+          action: run(toggleFormulaPalette),
+        },
+        {
+          id: 'cpalette',
+          icon: <IConst />,
+          label: t('menu.constPalette'),
+          checked: constPaletteOpen,
+          action: run(toggleConstPalette),
+        },
+        {
+          id: 'epalette',
+          icon: <IField />,
+          label: t('menu.elemPalette'),
+          checked: elemPaletteOpen,
+          action: run(toggleElemPalette),
+        },
+        {
+          id: 'live',
+          icon: <ISignal />,
+          label: t('menu.liveSync'),
+          checked: liveConnected,
+          action: run(toggleLive),
+        },
+        {
+          id: 'recalc',
+          icon: <IRecalc />,
+          label: t('menu.recalc'),
+          hint: 'Ctrl+↵',
+          action: run(recalc),
+        },
+        {
+          id: 'variables',
+          icon: <IFx />,
+          label: t('menu.variables'),
+          hint: 'Ctrl+K',
+          action: run(onOpenNavigator),
+        },
+        {
+          id: 'problems',
+          icon: <IWarn />,
+          label: t('menu.problems'),
+          hint: 'Ctrl+Shift+M',
+          action: run(onOpenProblems),
+        },
         { sep: true },
         {
           id: 'theme-sub',
-          icon: (THEMES.find((x) => x.id === theme)?.kind === 'light' ? <ISun /> : <IMoon />) as React.ReactNode,
+          icon: (THEMES.find((x) => x.id === theme)?.kind === 'light' ? (
+            <ISun />
+          ) : (
+            <IMoon />
+          )) as React.ReactNode,
           label: t('menu.theme'),
           children: THEMES.map((th) => ({
             id: `theme-${th.id}`,
@@ -339,8 +612,10 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
       label: t('menu.examples'),
       items: [
         {
-          id: 'tpl-sub', icon: <IFormula />, label: t('menu.templates'), children:
-            templateChildren(),
+          id: 'tpl-sub',
+          icon: <IFormula />,
+          label: t('menu.templates'),
+          children: templateChildren(),
         },
         { id: 'exquick', icon: <ISignal />, label: t('menu.exQuick'), action: run(loadQuickstart) },
         { id: 'ex20', icon: <IZap />, label: t('menu.ex20'), action: run(loadTestScenario) },
@@ -351,9 +626,7 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
       id: 'help',
       label: t('menu.help'),
       alignRight: true,
-      items: [
-        { id: 'welcome', label: t('menu.welcome'), action: run(onShowWelcome) },
-      ],
+      items: [{ id: 'welcome', label: t('menu.welcome'), action: run(onShowWelcome) }],
     },
   ];
 
@@ -373,7 +646,13 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
       className={`menu-item ${tall ? 'min-h-[44px]' : ''}`}
     >
       <span className="w-4 shrink-0 inline-flex justify-center" aria-hidden="true">
-        {it.checked ? <span className="text-[var(--accent)]"><ICheck /></span> : it.icon}
+        {it.checked ? (
+          <span className="text-[var(--accent)]">
+            <ICheck />
+          </span>
+        ) : (
+          it.icon
+        )}
       </span>
       <span className={`flex-1 ${it.danger ? 'text-[var(--danger)]' : ''}`}>{it.label}</span>
       {it.hint && <kbd>{it.hint}</kbd>}
@@ -382,7 +661,12 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
 
   const renderItem = (it: Entry, i: number | string, onPick: () => void, tall = false) => {
     if ('sep' in it) return <div key={`sep${i}`} className="menu-sep" role="separator" />;
-    if ('head' in it) return <div key={`h${i}`} className="menu-head">{it.head}</div>;
+    if ('head' in it)
+      return (
+        <div key={`h${i}`} className="menu-head">
+          {it.head}
+        </div>
+      );
     if ('children' in it) {
       const expanded = subOpen === it.id;
       return (
@@ -417,7 +701,9 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
               {it.icon}
             </span>
             <span className="flex-1">{it.label}</span>
-            <span aria-hidden="true" className="text-[var(--faint)]">▸</span>
+            <span aria-hidden="true" className="text-[var(--faint)]">
+              ▸
+            </span>
           </button>
           {expanded && (
             // мост pl-1.5 вместо отступа ml: hover не рвётся между меню и подменю
@@ -428,7 +714,8 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
                 className="menu-drop min-w-60 border border-[var(--chrome-line)] bg-[var(--chrome)]"
               >
                 {it.children.map((c, j) => {
-                  if ('sep' in c || 'head' in c || 'children' in c) return renderItem(c, `${i}-${j}`, () => {});
+                  if ('sep' in c || 'head' in c || 'children' in c)
+                    return renderItem(c, `${i}-${j}`, () => {});
                   return renderLeaf(c, `${i}-${j}`, c.action);
                 })}
               </div>
@@ -487,14 +774,38 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
       <div className="flex-1" aria-hidden="true" />
 
       {/* частые действия — всегда под рукой */}
-      <div className="flex items-center gap-0.5 shrink-0" role="toolbar" aria-label={t('menu.edit')}>
-        <button type="button" className="nya-tbtn nya-tbtn-big" onClick={undo} disabled={!canUndo} title={`${t('menu.undo')} · Ctrl+Z`} aria-label={t('menu.undo')}>
+      <div
+        className="flex items-center gap-0.5 shrink-0"
+        role="toolbar"
+        aria-label={t('menu.edit')}
+      >
+        <button
+          type="button"
+          className="nya-tbtn nya-tbtn-big"
+          onClick={undo}
+          disabled={!canUndo}
+          title={`${t('menu.undo')} · Ctrl+Z`}
+          aria-label={t('menu.undo')}
+        >
           <IUndo />
         </button>
-        <button type="button" className="nya-tbtn nya-tbtn-big" onClick={redo} disabled={!canRedo} title={`${t('menu.redo')} · Ctrl+Shift+Z`} aria-label={t('menu.redo')}>
+        <button
+          type="button"
+          className="nya-tbtn nya-tbtn-big"
+          onClick={redo}
+          disabled={!canRedo}
+          title={`${t('menu.redo')} · Ctrl+Shift+Z`}
+          aria-label={t('menu.redo')}
+        >
           <IRedo />
         </button>
-        <button type="button" className="nya-tbtn relative" onClick={recalc} title={`${t('menu.recalc')} · Ctrl+↵${errCount ? ` · ${t('calc.errors', { n: errCount })}` : ` · ${t('calc.ok')}`}`} aria-label={t('menu.recalc')}>
+        <button
+          type="button"
+          className="nya-tbtn relative"
+          onClick={recalc}
+          title={`${t('menu.recalc')} · Ctrl+↵${errCount ? ` · ${t('calc.errors', { n: errCount })}` : ` · ${t('calc.ok')}`}`}
+          aria-label={t('menu.recalc')}
+        >
           <IRecalc />
           <span
             aria-hidden="true"
@@ -585,7 +896,13 @@ export default function MenuBar({ onOpenFile, onShowWelcome, onOpenNavigator, on
             style={{ background: liveConnected ? 'var(--ok)' : 'var(--faint)' }}
           />
         </button>
-        <button type="button" className="nya-tbtn nya-tbtn-big" onClick={toggleTheme} title={theme} aria-label={theme}>
+        <button
+          type="button"
+          className="nya-tbtn nya-tbtn-big"
+          onClick={toggleTheme}
+          title={theme}
+          aria-label={theme}
+        >
           {THEMES.find((x) => x.id === theme)?.kind === 'light' ? <IMoon /> : <ISun />}
         </button>
       </div>

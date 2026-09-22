@@ -10,7 +10,13 @@ import VariableNavigator from './components/VariableNavigator';
 import { useCanvasStore, type PaletteTab } from './store/canvasStore';
 import { saveDocument } from './lib/saveDocument';
 import { installPrintCleanup } from './lib/print';
-import { clearShareParamFromUrl, decodeShareParam, readLangFromUrl, readShareParamFromUrl, readTemplateFromUrl } from './lib/share';
+import {
+  clearShareParamFromUrl,
+  decodeShareParam,
+  readLangFromUrl,
+  readShareParamFromUrl,
+  readTemplateFromUrl,
+} from './lib/share';
 import { t } from './i18n';
 
 export default function App() {
@@ -31,11 +37,15 @@ export default function App() {
   const elemPaletteOpen = useCanvasStore((s) => s.elemPaletteOpen);
   const scopeMonOpen = useCanvasStore((s) => s.scopeMonOpen);
   const detachedVisible = detachedTabs.filter((id: PaletteTab) =>
-    id === 'functions' ? paletteOpen
-    : id === 'formulas' ? formulaPaletteOpen
-    : id === 'constants' ? constPaletteOpen
-    : id === 'elements' ? elemPaletteOpen
-    : scopeMonOpen,
+    id === 'functions'
+      ? paletteOpen
+      : id === 'formulas'
+        ? formulaPaletteOpen
+        : id === 'constants'
+          ? constPaletteOpen
+          : id === 'elements'
+            ? elemPaletteOpen
+            : scopeMonOpen,
   );
   // пристыкованные вынесенные вкладки живут во flex-ряду (слева/справа от холста),
   // плавающие — окнами поверх всего
@@ -203,7 +213,8 @@ export default function App() {
     setWelcomeForced(false);
     setWelcomeDismissed(true);
   };
-  const showWelcome = welcomeForced || (!welcomeDismissed && !shareIncoming && Object.keys(blocks).length === 0);
+  const showWelcome =
+    welcomeForced || (!welcomeDismissed && !shareIncoming && Object.keys(blocks).length === 0);
 
   return (
     <div className="nya-app h-screen w-screen flex flex-col overflow-hidden">
@@ -252,7 +263,9 @@ export default function App() {
       ))}
       {/* Ctrl+K: навигатор переменных листа */}
       {navigatorOpen && <VariableNavigator onClose={() => setNavigatorOpen(false)} />}
-      {showWelcome && <WelcomeModal onClose={closeWelcome} onOpenFile={() => fileRef.current?.click()} />}
+      {showWelcome && (
+        <WelcomeModal onClose={closeWelcome} onOpenFile={() => fileRef.current?.click()} />
+      )}
     </div>
   );
 }

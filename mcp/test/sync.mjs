@@ -14,7 +14,9 @@ const check = (cond, label) => {
   console.log(`ok: ${label}`);
 };
 
-const proc = spawn(process.execPath, [serverPath, '--port=0'], { stdio: ['ignore', 'ignore', 'pipe'] });
+const proc = spawn(process.execPath, [serverPath, '--port=0'], {
+  stdio: ['ignore', 'ignore', 'pipe'],
+});
 let base = '';
 await new Promise((resolve, reject) => {
   const timer = setTimeout(() => reject(new Error('sync server did not start')), 15000);
@@ -78,8 +80,16 @@ try {
     const idx = buf.indexOf('\n\n');
     if (idx < 0) continue;
     const frame = buf.slice(0, idx);
-    const name = frame.split('\n').find((l) => l.startsWith('event:'))?.slice(6).trim();
-    const dataLine = frame.split('\n').find((l) => l.startsWith('data:'))?.slice(5).trim();
+    const name = frame
+      .split('\n')
+      .find((l) => l.startsWith('event:'))
+      ?.slice(6)
+      .trim();
+    const dataLine = frame
+      .split('\n')
+      .find((l) => l.startsWith('data:'))
+      ?.slice(5)
+      .trim();
     if (name === 'snapshot' && dataLine) {
       try {
         const data = JSON.parse(dataLine);

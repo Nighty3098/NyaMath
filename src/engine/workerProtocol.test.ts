@@ -13,9 +13,21 @@ import type { MathBlockData } from './dependencies';
 let id = 0;
 function block(y: number, patch: Partial<MathBlockData> = {}): MathBlockData {
   return {
-    id: `w${id++}`, x: 80, y, rawInput: '', displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind: 'math', plotPreview: null, ...patch,
+    id: `w${id++}`,
+    x: 80,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind: 'math',
+    plotPreview: null,
+    ...patch,
   };
 }
 
@@ -61,7 +73,10 @@ describe('workerProtocol: scope serde', () => {
   });
 
   it('матрицы с юнитами/комплексными внутри', () => {
-    const m = math.matrix([[1, math.complex(0, 1)], [math.unit(3, 'm'), 0]]);
+    const m = math.matrix([
+      [1, math.complex(0, 1)],
+      [math.unit(3, 'm'), 0],
+    ]);
     const s = hop(serializeScopeValue(m) as SerVal);
     const v = deserializeScopeValue(s);
     expect(math.isMatrix(v)).toBe(true);
@@ -86,9 +101,12 @@ describe('workerProtocol: scope serde', () => {
 describe('workerProtocol: slim', () => {
   it('режет derived и resultValue, оставляет ввод', () => {
     const b = block(60, {
-      rawInput: 'x := 5', resultStr: '5', resultValue: math.complex(1, 2),
+      rawInput: 'x := 5',
+      resultStr: '5',
+      resultValue: math.complex(1, 2),
       plotPreview: { label: 'x', expr: 'x', xs: [1], ys: [1], xmin: 0, xmax: 1, ymin: 0, ymax: 1 },
-      sliderVar: 'k', exportName: 'e',
+      sliderVar: 'k',
+      exportName: 'e',
     });
     const s = slimWorkerInput(b);
     expect((s as Record<string, unknown>)['resultValue']).toBeUndefined();

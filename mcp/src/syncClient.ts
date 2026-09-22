@@ -42,12 +42,19 @@ export async function pullSnapshot(url: string, timeoutMs = 10000): Promise<Sync
   try {
     data = await fetchJson(`${url}/snapshot`, undefined, timeoutMs);
   } catch (e) {
-    throw new Error(`sync-сервис недоступен (${url}): ${e instanceof Error ? e.message : String(e)}`);
+    throw new Error(
+      `sync-сервис недоступен (${url}): ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
   if (!data || typeof data !== 'object' || !Array.isArray((data as { blocks?: unknown }).blocks)) {
     throw new Error('Некорректный snapshot');
   }
-  const d = data as { rev?: unknown; blocks: unknown[]; meta?: SyncSnapshot['meta']; deleted?: SyncSnapshot['deleted'] };
+  const d = data as {
+    rev?: unknown;
+    blocks: unknown[];
+    meta?: SyncSnapshot['meta'];
+    deleted?: SyncSnapshot['deleted'];
+  };
   return {
     rev: typeof d.rev === 'number' ? d.rev : -1,
     blocks: d.blocks,
@@ -71,7 +78,8 @@ export async function pushSnapshot(
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
-      const body: Record<string, unknown> = baseRev === undefined ? { blocks } : { blocks, baseRev };
+      const body: Record<string, unknown> =
+        baseRev === undefined ? { blocks } : { blocks, baseRev };
       if (extra?.meta !== undefined) body['meta'] = extra.meta;
       if (extra?.deleted !== undefined) body['deleted'] = extra.deleted;
       res = await fetch(`${url}/push`, {
@@ -85,7 +93,9 @@ export async function pushSnapshot(
     }
   } catch (e) {
     if (e instanceof Error && e.name === 'AbortError') throw new Error('timeout');
-    throw new Error(`sync-сервис недоступен (${url}): ${e instanceof Error ? e.message : String(e)}`);
+    throw new Error(
+      `sync-сервис недоступен (${url}): ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
   let data: unknown = null;
   try {
@@ -96,7 +106,11 @@ export async function pushSnapshot(
   if (res.status === 409) {
     const err = (data as { error?: unknown })?.error;
     const rev = (data as { rev?: unknown })?.rev;
-    throw new Error(typeof err === 'string' ? err : `CONFLICT: сервер новее (rev=${typeof rev === 'number' ? rev : '?'})`);
+    throw new Error(
+      typeof err === 'string'
+        ? err
+        : `CONFLICT: сервер новее (rev=${typeof rev === 'number' ? rev : '?'})`,
+    );
   }
   if (!res.ok) {
     const err = (data as { error?: unknown })?.error;

@@ -1,20 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import {
-  findUseBeforeDef,
-  recalculateAll,
-  type MathBlockData,
-} from './dependencies';
-import {
-  applyColonShortcut,
-  separateBlocksVertically,
-} from '../lib/canvasLayout';
+import { findUseBeforeDef, recalculateAll, type MathBlockData } from './dependencies';
+import { applyColonShortcut, separateBlocksVertically } from '../lib/canvasLayout';
 
 let id = 0;
-function block(kind: MathBlockData['kind'], y: number, patch: Partial<MathBlockData> = {}): MathBlockData {
+function block(
+  kind: MathBlockData['kind'],
+  y: number,
+  patch: Partial<MathBlockData> = {},
+): MathBlockData {
   return {
-    id: `c${id++}`, x: 80, y, rawInput: '', displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind, plotPreview: null, ...patch,
+    id: `c${id++}`,
+    x: 80,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind,
+    plotPreview: null,
+    ...patch,
   };
 }
 

@@ -1,10 +1,11 @@
-@import "tailwindcss";
-@import "katex/dist/katex.min.css";
+@import 'tailwindcss';
+@import 'katex/dist/katex.min.css';
 
 /* ===== Семантические токены тем (hex — canonical палитры с GitHub, см. src/theme.ts) ===== */
 /* Светлая по умолчанию — тёплая «бумага» в духе Claude/Notion: кремовый хром,
    белые карточки, терракотовый акцент вместо холодного синего. */
-:root, [data-theme="github-light"] {
+:root,
+[data-theme='github-light'] {
   --chrome: #faf9f5;
   --chrome-ink: #1f1e1d;
   --chrome-soft: #6f6e69;
@@ -30,7 +31,7 @@
 }
 
 /* --- gruvbox dark: morhetz/gruvbox --- */
-[data-theme="gruvbox-dark"] {
+[data-theme='gruvbox-dark'] {
   --chrome: #1d2021;
   --chrome-ink: #ebdbb2;
   --chrome-soft: #a89984;
@@ -56,7 +57,7 @@
 }
 
 /* --- gruvbox light: morhetz/gruvbox (faded-акценты светлой схемы) --- */
-[data-theme="gruvbox-light"] {
+[data-theme='gruvbox-light'] {
   --chrome: #ebdbb2;
   --chrome-ink: #3c3836;
   --chrome-soft: #665c54;
@@ -82,7 +83,7 @@
 }
 
 /* --- nord dark: nordtheme.com (nord0..nord15) --- */
-[data-theme="nord-dark"] {
+[data-theme='nord-dark'] {
   --chrome: #232831;
   --chrome-ink: #eceff4;
   --chrome-soft: #d8dee9;
@@ -108,7 +109,7 @@
 }
 
 /* --- nord light: Snow Storm --- */
-[data-theme="nord-light"] {
+[data-theme='nord-light'] {
   --chrome: #e5e9f0;
   --chrome-ink: #2e3440;
   --chrome-soft: #4c566a;
@@ -134,7 +135,7 @@
 }
 
 /* --- solarized dark (классика Ethan Schoonover: base03..base3) --- */
-[data-theme="solarized-dark"] {
+[data-theme='solarized-dark'] {
   --chrome: #002b36;
   --chrome-ink: #93a1a1;
   --chrome-soft: #839496;
@@ -160,7 +161,7 @@
 }
 
 /* --- osaka solarized: craftzdog/solarized-osaka.nvim (HSL→hex) --- */
-[data-theme="osaka-solarized"] {
+[data-theme='osaka-solarized'] {
   --chrome: #00141a;
   --chrome-ink: #9fabad;
   --chrome-soft: #839495;
@@ -186,7 +187,7 @@
 }
 
 /* --- nightfly: bluz71/vim-nightfly-colors --- */
-[data-theme="nightfly"] {
+[data-theme='nightfly'] {
   --chrome: #081e2f;
   --chrome-ink: #c3ccdc;
   --chrome-soft: #a1aab8;
@@ -212,7 +213,7 @@
 }
 
 /* --- github dark: тёплый charcoal под стать светлой «бумаге» (Claude-стиль) --- */
-[data-theme="github-dark"] {
+[data-theme='github-dark'] {
   --chrome: #211f1d;
   --chrome-ink: #ede9e2;
   --chrome-soft: #a39e96;
@@ -238,7 +239,7 @@
 }
 
 /* --- blueprint: инженерная синька — белый чертёж по синему полю --- */
-[data-theme="blueprint"] {
+[data-theme='blueprint'] {
   --chrome: #0e2547;
   --chrome-ink: #f4f7fb;
   --chrome-soft: #9db4d4;
@@ -264,7 +265,7 @@
 }
 
 /* --- graph: инженерная миллиметровка — тёмно-синие чернила по белому --- */
-[data-theme="graph"] {
+[data-theme='graph'] {
   --chrome: #eef2ee;
   --chrome-ink: #1c3d5a;
   --chrome-soft: #4a6a86;
@@ -289,7 +290,9 @@
   --grid-dk: rgba(30, 108, 60, 0.15);
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   overscroll-behavior: none;
@@ -308,8 +311,16 @@ html, body, #root {
 }
 
 body {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
-  font-feature-settings: "cv11", "ss01";
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    ui-sans-serif,
+    system-ui,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
   background: var(--canvas);
   color: var(--chrome-ink);
   -webkit-font-smoothing: antialiased;
@@ -318,20 +329,30 @@ body {
 
 /* Белые оверлеи из старых классов — переводим на нейтральный currentColor-микс,
    чтобы одинаково тихо смотрелись и на тёплой бумаге, и в тёмных темах. */
-.hover\:bg-white\/5:hover { background: color-mix(in srgb, currentColor 8%, transparent) !important; }
-.hover\:bg-white\/10:hover { background: color-mix(in srgb, currentColor 12%, transparent) !important; }
-.bg-white\/10 { background: color-mix(in srgb, currentColor 10%, transparent) !important; }
-.bg-white\/5 { background: color-mix(in srgb, currentColor 6%, transparent) !important; }
+.hover\:bg-white\/5:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent) !important;
+}
+.hover\:bg-white\/10:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent) !important;
+}
+.bg-white\/10 {
+  background: color-mix(in srgb, currentColor 10%, transparent) !important;
+}
+.bg-white\/5 {
+  background: color-mix(in srgb, currentColor 6%, transparent) !important;
+}
 
 /* Режим «без бордеров»: все нейтральные рамки прозрачны во всём приложении.
    Через атрибут-селектор (без экранирований — их не переваривает парсер).
    Смысловые не трогаем: акцент редактирования/выбора, danger, is-on состояния. */
-[class*="border-[var(--line)]"],
-[class*="border-[var(--chrome-line)]"],
-[class*="border-[var(--input-border)]"] {
+[class*='border-[var(--line)]'],
+[class*='border-[var(--chrome-line)]'],
+[class*='border-[var(--input-border)]'] {
   border-color: transparent !important;
 }
-.menu-sep { border-top-color: transparent; }
+.menu-sep {
+  border-top-color: transparent;
+}
 
 /* ===== Тач и мобильные: крупные цели, видимые ручки, safe-area ===== */
 /* Ручки блоков видны только по hover — на таче hover нет, показываем всегда */
@@ -379,7 +400,7 @@ body {
   flex-shrink: 0;
 }
 @media (max-width: 640px) {
-  .nya-menubar button[role="menuitem"] {
+  .nya-menubar button[role='menuitem'] {
     padding: 6px 8px;
     font-size: 12px;
   }
@@ -469,26 +490,40 @@ body {
 }
 
 .math-input {
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
   font-variant-numeric: tabular-nums;
 }
 
 /* Формулы наследуют чернила листа */
-.nya-sheet .katex { color: var(--ink); }
-.nya-sheet .katex-display { margin: 0; }
+.nya-sheet .katex {
+  color: var(--ink);
+}
+.nya-sheet .katex-display {
+  margin: 0;
+}
 
 /* Уважение к reduced-motion */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
 }
 
 /* thin scrollbars */
-*::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: var(--hover-line); border-radius: 8px; }
-*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--hover-line);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
 
 ::selection {
   background: var(--accent-soft);
@@ -515,14 +550,23 @@ body {
   color: var(--chrome-soft);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background 140ms ease-out, color 140ms ease-out, border-color 140ms ease-out, transform 140ms ease-out;
+  transition:
+    background 140ms ease-out,
+    color 140ms ease-out,
+    border-color 140ms ease-out,
+    transform 140ms ease-out;
 }
 .nya-tbtn:hover {
   color: var(--chrome-ink);
   background: color-mix(in srgb, currentColor 7%, transparent);
 }
-.nya-tbtn:active { transform: scale(0.94); }
-.nya-tbtn:disabled { opacity: 0.35; pointer-events: none; }
+.nya-tbtn:active {
+  transform: scale(0.94);
+}
+.nya-tbtn:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
 
 /* Пульт инженера: крупные контролы под палец */
 .nya-tbtn-big {
@@ -545,11 +589,22 @@ body {
   color: var(--chrome-soft);
   white-space: nowrap;
   cursor: pointer;
-  transition: background 140ms ease-out, color 140ms ease-out, transform 140ms ease-out;
+  transition:
+    background 140ms ease-out,
+    color 140ms ease-out,
+    transform 140ms ease-out;
 }
-.nya-mbtn:hover { color: var(--chrome-ink); background: color-mix(in srgb, currentColor 7%, transparent); }
-.nya-mbtn:active { transform: scale(0.96); }
-.nya-mbtn.is-open { color: var(--chrome-ink); background: color-mix(in srgb, currentColor 10%, transparent); }
+.nya-mbtn:hover {
+  color: var(--chrome-ink);
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+.nya-mbtn:active {
+  transform: scale(0.96);
+}
+.nya-mbtn.is-open {
+  color: var(--chrome-ink);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
 
 /* Выпадающие меню: воздушные, с секциями */
 .menu-drop {
@@ -570,16 +625,27 @@ body {
   text-align: left;
   color: var(--chrome-soft);
   cursor: pointer;
-  transition: background 120ms ease-out, color 120ms ease-out;
+  transition:
+    background 120ms ease-out,
+    color 120ms ease-out;
 }
-.menu-item:hover { background: var(--accent-soft); color: var(--chrome-ink); }
-.menu-item:disabled { opacity: 0.4; pointer-events: none; }
+.menu-item:hover {
+  background: var(--accent-soft);
+  color: var(--chrome-ink);
+}
+.menu-item:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
 .menu-item kbd {
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 11px;
   opacity: 0.7;
 }
-.menu-sep { margin: 6px 4px; border-top: 1px solid var(--chrome-line); }
+.menu-sep {
+  margin: 6px 4px;
+  border-top: 1px solid var(--chrome-line);
+}
 .menu-head {
   padding: 6px 10px 4px;
   font-size: 10.5px;
@@ -598,8 +664,12 @@ body {
   outline: none;
   transition: border-color 140ms ease-out;
 }
-.nya-input:focus { border-color: var(--accent-line); }
-.nya-input::placeholder { color: var(--faint); }
+.nya-input:focus {
+  border-color: var(--accent-line);
+}
+.nya-input::placeholder {
+  color: var(--faint);
+}
 
 /* Окошко редактирования блока: спокойная карточка, ничего лишнего.
    Своего кольца не рисует — единый внешний аутлайн даёт .nya-block. */
@@ -617,12 +687,16 @@ body {
   box-shadow: none;
   caret-color: var(--accent-ink);
 }
-.nya-editor::placeholder { color: var(--faint); }
-textarea.nya-editor { resize: none; }
+.nya-editor::placeholder {
+  color: var(--faint);
+}
+textarea.nya-editor {
+  resize: none;
+}
 
 /* Подсказки-клавиши в пустом состоянии и справке */
 .nya-kbd {
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 12px;
   padding: 3px 8px;
   border-radius: 7px;
@@ -635,9 +709,13 @@ textarea.nya-editor { resize: none; }
 /* Блоки: единый минимализм — мягкая рамка, акцент только у выбранного */
 .nya-block {
   border-radius: var(--radius-m);
-  transition: border-color 150ms ease-out, background 150ms ease-out;
+  transition:
+    border-color 150ms ease-out,
+    background 150ms ease-out;
 }
-.nya-region .nya-block:focus-within > .opacity-0 { opacity: 1; }
+.nya-region .nya-block:focus-within > .opacity-0 {
+  opacity: 1;
+}
 .nya-block-error {
   border-left: 3px solid var(--danger);
 }
@@ -647,7 +725,9 @@ textarea.nya-editor { resize: none; }
   border-radius: 999px;
   background: var(--ok);
 }
-.nya-status-dot.is-err { background: var(--danger); }
+.nya-status-dot.is-err {
+  background: var(--danger);
+}
 
 /* Зумбар-пилюля и палитра: стекло, минимум шума */
 .nya-zoombar {
@@ -682,10 +762,14 @@ textarea.nya-editor { resize: none; }
   animation: welcome-fade 150ms ease-out;
 }
 @keyframes welcome-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
-.welcome-backdrop[data-closing="true"] {
+.welcome-backdrop[data-closing='true'] {
   opacity: 0;
   transition: opacity 150ms ease-out;
 }
@@ -695,9 +779,15 @@ textarea.nya-editor { resize: none; }
   filter: blur(4px);
   animation: welcome-in 400ms ease-out forwards;
 }
-.welcome-d0 { animation-delay: 0ms; }
-.welcome-d1 { animation-delay: 100ms; }
-.welcome-d2 { animation-delay: 200ms; }
+.welcome-d0 {
+  animation-delay: 0ms;
+}
+.welcome-d1 {
+  animation-delay: 100ms;
+}
+.welcome-d2 {
+  animation-delay: 200ms;
+}
 @keyframes welcome-in {
   to {
     opacity: 1;
@@ -710,7 +800,10 @@ textarea.nya-editor { resize: none; }
   opacity: 0;
   transform: translateY(-12px);
   filter: blur(4px);
-  transition: opacity 150ms ease-out, transform 150ms ease-out, filter 150ms ease-out;
+  transition:
+    opacity 150ms ease-out,
+    transform 150ms ease-out,
+    filter 150ms ease-out;
 }
 
 /* ===== Печать / PDF: лист → вертикальный документ =====
@@ -727,20 +820,24 @@ textarea.nya-editor { resize: none; }
 }
 @media print {
   /* цвета как на экране (тёмная тема печатается тёмной) */
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  html, body, #root {
+  html,
+  body,
+  #root {
     height: auto !important;
     overflow: visible !important;
     background: var(--canvas) !important;
   }
   /* хром приложения и оверлеи — скрыть */
-  [role="menubar"],
-  [role="dialog"],
-  [role="complementary"],
-  [role="toolbar"] {
+  [role='menubar'],
+  [role='dialog'],
+  [role='complementary'],
+  [role='toolbar'] {
     display: none !important;
   }
   /* фиксированный layout приложения → обычный поток, иначе обрезка одной страницей */
@@ -831,13 +928,13 @@ textarea.nya-editor { resize: none; }
   }
 
   /* ===== Ч/Б режим: data-print="bw" — чёрный текст, белый фон ===== */
-  html[data-print="bw"],
-  html[data-print="bw"] body,
-  html[data-print="bw"] #root,
-  html[data-print="bw"] .nya-app,
-  html[data-print="bw"] .nya-workspace,
-  html[data-print="bw"] .nya-canvas,
-  html[data-print="bw"] .nya-sheet {
+  html[data-print='bw'],
+  html[data-print='bw'] body,
+  html[data-print='bw'] #root,
+  html[data-print='bw'] .nya-app,
+  html[data-print='bw'] .nya-workspace,
+  html[data-print='bw'] .nya-canvas,
+  html[data-print='bw'] .nya-sheet {
     --canvas: #ffffff;
     --sheet: #ffffff;
     --chrome: #ffffff;
@@ -863,21 +960,21 @@ textarea.nya-editor { resize: none; }
     color: #000000 !important;
     border-color: #000000 !important;
   }
-  html[data-print="bw"] .nya-block {
+  html[data-print='bw'] .nya-block {
     background: #ffffff !important;
     color: #000000 !important;
     border-color: #000000 !important;
   }
-  html[data-print="bw"] .nya-sheet .katex,
-  html[data-print="bw"] .nya-sheet .katex * {
+  html[data-print='bw'] .nya-sheet .katex,
+  html[data-print='bw'] .nya-sheet .katex * {
     color: #000000 !important;
   }
   /* SVG-графики: белый фон + grayscale (инлайновые fill/stroke палитры иначе останутся тёмными) */
-  html[data-print="bw"] .nya-sheet svg {
+  html[data-print='bw'] .nya-sheet svg {
     background: #ffffff !important;
     filter: grayscale(1) contrast(1.05);
   }
-  html[data-print="bw"] .nya-sheet canvas {
+  html[data-print='bw'] .nya-sheet canvas {
     background: #ffffff !important;
     filter: grayscale(1) contrast(1.05);
   }

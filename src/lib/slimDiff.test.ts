@@ -5,9 +5,21 @@ import type { MathBlockData } from '../engine/dependencies';
 let id = 0;
 function block(y: number, patch: Partial<MathBlockData> = {}): MathBlockData {
   return {
-    id: `d${id++}`, x: 80, y, rawInput: '', displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind: 'math', plotPreview: null, ...patch,
+    id: `d${id++}`,
+    x: 80,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind: 'math',
+    plotPreview: null,
+    ...patch,
   };
 }
 
@@ -22,10 +34,21 @@ describe('slimDiff: canonical lines', () => {
     expect(slimText([a, b]).map((l) => JSON.parse(l).body)).toEqual(['a', 'b']);
   });
   it('plot/slider/sim сворачиваются компактно', () => {
-    expect(diffLine(block(60, { kind: 'plot', plotFn: 'sin(x)', plotXmin: -10, plotXmax: 10 })))
-      .toBe('{"kind":"plot","x":80,"y":60,"body":"sin(x) [-10, 10]"}');
-    expect(diffLine(block(60, { kind: 'slider', sliderVar: 'k', sliderMin: 0, sliderMax: 10, sliderStep: 0.5, sliderVal: 5 })))
-      .toContain('"body":"k 0..10/0.5 =5"');
+    expect(
+      diffLine(block(60, { kind: 'plot', plotFn: 'sin(x)', plotXmin: -10, plotXmax: 10 })),
+    ).toBe('{"kind":"plot","x":80,"y":60,"body":"sin(x) [-10, 10]"}');
+    expect(
+      diffLine(
+        block(60, {
+          kind: 'slider',
+          sliderVar: 'k',
+          sliderMin: 0,
+          sliderMax: 10,
+          sliderStep: 0.5,
+          sliderVal: 5,
+        }),
+      ),
+    ).toContain('"body":"k 0..10/0.5 =5"');
   });
 });
 

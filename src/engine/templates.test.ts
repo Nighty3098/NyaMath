@@ -7,11 +7,23 @@ function toBlocks(tplId: string): MathBlockData[] {
   const tpl = getTemplate(tplId);
   if (!tpl) throw new Error(`no template ${tplId}`);
   return tpl.lines.map((ln, k) => ({
-    id: `tpl${id++}`, x: 80, y: 60 + k * 64, rawInput: ln.raw,
-    displayLatex: '', resultStr: '', resultLatex: '', resultValue: null,
-    error: null, dependencies: [], definedVar: null, isOutput: false,
-    kind: ln.kind, plotPreview: null,
-    ...(ln.plotFn ? { plotFn: ln.plotFn, plotXmin: ln.plotXmin ?? -10, plotXmax: ln.plotXmax ?? 10 } : {}),
+    id: `tpl${id++}`,
+    x: 80,
+    y: 60 + k * 64,
+    rawInput: ln.raw,
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind: ln.kind,
+    plotPreview: null,
+    ...(ln.plotFn
+      ? { plotFn: ln.plotFn, plotXmin: ln.plotXmin ?? -10, plotXmax: ln.plotXmax ?? 10 }
+      : {}),
     ...(ln.plotLogx ? { plotLogx: true } : {}),
     ...(ln.exportName ? { exportName: ln.exportName } : {}),
   }));
@@ -20,7 +32,10 @@ function toBlocks(tplId: string): MathBlockData[] {
 function calcAll(tplId: string): Record<string, MathBlockData> {
   const r = recalculateAll(toBlocks(tplId));
   const errs = Object.values(r.blocks).filter((b) => b.error);
-  expect(errs.map((b) => `${b.rawInput} ⟹ ${b.error}`), tplId).toEqual([]);
+  expect(
+    errs.map((b) => `${b.rawInput} ⟹ ${b.error}`),
+    tplId,
+  ).toEqual([]);
   return r.blocks;
 }
 
@@ -38,9 +53,18 @@ describe('templates: library integrity', () => {
   it('16 шаблонов в 8 разделах с описаниями', () => {
     const all = listTemplates();
     expect(all.length).toBe(16);
-    expect(new Set(all.map((t) => t.section))).toEqual(new Set([
-      'beams', 'circuits', 'tolerances', 'thermal', 'vibration', 'hydro', 'fea', 'signal',
-    ]));
+    expect(new Set(all.map((t) => t.section))).toEqual(
+      new Set([
+        'beams',
+        'circuits',
+        'tolerances',
+        'thermal',
+        'vibration',
+        'hydro',
+        'fea',
+        'signal',
+      ]),
+    );
     for (const t of all) {
       expect(t.title.ru.length).toBeGreaterThan(0);
       expect(t.title.en.length).toBeGreaterThan(0);
@@ -154,6 +178,8 @@ describe('templates: library integrity', () => {
   it('RC-ФНЧ: fc≈994.7 Гц, H(fc)≈−3.01 дБ', () => {
     const b = calcAll('signal-rc-lowpass');
     expect(byRaw(b, 'fc := 1/(2*pi*RC) =').resultStr).toContain('994.718');
-    expect(byRaw(b, 'Hfc = bodeMagDb([1], [inUnits(RC, "s"), 1], inUnits(2*pi*fc, "Hz"))').resultStr).toContain('-3.01');
+    expect(
+      byRaw(b, 'Hfc = bodeMagDb([1], [inUnits(RC, "s"), 1], inUnits(2*pi*fc, "Hz"))').resultStr,
+    ).toContain('-3.01');
   });
 });

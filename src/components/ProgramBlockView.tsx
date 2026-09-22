@@ -57,7 +57,11 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
   const resultHtml = useMemo(() => {
     if (!block.resultLatex || block.error) return '';
     try {
-      return katex.renderToString(block.resultLatex, { throwOnError: false, displayMode: false, strict: false });
+      return katex.renderToString(block.resultLatex, {
+        throwOnError: false,
+        displayMode: false,
+        strict: false,
+      });
     } catch {
       return '';
     }
@@ -73,10 +77,18 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
     try {
       return debugProgram(block.rawInput, { ...base });
     } catch (e) {
-      return { steps: [], truncated: false, error: e instanceof Error ? e.message : String(e), errorLine: null };
+      return {
+        steps: [],
+        truncated: false,
+        error: e instanceof Error ? e.message : String(e),
+        errorLine: null,
+      };
     }
   }, [showDebug, block.rawInput, base]);
-  const selDebugStep = selStep == null ? debug?.steps[debug.steps.length - 1] ?? null : (debug?.steps.find((s) => s.n === selStep) ?? null);
+  const selDebugStep =
+    selStep == null
+      ? (debug?.steps[debug.steps.length - 1] ?? null)
+      : (debug?.steps.find((s) => s.n === selStep) ?? null);
 
   const finishEdit = (value: string) => {
     if (value.trim() === '') removeBlock(block.id);
@@ -93,8 +105,8 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
           block.error
             ? 'border-[var(--danger)] bg-[var(--danger-bg)] outline outline-2 outline-[var(--danger)]'
             : editing
-              // Active region — пунктирная рамка (vs сплошная у выделенного)
-              ? 'border-[var(--ink)] outline outline-2 outline-dashed outline-[var(--accent-line)]'
+              ? // Active region — пунктирная рамка (vs сплошная у выделенного)
+                'border-[var(--ink)] outline outline-2 outline-dashed outline-[var(--accent-line)]'
               : selected
                 ? 'border-[var(--ink)] outline outline-2 outline-[var(--accent-line)]'
                 : 'border-[var(--ink)]/60 hover:outline hover:outline-1 hover:outline-[var(--hover-line)]'
@@ -137,7 +149,9 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
           className="flex items-center gap-2 mb-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
           style={{ opacity: selected || editing ? 1 : undefined }}
         >
-          <span className="text-[10px] uppercase tracking-wider text-[var(--faint)]">program →</span>
+          <span className="text-[10px] uppercase tracking-wider text-[var(--faint)]">
+            program →
+          </span>
           <label htmlFor={`export-${block.id}`} className="sr-only">
             {t('g.exportLabel')}
           </label>
@@ -251,7 +265,10 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
         )}
 
         {block.error ? (
-          <div className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--danger)]" role="alert">
+          <div
+            className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--danger)]"
+            role="alert"
+          >
             <IWarn /> {block.error}
           </div>
         ) : block.resultLatex ? (
@@ -265,18 +282,23 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
               <span className="math-input text-[13px] text-[var(--ink)]">{block.resultStr}</span>
             )}
             {block.definedVar && (
-              <span className="math-input text-[11px] text-[var(--faint)]">→ {block.definedVar}</span>
+              <span className="math-input text-[11px] text-[var(--faint)]">
+                → {block.definedVar}
+              </span>
             )}
           </div>
         ) : null}
 
         {block.disabled && (
-            <div className="text-[11px] leading-5 text-[var(--faint)] flex items-center gap-1">
-              <IPause /> {t('m.disabled')}
-            </div>
+          <div className="text-[11px] leading-5 text-[var(--faint)] flex items-center gap-1">
+            <IPause /> {t('m.disabled')}
+          </div>
         )}
         {!block.disabled && lateDeps && lateDeps.length > 0 && (
-          <div className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--accent-line)]" role="note">
+          <div
+            className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--accent-line)]"
+            role="note"
+          >
             <IWarn /> {t('m.useBeforeDef', { names: lateDeps.join(', ') })}
           </div>
         )}
@@ -285,9 +307,14 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
         {/* trace-лог операторов trace */}
         {block.programTrace && block.programTrace.length > 0 && (
           <div className="mt-1 rounded-lg border border-[var(--line)] bg-[var(--input-bg)] px-1.5 py-1">
-            <div className="text-[10px] uppercase tracking-wider text-[var(--faint)]">{t('g.trace')}</div>
+            <div className="text-[10px] uppercase tracking-wider text-[var(--faint)]">
+              {t('g.trace')}
+            </div>
             {block.programTrace.map((line, k) => (
-              <div key={k} className="math-input text-[12px] text-[var(--ink-soft)] whitespace-pre-wrap break-words">
+              <div
+                key={k}
+                className="math-input text-[12px] text-[var(--ink-soft)] whitespace-pre-wrap break-words"
+              >
                 {line}
               </div>
             ))}
@@ -303,7 +330,10 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
             onPointerDown={(e) => e.stopPropagation()}
           >
             {debug?.error && (
-              <div className="flex items-center gap-1.5 text-[12px] text-[var(--danger)]" role="alert">
+              <div
+                className="flex items-center gap-1.5 text-[12px] text-[var(--danger)]"
+                role="alert"
+              >
                 <IWarn /> {debug.error}
               </div>
             )}
@@ -311,7 +341,11 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
               <div className="text-[12px] text-[var(--faint)]">{t('g.debugEmpty')}</div>
             )}
             {debug && debug.steps.length > 0 && (
-              <div className="max-h-[180px] overflow-y-auto" role="list" aria-label={t('g.debugShow')}>
+              <div
+                className="max-h-[180px] overflow-y-auto"
+                role="list"
+                aria-label={t('g.debugShow')}
+              >
                 {debug.steps.map((s) => (
                   <button
                     key={s.n}
@@ -319,10 +353,14 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
                     role="listitem"
                     onClick={() => setSelStep(s.n)}
                     className={`w-full text-left math-input text-[12px] px-1 py-px rounded flex items-baseline gap-1.5 cursor-pointer ${
-                      selDebugStep?.n === s.n ? 'bg-white/10 text-[var(--ink)]' : 'text-[var(--ink-soft)] hover:bg-white/5'
+                      selDebugStep?.n === s.n
+                        ? 'bg-white/10 text-[var(--ink)]'
+                        : 'text-[var(--ink-soft)] hover:bg-white/5'
                     }`}
                   >
-                    <span className="text-[var(--faint)] shrink-0">#{s.n}·L{s.line}</span>
+                    <span className="text-[var(--faint)] shrink-0">
+                      #{s.n}·L{s.line}
+                    </span>
                     {s.kind === 'breakpoint' && (
                       <span className="text-[var(--danger)] shrink-0" aria-hidden="true">
                         ●
@@ -334,7 +372,11 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
                 ))}
               </div>
             )}
-            {debug?.truncated && <div className="text-[11px] text-[var(--faint)]">{t('g.debugTrunc', { n: debug.steps.length })}</div>}
+            {debug?.truncated && (
+              <div className="text-[11px] text-[var(--faint)]">
+                {t('g.debugTrunc', { n: debug.steps.length })}
+              </div>
+            )}
             {selDebugStep && Object.keys(selDebugStep.locals).length > 0 && (
               <div className="mt-1 border-t border-[var(--line)] pt-1">
                 <div className="text-[10px] uppercase tracking-wider text-[var(--faint)]">

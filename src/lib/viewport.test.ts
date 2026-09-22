@@ -2,18 +2,39 @@ import { describe, expect, it } from 'vitest';
 import { estBlockHeight, rectHit, viewportRect, visibleIdsOf } from './viewport';
 import type { MathBlockData } from '../engine/dependencies';
 
-function block(id: string, x: number, y: number, kind: MathBlockData['kind'] = 'math', h?: number): MathBlockData {
+function block(
+  id: string,
+  x: number,
+  y: number,
+  kind: MathBlockData['kind'] = 'math',
+  h?: number,
+): MathBlockData {
   return {
-    id, x, y, rawInput: '', displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind, plotPreview: null, h: h ?? null,
+    id,
+    x,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind,
+    plotPreview: null,
+    h: h ?? null,
   };
 }
 
 describe('viewport: rect', () => {
   it('нулевой вьюпорт без overscan', () => {
     expect(viewportRect({ x: 0, y: 0, k: 1 }, { w: 800, h: 600 }, 0)).toEqual({
-      x0: 0, y0: 0, x1: 800, y1: 600,
+      x0: 0,
+      y0: 0,
+      x1: 800,
+      y1: 600,
     });
   });
   it('пан и зум', () => {

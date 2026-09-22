@@ -25,13 +25,17 @@ export function fillPrintHead(): void {
     const sub = el.querySelector('[data-ph="sub"]');
     if (title) title.textContent = t('print.head', { date });
     if (sub) sub.textContent = t('print.sub', { n: blocks.length, e: errs });
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function printDocument(mode: PrintMode = 'color'): void {
   try {
     document.documentElement.dataset.print = mode;
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   // Гасим виртуализацию ЗАРАНЕЕ: полный рендер успевает закоммититься
   // за два кадра (иначе в печать попадут только видимые блоки).
   try {
@@ -53,10 +57,14 @@ export function installPrintCleanup(): () => void {
   const cleanupPrint = () => {
     try {
       delete document.documentElement.dataset.print;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     try {
       useCanvasStore.getState().setPrinting(false);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
   const commit = () => {
     // Коммитим открытый редактор, иначе печатается пустой textarea
@@ -67,7 +75,9 @@ export function installPrintCleanup(): () => void {
       if (!document.documentElement.dataset.print) {
         document.documentElement.dataset.print = 'color';
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
   window.addEventListener('beforeprint', commit);
   window.addEventListener('afterprint', cleanupPrint);

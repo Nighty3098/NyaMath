@@ -2,11 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { recalculateAll, type MathBlockData } from './dependencies';
 
 let id = 0;
-function block(kind: MathBlockData['kind'], y: number, patch: Partial<MathBlockData> = {}): MathBlockData {
+function block(
+  kind: MathBlockData['kind'],
+  y: number,
+  patch: Partial<MathBlockData> = {},
+): MathBlockData {
   return {
-    id: `s${id++}`, x: 80, y, rawInput: '', displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind, plotPreview: null, ...patch,
+    id: `s${id++}`,
+    x: 80,
+    y,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind,
+    plotPreview: null,
+    ...patch,
   };
 }
 
@@ -17,7 +33,13 @@ function recalc(list: MathBlockData[]): MathBlockData[] {
 
 const slider = (y: number, patch: Partial<MathBlockData> = {}) =>
   block('slider', y, {
-    rawInput: 'slider', sliderVar: 'k', sliderMin: 0, sliderMax: 10, sliderStep: 0.5, sliderVal: 3, ...patch,
+    rawInput: 'slider',
+    sliderVar: 'k',
+    sliderMin: 0,
+    sliderMax: 10,
+    sliderStep: 0.5,
+    sliderVal: 3,
+    ...patch,
   });
 
 describe('slider blocks', () => {
@@ -30,10 +52,7 @@ describe('slider blocks', () => {
   });
 
   it('errors on use-before-definition (top-to-bottom order)', () => {
-    const [m] = recalc([
-      block('math', 60, { rawInput: 'y := 2*k =' }),
-      slider(124),
-    ]);
+    const [m] = recalc([block('math', 60, { rawInput: 'y := 2*k =' }), slider(124)]);
     expect(m.error).not.toBeNull();
   });
 

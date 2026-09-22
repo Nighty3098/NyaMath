@@ -11,7 +11,10 @@ describe('addBlocks insert path', () => {
     st.clear();
     const f = FORMULAS.find((x) => x.id === 'ohm-law');
     expect(f).toBeTruthy();
-    const lines = f!.code.split('\n').map((l) => l.trim()).filter(Boolean);
+    const lines = f!.code
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
     expect(lines.length).toBeGreaterThan(1);
     useCanvasStore.getState().addBlocks(lines, 80, 60);
     const after = useCanvasStore.getState();
@@ -33,7 +36,10 @@ describe('addBlocks insert path', () => {
     st.clear();
     let checked = 0;
     for (const f of FORMULAS) {
-      const lines = f.code.split('\n').map((l) => l.trim()).filter(Boolean);
+      const lines = f.code
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean);
       useCanvasStore.getState().addBlocks(lines, 80, 60);
       await flushRecalc();
       const after = useCanvasStore.getState();

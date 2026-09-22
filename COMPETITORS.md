@@ -8,24 +8,24 @@
 
 ## 0. Сводная таблица
 
-| Программа | Ниша | Лицензия/цена (2026) | Главный плюс | Главная боль |
-|---|---|---|---|---|
-| PTC Mathcad Prime 12 | «Лист = отчёт», эталон | Подписка ~£3k/год/seat, Express-free с вотермаркой | Нотация как в учебнике (`:=`, `=`, юниты в строке), документ = отчёт, Solve Blocks, Excel/Creo/Windchill | Цена + license.dat, миграция 15→Prime ломает листы, тормоза на больших листах, бедные плоты |
-| SMath Studio 1.x | Бесплатный клон Mathcad 15 | Free personal, ~2 МБ, portable | Лёгкий, paper-like, Dynamic Assistant + autocomplete, 40+ языков, форум с автором | UI «из 2008», Mono-костыль на Linux/Mac, плагинный ад без lockfile, нет коллаба/Python |
-| Calcpad / CalcpadCE (fork 03.2026) | Код → красивый HTML-отчёт | Free, desktop .NET + cloud IDE | Подстановка значений (`F = m·a = 10 N`), `?` → форма ввода для заказчика, экспорт в Word, библиотека балки/ЖБ | Code-DSL вместо WYSIWYG, numeric-only без сильного CAS, нет тем, web-viewer read-only |
-| Maple Flow (+ классический Maple) | Свободный canvas на движке Maple | Дорого (≈ Mathcad), perpetual или sub, Win+Mac | Сильнейший символьный движок, свободное позиционирование, AI Formula Assistant, фазоры, кодогенерация C/Python/MATLAB | Цена, Flow беднее классики по пакетам, Ribbon-ворчание, Trustpilot 2.3 за краши/порчу файлов |
-| Wolfram Mathematica / Alpha | «Всё в одном» CAS | x2–5 от конкурентов, cloud по подписке, upload-лимиты | 7000 функций, символьное+численное+ML+гео+Knowledgebase, лучший Help, Manipulate | Кривая WL-языка, no-autosave (теряли часы), тяжёлый старт, проприетарность |
-| MATLAB + Live Editor + Simulink | Численная среда №1 | $940+/год + тулбоксы ×$2000 | Тулбоксы под всё, отладчик, плоты одной строкой, Simulink, курсы/поддержка | Подписка вместо perpetual, black-box солверы, 1-индекс, тяжёлая установка, Live Editor тормозит |
-| GNU Octave / Scilab+Xcos | Бесплатные MATLAB-клоны | GPL/free | Octave ~95% синтаксиса `.m`, Scilab IDE из коробки + Xcos как бесплатный Simulink, `mfile2sci` | Нет тулбоксов/Simulink-паритета, плоты проще, диалекты (`%pi`, `xgrid`), perf ниже MKL |
-| Julia + Pluto.jl | Быстрый научный стек | MIT/free | Скорость C + удобство Python, реактивный DAG без hidden state, `.jl` git-friendly, `@bind`-слайдеры | TTFP (JIT-прогрев), правило «переменная — один раз», сырая экосистема, фрагментация Quarto/Pluto/Bonito |
-| Jupyter / Colab / Kaggle | Notebook-стандарт | Free tiers (Colab 12h/12GB, GPU не гарантирован) | Zero-setup в браузере, 40+ ядер, Markdown+код+картинки, nbconvert, шаринг как Google Docs | Hidden state (только ~4% воспроизводимы), таймауты/стирание файлов, `pip`-ад, нечитаемые git-диффы |
-| Desmos Studio | Граф-калькулятор №1 | Free | Zero-friction старт, слайдеры, цвета/анимации, офлайн на телефоне, клавиатура `π √ ≤`, Projector Mode | Не CAS, нет units/документов-отчётов/матриц/ODE/программ — «игрушечный» для вуза |
-| GeoGebra | Школьный всё-в-одном | Free | Геометрия+алгебра+CAS+статистика+3D, drag-and-drop, 80+ языков, LMS | 6 приложений вместо одного путают, сложный онбординг, CAS слабее Maple, баги сохранений |
-| Symbolab / Photomath / MS Solver / Mathway / WA | «Домашка за 5 сек» | Freemium (шаги $2–10/мес; MS Solver free) | Step-by-step + камера-ввод + Problem Generator, графинг вместо TI-84 | Шаги за paywall, скипы логики, редизайны клавиатур, читинг-морализм, сбор данных/ads |
-| OriginPro / LabPlot / SciDAVis | Плоты для статей | Дорого (Origin), LabPlot free | Publication-quality в 2 клика, 100+ типов, multi-axis/panel, fitting/ANOVA, batch без кода | Кривая обучения, стиль «из 90-х», только Windows полноценно, `.opj` через Viewer |
-| HiPER Calc / Numbat / Soulver | Карманные | Free+ads / open-source | 100 знаков, SI-префиксы, history-лента, Numbat-units в терминале, Soulver «пишешь словами» | Ads + consent 500+ партнёров (HiPER), только «одна строка», нет графиков/матриц/ODE |
-| CalcTree / fxSolver | Новые web | Cloud-sub (free-tier обрезан) | CalcTree: realtime-коллаба + версионность + AI по стандартам; fxSolver: тысячи готовых формул «вбил → Solve» | Cloud-only без offline, vendor lock-in, «слишком много AI-магии», у fxSolver устаревший UI без units |
-| Maxima / SageMath+CoCalc | Open-source CAS | GPL/free | Maxima — лучший free CAS (Laplace/ODE/ряды), Sage — «бесплатный Mathematica на Python-клее», CoCalc TimeTravel | Сборка «дни фиксов», DX 90-х, Sage тяжёлый (ГБ зависимостей), CoCalc free тормозит |
+| Программа                                       | Ниша                             | Лицензия/цена (2026)                                  | Главный плюс                                                                                                          | Главная боль                                                                                            |
+| ----------------------------------------------- | -------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| PTC Mathcad Prime 12                            | «Лист = отчёт», эталон           | Подписка ~£3k/год/seat, Express-free с вотермаркой    | Нотация как в учебнике (`:=`, `=`, юниты в строке), документ = отчёт, Solve Blocks, Excel/Creo/Windchill              | Цена + license.dat, миграция 15→Prime ломает листы, тормоза на больших листах, бедные плоты             |
+| SMath Studio 1.x                                | Бесплатный клон Mathcad 15       | Free personal, ~2 МБ, portable                        | Лёгкий, paper-like, Dynamic Assistant + autocomplete, 40+ языков, форум с автором                                     | UI «из 2008», Mono-костыль на Linux/Mac, плагинный ад без lockfile, нет коллаба/Python                  |
+| Calcpad / CalcpadCE (fork 03.2026)              | Код → красивый HTML-отчёт        | Free, desktop .NET + cloud IDE                        | Подстановка значений (`F = m·a = 10 N`), `?` → форма ввода для заказчика, экспорт в Word, библиотека балки/ЖБ         | Code-DSL вместо WYSIWYG, numeric-only без сильного CAS, нет тем, web-viewer read-only                   |
+| Maple Flow (+ классический Maple)               | Свободный canvas на движке Maple | Дорого (≈ Mathcad), perpetual или sub, Win+Mac        | Сильнейший символьный движок, свободное позиционирование, AI Formula Assistant, фазоры, кодогенерация C/Python/MATLAB | Цена, Flow беднее классики по пакетам, Ribbon-ворчание, Trustpilot 2.3 за краши/порчу файлов            |
+| Wolfram Mathematica / Alpha                     | «Всё в одном» CAS                | x2–5 от конкурентов, cloud по подписке, upload-лимиты | 7000 функций, символьное+численное+ML+гео+Knowledgebase, лучший Help, Manipulate                                      | Кривая WL-языка, no-autosave (теряли часы), тяжёлый старт, проприетарность                              |
+| MATLAB + Live Editor + Simulink                 | Численная среда №1               | $940+/год + тулбоксы ×$2000                           | Тулбоксы под всё, отладчик, плоты одной строкой, Simulink, курсы/поддержка                                            | Подписка вместо perpetual, black-box солверы, 1-индекс, тяжёлая установка, Live Editor тормозит         |
+| GNU Octave / Scilab+Xcos                        | Бесплатные MATLAB-клоны          | GPL/free                                              | Octave ~95% синтаксиса `.m`, Scilab IDE из коробки + Xcos как бесплатный Simulink, `mfile2sci`                        | Нет тулбоксов/Simulink-паритета, плоты проще, диалекты (`%pi`, `xgrid`), perf ниже MKL                  |
+| Julia + Pluto.jl                                | Быстрый научный стек             | MIT/free                                              | Скорость C + удобство Python, реактивный DAG без hidden state, `.jl` git-friendly, `@bind`-слайдеры                   | TTFP (JIT-прогрев), правило «переменная — один раз», сырая экосистема, фрагментация Quarto/Pluto/Bonito |
+| Jupyter / Colab / Kaggle                        | Notebook-стандарт                | Free tiers (Colab 12h/12GB, GPU не гарантирован)      | Zero-setup в браузере, 40+ ядер, Markdown+код+картинки, nbconvert, шаринг как Google Docs                             | Hidden state (только ~4% воспроизводимы), таймауты/стирание файлов, `pip`-ад, нечитаемые git-диффы      |
+| Desmos Studio                                   | Граф-калькулятор №1              | Free                                                  | Zero-friction старт, слайдеры, цвета/анимации, офлайн на телефоне, клавиатура `π √ ≤`, Projector Mode                 | Не CAS, нет units/документов-отчётов/матриц/ODE/программ — «игрушечный» для вуза                        |
+| GeoGebra                                        | Школьный всё-в-одном             | Free                                                  | Геометрия+алгебра+CAS+статистика+3D, drag-and-drop, 80+ языков, LMS                                                   | 6 приложений вместо одного путают, сложный онбординг, CAS слабее Maple, баги сохранений                 |
+| Symbolab / Photomath / MS Solver / Mathway / WA | «Домашка за 5 сек»               | Freemium (шаги $2–10/мес; MS Solver free)             | Step-by-step + камера-ввод + Problem Generator, графинг вместо TI-84                                                  | Шаги за paywall, скипы логики, редизайны клавиатур, читинг-морализм, сбор данных/ads                    |
+| OriginPro / LabPlot / SciDAVis                  | Плоты для статей                 | Дорого (Origin), LabPlot free                         | Publication-quality в 2 клика, 100+ типов, multi-axis/panel, fitting/ANOVA, batch без кода                            | Кривая обучения, стиль «из 90-х», только Windows полноценно, `.opj` через Viewer                        |
+| HiPER Calc / Numbat / Soulver                   | Карманные                        | Free+ads / open-source                                | 100 знаков, SI-префиксы, history-лента, Numbat-units в терминале, Soulver «пишешь словами»                            | Ads + consent 500+ партнёров (HiPER), только «одна строка», нет графиков/матриц/ODE                     |
+| CalcTree / fxSolver                             | Новые web                        | Cloud-sub (free-tier обрезан)                         | CalcTree: realtime-коллаба + версионность + AI по стандартам; fxSolver: тысячи готовых формул «вбил → Solve»          | Cloud-only без offline, vendor lock-in, «слишком много AI-магии», у fxSolver устаревший UI без units    |
+| Maxima / SageMath+CoCalc                        | Open-source CAS                  | GPL/free                                              | Maxima — лучший free CAS (Laplace/ODE/ряды), Sage — «бесплатный Mathematica на Python-клее», CoCalc TimeTravel        | Сборка «дни фиксов», DX 90-х, Sage тяжёлый (ГБ зависимостей), CoCalc free тормозит                      |
 
 ---
 
@@ -72,6 +72,7 @@
 Стек: React 19 + TS + Vite + Tailwind, mathjs, KaTeX, three.js, zustand, sql.js, MCP на Node. Проверено по `src/engine/*`, `src/components/*`, `src/store/*`, `src/lib/*`, `mcp/src/*`.
 
 **Ядро-лист (Mathcad-парадигма):**
+
 - Math-блоки `x := 5`, `f(x) := ...`, trailing `=`, `j` (`3+4j`, `Re/Im`), матрицы `[1, 2; 3, 4]`, диапазоны `1..10`, сабскрипты `V_0` в 1 кейстрок, lenient RU/EN-ошибки + did-you-mean (`mathEngine.ts`, `suggestName`).
 - Строгий top-to-bottom по `y` + DAG зависимостей + детект циклов + Disabled-регионы (`dependencies.ts`).
 - Units через mathjs + `defunit`/`convertTo`/`inUnits`/`hasUnit` + пресеты систем SI/US/CGS (`UnitSys none|SI|US|CGS`, `units.test.ts`).
@@ -84,16 +85,19 @@
 - Справочные данные в SQLite `public/NyaMath.db` (константы, материалы, формулы 529, сниппеты 122, sim-пресеты, SI-префиксы): `db/schema.sql` + `db/seed.json` + `npm run seed`, слой `lib/db.ts`, геттеры синхронные, сверка с NIST в тестах.
 
 **Program-блоки и симуляции (Xcos-лайт):**
+
 - `if/else if/else/end`, `for i in вектор/a..b/n`, `while`, `break/continue/return/assert/trace/breakpoint`, `on error`, `exportName`, локальный scope (свой интерпретатор поверх `EvalFunction`, не `eval`), лимиты 100k/2000 строк.
 - Step-debugger + breakpoints + `programTrace` (`ProgramBlockView.tsx`).
 - Sim-движок `simEngine.ts`: `euler/rk4/rk45/trbdf2`, events (`cond` + actions + `stop`), FDTD 1D (1000 ячеек/8000 шагов, слои `eps`, gauss/sine), ~24 готовые модели, лимиты честности вместо тихой деградации.
 
 **Графики:**
+
 - 2D plot-блоки: мультисерии `;`, `xy/polar`, `line/bar/stem`, полоса ошибок `plotErr`, `logx`, title/labels/grid/legend, единицы осей `plotXUnit/plotYUnit`, автопревью + `MiniPlot`, даунсэмплинг `max_points`, contour.
 - plot3d на three.js (`surface/points/matrix/auto`, сетка, wireframe).
 - Экспорт PNG (×2)/CSV, копирование в буфер, печать/PDF через print-CSS + шапка отчёта.
 
 **Канвас/UX/документ:**
+
 - Infinite canvas: drag, мультивыделение, ручной размер `w/h`, сетка/прилипание, undo/redo, виртуализация от 250 блоков, 11+ тем с AA-аудитом контраста, RU/EN, тёмная тема.
 - Dynamic Assistant: fuzzy префикс>подстрока>subsequence по scope+константам+функциям+единицам, F12 — весь список (`assistant.ts`, `AssistantPopup.tsx`).
 - Command Palette `Ctrl+K` (команды+переменные, fuzzy), контекстное меню мат-блока (Clickable Math по-Maple), экранная мат-клавиатура `π √ ≤` (`MathKeyboard`), подсветка переменной по листу (`varHighlight.ts`), статус-бар (состояние/ошибки/время расчёта), Quickstart «парабола+слайдер+график в 1 клик», шаблоны ГОСТ (балки/цепи/допуски 25346-2013, `templates` в БД).
@@ -105,6 +109,7 @@
 ## 4. Чего НЕ хватает (бэклог по приоритетам)
 
 **P0 — быстрые победы (1–3 дня каждая):**
+
 - [x] Phasor-вид `|Z|∠φ` для комплексных (электрики просят везде — Flow-фича). ✅ Готово 22.09.2026: `ComplexFmt rect|polar|both` в `mathEngine.ts` (текст + KaTeX `5\angle 53.13^{\circ}`), `envTag` + воркер-протокол + стор с персистом + подменю Вид → Комплексные; `phasor.test.ts` (6 шт).
 - [ ] Режим «Отчёт» + флаги видимости `#pre/#post/#hide` (Calcpad-паттерн для экспертизы; print-CSS фильтр).
 - [ ] Автосейв-снапшоты/TimeTravel поверх undo/redo (ответ no-autosave Mathematica и corrupt Maple).
@@ -113,6 +118,7 @@
 - [ ] Стили плотов «для статьи» + SVG-экспорт без артефактов + multi-axis (Origin-урок; PNG/CSV уже есть).
 
 **P1 — ядро и масштаб (1–2 недели):**
+
 - [x] Yjs-CRDT поверх Live Sync (сейчас LWW `rev`) + курс-режим (раздача `#t=` + сбор через `nya_get_scope`) — дотянуть до CalcTree/CoCalc. ✅ Готово 22.09.2026 — CRDT-лайт без новых зависимостей: per-block LWW-Map + tombstones + three-way merge (`src/lib/syncCrdt.ts`, 11 тестов); браузер шлёт `meta/deleted`, сервер мёржит stale-push с meta вместо 409 (legacy без meta — 409 как раньше; `mcp/test/crdt.mjs`, 10 e2e-чеков). Полный Yjs + курс-режим — следующий шаг.
 - [x] Библиотека шаблонов как продукт (fxSolver-паттерн): сейчас 6 ГОСТ-шаблонов — нужны десятки (балки, цепи, допуски, теплотехника) с версионированием в git. ✅ Готово 22.09.2026: 16 шаблонов в 8 разделах (балки/цепи/допуски/тепло/вибрации/гидравлика/МКЭ/сигналы) + поддержка program/plot-строк в шаблонах, меню с группировкой по разделам, каждый шаблон считается без ошибок (`templates.test.ts`, 18 шт). Паки: `argDeg/fromPolar/beamKe/beamFe/barKe` + сниппеты палитры.
 - [x] PWA + offline + touch-палитра + планшетный history-lane (Desmos/HiPER-уроки). ✅ Готово 22.09.2026 (частично): `manifest.webmanifest` + `sw.js` (stale-while-revalidate, навигация network-first) + регистрация только в production (`pwa.ts`, `pwa.test.ts`); touch-палитра/экранная клавиатура уже была (`MathKeyboard`), history-lane — бэклог.
@@ -121,12 +127,14 @@
 - [x] Экспорт `.docx` через `docx` npm + MathML→OMML (Calcpad-фича для проектных записок). ✅ Готово 22.09.2026 — без зависимостей: Word-HTML `.doc` (открывает Word/LibreOffice; формулы `raw = result`, секции, программы, подписи фигур, `wordExport.ts`, 4 теста + пункт Файл → Отчёт Word). Настоящий `.docx`/OMML (нужен zip) — бэклог.
 
 **P2 — дорого, но возможно (1–2 мес.):**
+
 - [ ] Pyodide-WASM Python-блок (Advanced Controls из Prime 11) — опциональным чанком, не в base-бандле (~10MB, медленный старт).
 - [ ] OCR с фото (Tesseract.js) + handwriting — только nice-to-have, точность ниже Photomath-native.
 - [ ] Tauri/Capacitor-десктоп для air-gap enterprise (тот же React-код, но пайплайн подписи/обновлений).
 - [ ] Дотянуть `simplify/sderiv/expand/sfactor` (честный максимум numeric-first; полный CAS — см. ниже «нельзя»).
 
 **Не берём (принципиально не в нашем стеке):**
+
 - Полный CAS уровня Mathematica/Maple (ядро на C/Lisp 40 лет правил; Maxima-в-WASM — сотни МБ и тормоза).
 - MATLAB-производительность (MKL/CUDA/DL-Toolbox; в браузере только `Float64Array` + GC-паузы; большие гриды — только даунсэмплинг, уже делаем).
 - Hard-realtime/FEM уровня Ansys/COMSOL (нет детерминизма event loop, RAM вкладки 2–4GB; наш FDTD-лимит 1000×8000 — честный потолок).
@@ -138,4 +146,4 @@
 
 ---
 
-*Источники: PTC Mathcad Prime G2/Capterra/Community + Prime 12 release notes 04.2026; SMath smath.com/reviews + Forum; Calcpad calcpad.eu + CE-fork 03.2026; Maplesoft compare/mathcad + Flow docs + Trustpilot Maple 2.3; Wolfram/TechRadar/HN; MathWorks Central + Live Editor UX-blog 06.2025; Octave/Scilab docs + G2; Pluto.jl GitHub/discourse; Jupyter PMC 8106381 + Colab docs; Desmos/GeoGebra обзоры + App Store; Symbolab/Photomath App Store + ScreensDesign/NextSprints; OriginLab G2/Capterra; HiPER Play 260K 4.7; IndustrialMonitor 07.2026 + EAC Mathcad-vs-MATLAB 03.2026; Maplesoft Maple-2026 MCP-анонс.*
+_Источники: PTC Mathcad Prime G2/Capterra/Community + Prime 12 release notes 04.2026; SMath smath.com/reviews + Forum; Calcpad calcpad.eu + CE-fork 03.2026; Maplesoft compare/mathcad + Flow docs + Trustpilot Maple 2.3; Wolfram/TechRadar/HN; MathWorks Central + Live Editor UX-blog 06.2025; Octave/Scilab docs + G2; Pluto.jl GitHub/discourse; Jupyter PMC 8106381 + Colab docs; Desmos/GeoGebra обзоры + App Store; Symbolab/Photomath App Store + ScreensDesign/NextSprints; OriginLab G2/Capterra; HiPER Play 260K 4.7; IndustrialMonitor 07.2026 + EAC Mathcad-vs-MATLAB 03.2026; Maplesoft Maple-2026 MCP-анонс._

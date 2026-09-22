@@ -6,9 +6,19 @@ import { listSnippets } from '../lib/db';
 
 function mathBlock(id: string, rawInput: string, y: number): MathBlockData {
   return {
-    id, x: 0, y, rawInput, displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null,
-    dependencies: [], definedVar: null, isOutput: true, kind: 'math',
+    id,
+    x: 0,
+    y,
+    rawInput,
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: true,
+    kind: 'math',
   };
 }
 
@@ -18,7 +28,10 @@ function recalcLines(lines: string[]) {
   return recalculateAll(blocks);
 }
 
-function finiteCount(s: { series: { ys: unknown[]; indexMode?: boolean }[] }): { total: number; indexed: boolean } {
+function finiteCount(s: { series: { ys: unknown[]; indexMode?: boolean }[] }): {
+  total: number;
+  indexed: boolean;
+} {
   let n = 0;
   let allIndexed = s.series.length > 0;
   for (const ser of s.series) {
@@ -37,7 +50,10 @@ describe('palette plot snippets carry their variables', () => {
   it('plot snippets define variables without errors', () => {
     expect(plots.length).toBeGreaterThan(0);
     for (const s of plots) {
-      const lines = (s.vars ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
+      const lines = (s.vars ?? '')
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean);
       expect(lines.length, `${s.label.en}: no vars`).toBeGreaterThan(0);
       const res = recalcLines(lines);
       for (const b of Object.values(res.blocks)) {
@@ -48,7 +64,10 @@ describe('palette plot snippets carry their variables', () => {
 
   it('plot code samples against its own variables', () => {
     for (const s of plots) {
-      const lines = (s.vars ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
+      const lines = (s.vars ?? '')
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean);
       const res = recalcLines(lines);
       const sample = samplePlotBlock(s.code, res.scope, -10, 10, 60);
       expect(sample, `${s.label.en}: no sample`).not.toBeNull();
@@ -61,14 +80,25 @@ describe('palette plot snippets carry their variables', () => {
   it('contour snippet samples as a surface', () => {
     expect(contours.length).toBeGreaterThan(0);
     for (const s of contours) {
-      const lines = (s.vars ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
+      const lines = (s.vars ?? '')
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean);
       const res = recalcLines(lines);
       const sample = samplePlot3d(s.code, res.scope, {
-        xmin: -5, xmax: 5, ymin: -5, ymax: 5, res: 16, mode: 'surface',
+        xmin: -5,
+        xmax: 5,
+        ymin: -5,
+        ymax: 5,
+        res: 16,
+        mode: 'surface',
       });
       expect(sample, `${s.label.en}: no sample`).not.toBeNull();
       const zs = (sample as { zs: unknown[][] }).zs.flat(Infinity);
-      expect(zs.some((z) => typeof z === 'number' && isFinite(z)), `${s.label.en}: no finite z`).toBe(true);
+      expect(
+        zs.some((z) => typeof z === 'number' && isFinite(z)),
+        `${s.label.en}: no finite z`,
+      ).toBe(true);
     }
   });
 });

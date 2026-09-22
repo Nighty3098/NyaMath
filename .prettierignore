@@ -1,0 +1,6 @@
+dist/
+coverage/
+public/NyaMath.db
+*.db
+nyamath-doc.json
+db/seed.json

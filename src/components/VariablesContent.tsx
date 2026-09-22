@@ -39,7 +39,9 @@ export default function VariablesContent({ onOpenNavigator }: { onOpenNavigator?
           onChange={(e) => setQ(e.target.value)}
           onPointerDown={(e) => e.stopPropagation()}
         />
-        <span className="math-input tabular-nums text-[11px] text-[var(--chrome-soft)] shrink-0">{filtered.length}</span>
+        <span className="math-input tabular-nums text-[11px] text-[var(--chrome-soft)] shrink-0">
+          {filtered.length}
+        </span>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto py-1">
         {filtered.length === 0 && (
@@ -69,7 +71,10 @@ export default function VariablesContent({ onOpenNavigator }: { onOpenNavigator?
         ))}
       </div>
       {computeError && (
-        <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-t border-[var(--chrome-line)]" role="alert">
+        <div
+          className="shrink-0 flex items-center gap-2 px-3 py-2 border-t border-[var(--chrome-line)]"
+          role="alert"
+        >
           <span className="math-input flex-1 text-[11px] leading-4 text-[var(--danger)]">
             {computeError}
           </span>

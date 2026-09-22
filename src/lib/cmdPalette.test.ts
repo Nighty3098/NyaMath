@@ -59,7 +59,9 @@ describe('cmdPalette: labels', () => {
 
 describe('cmdPalette: varScore', () => {
   it('имя бьёт сниппет', () => {
-    expect(varScore('alph', 'alpha', 'x := 1')).toBeGreaterThan(varScore('alph', 'beta', 'alpha is here'));
+    expect(varScore('alph', 'alpha', 'x := 1')).toBeGreaterThan(
+      varScore('alph', 'beta', 'alpha is here'),
+    );
   });
 
   it('подстрока в сниппете — запасной вариант', () => {

@@ -10,7 +10,9 @@ export function coalescedPos(e: ReactPointerEvent<HTMLElement>): { x: number; y:
       const last = list[list.length - 1];
       return { x: last.clientX, y: last.clientY };
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return { x: e.clientX, y: e.clientY };
 }
 
@@ -23,8 +25,12 @@ export function coalescedPos(e: ReactPointerEvent<HTMLElement>): { x: number; y:
  */
 export function useRegionDrag(id: string, scale: number, disabled: boolean) {
   const drag = useRef<{
-    px: number; py: number; cx: number; cy: number;
-    orig: Record<string, { x: number; y: number }>; moved: boolean;
+    px: number;
+    py: number;
+    cx: number;
+    cy: number;
+    orig: Record<string, { x: number; y: number }>;
+    moved: boolean;
   } | null>(null);
   const raf = useRef(0);
 
@@ -37,12 +43,15 @@ export function useRegionDrag(id: string, scale: number, disabled: boolean) {
   };
 
   // размонтирование посреди жеста (блок удалили клавишей) — убрать тень
-  useEffect(() => () => {
-    if (raf.current) cancelAnimationFrame(raf.current);
-    raf.current = 0;
-    drag.current = null;
-    hideGhost();
-  }, []);
+  useEffect(
+    () => () => {
+      if (raf.current) cancelAnimationFrame(raf.current);
+      raf.current = 0;
+      drag.current = null;
+      hideGhost();
+    },
+    [],
+  );
 
   const onGripDown = (e: ReactPointerEvent<HTMLElement>) => {
     if (disabled) return;
@@ -57,7 +66,14 @@ export function useRegionDrag(id: string, scale: number, disabled: boolean) {
       if (b) orig[gid] = { x: b.x, y: b.y };
     }
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    drag.current = { px: e.clientX, py: e.clientY, cx: e.clientX, cy: e.clientY, orig, moved: false };
+    drag.current = {
+      px: e.clientX,
+      py: e.clientY,
+      cx: e.clientX,
+      cy: e.clientY,
+      orig,
+      moved: false,
+    };
   };
 
   const onGripMove = (e: ReactPointerEvent<HTMLElement>) => {
@@ -118,8 +134,13 @@ export function useRegionResize(
   const minH = opts?.minH ?? 200;
   const maxH = opts?.maxH ?? 1600;
   const rz = useRef<{
-    px: number; py: number; cx: number; cy: number;
-    startW: number; startH: number; active: boolean;
+    px: number;
+    py: number;
+    cx: number;
+    cy: number;
+    startW: number;
+    startH: number;
+    active: boolean;
   } | null>(null);
   const raf = useRef(0);
 
@@ -129,7 +150,9 @@ export function useRegionResize(
     if (!r || !r.active) return;
     const w = Math.min(maxW, Math.max(minW, r.startW + (r.cx - r.px) / scale));
     const h = withH ? Math.min(maxH, Math.max(minH, r.startH + (r.cy - r.py) / scale)) : undefined;
-    useCanvasStore.getState().sizeTo(id, Math.round(w), h === undefined ? undefined : Math.round(h));
+    useCanvasStore
+      .getState()
+      .sizeTo(id, Math.round(w), h === undefined ? undefined : Math.round(h));
   };
 
   const onResizeDown = (e: ReactPointerEvent<HTMLElement>) => {

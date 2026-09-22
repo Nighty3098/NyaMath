@@ -4,7 +4,22 @@ import { blockDefs, blockDeps, type MathBlockData } from '../engine/dependencies
 import { focusBlock } from '../lib/focusBlock';
 import { filterCommands, varScore, type CmdId, type RankedCmd } from '../lib/cmdPalette';
 import { t, type StrKey } from '../i18n';
-import { IChip, IContour, IDemo, IFormula, IGrid, IMoon, IPlot, IPlot3d, IProgram, IRecalc, ISignal, ISim, IX, IZap } from './Icon';
+import {
+  IChip,
+  IContour,
+  IDemo,
+  IFormula,
+  IGrid,
+  IMoon,
+  IPlot,
+  IPlot3d,
+  IProgram,
+  IRecalc,
+  ISignal,
+  ISim,
+  IX,
+  IZap,
+} from './Icon';
 
 interface NavBlock {
   id: string;
@@ -73,22 +88,54 @@ function runCmd(id: CmdId): void {
     fn(p.x, p.y);
   };
   switch (id) {
-    case 'ins-math': put((x, y) => st.addBlock(x, y)); break;
-    case 'ins-text': put((x, y) => st.addTextBlock(x, y)); break;
-    case 'ins-plot': put((x, y) => st.addPlotBlock(x, y)); break;
-    case 'ins-contour': put((x, y) => st.addContourBlock(x, y)); break;
-    case 'ins-3d': put((x, y) => st.addPlot3dBlock(x, y)); break;
-    case 'ins-prog': put((x, y) => st.addProgramBlock(x, y)); break;
-    case 'ins-sim': put((x, y) => st.addSimBlock(x, y)); break;
-    case 'ins-slider': put((x, y) => st.addSliderBlock(x, y)); break;
-    case 'recalc': st.recalc(); break;
-    case 'calc-now': st.recalcNow(); break;
-    case 'scope-mon': st.toggleScopeMon(); break;
-    case 'quickstart': st.loadQuickstart(); break;
-    case 'ex20': st.loadTestScenario(); break;
-    case 'ex-advanced': st.loadAdvancedDemo(); break;
-    case 'theme': st.toggleTheme(); break;
-    case 'grid': st.toggleGrid(); break;
+    case 'ins-math':
+      put((x, y) => st.addBlock(x, y));
+      break;
+    case 'ins-text':
+      put((x, y) => st.addTextBlock(x, y));
+      break;
+    case 'ins-plot':
+      put((x, y) => st.addPlotBlock(x, y));
+      break;
+    case 'ins-contour':
+      put((x, y) => st.addContourBlock(x, y));
+      break;
+    case 'ins-3d':
+      put((x, y) => st.addPlot3dBlock(x, y));
+      break;
+    case 'ins-prog':
+      put((x, y) => st.addProgramBlock(x, y));
+      break;
+    case 'ins-sim':
+      put((x, y) => st.addSimBlock(x, y));
+      break;
+    case 'ins-slider':
+      put((x, y) => st.addSliderBlock(x, y));
+      break;
+    case 'recalc':
+      st.recalc();
+      break;
+    case 'calc-now':
+      st.recalcNow();
+      break;
+    case 'scope-mon':
+      st.toggleScopeMon();
+      break;
+    case 'quickstart':
+      st.loadQuickstart();
+      break;
+    case 'ex20':
+      st.loadTestScenario();
+      break;
+    case 'ex-advanced':
+      st.loadAdvancedDemo();
+      break;
+    case 'theme':
+      st.toggleTheme();
+      break;
+    case 'grid':
+      st.toggleGrid();
+      break;
   }
 }
 
@@ -142,7 +189,12 @@ export default function VariableNavigator({ onClose }: Props) {
         e = { name, defs: [], uses: [] };
         map.set(name, e);
       }
-      (e[kind] as NavBlock[]).push({ id: b.id, kind: b.kind, snippet: snippetOf(b), value: kind === 'defs' ? valueOf(b, name) : null });
+      (e[kind] as NavBlock[]).push({
+        id: b.id,
+        kind: b.kind,
+        snippet: snippetOf(b),
+        value: kind === 'defs' ? valueOf(b, name) : null,
+      });
     };
     for (const b of Object.values(blocks)) {
       for (const n of blockDefs(b)) push(n, 'defs', b);
@@ -182,10 +234,13 @@ export default function VariableNavigator({ onClose }: Props) {
   }, [entries, q]);
 
   type Row = { t: 'cmd'; cmd: RankedCmd } | { t: 'var'; entry: NavEntry };
-  const rows = useMemo<Row[]>(() => [
-    ...cmds.map((cmd): Row => ({ t: 'cmd', cmd })),
-    ...filtered.map((entry): Row => ({ t: 'var', entry })),
-  ], [cmds, filtered]);
+  const rows = useMemo<Row[]>(
+    () => [
+      ...cmds.map((cmd): Row => ({ t: 'cmd', cmd })),
+      ...filtered.map((entry): Row => ({ t: 'var', entry })),
+    ],
+    [cmds, filtered],
+  );
   const safeSel = rows.length ? Math.min(sel, rows.length - 1) : -1;
 
   const scrollToSel = useCallback((i: number) => {
@@ -275,7 +330,10 @@ export default function VariableNavigator({ onClose }: Props) {
         ) : (
           <div className="h-[380px] max-h-[60vh] min-h-0 flex flex-row">
             {/* список: команды + переменные */}
-            <div ref={listRef} className="w-[240px] border-r border-[var(--line)] overflow-y-auto py-1">
+            <div
+              ref={listRef}
+              className="w-[240px] border-r border-[var(--line)] overflow-y-auto py-1"
+            >
               {rows.length === 0 ? (
                 <div className="px-3 py-4 text-[12px] text-[var(--faint)]">{t('nv.empty')}</div>
               ) : (
@@ -305,9 +363,16 @@ export default function VariableNavigator({ onClose }: Props) {
                           <Icon />
                         </span>
                         <span className="flex-1 min-w-0">
-                          <span className="block text-[13px] text-[var(--ink)] font-medium truncate">{c.label}</span>
+                          <span className="block text-[13px] text-[var(--ink)] font-medium truncate">
+                            {c.label}
+                          </span>
                         </span>
-                        <span className="text-[11px] text-[var(--accent-line)] opacity-0 group-hover:opacity-100 shrink-0" style={{ opacity: active ? 1 : undefined }}>⏎</span>
+                        <span
+                          className="text-[11px] text-[var(--accent-line)] opacity-0 group-hover:opacity-100 shrink-0"
+                          style={{ opacity: active ? 1 : undefined }}
+                        >
+                          ⏎
+                        </span>
                       </button>
                     );
                   })}
@@ -318,33 +383,40 @@ export default function VariableNavigator({ onClose }: Props) {
                   )}
                   {filtered.map((e, j) => {
                     const i = cmds.length + j;
-                  const Icon = KIND_ICON[e.defs[0]?.kind ?? 'math'];
-                  const active = i === safeSel;
-                  return (
-                    <button
-                      key={e.name}
-                      type="button"
-                      className={`w-full text-left px-3 py-1.5 flex items-center gap-2 cursor-pointer ${
-                        active ? 'bg-[var(--accent-line)]/15' : 'hover:bg-[var(--accent-line)]/10'
-                      }`}
-                      onClick={() => setSel(i)}
-                      onMouseEnter={() => setSel(i)}
-                    >
-                      <span className="text-[var(--faint)] inline-flex shrink-0">
-                        <Icon />
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-[13px] text-[var(--ink)] font-medium truncate">{e.name}</span>
-                        <span className="block text-[10px] text-[var(--faint)] truncate">{e.uses.length > 0 ? t('nv.usedIn', { n: e.uses.length }) : '—'}</span>
-                      </span>
-                      {e.defs[0]?.value != null && (
-                        <span className="text-[11px] text-[var(--faint)] font-mono truncate max-w-[72px]" title={e.defs[0].value}>
-                          {e.defs[0].value}
+                    const Icon = KIND_ICON[e.defs[0]?.kind ?? 'math'];
+                    const active = i === safeSel;
+                    return (
+                      <button
+                        key={e.name}
+                        type="button"
+                        className={`w-full text-left px-3 py-1.5 flex items-center gap-2 cursor-pointer ${
+                          active ? 'bg-[var(--accent-line)]/15' : 'hover:bg-[var(--accent-line)]/10'
+                        }`}
+                        onClick={() => setSel(i)}
+                        onMouseEnter={() => setSel(i)}
+                      >
+                        <span className="text-[var(--faint)] inline-flex shrink-0">
+                          <Icon />
                         </span>
-                      )}
-                    </button>
-                  );
-                })}
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[13px] text-[var(--ink)] font-medium truncate">
+                            {e.name}
+                          </span>
+                          <span className="block text-[10px] text-[var(--faint)] truncate">
+                            {e.uses.length > 0 ? t('nv.usedIn', { n: e.uses.length }) : '—'}
+                          </span>
+                        </span>
+                        {e.defs[0]?.value != null && (
+                          <span
+                            className="text-[11px] text-[var(--faint)] font-mono truncate max-w-[72px]"
+                            title={e.defs[0].value}
+                          >
+                            {e.defs[0].value}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </>
               )}
             </div>
@@ -354,7 +426,9 @@ export default function VariableNavigator({ onClose }: Props) {
                 <div className="text-[13px] text-[var(--faint)]">{t('nv.empty')}</div>
               ) : cur.t === 'cmd' ? (
                 <>
-                  <div className="text-[15px] font-semibold text-[var(--ink)] mb-2 break-all">{cur.cmd.label}</div>
+                  <div className="text-[15px] font-semibold text-[var(--ink)] mb-2 break-all">
+                    {cur.cmd.label}
+                  </div>
                   <button
                     type="button"
                     className="text-[12px] px-3 min-h-[34px] rounded-lg border border-[var(--accent-line)]/50 bg-[var(--accent-line)]/10 text-[var(--ink)] hover:bg-[var(--accent-line)]/20 cursor-pointer"
@@ -368,24 +442,41 @@ export default function VariableNavigator({ onClose }: Props) {
                 </>
               ) : curVar ? (
                 <>
-                  <div className="text-[15px] font-semibold text-[var(--ink)] mb-2 break-all">{curVar.name}</div>
-                  <div className="text-[11px] uppercase tracking-wider text-[var(--faint)] mb-1">{t('nv.defs')}</div>
+                  <div className="text-[15px] font-semibold text-[var(--ink)] mb-2 break-all">
+                    {curVar.name}
+                  </div>
+                  <div className="text-[11px] uppercase tracking-wider text-[var(--faint)] mb-1">
+                    {t('nv.defs')}
+                  </div>
                   {curVar.defs.length === 0 ? (
                     <div className="text-[12px] text-[var(--faint)] mb-3">—</div>
                   ) : (
                     <ul className="space-y-1 mb-3">
                       {curVar.defs.map((d, i) => (
-                        <BlockRow key={d.id} b={d} label={t(KIND_LABEL[d.kind])} onGo={() => focusBlock(d.id)} emphasize={i === curVar.defs.length - 1} />
+                        <BlockRow
+                          key={d.id}
+                          b={d}
+                          label={t(KIND_LABEL[d.kind])}
+                          onGo={() => focusBlock(d.id)}
+                          emphasize={i === curVar.defs.length - 1}
+                        />
                       ))}
                     </ul>
                   )}
-                  <div className="text-[11px] uppercase tracking-wider text-[var(--faint)] mb-1">{t('nv.uses')}</div>
+                  <div className="text-[11px] uppercase tracking-wider text-[var(--faint)] mb-1">
+                    {t('nv.uses')}
+                  </div>
                   {curVar.uses.length === 0 ? (
                     <div className="text-[12px] text-[var(--faint)]">—</div>
                   ) : (
                     <ul className="space-y-1">
                       {curVar.uses.map((u) => (
-                        <BlockRow key={u.id} b={u} label={t(KIND_LABEL[u.kind])} onGo={() => focusBlock(u.id)} />
+                        <BlockRow
+                          key={u.id}
+                          b={u}
+                          label={t(KIND_LABEL[u.kind])}
+                          onGo={() => focusBlock(u.id)}
+                        />
                       ))}
                     </ul>
                   )}
@@ -399,18 +490,39 @@ export default function VariableNavigator({ onClose }: Props) {
   );
 }
 
-function BlockRow({ b, label, onGo, emphasize }: { b: NavBlock; label: string; onGo: () => void; emphasize?: boolean }) {
+function BlockRow({
+  b,
+  label,
+  onGo,
+  emphasize,
+}: {
+  b: NavBlock;
+  label: string;
+  onGo: () => void;
+  emphasize?: boolean;
+}) {
   return (
     <li
       className={`flex items-center gap-2 rounded-lg px-2 py-1.5 border cursor-pointer group ${
-        emphasize ? 'border-[var(--accent-line)]/50 bg-[var(--accent-line)]/10' : 'border-[var(--line)]/60 hover:border-[var(--accent-line)]/50'
+        emphasize
+          ? 'border-[var(--accent-line)]/50 bg-[var(--accent-line)]/10'
+          : 'border-[var(--line)]/60 hover:border-[var(--accent-line)]/50'
       }`}
       onClick={onGo}
     >
-      <span className="text-[10px] uppercase tracking-wider text-[var(--accent-ink)] shrink-0">{label}</span>
+      <span className="text-[10px] uppercase tracking-wider text-[var(--accent-ink)] shrink-0">
+        {label}
+      </span>
       <span className="text-[12px] text-[var(--ink)] truncate flex-1 font-mono">{b.snippet}</span>
-      {b.value != null && <span className="text-[11px] text-[var(--faint)] font-mono truncate max-w-[90px]"> = {b.value}</span>}
-      <span className="text-[11px] text-[var(--accent-line)] opacity-0 group-hover:opacity-100 shrink-0">{t('nv.goto')}</span>
+      {b.value != null && (
+        <span className="text-[11px] text-[var(--faint)] font-mono truncate max-w-[90px]">
+          {' '}
+          = {b.value}
+        </span>
+      )}
+      <span className="text-[11px] text-[var(--accent-line)] opacity-0 group-hover:opacity-100 shrink-0">
+        {t('nv.goto')}
+      </span>
     </li>
   );
 }

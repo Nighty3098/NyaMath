@@ -1,28 +1,20 @@
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useCanvasStore } from "../store/canvasStore";
-import { sortBlocksTopDown, findUseBeforeDef } from "../engine/dependencies";
-import { viewportRect, visibleIdsOf, VIRTUALIZE_AT } from "../lib/viewport";
-import { registerBlockFocus } from "../lib/focusBlock";
-import MathBlockView from "./MathBlockView";
-import PlotBlockView from "./PlotBlockView";
-import ContourBlockView from "./ContourBlockView";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCanvasStore } from '../store/canvasStore';
+import { sortBlocksTopDown, findUseBeforeDef } from '../engine/dependencies';
+import { viewportRect, visibleIdsOf, VIRTUALIZE_AT } from '../lib/viewport';
+import { registerBlockFocus } from '../lib/focusBlock';
+import MathBlockView from './MathBlockView';
+import PlotBlockView from './PlotBlockView';
+import ContourBlockView from './ContourBlockView';
 // three.js едет отдельным чанком — грузится только при первом 3D-блоке
-const Plot3dBlockView = lazy(() => import("./Plot3dBlockView"));
-import ProgramBlockView from "./ProgramBlockView";
-import SimBlockView from "./SimBlockView";
-import SliderBlockView from "./SliderBlockView";
-import MathKeyboard from "./MathKeyboard";
-import EmptyStarter from "./EmptyStarter";
-import { IMinus, IPlus } from "./Icon";
-import { t } from "../i18n";
+const Plot3dBlockView = lazy(() => import('./Plot3dBlockView'));
+import ProgramBlockView from './ProgramBlockView';
+import SimBlockView from './SimBlockView';
+import SliderBlockView from './SliderBlockView';
+import MathKeyboard from './MathKeyboard';
+import EmptyStarter from './EmptyStarter';
+import { IMinus, IPlus } from './Icon';
+import { t } from '../i18n';
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 3;
@@ -33,8 +25,7 @@ interface View {
   k: number;
 }
 
-const clamp = (v: number, lo: number, hi: number) =>
-  Math.min(hi, Math.max(lo, v));
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 export default function Canvas() {
   const blocks = useCanvasStore((s) => s.blocks);
@@ -64,7 +55,7 @@ export default function Canvas() {
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
+    if (!el || typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(() => {
       setSize({ w: el.clientWidth, h: el.clientHeight });
     });
@@ -77,11 +68,11 @@ export default function Canvas() {
     // Ctrl+P в обход меню: тоже гасим виртуализацию (printDocument — заранее)
     const on = () => useCanvasStore.getState().setPrinting(true);
     const off = () => useCanvasStore.getState().setPrinting(false);
-    window.addEventListener("beforeprint", on);
-    window.addEventListener("afterprint", off);
+    window.addEventListener('beforeprint', on);
+    window.addEventListener('afterprint', off);
     return () => {
-      window.removeEventListener("beforeprint", on);
-      window.removeEventListener("afterprint", off);
+      window.removeEventListener('beforeprint', on);
+      window.removeEventListener('afterprint', off);
     };
   }, []);
 
@@ -166,14 +157,12 @@ export default function Canvas() {
         setView(n);
       }
     };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
   }, [zoomAt]);
 
   const isInteractive = (t: EventTarget | null) =>
-    (t as HTMLElement | null)?.closest?.(
-      "input, textarea, button, select, .nya-block",
-    ) ?? null;
+    (t as HTMLElement | null)?.closest?.('input, textarea, button, select, .nya-block') ?? null;
 
   // Рамка выделения (marquee) в экранных координатах контейнера
   const [marquee, setMarquee] = useState<{
@@ -191,9 +180,7 @@ export default function Canvas() {
   } | null>(null);
   // --- Тач-жесты: один палец — панорама, два — pinch-zoom, дабл-тап — новый блок ---
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
-  const pinchRef = useRef<{ pd: number; pmx: number; pmy: number } | null>(
-    null,
-  );
+  const pinchRef = useRef<{ pd: number; pmx: number; pmy: number } | null>(null);
   const touchRef = useRef<{
     sx: number;
     sy: number;
@@ -273,7 +260,7 @@ export default function Canvas() {
 
   const onPointerDown = (e: React.PointerEvent) => {
     const bg = !isInteractive(e.target);
-    const isTouch = e.pointerType !== "mouse";
+    const isTouch = e.pointerType !== 'mouse';
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     // Два пальца — переход в pinch (отменяем всё остальное)
     if (pointersRef.current.size === 2) {
@@ -286,8 +273,7 @@ export default function Canvas() {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       const pm = pinchDistMid();
       // почти сомкнутые пальцы — не старт: иначе первый же шаг взрывает зум
-      if (pm && pm.d > 24)
-        pinchRef.current = { pd: pm.d, pmx: pm.mx, pmy: pm.my };
+      if (pm && pm.d > 24) pinchRef.current = { pd: pm.d, pmx: pm.mx, pmy: pm.my };
       return;
     }
     if (pointersRef.current.size > 2) return;
@@ -365,7 +351,7 @@ export default function Canvas() {
     }
     // Один палец: панорама после порога, иначе ждём тап/long-press
     const tr = touchRef.current;
-    if (tr && e.pointerType !== "mouse") {
+    if (tr && e.pointerType !== 'mouse') {
       const pos = coalescedPos(e);
       if (tr.marquee) {
         const q = toLocal(pos.x, pos.y);
@@ -406,9 +392,7 @@ export default function Canvas() {
   const newBlockAt = (clientX: number, clientY: number) => {
     const w = screenToWorld(clientX, clientY);
     addBlock(Math.round(w.x - 40), Math.round(w.y - 20));
-    useCanvasStore
-      .getState()
-      .setCross(Math.round(w.x - 40), Math.round(w.y - 20));
+    useCanvasStore.getState().setCross(Math.round(w.x - 40), Math.round(w.y - 20));
   };
 
   const endPointer = (e?: React.PointerEvent) => {
@@ -419,7 +403,7 @@ export default function Canvas() {
       pinchRef.current = null;
       if (pointersRef.current.size === 1) {
         const [[, pt]] = [...pointersRef.current.entries()];
-        if (e && e.pointerType !== "mouse") {
+        if (e && e.pointerType !== 'mouse') {
           const p = toLocal(pt.x, pt.y);
           touchRef.current = {
             sx: p.x,
@@ -444,7 +428,7 @@ export default function Canvas() {
     }
     // Тап / дабл-тап одним пальцем
     const tr = touchRef.current;
-    if (tr && (!e || e.pointerType !== "mouse")) {
+    if (tr && (!e || e.pointerType !== 'mouse')) {
       touchRef.current = null;
       setPanning(false);
       const quick = Date.now() - tr.t < TAP_TIME;
@@ -498,7 +482,7 @@ export default function Canvas() {
     const y1 = Math.max(marquee.y0, marquee.y1);
     const cRect = containerRef.current?.getBoundingClientRect();
     const ids: string[] = [];
-    containerRef.current?.querySelectorAll("[data-block-id]").forEach((el) => {
+    containerRef.current?.querySelectorAll('[data-block-id]').forEach((el) => {
       const r = (el as HTMLElement).getBoundingClientRect();
       const ex0 = r.left - (cRect?.left ?? 0);
       const ex1 = r.right - (cRect?.left ?? 0);
@@ -537,37 +521,37 @@ export default function Canvas() {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (
-        e.code === "Space" &&
+        e.code === 'Space' &&
         !(e.target instanceof HTMLInputElement) &&
         !(e.target instanceof HTMLTextAreaElement)
       ) {
         spaceRef.current = true;
         setSpaceDown(true);
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
         recalc();
       }
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedIds.length) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length) {
         const ae = document.activeElement;
-        if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
+        if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
         e.preventDefault();
         removeSelected();
       }
       // Esc на пустом месте — снять выделение (в редакторах Esc обрабатывается локально)
-      if (e.key === "Escape") select(null);
+      if (e.key === 'Escape') select(null);
     };
     const up = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
+      if (e.code === 'Space') {
         spaceRef.current = false;
         setSpaceDown(false);
       }
     };
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
     return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
     };
   }, [recalc, removeSelected, selectedIds.length, select]);
 
@@ -580,10 +564,10 @@ export default function Canvas() {
       const ae = document.activeElement;
       if (
         ae &&
-        (ae.tagName === "INPUT" ||
-          ae.tagName === "TEXTAREA" ||
-          ae.tagName === "SELECT" ||
-          ae.tagName === "BUTTON" ||
+        (ae.tagName === 'INPUT' ||
+          ae.tagName === 'TEXTAREA' ||
+          ae.tagName === 'SELECT' ||
+          ae.tagName === 'BUTTON' ||
           (ae as HTMLElement).isContentEditable)
       ) {
         return;
@@ -591,39 +575,33 @@ export default function Canvas() {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const st = useCanvasStore.getState();
       if (
-        e.key === "ArrowLeft" ||
-        e.key === "ArrowRight" ||
-        e.key === "ArrowUp" ||
-        e.key === "ArrowDown"
+        e.key === 'ArrowLeft' ||
+        e.key === 'ArrowRight' ||
+        e.key === 'ArrowUp' ||
+        e.key === 'ArrowDown'
       ) {
         e.preventDefault();
         const big = e.shiftKey ? LINE : STEP;
-        if (e.key === "ArrowLeft") st.nudgeCross(-big, 0);
-        else if (e.key === "ArrowRight") st.nudgeCross(big, 0);
-        else if (e.key === "ArrowUp") st.nudgeCross(0, -big);
+        if (e.key === 'ArrowLeft') st.nudgeCross(-big, 0);
+        else if (e.key === 'ArrowRight') st.nudgeCross(big, 0);
+        else if (e.key === 'ArrowUp') st.nudgeCross(0, -big);
         else st.nudgeCross(0, big);
-      } else if (e.key === "Enter") {
+      } else if (e.key === 'Enter') {
         e.preventDefault();
         st.nudgeCross(0, LINE);
-      } else if (e.key.length === 1 && e.key !== " ") {
+      } else if (e.key.length === 1 && e.key !== ' ') {
         // пробел — панорама, остальная печать — сразу блок с этим символом
         e.preventDefault();
         st.addBlock(st.cross.x, st.cross.y, e.key, true);
       }
     };
-    window.addEventListener("keydown", down);
-    return () => window.removeEventListener("keydown", down);
+    window.addEventListener('keydown', down);
+    return () => window.removeEventListener('keydown', down);
   }, []);
 
-  const list = useMemo(
-    () => sortBlocksTopDown(Object.values(blocks)),
-    [blocks],
-  );
+  const list = useMemo(() => sortBlocksTopDown(Object.values(blocks)), [blocks]);
   // Use-before-definition : зависимости, определённые ниже по листу
-  const lateDeps = useMemo(
-    () => findUseBeforeDef(Object.values(blocks)),
-    [blocks],
-  );
+  const lateDeps = useMemo(() => findUseBeforeDef(Object.values(blocks)), [blocks]);
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
 
@@ -651,10 +629,7 @@ export default function Canvas() {
   useEffect(() => {
     const push = () => {
       const d = dataRef.current;
-      const rect = viewportRect(
-        { x: d.view.x, y: d.view.y, k: d.view.k },
-        d.size,
-      );
+      const rect = viewportRect({ x: d.view.x, y: d.view.y, k: d.view.k }, d.size);
       useCanvasStore.getState().setVisibleIds(visibleIdsOf(d.list, rect));
     };
     push();
@@ -669,8 +644,7 @@ export default function Canvas() {
         // Standard (крупная) / Fine (мелкая) сетка
         const s = (gridSize === 'fine' ? 11 : 22) * view.k;
         return {
-          backgroundImage:
-            "radial-gradient(circle, var(--grid-dk) 1.2px, transparent 1.3px)",
+          backgroundImage: 'radial-gradient(circle, var(--grid-dk) 1.2px, transparent 1.3px)',
           backgroundSize: `${s}px ${s}px`,
           backgroundPosition: `${mod(view.x, s)}px ${mod(view.y, s)}px`,
         };
@@ -682,10 +656,10 @@ export default function Canvas() {
       ref={containerRef}
       className="nya-canvas flex-1 relative overflow-hidden bg-[var(--sheet)] select-none"
       role="application"
-      aria-label={t("c.aria")}
+      aria-label={t('c.aria')}
       style={{
-        cursor: panning ? "grabbing" : spaceDown ? "grab" : "crosshair",
-        touchAction: "none",
+        cursor: panning ? 'grabbing' : spaceDown ? 'grab' : 'crosshair',
+        touchAction: 'none',
         ...gridStyle,
       }}
       onPointerDown={onPointerDown}
@@ -703,7 +677,7 @@ export default function Canvas() {
           transform: `translateY(${cross.y * view.k + view.y}px)`,
           height: 1,
           background:
-            "linear-gradient(to right, transparent, var(--accent-line) 12%, var(--accent-line) 88%, transparent)",
+            'linear-gradient(to right, transparent, var(--accent-line) 12%, var(--accent-line) 88%, transparent)',
           opacity: 0.28,
         }}
       />
@@ -714,7 +688,7 @@ export default function Canvas() {
           transform: `translateX(${cross.x * view.k + view.x}px)`,
           width: 1,
           background:
-            "linear-gradient(to bottom, transparent, var(--accent-line) 12%, var(--accent-line) 88%, transparent)",
+            'linear-gradient(to bottom, transparent, var(--accent-line) 12%, var(--accent-line) 88%, transparent)',
           opacity: 0.28,
         }}
       />
@@ -738,7 +712,7 @@ export default function Canvas() {
         className="absolute left-0 top-0 nya-sheet"
         style={{
           transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`,
-          transformOrigin: "0 0",
+          transformOrigin: '0 0',
         }}
       >
         {/* курсор-прицел */}
@@ -749,31 +723,31 @@ export default function Canvas() {
         >
           <div
             style={{
-              position: "absolute",
+              position: 'absolute',
               left: -13 / view.k,
               top: -1 / view.k,
               width: 26 / view.k,
               height: Math.max(1 / view.k, 0.75),
-              background: "var(--danger)",
+              background: 'var(--danger)',
             }}
           />
           <div
             style={{
-              position: "absolute",
+              position: 'absolute',
               top: -13 / view.k,
               left: -1 / view.k,
               height: 26 / view.k,
               width: Math.max(1 / view.k, 0.75),
-              background: "var(--danger)",
+              background: 'var(--danger)',
             }}
           />
         </div>
         {visList.map((b) =>
-          b.kind === "plot" ? (
+          b.kind === 'plot' ? (
             <PlotBlockView key={b.id} block={b} scale={view.k} />
-          ) : b.kind === "contour" ? (
+          ) : b.kind === 'contour' ? (
             <ContourBlockView key={b.id} block={b} scale={view.k} />
-          ) : b.kind === "plot3d" ? (
+          ) : b.kind === 'plot3d' ? (
             <Suspense
               key={b.id}
               fallback={
@@ -786,11 +760,11 @@ export default function Canvas() {
             >
               <Plot3dBlockView block={b} scale={view.k} />
             </Suspense>
-          ) : b.kind === "program" ? (
+          ) : b.kind === 'program' ? (
             <ProgramBlockView key={b.id} block={b} scale={view.k} lateDeps={lateDeps.get(b.id)} />
-          ) : b.kind === "sim" ? (
+          ) : b.kind === 'sim' ? (
             <SimBlockView key={b.id} block={b} scale={view.k} />
-          ) : b.kind === "slider" ? (
+          ) : b.kind === 'slider' ? (
             <SliderBlockView key={b.id} block={b} scale={view.k} />
           ) : (
             <MathBlockView key={b.id} block={b} scale={view.k} lateDeps={lateDeps.get(b.id)} />
@@ -809,9 +783,9 @@ export default function Canvas() {
       <div
         className="nya-zoombar absolute right-3 bottom-3 flex items-center gap-0.5 bg-[var(--chrome)]/85 border border-[var(--chrome-line)] px-1.5 py-1 print:hidden"
         role="toolbar"
-        aria-label={t("c.zoomBar")}
+        aria-label={t('c.zoomBar')}
       >
-        <ZoomBtn onClick={() => zoomCenter(1 / 1.25)} label={t("c.zoomOut")}>
+        <ZoomBtn onClick={() => zoomCenter(1 / 1.25)} label={t('c.zoomOut')}>
           <IMinus />
         </ZoomBtn>
         <button
@@ -822,12 +796,12 @@ export default function Canvas() {
             targetRef.current = n;
             setView(n);
           }}
-          title={t("c.resetView")}
-          aria-label={t("c.resetZoom")}
+          title={t('c.resetView')}
+          aria-label={t('c.resetZoom')}
         >
           {Math.round(view.k * 100)}%
         </button>
-        <ZoomBtn onClick={() => zoomCenter(1.25)} label={t("c.zoomIn")}>
+        <ZoomBtn onClick={() => zoomCenter(1.25)} label={t('c.zoomIn')}>
           <IPlus />
         </ZoomBtn>
       </div>

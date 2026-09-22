@@ -123,7 +123,9 @@ describe('GUM-S1 Monte-Carlo (uMC)', () => {
   it('propagates via RSS for independent normals (GUM-S1 9.4)', () => {
     // модель a+b-c с a=N(100,1), b=N(50,0.5), c=N(2,0.2):
     // y=148, u=√(1²+0.5²+0.2²)=1.135782
-    const [mean, u] = vec('uMC("a+b-c", [[a, 100, 1, "norm"], [b, 50, 0.5, "norm"], [c, 2, 0.2, "norm"]], 200000, 7)');
+    const [mean, u] = vec(
+      'uMC("a+b-c", [[a, 100, 1, "norm"], [b, 50, 0.5, "norm"], [c, 2, 0.2, "norm"]], 200000, 7)',
+    );
     expect(Math.abs(mean - 148)).toBeLessThan(0.01);
     const wantU = Math.sqrt(1 + 0.25 + 0.04);
     expect(Math.abs(u - wantU)).toBeLessThan(wantU * 0.02);
@@ -160,7 +162,9 @@ describe('GUM-S1 Monte-Carlo (uMC)', () => {
     expect(evaluateLine('uMC("x", [[x, 1, -1]], 100) =', createBaseScope()).error).not.toBeNull();
     expect(evaluateLine('uMC("x", [[x, 1]], 100) =', createBaseScope()).error).not.toBeNull();
     expect(evaluateLine('uMC("x", [[1, 2, 0.1]], 100) =', createBaseScope()).error).not.toBeNull();
-    expect(evaluateLine('uMC("x", [[x, 1, 0.1, "cauchy"]], 100) =', createBaseScope()).error).not.toBeNull();
+    expect(
+      evaluateLine('uMC("x", [[x, 1, 0.1, "cauchy"]], 100) =', createBaseScope()).error,
+    ).not.toBeNull();
     expect(evaluateLine('uMC("x", [[x, 1, 0.1]], 50) =', createBaseScope()).error).not.toBeNull();
   });
 });

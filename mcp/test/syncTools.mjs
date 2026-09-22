@@ -19,7 +19,9 @@ const check = (cond, label) => {
 };
 
 // 0. живой sync-сервис с пустым документом (отдельный процесс — как npm run dev)
-const proc = spawn(process.execPath, [serverPath, '--port=0'], { stdio: ['ignore', 'ignore', 'pipe'] });
+const proc = spawn(process.execPath, [serverPath, '--port=0'], {
+  stdio: ['ignore', 'ignore', 'pipe'],
+});
 let base = '';
 await new Promise((resolve, reject) => {
   const timer = setTimeout(() => reject(new Error('sync server did not start')), 15000);
@@ -49,16 +51,21 @@ try {
   let r = await fetch(`${base}/push`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ blocks: [
-      { id: 's1', x: 80, y: 60, rawInput: 'x := 5', kind: 'math' },
-      { id: 's2', x: 80, y: 124, rawInput: 'y := x*2\ny =' },
-    ] }),
+    body: JSON.stringify({
+      blocks: [
+        { id: 's1', x: 80, y: 60, rawInput: 'x := 5', kind: 'math' },
+        { id: 's2', x: 80, y: 124, rawInput: 'y := x*2\ny =' },
+      ],
+    }),
   }).then((x) => x.json());
   check(r.ok === true, 'seed push accepted');
 
   // 2. pull забирает холст в stdio-сессию
   r = await call('nya_sync_pull', { url: base });
-  check(!r.isError && r.data.blocks === 2 && r.data.rev >= 0, `pull: ${r.data.blocks} blocks rev=${r.data.rev}`);
+  check(
+    !r.isError && r.data.blocks === 2 && r.data.rev >= 0,
+    `pull: ${r.data.blocks} blocks rev=${r.data.rev}`,
+  );
   r = await call('nya_get_scope');
   check(r.data.variables['y'] === '10', `pulled y = ${r.data.variables['y']}`);
 
@@ -71,7 +78,10 @@ try {
   // 4. браузер (snapshot) видит правку посчитанной
   const snap = await fetch(`${base}/snapshot`).then((x) => x.json());
   const zz = snap.blocks.find((b) => b.rawInput && b.rawInput.includes('zz_tmp'));
-  check(snap.blocks.length === 3 && !!zz && zz.error === null && zz.resultStr === '42', `snapshot zz = ${zz?.resultStr}`);
+  check(
+    snap.blocks.length === 3 && !!zz && zz.error === null && zz.resultStr === '42',
+    `snapshot zz = ${zz?.resultStr}`,
+  );
 
   // 5. мёртвый сервис — честная ошибка, а не вис
   r = await call('nya_sync_pull', { url: 'http://127.0.0.1:1' });

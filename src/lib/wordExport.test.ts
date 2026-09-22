@@ -5,9 +5,21 @@ import { blocksToWordHtml } from './wordExport';
 let n = 0;
 function blk(patch: Partial<MathBlockData>): MathBlockData {
   return {
-    id: `wd${n++}`, x: 80, y: 60 + n * 64, rawInput: '', displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null, dependencies: [],
-    definedVar: null, isOutput: false, kind: 'math', plotPreview: null, ...patch,
+    id: `wd${n++}`,
+    x: 80,
+    y: 60 + n * 64,
+    rawInput: '',
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: false,
+    kind: 'math',
+    plotPreview: null,
+    ...patch,
   };
 }
 

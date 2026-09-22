@@ -4,9 +4,19 @@ import type { MathBlockData } from './dependencies';
 
 function mathBlock(id: string, rawInput: string, y = 0): MathBlockData {
   return {
-    id, x: 0, y, rawInput, displayLatex: '', resultStr: '',
-    resultLatex: '', resultValue: null, error: null,
-    dependencies: [], definedVar: null, isOutput: true, kind: 'math',
+    id,
+    x: 0,
+    y,
+    rawInput,
+    displayLatex: '',
+    resultStr: '',
+    resultLatex: '',
+    resultValue: null,
+    error: null,
+    dependencies: [],
+    definedVar: null,
+    isOutput: true,
+    kind: 'math',
   };
 }
 

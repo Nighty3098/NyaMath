@@ -36,7 +36,10 @@ export function parseDocFile(raw: unknown): ParsedDoc {
 }
 
 /** Упаковать блоки в файл с заголовком. savedAt — ISO для воспроизводимости. */
-export function serializeDocFile(blocks: unknown[], now: string = new Date().toISOString()): DocFile {
+export function serializeDocFile(
+  blocks: unknown[],
+  now: string = new Date().toISOString(),
+): DocFile {
   return { engine: ENGINE_VERSION, savedAt: now, blocks };
 }
 

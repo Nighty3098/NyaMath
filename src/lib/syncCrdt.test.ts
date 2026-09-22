@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
-  canon, getActor, isNewer, mergeBlockMaps, stampOutgoing, type WireBlock,
+  canon,
+  getActor,
+  isNewer,
+  mergeBlockMaps,
+  stampOutgoing,
+  type WireBlock,
 } from './syncCrdt';
 
 const b = (id: string, raw: string, extra: Record<string, unknown> = {}): WireBlock => ({
-  id, x: 80, y: 60, rawInput: raw, kind: 'math', ...extra,
+  id,
+  x: 80,
+  y: 60,
+  rawInput: raw,
+  kind: 'math',
+  ...extra,
 });
 
 const byId = (blocks: WireBlock[]): Record<string, WireBlock> =>
@@ -43,12 +53,18 @@ describe('syncCrdt', () => {
     const remote = [b('1', 'x := 20')];
     const lm = { '1': { clock: 5, actor: 'a' } };
     const rm = { '1': { clock: 9, actor: 'b' } };
-    expect(byId(mergeBlockMaps(base, {}, local, lm, remote, rm, {}, {}).blocks)['1'].rawInput).toBe('x := 20');
-    expect(byId(mergeBlockMaps(base, {}, local, rm, remote, lm, {}, {}).blocks)['1'].rawInput).toBe('x := 10');
+    expect(byId(mergeBlockMaps(base, {}, local, lm, remote, rm, {}, {}).blocks)['1'].rawInput).toBe(
+      'x := 20',
+    );
+    expect(byId(mergeBlockMaps(base, {}, local, rm, remote, lm, {}, {}).blocks)['1'].rawInput).toBe(
+      'x := 10',
+    );
     // tie по часам — детерминированно remote
     const t = { '1': { clock: 7, actor: 'a' } };
     const t2 = { '1': { clock: 7, actor: 'b' } };
-    expect(byId(mergeBlockMaps(base, {}, local, t, remote, t2, {}, {}).blocks)['1'].rawInput).toBe('x := 20');
+    expect(byId(mergeBlockMaps(base, {}, local, t, remote, t2, {}, {}).blocks)['1'].rawInput).toBe(
+      'x := 20',
+    );
   });
 
   it('удаление без concurrent-правки уважается', () => {
@@ -64,9 +80,16 @@ describe('syncCrdt', () => {
     const base = [b('1', 'x := 1')];
     const local: WireBlock[] = []; // удалили в clock 5
     const remote = [b('1', 'x := 99')]; // правили в clock 9
-    const m = mergeBlockMaps(base, {}, local, {},
-      remote, { '1': { clock: 9, actor: 'b' } },
-      { '1': { clock: 5, actor: 'a' } }, {});
+    const m = mergeBlockMaps(
+      base,
+      {},
+      local,
+      {},
+      remote,
+      { '1': { clock: 9, actor: 'b' } },
+      { '1': { clock: 5, actor: 'a' } },
+      {},
+    );
     expect(byId(m.blocks)['1'].rawInput).toBe('x := 99');
     expect(m.deleted['1']).toBeUndefined();
   });
@@ -75,9 +98,16 @@ describe('syncCrdt', () => {
     const base = [b('1', 'x := 1')];
     const local: WireBlock[] = [];
     const remote = [b('1', 'x := 99')];
-    const m = mergeBlockMaps(base, {}, local, {},
-      remote, { '1': { clock: 5, actor: 'b' } },
-      { '1': { clock: 9, actor: 'a' } }, {});
+    const m = mergeBlockMaps(
+      base,
+      {},
+      local,
+      {},
+      remote,
+      { '1': { clock: 5, actor: 'b' } },
+      { '1': { clock: 9, actor: 'a' } },
+      {},
+    );
     expect(m.blocks.map((x) => x.id)).toEqual([]);
     expect(m.deleted['1']).toBeTruthy();
   });

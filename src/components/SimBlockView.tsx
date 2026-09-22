@@ -1,7 +1,16 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { plotPalettes } from '../theme';
-import { SIM_DOMAINS, SIM_SOLVERS, getSimModel, listSimModels, simModelPatch, type SimMode, type SimResult, type SimSolver } from '../engine/simEngine';
+import {
+  SIM_DOMAINS,
+  SIM_SOLVERS,
+  getSimModel,
+  listSimModels,
+  simModelPatch,
+  type SimMode,
+  type SimResult,
+  type SimSolver,
+} from '../engine/simEngine';
 import type { MathBlockData } from '../engine/dependencies';
 import { useRegionDrag, useRegionResize } from './useRegionDrag';
 import { IGrip, IPause, IPlay, IWarn, IX } from './Icon';
@@ -20,8 +29,10 @@ const fmtTick = (v: number) => {
   return String(Number(v.toPrecision(4)));
 };
 
-const numField = 'w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text';
-const txtField = 'math-input bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-2 py-0.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent-line)] select-text';
+const numField =
+  'w-[64px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text';
+const txtField =
+  'math-input bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-2 py-0.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent-line)] select-text';
 
 function SimBlockView({ block, scale }: { block: MathBlockData; scale: number }) {
   const removeBlock = useCanvasStore((s) => s.removeBlock);
@@ -62,7 +73,8 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
   const showProgress = computeActive && computeSimId === block.id;
 
   /** Правка полей = своя система (привязка к пресету сбрасывается). */
-  const edit = (patch: Partial<MathBlockData>) => updateSim(block.id, { simModel: 'custom', ...patch });
+  const edit = (patch: Partial<MathBlockData>) =>
+    updateSim(block.id, { simModel: 'custom', ...patch });
 
   const applyPreset = (id: string) => {
     if (id === 'custom') {
@@ -75,7 +87,11 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
   };
 
   const states = useMemo(
-    () => (block.simStates ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+    () =>
+      (block.simStates ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
     [block.simStates],
   );
   const model = getSimModel(modelId);
@@ -87,15 +103,25 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
     if (r.field) {
       if (r.field.snaps.length < 2) return null;
       return {
-        ts: r.field.ts, xs: r.field.xs, curves: [], steps: r.steps, xIsT: false,
-        field: r.field, tEst: r.tEst, events: [] as { t: number }[], halted: false,
+        ts: r.field.ts,
+        xs: r.field.xs,
+        curves: [],
+        steps: r.steps,
+        xIsT: false,
+        field: r.field,
+        tEst: r.tEst,
+        events: [] as { t: number }[],
+        halted: false,
       };
     }
     if (r.ts.length < 2) return null;
     const xName = block.simX ?? 't';
     const xs = xName === 't' ? r.ts : r.series.find((s) => s.name === xName)?.ys;
     if (!xs) return null;
-    const yNames = (block.simY ?? '').split(';').map((s) => s.trim()).filter(Boolean);
+    const yNames = (block.simY ?? '')
+      .split(';')
+      .map((s) => s.trim())
+      .filter(Boolean);
     const curves = yNames
       .map((name, i) => {
         const s = r.series.find((sg) => sg.name === name);
@@ -103,7 +129,17 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
       })
       .filter((c): c is { name: string; ys: number[]; color: string } => c !== null);
     if (!curves.length) return null;
-    return { ts: r.ts, xs, curves, steps: r.steps, xIsT: xName === 't', field: null, tEst: null as number | null, events: r.events, halted: r.halted };
+    return {
+      ts: r.ts,
+      xs,
+      curves,
+      steps: r.steps,
+      xIsT: xName === 't',
+      field: null,
+      tEst: null as number | null,
+      events: r.events,
+      halted: r.halted,
+    };
   }, [block.simResult, block.simX, block.simY, pal]);
 
   // Высота всего хрома (шапка + панель плеера под графиком) — измеряем,
@@ -126,7 +162,11 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
   return (
-    <div ref={boxRef} className="absolute z-10 min-h-fit" style={{ left: block.x, top: block.y, width: pw, height: ph + headH }}>
+    <div
+      ref={boxRef}
+      className="absolute z-10 min-h-fit"
+      style={{ left: block.x, top: block.y, width: pw, height: ph + headH }}
+    >
       <div
         data-block-id={block.id}
         className={`nya-block relative w-full h-full rounded-xl px-3 py-2 flex flex-col bg-[var(--sheet)] group ${
@@ -148,9 +188,15 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
             onPointerCancel={onGripUp}
             onDoubleClick={(e) => e.stopPropagation()}
           >
-            <span className="text-[var(--faint)] inline-flex" aria-hidden="true"><IGrip /></span>
-            <span className="text-[11px] uppercase tracking-wider text-[var(--accent-ink)]">sim</span>
-            <label htmlFor={`simmodel-${block.id}`} className="sr-only">{t('sim.preset')}</label>
+            <span className="text-[var(--faint)] inline-flex" aria-hidden="true">
+              <IGrip />
+            </span>
+            <span className="text-[11px] uppercase tracking-wider text-[var(--accent-ink)]">
+              sim
+            </span>
+            <label htmlFor={`simmodel-${block.id}`} className="sr-only">
+              {t('sim.preset')}
+            </label>
             <select
               id={`simmodel-${block.id}`}
               className="flex-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent-line)]"
@@ -163,19 +209,27 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
               <option value="custom">{t('sim.custom')}</option>
               {SIM_DOMAINS.map((d) => (
                 <optgroup key={d} label={simDomainName(d)}>
-                  {listSimModels().filter((m) => m.domain === d).map((m) => (
-                    <option key={m.id} value={m.id} title={lx(m.desc)}>{lx(m.label)}</option>
-                  ))}
+                  {listSimModels()
+                    .filter((m) => m.domain === d)
+                    .map((m) => (
+                      <option key={m.id} value={m.id} title={lx(m.desc)}>
+                        {lx(m.label)}
+                      </option>
+                    ))}
                 </optgroup>
               ))}
             </select>
-            <label htmlFor={`simmode-${block.id}`} className="sr-only">{t('sim.mode')}</label>
+            <label htmlFor={`simmode-${block.id}`} className="sr-only">
+              {t('sim.mode')}
+            </label>
             <select
               id={`simmode-${block.id}`}
               className="min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--accent-line)]"
               value={simMode}
               title={t('sim.mode')}
-              onChange={(e) => updateSim(block.id, { simMode: e.target.value as SimMode, simModel: 'custom' })}
+              onChange={(e) =>
+                updateSim(block.id, { simMode: e.target.value as SimMode, simModel: 'custom' })
+              }
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
@@ -213,11 +267,17 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
                 role="progressbar"
                 aria-valuemin={0}
                 aria-valuemax={100}
-                aria-valuenow={computeProgress === null ? undefined : Math.round(computeProgress * 100)}
+                aria-valuenow={
+                  computeProgress === null ? undefined : Math.round(computeProgress * 100)
+                }
               >
                 <div
                   className={`h-full rounded-full bg-[var(--accent-line)] ${computeProgress === null ? 'animate-pulse w-full' : ''}`}
-                  style={computeProgress === null ? undefined : { width: `${Math.round(computeProgress * 100)}%` }}
+                  style={
+                    computeProgress === null
+                      ? undefined
+                      : { width: `${Math.round(computeProgress * 100)}%` }
+                  }
                 />
               </div>
               <button
@@ -238,183 +298,313 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
 
           {/* редактор */}
           {open && (
-            <div className="flex flex-col gap-1.5 mb-2 text-[12px] text-[var(--ink-soft)]" onClick={stop}>
-            {simMode === 'ode' ? (<>
-              <div className="flex items-center gap-2 flex-wrap">
-                <label className="flex items-center gap-1">
-                  {t('sim.states')}
-                  <input
-                    className={`${txtField} w-[130px] min-h-[32px]`}
-                    value={block.simStates ?? ''}
-                    placeholder={t('sim.statesPh')}
-                    spellCheck={false}
-                    onChange={(e) => edit({ simStates: e.target.value })}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </label>
-                <label className="flex items-center gap-1 flex-1 min-w-[200px]">
-                  {t('sim.init')}
-                  <input
-                    className={`${txtField} flex-1 min-h-[32px]`}
-                    value={block.simInit ?? ''}
-                    placeholder={t('sim.initPh')}
-                    spellCheck={false}
-                    onChange={(e) => edit({ simInit: e.target.value })}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </label>
-              </div>
-              <label className="flex flex-col gap-0.5">
-                <span>{t('sim.derivs')}</span>
-                <textarea
-                  rows={2}
-                  className={`${txtField} w-full resize-y`}
-                  value={block.simDerivs ?? ''}
-                  placeholder={t('sim.derivsPh')}
-                  spellCheck={false}
-                  onChange={(e) => edit({ simDerivs: e.target.value })}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </label>
-              <div className="flex gap-2">
-                <label className="flex flex-col gap-0.5 flex-1">
-                  <span>{t('sim.aux')}</span>
-                  <textarea
-                    rows={2}
-                    className={`${txtField} w-full resize-y`}
-                    value={block.simAux ?? ''}
-                    placeholder={t('sim.auxPh')}
-                    spellCheck={false}
-                    onChange={(e) => edit({ simAux: e.target.value })}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </label>
-                <label className="flex flex-col gap-0.5 flex-1">
-                  <span>{t('sim.params')}</span>
-                  <textarea
-                    rows={2}
-                    className={`${txtField} w-full resize-y`}
-                    value={block.simParams ?? ''}
-                    placeholder={t('sim.paramsPh')}
-                    spellCheck={false}
-                    onChange={(e) => edit({ simParams: e.target.value })}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </label>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <label>t₀ <input type="number" className={numField} value={block.simT0 ?? 0} onChange={(e) => edit({ simT0: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-                <label>t₁ <input type="number" className={numField} value={block.simT1 ?? 10} onChange={(e) => edit({ simT1: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-                <label>dt <input type="number" step="any" className={numField} value={block.simDt ?? 0.01} onChange={(e) => edit({ simDt: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-                <label>{t('sim.solver')}
-                  <select
-                    className="ml-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)]"
-                    value={block.simSolver ?? 'rk4'}
-                    onChange={(e) => edit({ simSolver: e.target.value as SimSolver })}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {SIM_SOLVERS.map((s) => (
-                      <option key={s} value={s}>{simSolverName(s)}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <label>{t('sim.xAxis')}
-                  <select
-                    className="ml-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)]"
-                    value={block.simX ?? 't'}
-                    onChange={(e) => edit({ simX: e.target.value })}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <option value="t">t</option>
-                    {states.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex items-center gap-1 flex-1 min-w-[160px]">
-                  {t('sim.yAxis')}
-                  <input
-                    className={`${txtField} flex-1 min-h-[32px]`}
-                    value={block.simY ?? ''}
-                    spellCheck={false}
-                    onChange={(e) => edit({ simY: e.target.value })}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </label>
-                <label className="flex items-center gap-1" title={t('sim.exportTitle')}>
-                  → <input
-                    className={`${txtField} w-20 min-h-[32px]`}
-                    value={block.simExport ?? ''}
-                    placeholder={t('sim.exportPh')}
-                    spellCheck={false}
-                    onChange={(e) => edit({ simExport: e.target.value.replace(/[^A-Za-z0-9_]/g, '') })}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </label>
-              </div>
-              <label className="flex flex-col gap-0.5">
-                <span>{t('sim.events')}</span>
-                <textarea
-                  rows={2}
-                  className={`${txtField} w-full resize-y`}
-                  value={block.simEvents ?? ''}
-                  placeholder={t('sim.eventsPh')}
-                  spellCheck={false}
-                  onChange={(e) => edit({ simEvents: e.target.value })}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </label>
-              <div className="text-[11px] text-[var(--faint)]">{t('sim.hint')}</div>
-            </>) : (<>
-              <div className="flex items-center gap-2 flex-wrap">
-                <label>{t('sim.cells')} <input type="number" step={1} className={numField} value={block.simFdtdN ?? 400} onChange={(e) => edit({ simFdtdN: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-                <label>{t('sim.flen')} <input type="number" step="any" className={numField} value={block.simFdtdL ?? 20} onChange={(e) => edit({ simFdtdL: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-                <label>{t('sim.fsteps')} <input type="number" step={1} className={numField} value={block.simFdtdSteps ?? 1500} onChange={(e) => edit({ simFdtdSteps: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-                <label>{t('sim.source')}
-                  <select
-                    className="ml-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)]"
-                    value={block.simFdtdSrc ?? 'gauss'}
-                    onChange={(e) => edit({ simFdtdSrc: e.target.value as 'gauss' | 'sine' })}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <option value="gauss">{t('sim.srcGauss')}</option>
-                    <option value="sine">{t('sim.srcSine')}</option>
-                  </select>
-                </label>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <label>{t('sim.freq')} <input type="number" step="any" className={numField} value={block.simFdtdFreq ?? 1} onChange={(e) => edit({ simFdtdFreq: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-                <label>{t('sim.amp')} <input type="number" step="any" className={numField} value={block.simFdtdAmp ?? 1} onChange={(e) => edit({ simFdtdAmp: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-                <label>{t('sim.srcPos')} <input type="number" step="any" className={numField} value={block.simFdtdSrcX ?? 4} onChange={(e) => edit({ simFdtdSrcX: Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-                <label>{t('sim.det')} <input type="number" step="any" className={numField} value={block.simFdtdDet ?? ''} placeholder="auto" onChange={(e) => edit({ simFdtdDet: e.target.value === '' ? undefined : Number(e.target.value) })} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} /></label>
-              </div>
-              <label className="flex flex-col gap-0.5">
-                <span>{t('sim.layers')}</span>
-                <textarea
-                  rows={2}
-                  className={`${txtField} w-full resize-y`}
-                  value={block.simFdtdLayers ?? ''}
-                  placeholder={t('sim.layersPh')}
-                  spellCheck={false}
-                  onChange={(e) => edit({ simFdtdLayers: e.target.value })}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </label>
-            </>)}
+            <div
+              className="flex flex-col gap-1.5 mb-2 text-[12px] text-[var(--ink-soft)]"
+              onClick={stop}
+            >
+              {simMode === 'ode' ? (
+                <>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label className="flex items-center gap-1">
+                      {t('sim.states')}
+                      <input
+                        className={`${txtField} w-[130px] min-h-[32px]`}
+                        value={block.simStates ?? ''}
+                        placeholder={t('sim.statesPh')}
+                        spellCheck={false}
+                        onChange={(e) => edit({ simStates: e.target.value })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <label className="flex items-center gap-1 flex-1 min-w-[200px]">
+                      {t('sim.init')}
+                      <input
+                        className={`${txtField} flex-1 min-h-[32px]`}
+                        value={block.simInit ?? ''}
+                        placeholder={t('sim.initPh')}
+                        spellCheck={false}
+                        onChange={(e) => edit({ simInit: e.target.value })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                  </div>
+                  <label className="flex flex-col gap-0.5">
+                    <span>{t('sim.derivs')}</span>
+                    <textarea
+                      rows={2}
+                      className={`${txtField} w-full resize-y`}
+                      value={block.simDerivs ?? ''}
+                      placeholder={t('sim.derivsPh')}
+                      spellCheck={false}
+                      onChange={(e) => edit({ simDerivs: e.target.value })}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </label>
+                  <div className="flex gap-2">
+                    <label className="flex flex-col gap-0.5 flex-1">
+                      <span>{t('sim.aux')}</span>
+                      <textarea
+                        rows={2}
+                        className={`${txtField} w-full resize-y`}
+                        value={block.simAux ?? ''}
+                        placeholder={t('sim.auxPh')}
+                        spellCheck={false}
+                        onChange={(e) => edit({ simAux: e.target.value })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <label className="flex flex-col gap-0.5 flex-1">
+                      <span>{t('sim.params')}</span>
+                      <textarea
+                        rows={2}
+                        className={`${txtField} w-full resize-y`}
+                        value={block.simParams ?? ''}
+                        placeholder={t('sim.paramsPh')}
+                        spellCheck={false}
+                        onChange={(e) => edit({ simParams: e.target.value })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label>
+                      t₀{' '}
+                      <input
+                        type="number"
+                        className={numField}
+                        value={block.simT0 ?? 0}
+                        onChange={(e) => edit({ simT0: Number(e.target.value) })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <label>
+                      t₁{' '}
+                      <input
+                        type="number"
+                        className={numField}
+                        value={block.simT1 ?? 10}
+                        onChange={(e) => edit({ simT1: Number(e.target.value) })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <label>
+                      dt{' '}
+                      <input
+                        type="number"
+                        step="any"
+                        className={numField}
+                        value={block.simDt ?? 0.01}
+                        onChange={(e) => edit({ simDt: Number(e.target.value) })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <label>
+                      {t('sim.solver')}
+                      <select
+                        className="ml-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)]"
+                        value={block.simSolver ?? 'rk4'}
+                        onChange={(e) => edit({ simSolver: e.target.value as SimSolver })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {SIM_SOLVERS.map((s) => (
+                          <option key={s} value={s}>
+                            {simSolverName(s)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label>
+                      {t('sim.xAxis')}
+                      <select
+                        className="ml-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)]"
+                        value={block.simX ?? 't'}
+                        onChange={(e) => edit({ simX: e.target.value })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="t">t</option>
+                        {states.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-1 flex-1 min-w-[160px]">
+                      {t('sim.yAxis')}
+                      <input
+                        className={`${txtField} flex-1 min-h-[32px]`}
+                        value={block.simY ?? ''}
+                        spellCheck={false}
+                        onChange={(e) => edit({ simY: e.target.value })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <label className="flex items-center gap-1" title={t('sim.exportTitle')}>
+                      →{' '}
+                      <input
+                        className={`${txtField} w-20 min-h-[32px]`}
+                        value={block.simExport ?? ''}
+                        placeholder={t('sim.exportPh')}
+                        spellCheck={false}
+                        onChange={(e) =>
+                          edit({ simExport: e.target.value.replace(/[^A-Za-z0-9_]/g, '') })
+                        }
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                  </div>
+                  <label className="flex flex-col gap-0.5">
+                    <span>{t('sim.events')}</span>
+                    <textarea
+                      rows={2}
+                      className={`${txtField} w-full resize-y`}
+                      value={block.simEvents ?? ''}
+                      placeholder={t('sim.eventsPh')}
+                      spellCheck={false}
+                      onChange={(e) => edit({ simEvents: e.target.value })}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </label>
+                  <div className="text-[11px] text-[var(--faint)]">{t('sim.hint')}</div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label>
+                      {t('sim.cells')}{' '}
+                      <input
+                        type="number"
+                        step={1}
+                        className={numField}
+                        value={block.simFdtdN ?? 400}
+                        onChange={(e) => edit({ simFdtdN: Number(e.target.value) })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <label>
+                      {t('sim.flen')}{' '}
+                      <input
+                        type="number"
+                        step="any"
+                        className={numField}
+                        value={block.simFdtdL ?? 20}
+                        onChange={(e) => edit({ simFdtdL: Number(e.target.value) })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <label>
+                      {t('sim.fsteps')}{' '}
+                      <input
+                        type="number"
+                        step={1}
+                        className={numField}
+                        value={block.simFdtdSteps ?? 1500}
+                        onChange={(e) => edit({ simFdtdSteps: Number(e.target.value) })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <label>
+                      {t('sim.source')}
+                      <select
+                        className="ml-1 min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)]"
+                        value={block.simFdtdSrc ?? 'gauss'}
+                        onChange={(e) => edit({ simFdtdSrc: e.target.value as 'gauss' | 'sine' })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="gauss">{t('sim.srcGauss')}</option>
+                        <option value="sine">{t('sim.srcSine')}</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label>
+                      {t('sim.freq')}{' '}
+                      <input
+                        type="number"
+                        step="any"
+                        className={numField}
+                        value={block.simFdtdFreq ?? 1}
+                        onChange={(e) => edit({ simFdtdFreq: Number(e.target.value) })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <label>
+                      {t('sim.amp')}{' '}
+                      <input
+                        type="number"
+                        step="any"
+                        className={numField}
+                        value={block.simFdtdAmp ?? 1}
+                        onChange={(e) => edit({ simFdtdAmp: Number(e.target.value) })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <label>
+                      {t('sim.srcPos')}{' '}
+                      <input
+                        type="number"
+                        step="any"
+                        className={numField}
+                        value={block.simFdtdSrcX ?? 4}
+                        onChange={(e) => edit({ simFdtdSrcX: Number(e.target.value) })}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <label>
+                      {t('sim.det')}{' '}
+                      <input
+                        type="number"
+                        step="any"
+                        className={numField}
+                        value={block.simFdtdDet ?? ''}
+                        placeholder="auto"
+                        onChange={(e) =>
+                          edit({
+                            simFdtdDet: e.target.value === '' ? undefined : Number(e.target.value),
+                          })
+                        }
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                  </div>
+                  <label className="flex flex-col gap-0.5">
+                    <span>{t('sim.layers')}</span>
+                    <textarea
+                      rows={2}
+                      className={`${txtField} w-full resize-y`}
+                      value={block.simFdtdLayers ?? ''}
+                      placeholder={t('sim.layersPh')}
+                      spellCheck={false}
+                      onChange={(e) => edit({ simFdtdLayers: e.target.value })}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </label>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -422,7 +612,13 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
         <StaleChip id={block.id} />
         {/* график + плеер */}
         {block.error ? (
-          <div ref={footRef} className="flex items-center gap-1.5 text-[var(--danger)] text-[12px] mb-1" role="alert"><IWarn /> {block.error}</div>
+          <div
+            ref={footRef}
+            className="flex items-center gap-1.5 text-[var(--danger)] text-[12px] mb-1"
+            role="alert"
+          >
+            <IWarn /> {block.error}
+          </div>
         ) : view ? (
           <SimPlayer
             result={block.simResult as SimResult}
@@ -444,7 +640,9 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
             onLoop={(v) => updatePlot(block.id, { simLoop: v })}
           />
         ) : (
-          <div ref={footRef} className="text-[var(--faint)] text-[12px] mb-1">{t('sim.noData')}</div>
+          <div ref={footRef} className="text-[var(--faint)] text-[12px] mb-1">
+            {t('sim.noData')}
+          </div>
         )}
 
         {/* ручка размера */}
@@ -472,7 +670,23 @@ interface Curve {
 }
 
 function SimPlayer({
-  result, xs, curves, xIsT, field, tEst, events, halted, pal, pw, ph, speed, loop, steps, chromeRef, onSpeed, onLoop,
+  result,
+  xs,
+  curves,
+  xIsT,
+  field,
+  tEst,
+  events,
+  halted,
+  pal,
+  pw,
+  ph,
+  speed,
+  loop,
+  steps,
+  chromeRef,
+  onSpeed,
+  onLoop,
 }: {
   result: SimResult;
   xs: number[];
@@ -482,7 +696,16 @@ function SimPlayer({
   tEst: number | null;
   events: { t: number }[];
   halted: boolean;
-  pal: { svgBg: string; grid: string; gridOpacity: number; tick: string; axis: string; frame: string; legend: string; series: string[] };
+  pal: {
+    svgBg: string;
+    grid: string;
+    gridOpacity: number;
+    tick: string;
+    axis: string;
+    frame: string;
+    legend: string;
+    series: string[];
+  };
   pw: number;
   ph: number;
   speed: number;
@@ -596,7 +819,22 @@ function SimPlayer({
       for (let i = 0; i <= 4; i++) out.push(lo + ((hi - lo) * i) / 4);
       return out;
     };
-    return { Wpx, PAD_L, PAD_R, PAD_T, PAD_B, x0, x1, y0, y1, px, py, full, xt: ticks(x0, x1), yt: ticks(y0, y1) };
+    return {
+      Wpx,
+      PAD_L,
+      PAD_R,
+      PAD_T,
+      PAD_B,
+      x0,
+      x1,
+      y0,
+      y1,
+      px,
+      py,
+      full,
+      xt: ticks(x0, x1),
+      yt: ticks(y0, y1),
+    };
   }, [xs, curves, field, isField, pw, ph, N]);
 
   const at = (arr: number[], f: number): number => {
@@ -643,7 +881,8 @@ function SimPlayer({
         }
         const cx = at(xs, frame);
         const cy = at(c.ys, frame);
-        if (isFinite(cx) && isFinite(cy)) d += `${d ? 'L' : 'M'}${geo.px(cx).toFixed(1)},${geo.py(cy).toFixed(1)}`;
+        if (isFinite(cx) && isFinite(cy))
+          d += `${d ? 'L' : 'M'}${geo.px(cx).toFixed(1)},${geo.py(cy).toFixed(1)}`;
         return d;
       });
 
@@ -667,45 +906,124 @@ function SimPlayer({
       >
         {geo.xt.map((v, i) => (
           <g key={`x${i}`}>
-            <line x1={geo.px(v)} y1={geo.PAD_T} x2={geo.px(v)} y2={ph - geo.PAD_B} stroke={pal.grid} strokeOpacity={pal.gridOpacity} />
-            <text x={geo.px(v)} y={ph - geo.PAD_B + 14} fontSize={9} fill={pal.tick} textAnchor="middle">
+            <line
+              x1={geo.px(v)}
+              y1={geo.PAD_T}
+              x2={geo.px(v)}
+              y2={ph - geo.PAD_B}
+              stroke={pal.grid}
+              strokeOpacity={pal.gridOpacity}
+            />
+            <text
+              x={geo.px(v)}
+              y={ph - geo.PAD_B + 14}
+              fontSize={9}
+              fill={pal.tick}
+              textAnchor="middle"
+            >
               {fmtTick(v)}
             </text>
           </g>
         ))}
         {geo.yt.map((v, i) => (
           <g key={`y${i}`}>
-            <line x1={geo.PAD_L} y1={geo.py(v)} x2={geo.Wpx - geo.PAD_R} y2={geo.py(v)} stroke={pal.grid} strokeOpacity={pal.gridOpacity} />
+            <line
+              x1={geo.PAD_L}
+              y1={geo.py(v)}
+              x2={geo.Wpx - geo.PAD_R}
+              y2={geo.py(v)}
+              stroke={pal.grid}
+              strokeOpacity={pal.gridOpacity}
+            />
             <text x={geo.PAD_L - 5} y={geo.py(v) + 3} fontSize={9} fill={pal.tick} textAnchor="end">
               {fmtTick(v)}
             </text>
           </g>
         ))}
-        <rect x={geo.PAD_L} y={geo.PAD_T} width={geo.Wpx - geo.PAD_L - geo.PAD_R} height={ph - geo.PAD_T - geo.PAD_B} fill="none" stroke={pal.frame} />
+        <rect
+          x={geo.PAD_L}
+          y={geo.PAD_T}
+          width={geo.Wpx - geo.PAD_L - geo.PAD_R}
+          height={ph - geo.PAD_T - geo.PAD_B}
+          fill="none"
+          stroke={pal.frame}
+        />
         {curvesEff.map((c, i) =>
-          geo.full[i] ? <path key={`f${i}`} d={geo.full[i]} fill="none" stroke={c.color} strokeOpacity={0.3} strokeWidth={1.5} /> : null,
+          geo.full[i] ? (
+            <path
+              key={`f${i}`}
+              d={geo.full[i]}
+              fill="none"
+              stroke={c.color}
+              strokeOpacity={0.3}
+              strokeWidth={1.5}
+            />
+          ) : null,
         )}
-        {xIsT && <line x1={geo.px(at(xsEff, frame))} y1={geo.PAD_T} x2={geo.px(at(xsEff, frame))} y2={ph - geo.PAD_B} stroke={pal.axis} strokeWidth={1} strokeDasharray="3 3" />}
+        {xIsT && (
+          <line
+            x1={geo.px(at(xsEff, frame))}
+            y1={geo.PAD_T}
+            x2={geo.px(at(xsEff, frame))}
+            y2={ph - geo.PAD_B}
+            stroke={pal.axis}
+            strokeWidth={1}
+            strokeDasharray="3 3"
+          />
+        )}
         {/* маркеры событий на оси времени */}
         {xIsT &&
           events.slice(0, 200).map((ev, i) => {
             if (ev.t < geo.x0 || ev.t > geo.x1) return null;
             const ex = geo.px(ev.t);
-            return <path key={`e${i}`} d={`M${ex},${geo.PAD_T} l3.5,6 h-7 Z`} fill={pal.axis} opacity={0.8} />;
+            return (
+              <path
+                key={`e${i}`}
+                d={`M${ex},${geo.PAD_T} l3.5,6 h-7 Z`}
+                fill={pal.axis}
+                opacity={0.8}
+              />
+            );
           })}
         {curvesEff.map((c, i) =>
-          trails[i] ? <path key={`t${i}`} d={trails[i]} fill="none" stroke={c.color} strokeWidth={2} strokeLinejoin="round" /> : null,
+          trails[i] ? (
+            <path
+              key={`t${i}`}
+              d={trails[i]}
+              fill="none"
+              stroke={c.color}
+              strokeWidth={2}
+              strokeLinejoin="round"
+            />
+          ) : null,
         )}
         {!isField &&
           curvesEff.map((c, i) => {
             const cx = at(xsEff, frame);
             const cy = at(c.ys, frame);
             if (!isFinite(cx) || !isFinite(cy)) return null;
-            return <circle key={`m${i}`} cx={geo.px(cx)} cy={geo.py(cy)} r={4} fill={c.color} stroke={pal.svgBg} strokeWidth={1.5} />;
+            return (
+              <circle
+                key={`m${i}`}
+                cx={geo.px(cx)}
+                cy={geo.py(cy)}
+                r={4}
+                fill={c.color}
+                stroke={pal.svgBg}
+                strokeWidth={1.5}
+              />
+            );
           })}
         {curvesEff.map((c, i) => (
           <g key={`l${i}`}>
-            <line x1={geo.PAD_L + 8} y1={geo.PAD_T + 12 + i * 15} x2={geo.PAD_L + 26} y2={geo.PAD_T + 12 + i * 15} stroke={c.color} strokeWidth={2.5} />
+            <line
+              x1={geo.PAD_L + 8}
+              y1={geo.PAD_T + 12 + i * 15}
+              x2={geo.PAD_L + 26}
+              y2={geo.PAD_T + 12 + i * 15}
+              stroke={c.color}
+              strokeWidth={2.5}
+            />
             <text x={geo.PAD_L + 30} y={geo.PAD_T + 15 + i * 15} fontSize={10} fill={pal.legend}>
               {c.name.length > 30 ? c.name.slice(0, 30) + '…' : c.name}
             </text>
@@ -714,54 +1032,61 @@ function SimPlayer({
       </svg>
       {/* плеер */}
       <div ref={chromeRef}>
-      <div className="flex items-center gap-2 mt-1.5 text-[12px] text-[var(--ink-soft)] flex-wrap">
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={playing ? t('sim.pause') : t('sim.play')}
-          title={playing ? t('sim.pause') : t('sim.play')}
-          className="min-w-[36px] min-h-[32px] px-2 rounded-lg border border-[var(--accent-line)]/60 bg-[var(--accent-soft)] text-[13px] cursor-pointer hover:brightness-125 active:scale-[0.96]"
-        >
-          {playing ? <IPause /> : <IPlay />}
-        </button>
-        <input
-          type="range"
-          min={0}
-          max={N - 1}
-          step={1}
-          value={fi}
-          aria-label="t"
-          className="flex-1 accent-[var(--accent-line)]"
-          onChange={(e) => {
-            frameRef.current = Number(e.target.value);
-            setFrame(Number(e.target.value));
-            setPlaying(false);
-          }}
-        />
-        <span className="math-input text-[11px] whitespace-nowrap">t = {fmtTick(tNow)}</span>
-        <label className="flex items-center gap-1 whitespace-nowrap">
-          {t('sim.speed')}
-          <select
-            className="min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1 text-[var(--ink)]"
-            value={speed}
-            onChange={(e) => onSpeed(Number(e.target.value))}
+        <div className="flex items-center gap-2 mt-1.5 text-[12px] text-[var(--ink-soft)] flex-wrap">
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={playing ? t('sim.pause') : t('sim.play')}
+            title={playing ? t('sim.pause') : t('sim.play')}
+            className="min-w-[36px] min-h-[32px] px-2 rounded-lg border border-[var(--accent-line)]/60 bg-[var(--accent-soft)] text-[13px] cursor-pointer hover:brightness-125 active:scale-[0.96]"
           >
-            {[0.25, 0.5, 1, 2, 4].map((s) => (
-              <option key={s} value={s}>{s}×</option>
-            ))}
-          </select>
-        </label>
-        <label className="inline-flex items-center gap-1 cursor-pointer whitespace-nowrap">
-          <input type="checkbox" className="w-4 h-4 accent-[var(--accent-line)]" checked={loop} onChange={(e) => onLoop(e.target.checked)} />
-          {t('sim.loop')}
-        </label>
-      </div>
-      <div className="text-[11px] text-[var(--faint)] mt-1">
-        {t('sim.stats', { steps, pts: N })}
-        {events.length > 0 && <> • {t('sim.eventsN', { n: events.length })}</>}
-        {halted && <> • {t('sim.halted')}</>}
-        {tEst != null && <> • {t('sim.transmission', { v: tEst })}</>}
-      </div>
+            {playing ? <IPause /> : <IPlay />}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={N - 1}
+            step={1}
+            value={fi}
+            aria-label="t"
+            className="flex-1 accent-[var(--accent-line)]"
+            onChange={(e) => {
+              frameRef.current = Number(e.target.value);
+              setFrame(Number(e.target.value));
+              setPlaying(false);
+            }}
+          />
+          <span className="math-input text-[11px] whitespace-nowrap">t = {fmtTick(tNow)}</span>
+          <label className="flex items-center gap-1 whitespace-nowrap">
+            {t('sim.speed')}
+            <select
+              className="min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1 text-[var(--ink)]"
+              value={speed}
+              onChange={(e) => onSpeed(Number(e.target.value))}
+            >
+              {[0.25, 0.5, 1, 2, 4].map((s) => (
+                <option key={s} value={s}>
+                  {s}×
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="inline-flex items-center gap-1 cursor-pointer whitespace-nowrap">
+            <input
+              type="checkbox"
+              className="w-4 h-4 accent-[var(--accent-line)]"
+              checked={loop}
+              onChange={(e) => onLoop(e.target.checked)}
+            />
+            {t('sim.loop')}
+          </label>
+        </div>
+        <div className="text-[11px] text-[var(--faint)] mt-1">
+          {t('sim.stats', { steps, pts: N })}
+          {events.length > 0 && <> • {t('sim.eventsN', { n: events.length })}</>}
+          {halted && <> • {t('sim.halted')}</>}
+          {tEst != null && <> • {t('sim.transmission', { v: tEst })}</>}
+        </div>
       </div>
     </div>
   );
