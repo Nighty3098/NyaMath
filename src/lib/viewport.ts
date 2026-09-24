@@ -72,3 +72,38 @@ export function visibleIdsOf(blocks: MathBlockData[], rect: WorldRect): string[]
 
 /** Порог виртуализации: меньше — оверхед не окупается. */
 export const VIRTUALIZE_AT = 250;
+
+/** Накопленные за кадр дельты колеса (rAF-коалесцирование, см. Canvas). */
+export interface WheelAcc {
+  /** суммарный сдвиг панорамы, экранные px */
+  dx: number;
+  dy: number;
+  /** суммарный лог-фактор pinch-зума */
+  zoomLog: number;
+  /** якорь зума, клиентские координаты последнего события */
+  ax: number;
+  ay: number;
+  hasZoom: boolean;
+}
+
+/**
+ * Один кадр коалесцированного колеса: чистая математика кадра панорамы/зума.
+ * Возвращает тот же объект при нулевых дельтах — вызыватель пропускает setState.
+ */
+export function applyWheelFrame(
+  v: Viewport,
+  acc: WheelAcc,
+  origin: { left: number; top: number },
+  kMin = 0.25,
+  kMax = 3,
+): Viewport {
+  const px = v.x - acc.dx;
+  const py = v.y - acc.dy;
+  if (!acc.hasZoom) return px === v.x && py === v.y ? v : { ...v, x: px, y: py };
+  const sx = acc.ax - origin.left;
+  const sy = acc.ay - origin.top;
+  const step = Math.max(-0.5, Math.min(0.5, acc.zoomLog));
+  const k = Math.max(kMin, Math.min(kMax, v.k * Math.exp(step)));
+  const f = k / v.k;
+  return { k, x: sx - (sx - px) * f, y: sy - (sy - py) * f };
+}

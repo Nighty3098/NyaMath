@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estBlockHeight, rectHit, viewportRect, visibleIdsOf } from './viewport';
+import { applyWheelFrame, estBlockHeight, rectHit, viewportRect, visibleIdsOf } from './viewport';
 import type { MathBlockData } from '../engine/dependencies';
 
 function block(
@@ -68,5 +68,52 @@ describe('viewport: visibility', () => {
   it('visibleIdsOf держит порядок входа', () => {
     const bs = [block('c', 80, 500), block('a', 80, 60), block('far', 80, 5000)];
     expect(visibleIdsOf(bs, rect)).toEqual(['c', 'a']);
+  });
+});
+
+describe('viewport: applyWheelFrame', () => {
+  const v = { x: 80, y: 40, k: 1 };
+  const origin = { left: 0, top: 0 };
+  it('пан копит дельты пачки событий', () => {
+    const n = applyWheelFrame(
+      v,
+      { dx: 5 + 7, dy: 3 + 4, zoomLog: 0, ax: 0, ay: 0, hasZoom: false },
+      origin,
+    );
+    expect(n).toEqual({ x: 68, y: 33, k: 1 });
+  });
+  it('нулевые дельты возвращают тот же объект (скип setState)', () => {
+    expect(
+      applyWheelFrame(v, { dx: 0, dy: 0, zoomLog: 0, ax: 0, ay: 0, hasZoom: false }, origin),
+    ).toBe(v);
+  });
+  it('зум к якорю держит точку под курсором', () => {
+    const n = applyWheelFrame(
+      v,
+      { dx: 0, dy: 0, zoomLog: Math.log(1.5), ax: 400, ay: 300, hasZoom: true },
+      origin,
+    );
+    expect(n.k).toBeCloseTo(1.5, 9);
+    // мировая точка под якорем не съехала: (s - x) / k invariant
+    expect((400 - n.x) / n.k).toBeCloseTo((400 - v.x) / v.k, 9);
+    expect((300 - n.y) / n.k).toBeCloseTo((300 - v.y) / v.k, 9);
+  });
+  it('взрывной шаг клампится, масштаб — в пределах', () => {
+    const n = applyWheelFrame(
+      v,
+      { dx: 0, dy: 0, zoomLog: 10, ax: 0, ay: 0, hasZoom: true },
+      origin,
+      0.25,
+      3,
+    );
+    expect(n.k).toBeLessThanOrEqual(3);
+    const m = applyWheelFrame(
+      { x: 0, y: 0, k: 0.25 },
+      { dx: 0, dy: 0, zoomLog: -10, ax: 0, ay: 0, hasZoom: true },
+      origin,
+      0.25,
+      3,
+    );
+    expect(m.k).toBe(0.25);
   });
 });

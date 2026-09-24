@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { sortBlocksTopDown, findUseBeforeDef } from '../engine/dependencies';
-import { viewportRect, visibleIdsOf, VIRTUALIZE_AT } from '../lib/viewport';
+import { applyWheelFrame, viewportRect, visibleIdsOf, VIRTUALIZE_AT } from '../lib/viewport';
 import { registerBlockFocus } from '../lib/focusBlock';
 import MathBlockView from './MathBlockView';
 import PlotBlockView from './PlotBlockView';
@@ -39,7 +39,7 @@ export default function Canvas() {
   const selectMany = useCanvasStore((s) => s.selectMany);
 
   const [view, setView] = useState<View>({ x: 80, y: 40, k: 1 });
-  // Цель анимации: колесо меняет target, rAF плавно догоняет view -> target
+  // Зеркало вида без ре-рендера: колесо копит дельты в rAF-кадр и читает базу отсюда
   const targetRef = useRef<View>({ x: 80, y: 40, k: 1 });
   const viewRef = useRef<View>({ x: 80, y: 40, k: 1 });
 
@@ -137,29 +137,57 @@ export default function Canvas() {
     [applyView],
   );
 
-  // Колесо: обычный скролл = панорама (мгновенно), Ctrl/Cmd+колесо (pinch) = плавный зум к курсору.
+  // Колесо: обычный скролл = панорама, Ctrl/Cmd+колесо (pinch) = зум к курсору.
+  // Тачпад шлёт wheel-поток с частотой в разы выше кадровой (+ инерция уже
+  // после жеста), поэтому дельты копим и применяем один раз за кадр через rAF:
+  // иначе каждое событие = отдельный синхронный ре-рендер всего холста.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    let raf = 0;
+    const acc = { dx: 0, dy: 0, zoomLog: 0, ax: 0, ay: 0, hasZoom: false };
+    const flush = () => {
+      raf = 0;
+      const v = viewRef.current;
+      // один замер геометрии на кадр и только для зума (иначе layout-thrash)
+      const rect = acc.hasZoom ? el.getBoundingClientRect() : null;
+      const n = applyWheelFrame(
+        v,
+        acc,
+        { left: rect?.left ?? 0, top: rect?.top ?? 0 },
+        MIN_SCALE,
+        MAX_SCALE,
+      );
+      acc.dx = 0;
+      acc.dy = 0;
+      acc.zoomLog = 0;
+      acc.hasZoom = false;
+      // applyView — через синхронное зеркало viewRef: пачка событий в одном
+      // кадре больше не читает stale-базу и не теряет дельты
+      if (n !== v) applyView(n);
+    };
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      // Нормируем дельту: трекпад шлёт мелкие значения, мышь с Ctrl — крупные.
+      // Шаг клампим на событие, чтобы один резкий тик не взрывал кадр.
+      const unit = e.deltaMode === 1 ? 16 : 1;
       if (e.ctrlKey || e.metaKey) {
-        // Нормируем дельту: трекпад шлёт мелкие значения, мышь с Ctrl — крупные.
-        // Ограничиваем шаг, чтобы не было прыжков.
-        const unit = e.deltaMode === 1 ? 16 : 1;
-        const step = clamp(-e.deltaY * unit * 0.0032, -0.16, 0.16);
-        zoomAt(e.clientX, e.clientY, Math.exp(step));
+        acc.zoomLog += clamp(-e.deltaY * unit * 0.0032, -0.16, 0.16);
+        acc.ax = e.clientX;
+        acc.ay = e.clientY;
+        acc.hasZoom = true;
       } else {
-        const unit = e.deltaMode === 1 ? 16 : 1;
-        const v = viewRef.current;
-        const n = { ...v, x: v.x - e.deltaX * unit, y: v.y - e.deltaY * unit };
-        targetRef.current = n;
-        setView(n);
+        acc.dx += e.deltaX * unit;
+        acc.dy += e.deltaY * unit;
       }
+      if (!raf) raf = requestAnimationFrame(flush);
     };
     el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, [zoomAt]);
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [applyView]);
 
   const isInteractive = (t: EventTarget | null) =>
     (t as HTMLElement | null)?.closest?.('input, textarea, button, select, .nya-block') ?? null;
