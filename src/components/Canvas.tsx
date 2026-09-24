@@ -12,6 +12,7 @@ import ProgramBlockView from './ProgramBlockView';
 import SimBlockView from './SimBlockView';
 import SliderBlockView from './SliderBlockView';
 import MathKeyboard from './MathKeyboard';
+import InsertSheet from './InsertSheet';
 import EmptyStarter from './EmptyStarter';
 import { IMinus, IPlus } from './Icon';
 import { t } from '../i18n';
@@ -192,6 +193,12 @@ export default function Canvas() {
   const isInteractive = (t: EventTarget | null) =>
     (t as HTMLElement | null)?.closest?.('input, textarea, button, select, .nya-block') ?? null;
 
+  /** Тач на контролах/редакторе — не пан: текст выделяют, кнопки жмут */
+  const isPanControl = (t: EventTarget | null) =>
+    (t as HTMLElement | null)?.closest?.(
+      'input, textarea, select, button, a, [contenteditable="true"]',
+    ) ?? null;
+
   // Рамка выделения (marquee) в экранных координатах контейнера
   const [marquee, setMarquee] = useState<{
     x0: number;
@@ -223,6 +230,16 @@ export default function Canvas() {
   const longTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapRef = useRef<{ t: number; x: number; y: number } | null>(null);
   const touchNewRef = useRef(0);
+  // Тач стартовал на блоке: ещё не пан (тап выберет/откроет), станет паном за порогом.
+  // На телефоне блоки занимают почти весь экран — без этого панораму негде начать.
+  const pendingRef = useRef<{
+    id: number;
+    sx: number;
+    sy: number;
+    cx: number;
+    cy: number;
+    t: number;
+  } | null>(null);
   const TAP_MOVE = 10;
   const TAP_TIME = 350;
   const DBL_DIST = 28;
@@ -295,6 +312,7 @@ export default function Canvas() {
       clearLongTimer();
       pressRef.current = null;
       touchRef.current = null;
+      pendingRef.current = null;
       panRef.current = null;
       setPanning(false);
       setMarquee(null);
@@ -307,7 +325,6 @@ export default function Canvas() {
     if (pointersRef.current.size > 2) return;
     const forcePan = spaceRef.current || e.button === 1 || e.button === 2;
     if (isTouch) {
-      // Палец по блоку уходит в stopPropagation внутри блока — сюда доходит только фон.
       // Один палец всегда панорама (рамка — по long-press, новый блок — дабл-тап).
       if (forcePan || bg) {
         e.preventDefault();
@@ -336,6 +353,18 @@ export default function Canvas() {
             /* ignore */
           }
         }, LONG_MS);
+      } else if (!isPanControl(e.target)) {
+        // Палец стартовал на блоке: пока не пан — отпустит без сдвига,
+        // клик по блоку (выбор/редактор) отработает сам; свайп запанорамит.
+        const p = toLocal(e.clientX, e.clientY);
+        pendingRef.current = {
+          id: e.pointerId,
+          sx: p.x,
+          sy: p.y,
+          cx: e.clientX,
+          cy: e.clientY,
+          t: Date.now(),
+        };
       }
       return;
     }
@@ -376,6 +405,32 @@ export default function Canvas() {
         pinchRef.current = { pd: pm.d, pmx: pm.mx, pmy: pm.my };
       }
       return;
+    }
+    // Один палец с блока: сдвиг за порогом — это пан, иначе ждём тап
+    const pd = pendingRef.current;
+    if (pd && e.pointerType !== 'mouse' && pointersRef.current.size < 2) {
+      if (e.pointerId !== pd.id) return;
+      const pos = coalescedPos(e);
+      if (Math.abs(pos.x - pd.cx) + Math.abs(pos.y - pd.cy) <= TAP_MOVE) return;
+      pendingRef.current = null;
+      // забираем указатель на контейнер — клик по блоку не выстрелит
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      touchRef.current = {
+        sx: pd.sx,
+        sy: pd.sy,
+        lx: pos.x,
+        ly: pos.y,
+        cx: pos.x,
+        cy: pos.y,
+        t: pd.t,
+        panning: true,
+        marquee: false,
+      };
+      setPanning(true);
     }
     // Один палец: панорама после порога, иначе ждём тап/long-press
     const tr = touchRef.current;
@@ -423,9 +478,24 @@ export default function Canvas() {
     useCanvasStore.getState().setCross(Math.round(w.x - 40), Math.round(w.y - 20));
   };
 
+  /** Центр текущего вида в мировых координатах — точка мобильной вставки */
+  const worldCenter = useCallback(() => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    const cx = (rect?.left ?? 0) + (rect?.width ?? 800) / 2;
+    const cy = (rect?.top ?? 0) + (rect?.height ?? 600) / 2;
+    return screenToWorld(cx, cy);
+  }, [screenToWorld]);
+
   const endPointer = (e?: React.PointerEvent) => {
     if (e) pointersRef.current.delete(e.pointerId);
     clearLongTimer();
+    // Тап с блока без сдвига: ничего не делаем — клик по блоку
+    // (выбор/редактор) отработает сам нативным путём
+    if (e && pendingRef.current?.id === e.pointerId) {
+      pendingRef.current = null;
+      return;
+    }
+    pendingRef.current = null;
     // Отпустили один палец из pinch — оставшийся продолжает панораму без прыжка
     if (pinchRef.current) {
       pinchRef.current = null;
@@ -806,6 +876,9 @@ export default function Canvas() {
 
       {/* экранная мат-клавиатура слева внизу */}
       <MathKeyboard />
+
+      {/* мобильная вставка: FAB + шит (md:hidden внутри) */}
+      <InsertSheet center={worldCenter} />
 
       {/* controls зума */}
       <div

@@ -59,6 +59,7 @@ import {
   IZap,
   ISun,
   IMoon,
+  IMenu,
   ICopy,
   ISignal,
   IDemo,
@@ -173,6 +174,8 @@ export default function MenuBar({
 
   const [open, setOpen] = useState<string | null>(null);
   const [subOpen, setSubOpen] = useState<string | null>(null);
+  // Мобильный шит: текстовые меню скрыты (hidden md:block), весь их состав — сюда
+  const [mOpen, setMOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -205,6 +208,12 @@ export default function MenuBar({
   const run = (fn: () => void) => () => {
     setOpen(null);
     setSubOpen(null);
+    fn();
+  };
+
+  // Листья шита закрывают и его тоже (десктопное run про шит не знает)
+  const runM = (fn: () => void) => () => {
+    setMOpen(false);
     fn();
   };
 
@@ -763,6 +772,96 @@ export default function MenuBar({
     </div>
   );
 
+  // Мобильный шит: разделы меню друг под другом, вложенные — аккордеоном
+  const renderSheetItems = (items: Entry[], depth: number): React.ReactNode => (
+    <div className={depth > 0 ? 'ml-3 border-l border-[var(--chrome-line)] pl-1' : ''}>
+      {items.map((it, i) => {
+        const key = `${depth}-${typeof it === 'object' && 'id' in it ? it.id : i}`;
+        if ('sep' in it) return <div key={key} className="menu-sep" role="separator" />;
+        if ('head' in it)
+          return (
+            <div key={key} className="menu-head">
+              {it.head}
+            </div>
+          );
+        if ('children' in it) {
+          const expanded = subOpen === it.id;
+          return (
+            <div key={key}>
+              <button
+                type="button"
+                aria-expanded={expanded}
+                onClick={() => setSubOpen(expanded ? null : it.id)}
+                className="menu-item w-full min-h-[44px]"
+              >
+                <span className="w-4 shrink-0 inline-flex justify-center" aria-hidden="true">
+                  {it.icon}
+                </span>
+                <span className="flex-1">{it.label}</span>
+                <span aria-hidden="true" className="text-[var(--faint)]">
+                  {expanded ? '▾' : '▸'}
+                </span>
+              </button>
+              {expanded && renderSheetItems(it.children, depth + 1)}
+            </div>
+          );
+        }
+        return renderLeaf(it, key, runM(it.action), true);
+      })}
+    </div>
+  );
+
+  const mobileSheet = mOpen && (
+    <div
+      className="fixed inset-0 z-[70] md:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('menu.main')}
+    >
+      <div
+        className="absolute inset-0 bg-black/40"
+        aria-hidden="true"
+        onClick={() => setMOpen(false)}
+      />
+      <div
+        className="absolute left-2 right-2 rounded-2xl border border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] shadow-2xl flex flex-col"
+        style={{ bottom: 'calc(8px + env(safe-area-inset-bottom))', maxHeight: '75dvh' }}
+      >
+        <div className="flex items-center gap-2 px-4 pt-3 pb-1 shrink-0">
+          <span className="flex-1 text-[15px] font-semibold">{t('menu.main')}</span>
+          <button
+            type="button"
+            className="nya-tbtn w-10 h-10"
+            onClick={() => setMOpen(false)}
+            aria-label={t('ui.close')}
+          >
+            <IX />
+          </button>
+        </div>
+        <div className="overflow-y-auto px-2 pb-3">
+          {menus.map((m) => (
+            <div key={m.id}>
+              <div className="menu-head">{m.label}</div>
+              {renderSheetItems(m.items, 0)}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  useEffect(() => {
+    if (!mOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMOpen(false);
+        setSubOpen(null);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [mOpen]);
+
   return (
     <div
       ref={barRef}
@@ -772,6 +871,17 @@ export default function MenuBar({
     >
       {/* меню слева, частые действия — справа */}
       <div className="flex items-center min-w-0 shrink-0">
+        {/* гамбургер: на телефоне текстовые меню скрыты — всё дублируется в шит */}
+        <button
+          type="button"
+          className="nya-tbtn nya-tbtn-big md:hidden"
+          onClick={() => setMOpen(true)}
+          aria-label={t('menu.main')}
+          aria-expanded={mOpen}
+          aria-haspopup="dialog"
+        >
+          <IMenu />
+        </button>
         {menus.map((m) => (
           <div key={m.id} className="relative hidden md:block">
             <button
@@ -927,6 +1037,7 @@ export default function MenuBar({
           {THEMES.find((x) => x.id === theme)?.kind === 'light' ? <IMoon /> : <ISun />}
         </button>
       </div>
+      {mobileSheet}
     </div>
   );
 }

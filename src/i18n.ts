@@ -289,6 +289,7 @@ const ru = {
   'ui.delete': 'Удалить (Del)',
   'ui.resizeW': 'Потянуть — ширина блока',
   'ui.editHint': 'Клик — редактировать • Shift+клик — в выделение',
+  'ui.close': 'Закрыть',
 
   'job.cancel': 'Отменить пересчёт',
   'job.timeout': 'Пересчёт превысил {s} c — воркер перезапущен, показаны прошлые результаты',
@@ -803,6 +804,7 @@ const en: Record<StrKey, string> = {
   'ui.delete': 'Delete (Del)',
   'ui.resizeW': 'Drag — block width',
   'ui.editHint': 'Click — edit • Shift+click — add to selection',
+  'ui.close': 'Close',
 
   'job.cancel': 'Cancel recalculation',
   'job.timeout': 'Recalculation exceeded {s}s — worker restarted, showing previous results',
