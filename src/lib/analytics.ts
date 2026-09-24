@@ -103,12 +103,38 @@ function newSid(): string {
 }
 
 /**
+ * Debug-режим для проверки в браузере: `?nya_debug=1` в URL или
+ * `localStorage.nya_debug = '1'`. Трекер пишет в консоль, что решил
+ * (скип с причиной / отправка / ответ сервера), в проде по умолчанию тихо.
+ */
+function isDebug(): boolean {
+  try {
+    if (typeof window === 'undefined') return false;
+    if (window.location.search.includes('nya_debug=1')) return true;
+    return localStorage.getItem('nya_debug') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function mark(status: string, debug: boolean, ...args: unknown[]): void {
+  try {
+    (window as unknown as { __nyaHit?: string }).__nyaHit = status;
+  } catch {
+    // ignore
+  }
+  if (debug) console.info('[nya-analytics]', status, ...args);
+}
+
+/**
  * Отправить один хит за сессию вкладки. Молча игнорирует localhost,
  * file://, DNT=1 и повторные вызовы. Не тормозит старт: шлёт после load.
  */
 export function trackVisitOnce(): void {
+  let debug = false;
   try {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    debug = isDebug();
     const { hostname, href } = window.location;
     if (
       hostname === '' ||
@@ -118,10 +144,17 @@ export function trackVisitOnce(): void {
       hostname.endsWith('.local') ||
       window.location.protocol === 'file:'
     ) {
-      return; // dev/локальные файлы — не спамим в Telegram
+      mark('skipped:local-host', debug, hostname); // dev/локальные файлы — не спамим в Telegram
+      return;
     }
-    if (window.navigator?.doNotTrack === '1') return; // уважаем DNT
-    if (sessionStorage.getItem(SENT_KEY)) return;
+    if (window.navigator?.doNotTrack === '1') {
+      mark('skipped:dnt', debug); // уважаем DNT
+      return;
+    }
+    if (sessionStorage.getItem(SENT_KEY)) {
+      mark('skipped:already-sent-this-tab', debug);
+      return;
+    }
     sessionStorage.setItem(SENT_KEY, '1');
 
     let sid = sessionStorage.getItem(SID_KEY);
@@ -167,18 +200,26 @@ export function trackVisitOnce(): void {
     const body = JSON.stringify(payload);
 
     const send = (): void => {
+      mark('sending', debug, payload);
       try {
         if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
           const blob = new Blob([body], { type: 'application/json' });
-          if (navigator.sendBeacon(ENDPOINT, blob)) return;
+          if (navigator.sendBeacon(ENDPOINT, blob)) {
+            mark('sent:beacon', debug);
+            return;
+          }
+          mark('beacon-rejected:fetch-fallback', debug);
         }
         void fetch(ENDPOINT, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body,
           keepalive: true,
-        }).catch(() => undefined);
-      } catch {
+        })
+          .then((r) => mark(`sent:fetch-${r.status}`, debug))
+          .catch((e) => mark('failed:fetch', debug, String(e)));
+      } catch (e) {
+        mark('failed:exception', debug, String(e));
         // аналитика никогда не должна ронять приложение
       }
     };
