@@ -18,6 +18,7 @@ import {
   readTemplateFromUrl,
 } from './lib/share';
 import { t } from './i18n';
+import { trackVisitOnce } from './lib/analytics';
 
 export default function App() {
   const theme = useCanvasStore((s) => s.theme);
@@ -54,6 +55,12 @@ export default function App() {
   const leftDetached = detachedVisible.filter((id) => sideOf(id) === 'left');
   const rightDetached = detachedVisible.filter((id) => sideOf(id) === 'right');
   const floatDetached = detachedVisible.filter((id) => sideOf(id) === 'float');
+
+  // Визит: один beacon на сессию в /api/hit (без секретов в клиенте).
+  // Секреты Telegram живут только в env серверной функции.
+  useEffect(() => {
+    trackVisitOnce();
+  }, []);
 
   // Смена темы без «смазывания»: глушим транзишены на один кадр
   useEffect(() => {
