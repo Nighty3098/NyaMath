@@ -60,6 +60,7 @@ import {
   ISun,
   IMoon,
   IMenu,
+  ISidebar,
   ICopy,
   ISignal,
   IDemo,
@@ -158,6 +159,10 @@ export default function MenuBar({
   const toggleConstPalette = useCanvasStore((s) => s.toggleConstPalette);
   const elemPaletteOpen = useCanvasStore((s) => s.elemPaletteOpen);
   const toggleElemPalette = useCanvasStore((s) => s.toggleElemPalette);
+  const toggleSidebar = useCanvasStore((s) => s.toggleSidebar);
+  // Сайдпанель видна, пока включён хоть один источник (как в UnifiedPalette)
+  const sidebarOpen =
+    paletteOpen || formulaPaletteOpen || constPaletteOpen || elemPaletteOpen || scopeMonOpen;
   const liveConnected = useCanvasStore((s) => s.liveConnected);
   const liveError = useCanvasStore((s) => s.liveError);
   const theme = useCanvasStore((s) => s.theme);
@@ -985,33 +990,13 @@ export default function MenuBar({
         <span className="w-px h-5 bg-[var(--chrome-line)] mx-1" aria-hidden="true" />
         <button
           type="button"
-          className={`nya-tbtn nya-tbtn-big ${paletteOpen ? 'is-on' : ''}`}
-          onClick={togglePalette}
-          title={t('menu.palette')}
-          aria-label={t('menu.palette')}
-          aria-pressed={paletteOpen}
+          className={`nya-tbtn nya-tbtn-big ${sidebarOpen ? 'is-on' : ''}`}
+          onClick={toggleSidebar}
+          title={t('menu.sidebar')}
+          aria-label={t('menu.sidebar')}
+          aria-pressed={sidebarOpen}
         >
-          <IFx />
-        </button>
-        <button
-          type="button"
-          className={`nya-tbtn nya-tbtn-big ${formulaPaletteOpen ? 'is-on' : ''}`}
-          onClick={toggleFormulaPalette}
-          title={t('menu.formulaPalette')}
-          aria-label={t('menu.formulaPalette')}
-          aria-pressed={formulaPaletteOpen}
-        >
-          <IFormula />
-        </button>
-        <button
-          type="button"
-          className={`nya-tbtn nya-tbtn-big ${constPaletteOpen ? 'is-on' : ''}`}
-          onClick={toggleConstPalette}
-          title={t('menu.constPalette')}
-          aria-label={t('menu.constPalette')}
-          aria-pressed={constPaletteOpen}
-        >
-          <IConst />
+          <ISidebar />
         </button>
         <button
           type="button"

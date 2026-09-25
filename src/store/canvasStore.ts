@@ -104,6 +104,8 @@ export interface CanvasState {
   elemPaletteOpen: boolean;
   setElemPaletteOpen: (v: boolean) => void;
   toggleElemPalette: () => void;
+  /** Сайдпанель целиком: вкл — функции+формулы+константы, выкл — всё сразу. */
+  toggleSidebar: () => void;
   /** Единое окно палитр: активная вкладка + геометрия окна.
    *  Флаги paletteOpen/formulaPaletteOpen/constPaletteOpen/elemPaletteOpen/scopeMonOpen —
    *  какие вкладки включены; окно видно, пока включён хоть один источник. */
@@ -872,6 +874,38 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     saveElemOpen(open);
     saveUnifiedUi();
     if (!open) saveDetachedTabs();
+  },
+  toggleSidebar: () => {
+    // сайдпанель видна, пока включён хоть один источник (см. isUnifiedPaletteOpen)
+    if (isUnifiedPaletteOpen(get())) {
+      set({
+        paletteOpen: false,
+        formulaPaletteOpen: false,
+        constPaletteOpen: false,
+        elemPaletteOpen: false,
+        scopeMonOpen: false,
+        detachedTabs: [],
+      });
+      savePaletteUi();
+      savePaletteUi('formulas');
+      savePaletteUi('constants');
+      saveElemOpen(false);
+      saveUnifiedUi();
+      saveDetachedTabs();
+      return;
+    }
+    const tab = get().paletteTab;
+    set({
+      paletteOpen: true,
+      formulaPaletteOpen: true,
+      constPaletteOpen: true,
+      paletteTab:
+        tab === 'functions' || tab === 'formulas' || tab === 'constants' ? tab : 'functions',
+    });
+    savePaletteUi();
+    savePaletteUi('formulas');
+    savePaletteUi('constants');
+    saveUnifiedUi();
   },
   paletteTab: initialUnifiedUi.tab,
   setPaletteTab: (t) => {

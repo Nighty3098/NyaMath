@@ -120,5 +120,7 @@ export const IChip = () => <Fa icon={faMicrochip} />;
 export const ITune = () => <Fa icon={faSliders} />;
 /** ЭМ поля: атом */
 export const IField = () => <Fa icon={faAtom} />;
+/** Сайдпанель (единое окно палитр): двухколоночный layout */
+export const ISidebar = () => <Fa icon={faTableColumns} />;
 /** Физические константы: бесконечность (константа как вечная величина) */
 export const IConst = () => <Fa icon={faInfinity} />;
