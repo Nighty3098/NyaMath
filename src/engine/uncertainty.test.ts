@@ -97,6 +97,11 @@ describe('МИ 1317-2004: значащие цифры', () => {
     expect(num('miRes(2.5, 4)')).toBeCloseTo(3, 12); // результат: тоже вверх
     expect(num('miRes(3.5, 4)')).toBeCloseTo(4, 12);
   });
+  it('roundSig — настоящее значение ниже половины не превращается в tie', () => {
+    // канонический round-trip: соседний double ниже 0.235 — это 0.23, не ничья
+    expect(num('roundSig(0.23499999999999996, 2)')).toBeCloseTo(0.23, 12);
+    expect(num('roundSig(0.23500000000000001, 2)')).toBeCloseTo(0.24, 12);
+  });
   it('roundSig держит до 15 значащих цифр (предел double)', () => {
     expect(num('roundSig(1.23456789012345, 15)')).toBeCloseTo(1.23456789012345, 12);
     expect(num('roundSig(1.23456789012345, 12)')).toBeCloseTo(1.23456789012, 12);
@@ -138,20 +143,100 @@ describe('МИ 1317-2004: значащие цифры', () => {
     // учебный пример: 123,4567 ± 0,1 → 123,5 ± 0,1
     expect(num('resRound(123.4567, 0.1, 1, 0)')).toBeCloseTo(123.5, 12);
   });
+  it('допуски — единицы ULP, реальные значения не трогаем', () => {
+    // 1e-11 ниже ничьей — настоящее значение, округлить вниз
+    expect(num('roundSig(23.49999999999, 2)')).toBeCloseTo(23, 12);
+    // 5e-13 выше целого — настоящее значение, ceil обязан дать 2
+    expect(num('ceilSig(0.10000000000005, 1)')).toBeCloseTo(0.2, 12);
+    // классификация первой цифры не ломается около границы 2/3:
+    // 0.29999… → первая цифра 2 → две цифры (значение 0.3 = 0.30,
+    // разряд сотых — его проверяет miRes ниже: 1.23, а не 1.2)
+    expect(num('mi1317(0.2999999999999)')).toBeCloseTo(0.3, 12);
+    expect(num('miRes(1.234, 0.2999999999999)')).toBeCloseTo(1.23, 12);
+    expect(num('miRes(1.234, 0.3)')).toBeCloseTo(1.2, 12);
+  });
+  it('границы: степени 10, переходы, знаки, большие значения', () => {
+    // переходы первой цифры и степеней десятки (ceil до 2 цифр)
+    expect(num('mi1317(1.99)')).toBeCloseTo(2.0, 12); // 19.9 → 20
+    expect(num('mi1317(2.0)')).toBeCloseTo(2.0, 12);
+    expect(num('mi1317(2.01)')).toBeCloseTo(2.1, 12); // 20.1 → 21
+    expect(num('mi1317(9.99)')).toBeCloseTo(10, 12); // 1 цифра: 9.99 → 10
+    expect(num('mi1317(10.0)')).toBeCloseTo(10, 12);
+    expect(num('mi1317(0.1)')).toBeCloseTo(0.1, 12);
+    expect(num('mi1317(100)')).toBeCloseTo(100, 12);
+    // знак: симметрично от нуля (ceilSig — вверх по модулю, т.е. от нуля)
+    expect(num('roundSig(-2.5, 1)')).toBeCloseTo(-3, 12);
+    expect(num('ceilSig(-0.73, 1)')).toBeCloseTo(-0.8, 12);
+    expect(num('ceilSig(-0.73498, 1)')).toBeCloseTo(-0.8, 12);
+    // большой результат при маленькой погрешности: разряд сотых сохраняется
+    // (п.1.3; раньше toPrecision(15) срезал .3 — ловится только точным сравнением)
+    expect(num('miRes(123456789012345.3, 0.1)')).toBe(123456789012345.3);
+    expect(num('miRes(123456789012345.38, 0.1)')).toBe(123456789012345.38);
+    expect(num('miRes(-123456789012345.3, 0.1)')).toBe(-123456789012345.3);
+  });
+  it('ceilSig на больших числах не глотает настоящий хвост', () => {
+    // q ≈ 1e14: хвост 0.0125 шага — настоящий (>1 ULP), обязан тянуть вверх
+    expect(num('ceilSig(1000000000000000.125, 15)')).toBe(1000000000000010);
+    expect(num('roundSig(1000000000000000.125, 15)')).toBe(1000000000000000);
+    expect(num('miRes(123456789012345.35, 0.1)')).toBe(123456789012345.35);
+  });
+  it('субнормальные не дают NaN', () => {
+    expect(num('roundSig(5e-324, 1)')).toBe(5e-324);
+    expect(num('ceilSig(5e-324, 1)')).toBe(5e-324);
+    expect(num('roundSig(5e-324, 15)')).toBe(5e-324);
+    expect(num('mi1317(5e-324)')).toBe(5e-324);
+    expect(num('miRes(5e-324, 5e-324)')).toBe(5e-324);
+    expect(num('roundSig(1e-308, 3)')).toBeCloseTo(1e-308, 320);
+  });
+  it('ULP — верхняя граница Number (точный ULP вместо log2)', () => {
+    // Math.log2(MAX_VALUE) даёт 1024 вместо 1023: ulpOf через log2
+    // становился Infinity, и ceilSig неверно возвращал 1.7e308
+    expect(num('ceilSig(1.7976931348623157e308, 2)')).toBe(Infinity);
+    expect(num('roundSig(1.7976931348623157e308, 2)')).toBe(Infinity);
+    // округление до 2 значащих цифр: 1.71e308 → 1.8e308 — непредставимо
+    expect(num('ceilSig(1.71e308, 2)')).toBe(Infinity);
+    // а 1.7e308 уже имеет две значащие цифры и сохраняется
+    expect(num('ceilSig(1.7e308, 2)')).toBe(1.7e308);
+  });
+  it('miRes — десятичный разряд на малых степенях 10 (sigPlace без log10)', () => {
+    // Math.log10(1e-312) = -312.0000000000007: floor давал -313 и неверный
+    // разряд (1.23e-312 вместо 1.2e-312 — нарушение п.1.3). Сверка строкой:
+    // точная проверка цифр; отношения/абсолютные допуски здесь бессмысленны
+    // (само основание 1e-312 пылит на 1e-12 относительных — сетка субнормалей).
+    // 1e-323 → '1e-323': истинное 1.2e-323 непредставимо, это ближайший double.
+    const str = (expr: string) => String(num(expr));
+    expect(str('miRes(1.234e-312, 1e-312)')).toBe('1.2e-312');
+    expect(str('miRes(1.26e-312, 1e-312)')).toBe('1.3e-312');
+    expect(str('miRes(1.234e-313, 1e-313)')).toBe('1.2e-313');
+    expect(str('miRes(1.234e-314, 1e-314)')).toBe('1.2e-314');
+    expect(str('miRes(1.234e-320, 1e-320)')).toBe('1.2e-320');
+    expect(str('miRes(1.234e-323, 1e-323)')).toBe('1e-323');
+    expect(str('mi1317(1e-312)')).toBe('1e-312');
+    expect(str('mi1317(1e-320)')).toBe('1e-320');
+    expect(str('mi1317(1e-323)')).toBe('1e-323');
+  });
   it('ceilSig — незначащий хвост тянет вверх (0.241 → 0.25)', () => {
     expect(num('ceilSig(0.241, 2)')).toBeCloseTo(0.25, 12);
     expect(num('ceilSig(0.2401, 2)')).toBeCloseTo(0.25, 12);
   });
-  it('mi1317/miRes with explicit n (1/2/3 значащие цифры)', () => {
+  it('mi1317/miRes with explicit n (только 1/2 — строгий МИ)', () => {
+    expect(num('mi1317(0.02341, 2)')).toBeCloseTo(0.024, 12); // вверх, хвост тянет
     expect(num('mi1317(0.067, 2)')).toBeCloseTo(0.067, 12); // матем., уже 2 цифры
     expect(num('mi1317(0.067, 2, 1)')).toBeCloseTo(0.067, 12); // вверх, уже 2 цифры
-    expect(num('mi1317(0.02341, 1)')).toBeCloseTo(0.03, 12); // 1/2 → вверх по умолч.
+    expect(num('mi1317(0.067, 2, 0)')).toBeCloseTo(0.067, 12); // матем. явно
+    // n=1 для стат. оценок — по следующей цифре (абз.3): 2<5 → вниз, 7≥5 → вверх
+    expect(num('mi1317(0.02341, 1)')).toBeCloseTo(0.02, 12);
+    expect(num('mi1317(0.027, 1)')).toBeCloseTo(0.03, 12);
     expect(num('mi1317(0.02341, 1, 0)')).toBeCloseTo(0.02, 12); // матем. явно
-    expect(num('mi1317(0.02341, 3)')).toBeCloseTo(0.0235, 12); // промежуточные
-    expect(num('mi1317(0.0142, 3)')).toBeCloseTo(0.0142, 12);
-    expect(num('miRes(10.0613, 0.02341, 3)')).toBeCloseTo(10.0613, 12);
+    expect(num('mi1317(0.02341, 1, 1)')).toBeCloseTo(0.03, 12); // вверх явно
     expect(num('miRes(10.0613, 0.02341, 1)')).toBeCloseTo(10.06, 12);
     expect(num('miRes(10.067, 0.067, 2)')).toBeCloseTo(10.067, 12);
+    // n ≥ 3 — не МИ 1317 (п.3.4: не более двух): только общие функции
+    expect(num('ceilSig(0.02341, 3)')).toBeCloseTo(0.0235, 12);
+    expect(num('uncRound(0.02341, 3)')).toBeCloseTo(0.0235, 12);
+    expect(evaluateLine('mi1317(0.02341, 3) =', createBaseScope()).error).not.toBeNull();
+    expect(evaluateLine('mi1317(0.0142, 3) =', createBaseScope()).error).not.toBeNull();
+    expect(evaluateLine('miRes(10.0613, 0.02341, 3) =', createBaseScope()).error).not.toBeNull();
     expect(evaluateLine('mi1317(0.1, 0) =', createBaseScope()).error).not.toBeNull();
     expect(evaluateLine('mi1317(0.1, 16) =', createBaseScope()).error).not.toBeNull();
     expect(evaluateLine('miRes(1, -0.1) =', createBaseScope()).error).not.toBeNull();

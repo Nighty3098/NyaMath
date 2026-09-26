@@ -982,122 +982,549 @@ export function buildPackScope(math: MathJsInstance): Scope {
     );
   };
   /**
-   * Значащие цифры (МИ 1317-2004, п.3.4; GUM 7.2.6; СТ СЭВ 543-77, п.2).
-   * roundSig — математически, ничьи .5 — вверх (СТ СЭВ 543-77, п.2.3);
-   * ceilSig — вверх (консервативно, для погрешностей и статистических
-   * оценок: неуказываемый разряд округляют в большую сторону).
+   * Значащие цифры и округление:
+   * - МИ 1317-2004, п.3.4 — характеристики погрешности;
+   * - МИ 1317-2004, п.1.3 — разряд результата относительно погрешности;
+   * - СТ СЭВ 543-77, пп.2.1–2.6 — правила округления;
+   * - GUM 7.2.6 — представление неопределённости.
+   *
+   * Внутри ядра используется каноническое десятичное round-trip
+   * представление JavaScript Number (Number.prototype.toString()).
+   *
+   * Это принципиально лучше ULP-поправок:
+   *   0.235                     -> "0.235"                     -> 0.24
+   *   0.23499999999999996       -> "0.23499999999999996"       -> 0.23
+   *
+   * То есть настоящее соседнее число ниже границы не объявляется
+   * искусственно десятичной ничьей.
    */
   const checkSigN = (n: unknown): number => {
     const N = Number(n);
-    if (typeof n === 'boolean' || !Number.isInteger(N) || N < 1 || N > 15)
+
+    if (
+      typeof n === 'boolean' ||
+      !Number.isInteger(N) ||
+      N < 1 ||
+      N > 15
+    ) {
       throw new Error(t('e.calcArgs'));
+    }
+
     return N;
   };
+
   const needUpFlag = (v: unknown): boolean => {
     if (typeof v === 'boolean') return v;
+
     const n = Number(v);
-    if (!isFinite(n)) throw new Error(t('e.calcArgs'));
+
+    if (!Number.isFinite(n)) {
+      throw new Error(t('e.calcArgs'));
+    }
+
     return n !== 0;
   };
+
   /**
-   * СТ СЭВ 543-77, п.2.3: первая отбрасываемая = 5 → последняя сохраняемая +1
-   * (2.5→3, 22.5→23, 0.145→0.15). Допуск tieEps снизу от .5 на шум double
-   * (0.235/0.01 = 23.499999999999996 обязано дать 24); сверху допуска нет —
-   * там обычное «больше .5 → вверх». Относительный, с потолком 1e-9.
+   * МИ 1317-2004, п.3.4:
+   * характеристики погрешности выражаются не более чем
+   * двумя значащими цифрами.
    */
-  const roundHalfUp = (q: number): number => {
-    const f = Math.floor(q);
-    const d = q - f;
-    const e = Math.min(1e-9, 1e-12 * Math.max(1, Math.abs(q)));
-    if (d < 0.5 - e) return f;
-    return f + 1;
+  const checkMiN = (n: unknown): number => {
+    const N = checkSigN(n);
+
+    if (N > 2) {
+      throw new Error(t('e.calcArgs'));
+    }
+
+    return N;
   };
   /**
-   * Притянуть q к целому, если в пределах шума double (например, 27.000000000000004
-   * или 26.999999999999996 → 27). Допуск относительный: настоящее отличие от
-   * целого на ≥1e-9 уже не трогаем (см. разбор claim 6).
+   * Разбор положительного конечного Number в каноническое
+   * десятичное представление:
+   *
+   *     x = digits × 10^(exp - digits.length + 1)
+   *
+   * Например:
+   *
+   *   123.45  -> { digits: "12345", exp: 2 }
+   *   0.00123 -> { digits: "123",   exp: -3 }
+   *   1e-312  -> { digits: "1",     exp: -312 }
+   *   1e+21   -> { digits: "1",     exp: 21 }
+   *
+   * Используется Number.toString(), а не toExponential(16):
+   * это исключает искусственный "хвост" двоичного представления.
    */
-  const snapInt = (q: number): number => {
-    const qi = Math.round(q);
-    const e = Math.min(1e-9, 1e-12 * Math.max(1, Math.abs(q)));
-    return Math.abs(q - qi) <= e ? qi : q;
+  const decSplit = (
+    ax: number,
+  ): { digits: string; exp: number } => {
+    if (!(ax > 0) || !Number.isFinite(ax)) {
+      throw new Error(t('e.calcArgs'));
+    }
+
+    const raw = ax.toString();
+
+    // Экспоненциальная форма: 1.234e-312, 1e+21 и т.п.
+    const expMatch = raw.match(
+      /^(\d)(?:\.(\d+))?[eE]([+-]?\d+)$/,
+    );
+
+    if (expMatch) {
+      return {
+        digits: expMatch[1] + (expMatch[2] ?? ''),
+        exp: Number(expMatch[3]),
+      };
+    }
+
+    // Обычная десятичная форма.
+    const dot = raw.indexOf('.');
+
+    const intPart = dot >= 0
+      ? raw.slice(0, dot)
+      : raw;
+
+    const fracPart = dot >= 0
+      ? raw.slice(dot + 1)
+      : '';
+
+    // Число >= 1.
+    if (intPart !== '0') {
+      return {
+        digits: intPart + fracPart,
+        exp: intPart.length - 1,
+      };
+    }
+
+    // Число от 0 до 1.
+    const firstNonZero = fracPart.search(/[^0]/);
+
+    if (firstNonZero < 0) {
+      return {
+        digits: '0',
+        exp: 0,
+      };
+    }
+
+    return {
+      digits: fracPart.slice(firstNonZero),
+      exp: -(firstNonZero + 1),
+    };
   };
-  /** Математическое округление до n значащих цифр (скаляр, любое конечное). */
-  const roundSigScalar = (x: number, n: number): number => {
-    if (x === 0) return 0;
+  /**
+   * Увеличить десятичную строку на единицу.
+   *
+   * "123" -> "124"
+   * "129" -> "130"
+   * "999" -> "1000", carry=true
+   */
+  const incDecStr = (
+    s: string,
+  ): { t: string; carry: boolean } => {
+    const a = s.split('');
+
+    let i = a.length - 1;
+
+    while (i >= 0 && a[i] === '9') {
+      a[i] = '0';
+      i--;
+    }
+
+    if (i < 0) {
+      return {
+        t: `1${'0'.repeat(a.length - 1)}`,
+        carry: true,
+      };
+    }
+
+    a[i] = String(Number(a[i]) + 1);
+
+    return {
+      t: a.join(''),
+      carry: false,
+    };
+  };
+
+  /**
+   * Получить Number из десятичной мантиссы и экспоненты.
+   *
+   * Примеры:
+   *   decimalNumber("123", -1) -> 12.3
+   *   decimalNumber("12",  2) -> 1200
+   *
+   * Если результат физически не представим в Number,
+   * JavaScript корректно вернёт Infinity или 0.
+   */
+  const decimalNumber = (
+    digits: string,
+    exp: number,
+  ): number => Number(`${digits}e${exp}`);
+  /**
+   * Математическое округление до n значащих цифр.
+   *
+   * СТ СЭВ 543-77:
+   *   < 5 -> сохраняем цифру;
+   *   = 5 -> увеличиваем;
+   *   > 5 -> увеличиваем.
+   *
+   * Никакого каскадного округления нет:
+   * решение принимается непосредственно по первому
+   * отбрасываемому десятичному разряду.
+   */
+  const roundSigScalar = (
+    x: number,
+    n: number,
+  ): number => {
+    if (x === 0) {
+      return 0;
+    }
+
     const s = Math.sign(x);
     const ax = Math.abs(x);
-    const e = Math.floor(Math.log10(ax));
-    const scale = 10 ** (e - n + 1);
-    // toPrecision(15): чистка шума double, НЕ срез цифр (n ≤ 15 — предел double)
-    return s * Number((roundHalfUp(ax / scale) * scale).toPrecision(15));
+
+    const { digits, exp } = decSplit(ax);
+
+    // В каноническом представлении уже нет информации
+    // после n-го разряда.
+    if (n >= digits.length) {
+      return x;
+    }
+
+    const kept = digits.slice(0, n);
+    const rest = digits.slice(n);
+
+    // Остаток состоит только из нулей:
+    // число уже точно попадает в нужный разряд.
+    if (!/[^0]/.test(rest)) {
+      return x;
+    }
+
+    // Первая отбрасываемая цифра.
+    const firstDropped = rest[0];
+
+    // < 5 — вниз.
+    if (firstDropped < '5') {
+      return s * decimalNumber(
+        kept,
+        exp - n + 1,
+      );
+    }
+
+    // = 5 или > 5 — вверх.
+    const { t, carry } = incDecStr(kept);
+
+    return s * decimalNumber(
+      t,
+      carry
+        ? exp - n + 2
+        : exp - n + 1,
+    );
   };
-  /** Округление ВВЕРХ по модулю до n значащих цифр (скаляр, любое конечное). */
-  const ceilSigScalar = (x: number, n: number): number => {
-    if (x === 0) return 0;
+  /**
+   * Округление ВВЕРХ ПО МОДУЛЮ до n значащих цифр.
+   *
+   * Важно:
+   *   ceilSig(-0.73, 1) = -0.8
+   *
+   * Это намеренно не обычный Math.ceil(),
+   * а округление консервативно ОТ НУЛЯ по модулю.
+   */
+  const ceilSigScalar = (
+    x: number,
+    n: number,
+  ): number => {
+    if (x === 0) {
+      return 0;
+    }
+
     const s = Math.sign(x);
     const ax = Math.abs(x);
-    const e = Math.floor(Math.log10(ax));
-    const scale = 10 ** (e - n + 1);
-    return s * Number((Math.ceil(snapInt(ax / scale)) * scale).toPrecision(15));
+
+    const { digits, exp } = decSplit(ax);
+
+    // У числа нет неизвестных разрядов после n-й цифры.
+    if (n >= digits.length) {
+      return x;
+    }
+
+    const kept = digits.slice(0, n);
+    const rest = digits.slice(n);
+
+    // Хвост состоит только из нулей:
+    // число уже кратно требуемому десятичному шагу.
+    if (!/[^0]/.test(rest)) {
+      return x;
+    }
+
+    // Есть хотя бы одна ненулевая отбрасываемая цифра:
+    // всегда увеличиваем по модулю.
+    const { t, carry } = incDecStr(kept);
+
+    return s * decimalNumber(
+      t,
+      carry
+        ? exp - n + 2
+        : exp - n + 1,
+    );
   };
-  /** Первая значащая цифра |d| (1..9). */
-  const firstSigDigit = (d: number): number => {
+  /**
+   * Первая значащая цифра |d| (1..9).
+   *
+   * Благодаря Number.toString():
+   *   0.3 -> "0.3" -> 3
+   *
+   * Поэтому не требуется искусственный ULP-корректор
+   * для границ вроде 0.3.
+   */
+  const firstSigDigit = (
+    d: number,
+  ): number => {
     const ax = Math.abs(d);
-    const f = ax / 10 ** Math.floor(Math.log10(ax));
-    return Math.min(9, Math.max(1, Math.floor(snapInt(f))));
+
+    const { digits } = decSplit(ax);
+
+    return Number(digits[0]);
   };
   /**
-   * Выбор округления погрешности (скаляр, d > 0). Сам п.3.4 МИ 1317-2004 требует
-   * лишь не более двух значащих цифр + вверх для статистических оценок; правило
-   * «первая цифра 1/2 → две цифры, 3+ → одна» — сложившееся практическое правило
-   * из учебников по МИ 1317 (оно же ограничивает ошибку округления разумными
-   * 5–50%). n=null — это практ. правило (1/2 → 2 вверх, иначе 1 матем.);
-   * n задан — ровно n цифр, направление up=null — как авто (1/2 → вверх).
+   * Выбор представления погрешности.
+   *
+   * МИ 1317-2004, п.3.4:
+   * - не более двух значащих цифр;
+   * - при двух цифрах статистическую оценку округляем вверх;
+   * - при одной цифре для статистической оценки:
+   *     следующая цифра >= 5 -> вверх,
+   *     следующая цифра < 5  -> вниз.
+   *
+   * Автоматический выбор:
+   *   первая значащая цифра 1/2 -> 2 цифры;
+   *   3...9                     -> 1 цифра.
+   *
+   * Последнее правило — практическая конвенция,
+   * а не буквальная формулировка п.3.4.
    */
   const miRoundScalar = (
     d: number,
     n: number | null,
     up: boolean | null,
   ): { rd: number; nn: number } => {
-    if (!(d > 0)) throw new Error(t('e.calcArgs'));
-    const autoUp = firstSigDigit(d) <= 2;
-    const nn = n ?? (autoUp ? 2 : 1);
-    const uu = up ?? autoUp;
-    return { rd: uu ? ceilSigScalar(d, nn) : roundSigScalar(d, nn), nn };
-  };
-  /** Декада младшей kept-значащей цифры округлённой погрешности ru. */
-  const sigPlace = (ru: number, n: number): number => Math.floor(Math.log10(ru)) - n + 1;
-  /** Округлить результат до декады place (МИ 1317-2004, п.1.3; СТ СЭВ 543-77, п.2). */
-  const roundToPlace = (y: number, place: number): number => {
-    if (y === 0) return 0;
-    const s = Math.sign(y);
-    const q = Math.abs(y) / 10 ** place;
-    return s * Number((roundHalfUp(q) * 10 ** place).toPrecision(15));
-  };
-  /** Поэлементно: скаляр → число, матрица/массив → матрица той же формы. */
+    if (!(d > 0) || !Number.isFinite(d)) {
+      throw new Error(t('e.calcArgs'));
+    }
 
-  const mapSig = (v: unknown, fn: (x: number) => number): unknown => {
-    if (v !== null && typeof v === 'object' && 'toArray' in (v as object)) {
-      const arr = (v as { toArray: () => unknown }).toArray() as unknown;
+    const autoTwoDigits =
+      firstSigDigit(d) <= 2;
+
+    const nn =
+      n ?? (autoTwoDigits ? 2 : 1);
+
+    // По умолчанию:
+    // 2 цифры -> вверх;
+    // 1 цифра -> обычное математическое округление.
+    const uu =
+      up ?? (nn === 2);
+
+    const rd = uu
+      ? ceilSigScalar(d, nn)
+      : roundSigScalar(d, nn);
+
+    return {
+      rd,
+      nn,
+    };
+  };
+  /**
+   * Разряд младшей значащей цифры округлённой погрешности.
+   *
+   * Например:
+   *
+   *   ru=0.024, n=2 -> place=-3
+   *   ru=0.07,  n=1 -> place=-2
+   *   ru=10,    n=1 -> place=1
+   *
+   * В отличие от Math.log10() здесь нет ошибки вида:
+   *   log10(1e-312) = -312.0000000000007
+   */
+  const sigPlace = (
+    ru: number,
+    n: number,
+  ): number => {
+    const { exp } = decSplit(Math.abs(ru));
+
+    return exp - n + 1;
+  };
+  /**
+   * Округление результата до десятичного разряда place.
+   *
+   * Это непосредственное десятичное округление:
+   *
+   *   place = -3 -> до 0.001
+   *   place = -1 -> до 0.1
+   *   place =  0 -> до 1
+   *   place =  2 -> до 100
+   *
+   * Используется для МИ 1317-2004, п.1.3.
+   *
+   * Важно:
+   * здесь НЕТ toPrecision(),
+   * НЕТ ULP-допусков,
+   * НЕТ log10/pow/div.
+   */
+  const roundToPlace = (
+    y: number,
+    place: number,
+  ): number => {
+    if (y === 0) {
+      return 0;
+    }
+
+    const s = Math.sign(y);
+    const ay = Math.abs(y);
+
+    const {
+      digits,
+      exp,
+    } = decSplit(ay);
+
+    /**
+     * k — сколько значащих десятичных цифр остаётся
+     * после округления до place.
+     *
+     * k = exp - place + 1
+     */
+    const k = exp - place + 1;
+
+    /**
+     * Число меньше половины шага.
+     *
+     * При k <= 0:
+     *   exp <= place - 1
+     *
+     * Поэтому:
+     *
+     *   exp < place-1 -> y < 0.5*step -> 0
+     *   exp = place-1 -> сравниваем первую цифру с 5
+     */
+    if (k <= 0) {
+      if (exp < place - 1) {
+        return 0;
+      }
+
+      const step = decimalNumber('1', place);
+
+      return digits[0] >= '5'
+        ? s * step
+        : 0;
+    }
+
+    /**
+     * Требуемый разряд мельче имеющихся
+     * десятичных данных Number.
+     *
+     * Дополнительных десятичных цифр у Number.toString()
+     * нет, поэтому изменение результата невозможно
+     * на основании доступного числа.
+     */
+    if (k >= digits.length) {
+      return y;
+    }
+
+    const kept = digits.slice(0, k);
+    const rest = digits.slice(k);
+
+    /**
+     * Уже кратно требуемому разряду.
+     */
+    if (!/[^0]/.test(rest)) {
+      return y;
+    }
+
+    /**
+     * Меньше 5 -> вниз.
+     */
+    if (rest[0] < '5') {
+      return s * decimalNumber(
+        kept,
+        place,
+      );
+    }
+
+    /**
+     * Равно 5 или больше -> вверх.
+     */
+    const { t, carry } = incDecStr(kept);
+
+    return s * decimalNumber(
+      t,
+      carry
+        ? place + 1
+        : place,
+    );
+  };
+  /**
+   * Поэлементная обработка:
+   * scalar -> scalar
+   * array/matrix -> matrix той же формы
+   */
+
+  const mapSig = (
+    v: unknown,
+    fn: (x: number) => number,
+  ): unknown => {
+    if (
+      v !== null &&
+      typeof v === 'object' &&
+      'toArray' in (v as object)
+    ) {
+      const arr = (
+        v as { toArray: () => unknown }
+      ).toArray();
+
       const rec = (z: unknown): unknown => {
-        if (Array.isArray(z)) return z.map(rec);
+        if (Array.isArray(z)) {
+          return z.map(rec);
+        }
+
         const n = Number(z);
-        if (typeof z === 'boolean' || !isFinite(n)) throw new Error(t('e.calcArgs'));
+
+        if (
+          typeof z === 'boolean' ||
+          !Number.isFinite(n)
+        ) {
+          throw new Error(t('e.calcArgs'));
+        }
+
         return fn(n);
       };
+
       return math.matrix(rec(arr) as never);
     }
+
     if (Array.isArray(v)) {
       const rec = (z: unknown): unknown => {
-        if (Array.isArray(z)) return z.map(rec);
+        if (Array.isArray(z)) {
+          return z.map(rec);
+        }
+
         const n = Number(z);
-        if (typeof z === 'boolean' || !isFinite(n)) throw new Error(t('e.calcArgs'));
+
+        if (
+          typeof z === 'boolean' ||
+          !Number.isFinite(n)
+        ) {
+          throw new Error(t('e.calcArgs'));
+        }
+
         return fn(n);
       };
+
       return math.matrix(rec(v) as never);
     }
+
     const n = needNum(v);
+
+    if (!Number.isFinite(n)) {
+      throw new Error(t('e.calcArgs'));
+    }
+
     return fn(n);
   };
   /**
@@ -2613,52 +3040,204 @@ export function buildPackScope(math: MathJsInstance): Scope {
       if (!(U >= 0) || !(K > 0)) throw new Error(t('e.calcArgs'));
       return U * K; // GUM (18): U = k·u_c
     },
-    uncRound: (u: unknown, n?: unknown, up?: unknown) => {
-      const N = n === undefined ? 2 : checkSigN(n);
-      const UP = up === undefined ? true : needUpFlag(up);
-      return mapSig(u, (z) => {
-        if (!(z > 0)) throw new Error(t('e.calcArgs'));
-        return UP ? ceilSigScalar(z, N) : roundSigScalar(z, N);
-      });
+    uncRound: (
+      u: unknown,
+      n?: unknown,
+      up?: unknown,
+    ) => {
+      const N =
+        n === undefined
+          ? 2
+          : checkSigN(n);
+
+      const UP =
+        up === undefined
+          ? true
+          : needUpFlag(up);
+
+      return mapSig(
+        u,
+        (z) => {
+          if (!(z > 0)) {
+            throw new Error(t('e.calcArgs'));
+          }
+
+          const r = UP
+            ? ceilSigScalar(z, N)
+            : roundSigScalar(z, N);
+
+          return r;
+        },
+      );
     },
-    resRound: (y: unknown, u: unknown, n?: unknown, up?: unknown) => {
-      const N = n === undefined ? 2 : checkSigN(n);
-      const UP = up === undefined ? true : needUpFlag(up);
+
+    resRound: (
+      y: unknown,
+      u: unknown,
+      n?: unknown,
+      up?: unknown,
+    ) => {
+      const N =
+        n === undefined
+          ? 2
+          : checkSigN(n);
+
+      const UP =
+        up === undefined
+          ? true
+          : needUpFlag(up);
+
       const U = needNum(u);
-      if (!(U > 0)) throw new Error(t('e.calcArgs'));
-      const ru = UP ? ceilSigScalar(U, N) : roundSigScalar(U, N);
-      const place = sigPlace(ru, N); // декада младшей значащей цифры
-      return mapSig(y, (v) => roundToPlace(v, place));
+
+      if (!(U > 0) || !Number.isFinite(U)) {
+        throw new Error(t('e.calcArgs'));
+      }
+
+      const ru = UP
+        ? ceilSigScalar(U, N)
+        : roundSigScalar(U, N);
+
+      // Округление самой погрешности оказалось
+      // за пределами Number.
+      if (!Number.isFinite(ru)) {
+        throw new Error(t('e.calcArgs'));
+      }
+
+      const place = sigPlace(ru, N);
+
+      return mapSig(
+        y,
+        (v) => roundToPlace(v, place),
+      );
     },
+
     // ── МИ 1317-2004: округление погрешности и результата ──
-    // roundSig(x, n) — математически до n зн. цифр, ничьи .5 — вверх
-    // (СТ СЭВ 543-77, п.2.3: п.3.4 МИ — нормы с 1 цифрой, промежуточные — с 3-й);
-    // ceilSig(x, n) — вверх (п.3.4: для статистических оценок
-    // неуказываемый разряд — в большую сторону).
-    roundSig: (x: unknown, n?: unknown) => {
-      const N = n === undefined ? 2 : checkSigN(n);
-      return mapSig(x, (z) => roundSigScalar(z, N));
+
+    /**
+     * Общая математическая функция:
+     * округление до n значащих цифр,
+     * 5 -> вверх.
+     *
+     * n = 1..15.
+     */
+    roundSig: (
+      x: unknown,
+      n?: unknown,
+    ) => {
+      const N =
+        n === undefined
+          ? 2
+          : checkSigN(n);
+
+      return mapSig(
+        x,
+        (z) => roundSigScalar(z, N),
+      );
     },
-    ceilSig: (x: unknown, n?: unknown) => {
-      const N = n === undefined ? 2 : checkSigN(n);
-      return mapSig(x, (z) => ceilSigScalar(z, N));
+
+    /**
+     * Консервативное округление по модулю вверх.
+     *
+     * Для отрицательных:
+     *   ceilSig(-0.73, 1) = -0.8
+     */
+    ceilSig: (
+      x: unknown,
+      n?: unknown,
+    ) => {
+      const N =
+        n === undefined
+          ? 2
+          : checkSigN(n);
+
+      return mapSig(
+        x,
+        (z) => ceilSigScalar(z, N),
+      );
     },
-    // mi1317(d, n?, up?) — п.3.4: без n — авто (1/2 → две цифры вверх,
-    // 3+ → одна матем.); с n — ровно n цифр, направление: up ?? (1/2 → вверх).
-    mi1317: (d: unknown, n?: unknown, up?: unknown) => {
-      const N = n === undefined ? null : checkSigN(n);
-      const UP = up === undefined ? null : needUpFlag(up);
-      return mapSig(d, (z) => miRoundScalar(z, N, UP).rd);
+
+    /**
+     * МИ 1317-2004, п.3.4:
+     * - не более двух значащих цифр;
+     * - n может быть только 1 или 2.
+     *
+     * Без n:
+     *   1/2 -> 2 цифры
+     *   3...9 -> 1 цифра
+     *
+     * Автоматический выбор количества цифр —
+     * практическое правило, а не буквальная формулировка МИ.
+     *
+     * Направление:
+     *   n=2 -> вверх;
+     *   n=1 -> математически;
+     *   явный up перекрывает.
+     */
+    mi1317: (
+      d: unknown,
+      n?: unknown,
+      up?: unknown,
+    ) => {
+      const N =
+        n === undefined
+          ? null
+          : checkMiN(n);
+
+      const UP =
+        up === undefined
+          ? null
+          : needUpFlag(up);
+
+      return mapSig(
+        d,
+        (z) => miRoundScalar(z, N, UP).rd,
+      );
     },
-    // miRes(x, d, n?, up?) — результат до разряда mi1317(d, n, up)
-    // (п.1.3: наименьший разряд результата = наименьшему разряду погрешности).
-    miRes: (x: unknown, d: unknown, n?: unknown, up?: unknown) => {
+
+    /**
+     * МИ 1317-2004, п.1.3:
+     * младший разряд результата
+     * = младшему разряду характеристики погрешности.
+     */
+    miRes: (
+      x: unknown,
+      d: unknown,
+      n?: unknown,
+      up?: unknown,
+    ) => {
       const D = needNum(d);
-      const N = n === undefined ? null : checkSigN(n);
-      const UP = up === undefined ? null : needUpFlag(up);
-      const { rd, nn } = miRoundScalar(D, N, UP);
+
+      if (!(D > 0) || !Number.isFinite(D)) {
+        throw new Error(t('e.calcArgs'));
+      }
+
+      const N =
+        n === undefined
+          ? null
+          : checkMiN(n);
+
+      const UP =
+        up === undefined
+          ? null
+          : needUpFlag(up);
+
+      const {
+        rd,
+        nn,
+      } = miRoundScalar(D, N, UP);
+
+      // Например MAX_VALUE при консервативном
+      // округлении может перейти в Infinity.
+      if (!Number.isFinite(rd)) {
+        throw new Error(t('e.calcArgs'));
+      }
+
       const place = sigPlace(rd, nn);
-      return mapSig(x, (v) => roundToPlace(v, place));
+
+      return mapSig(
+        x,
+        (v) => roundToPlace(v, place),
+      );
     },
     // ── Монте-Карло: GUM Supplement 1 (JCGM 101:2008), воспроизводимый seed.
     // uMC("R1*R2/(R1+R2)", [[R1, 100, 1, "rect"], [R2, 50, 0.5, "norm"]], 200000) →
