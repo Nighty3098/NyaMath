@@ -981,18 +981,146 @@ export function buildPackScope(math: MathJsInstance): Scope {
       (79 * z9 + 779 * z7 + 1482 * z5 - 1920 * z3 - 945 * z) / (92160 * n4)
     );
   };
-  /** Округление неопределённости ВВЕРХ до 2 значащих цифр (консервативно, GUM 7.2.6). */
-  const uncUp2 = (U: number): number => {
-    if (!(U > 0)) throw new Error(t('e.calcArgs'));
-    const e = Math.floor(Math.log10(U));
-    const f = U / 10 ** e;
-    let r = Math.ceil(f * 10 - 1e-9) / 10;
-    let ee = e;
-    if (r >= 10) {
-      r = 1;
-      ee += 1;
+  /**
+   * Значащие цифры (МИ 1317-2004, п.3.4; GUM 7.2.6; СТ СЭВ 543-77, п.2).
+   * roundSig — математически, ничьи .5 — вверх (СТ СЭВ 543-77, п.2.3);
+   * ceilSig — вверх (консервативно, для погрешностей и статистических
+   * оценок: неуказываемый разряд округляют в большую сторону).
+   */
+  const checkSigN = (n: unknown): number => {
+    const N = Number(n);
+    if (typeof n === 'boolean' || !Number.isInteger(N) || N < 1 || N > 15)
+      throw new Error(t('e.calcArgs'));
+    return N;
+  };
+  const needUpFlag = (v: unknown): boolean => {
+    if (typeof v === 'boolean') return v;
+    const n = Number(v);
+    if (!isFinite(n)) throw new Error(t('e.calcArgs'));
+    return n !== 0;
+  };
+  /**
+   * СТ СЭВ 543-77, п.2.3: первая отбрасываемая = 5 → последняя сохраняемая +1
+   * (2.5→3, 22.5→23, 0.145→0.15). Допуск tieEps снизу от .5 на шум double
+   * (0.235/0.01 = 23.499999999999996 обязано дать 24); сверху допуска нет —
+   * там обычное «больше .5 → вверх». Относительный, с потолком 1e-9.
+   */
+  const roundHalfUp = (q: number): number => {
+    const f = Math.floor(q);
+    const d = q - f;
+    const e = Math.min(1e-9, 1e-12 * Math.max(1, Math.abs(q)));
+    if (d < 0.5 - e) return f;
+    return f + 1;
+  };
+  /**
+   * Притянуть q к целому, если в пределах шума double (например, 27.000000000000004
+   * или 26.999999999999996 → 27). Допуск относительный: настоящее отличие от
+   * целого на ≥1e-9 уже не трогаем (см. разбор claim 6).
+   */
+  const snapInt = (q: number): number => {
+    const qi = Math.round(q);
+    const e = Math.min(1e-9, 1e-12 * Math.max(1, Math.abs(q)));
+    return Math.abs(q - qi) <= e ? qi : q;
+  };
+  /** Математическое округление до n значащих цифр (скаляр, любое конечное). */
+  const roundSigScalar = (x: number, n: number): number => {
+    if (x === 0) return 0;
+    const s = Math.sign(x);
+    const ax = Math.abs(x);
+    const e = Math.floor(Math.log10(ax));
+    const scale = 10 ** (e - n + 1);
+    // toPrecision(15): чистка шума double, НЕ срез цифр (n ≤ 15 — предел double)
+    return s * Number((roundHalfUp(ax / scale) * scale).toPrecision(15));
+  };
+  /** Округление ВВЕРХ по модулю до n значащих цифр (скаляр, любое конечное). */
+  const ceilSigScalar = (x: number, n: number): number => {
+    if (x === 0) return 0;
+    const s = Math.sign(x);
+    const ax = Math.abs(x);
+    const e = Math.floor(Math.log10(ax));
+    const scale = 10 ** (e - n + 1);
+    return s * Number((Math.ceil(snapInt(ax / scale)) * scale).toPrecision(15));
+  };
+  /** Первая значащая цифра |d| (1..9). */
+  const firstSigDigit = (d: number): number => {
+    const ax = Math.abs(d);
+    const f = ax / 10 ** Math.floor(Math.log10(ax));
+    return Math.min(9, Math.max(1, Math.floor(snapInt(f))));
+  };
+  /**
+   * Выбор округления погрешности (скаляр, d > 0). Сам п.3.4 МИ 1317-2004 требует
+   * лишь не более двух значащих цифр + вверх для статистических оценок; правило
+   * «первая цифра 1/2 → две цифры, 3+ → одна» — сложившееся практическое правило
+   * из учебников по МИ 1317 (оно же ограничивает ошибку округления разумными
+   * 5–50%). n=null — это практ. правило (1/2 → 2 вверх, иначе 1 матем.);
+   * n задан — ровно n цифр, направление up=null — как авто (1/2 → вверх).
+   */
+  const miRoundScalar = (
+    d: number,
+    n: number | null,
+    up: boolean | null,
+  ): { rd: number; nn: number } => {
+    if (!(d > 0)) throw new Error(t('e.calcArgs'));
+    const autoUp = firstSigDigit(d) <= 2;
+    const nn = n ?? (autoUp ? 2 : 1);
+    const uu = up ?? autoUp;
+    return { rd: uu ? ceilSigScalar(d, nn) : roundSigScalar(d, nn), nn };
+  };
+  /** Декада младшей kept-значащей цифры округлённой погрешности ru. */
+  const sigPlace = (ru: number, n: number): number => Math.floor(Math.log10(ru)) - n + 1;
+  /** Округлить результат до декады place (МИ 1317-2004, п.1.3; СТ СЭВ 543-77, п.2). */
+  const roundToPlace = (y: number, place: number): number => {
+    if (y === 0) return 0;
+    const s = Math.sign(y);
+    const q = Math.abs(y) / 10 ** place;
+    return s * Number((roundHalfUp(q) * 10 ** place).toPrecision(15));
+  };
+  /** Поэлементно: скаляр → число, матрица/массив → матрица той же формы. */
+
+  const mapSig = (v: unknown, fn: (x: number) => number): unknown => {
+    if (v !== null && typeof v === 'object' && 'toArray' in (v as object)) {
+      const arr = (v as { toArray: () => unknown }).toArray() as unknown;
+      const rec = (z: unknown): unknown => {
+        if (Array.isArray(z)) return z.map(rec);
+        const n = Number(z);
+        if (typeof z === 'boolean' || !isFinite(n)) throw new Error(t('e.calcArgs'));
+        return fn(n);
+      };
+      return math.matrix(rec(arr) as never);
     }
-    return Number((r * 10 ** ee).toPrecision(12));
+    if (Array.isArray(v)) {
+      const rec = (z: unknown): unknown => {
+        if (Array.isArray(z)) return z.map(rec);
+        const n = Number(z);
+        if (typeof z === 'boolean' || !isFinite(n)) throw new Error(t('e.calcArgs'));
+        return fn(n);
+      };
+      return math.matrix(rec(v) as never);
+    }
+    const n = needNum(v);
+    return fn(n);
+  };
+  /**
+   * Точное G_крит двустороннего критерия Граббса для одного выброса
+   * (Grubbs 1950; NIST/SEMATECH 1.3.5.17):
+   * G = (n−1)/√n·√(t²/(n−2+t²)), t = t_{1−(1−P)/(2n), n−2}.
+   * Якоря: n=5 → 1.715, n=10 → 2.290 (P=0.95); n=10 → 2.482 (P=0.99).
+   */
+  const grubbsCritNum = (N: number, P: number): number => {
+    const tc = tStudCdf(1 - (1 - P) / (2 * N), N - 2);
+    return ((N - 1) / Math.sqrt(N)) * Math.sqrt((tc * tc) / (N - 2 + tc * tc));
+  };
+  /**
+   * Табличный Q_крит критерия Диксона для одного выброса (Dixon 1950):
+   * только n = 3…10, P = 0.95/0.99; при n ≥ 10 — критерий Граббса.
+   */
+  const DIXON_Q95 = [0.97, 0.829, 0.71, 0.625, 0.568, 0.526, 0.493, 0.466];
+  const DIXON_Q99 = [0.994, 0.926, 0.821, 0.74, 0.68, 0.634, 0.598, 0.568];
+  const dixonCritNum = (N: number, P: number): number => {
+    if (N < 3 || N > 10) throw new Error(t('e.calcArgs'));
+    if (P === 0.95) return DIXON_Q95[N - 3] as number;
+    if (P === 0.99) return DIXON_Q99[N - 3] as number;
+    throw new Error(t('e.calcArgs'));
   };
 
   const S: Scope = {
@@ -2485,12 +2613,52 @@ export function buildPackScope(math: MathJsInstance): Scope {
       if (!(U >= 0) || !(K > 0)) throw new Error(t('e.calcArgs'));
       return U * K; // GUM (18): U = k·u_c
     },
-    uncRound: (u: unknown) => uncUp2(needNum(u)), // вверх до 2 зн. цифр (GUM 7.2.6)
-    resRound: (y: unknown, u: unknown) => {
-      const Y = needNum(y);
-      const ru = uncUp2(needNum(u));
-      const place = Math.floor(Math.log10(ru)) - 1; // декада 2-й значащей цифры
-      return Number((Math.round(Y / 10 ** place) * 10 ** place).toPrecision(12));
+    uncRound: (u: unknown, n?: unknown, up?: unknown) => {
+      const N = n === undefined ? 2 : checkSigN(n);
+      const UP = up === undefined ? true : needUpFlag(up);
+      return mapSig(u, (z) => {
+        if (!(z > 0)) throw new Error(t('e.calcArgs'));
+        return UP ? ceilSigScalar(z, N) : roundSigScalar(z, N);
+      });
+    },
+    resRound: (y: unknown, u: unknown, n?: unknown, up?: unknown) => {
+      const N = n === undefined ? 2 : checkSigN(n);
+      const UP = up === undefined ? true : needUpFlag(up);
+      const U = needNum(u);
+      if (!(U > 0)) throw new Error(t('e.calcArgs'));
+      const ru = UP ? ceilSigScalar(U, N) : roundSigScalar(U, N);
+      const place = sigPlace(ru, N); // декада младшей значащей цифры
+      return mapSig(y, (v) => roundToPlace(v, place));
+    },
+    // ── МИ 1317-2004: округление погрешности и результата ──
+    // roundSig(x, n) — математически до n зн. цифр, ничьи .5 — вверх
+    // (СТ СЭВ 543-77, п.2.3: п.3.4 МИ — нормы с 1 цифрой, промежуточные — с 3-й);
+    // ceilSig(x, n) — вверх (п.3.4: для статистических оценок
+    // неуказываемый разряд — в большую сторону).
+    roundSig: (x: unknown, n?: unknown) => {
+      const N = n === undefined ? 2 : checkSigN(n);
+      return mapSig(x, (z) => roundSigScalar(z, N));
+    },
+    ceilSig: (x: unknown, n?: unknown) => {
+      const N = n === undefined ? 2 : checkSigN(n);
+      return mapSig(x, (z) => ceilSigScalar(z, N));
+    },
+    // mi1317(d, n?, up?) — п.3.4: без n — авто (1/2 → две цифры вверх,
+    // 3+ → одна матем.); с n — ровно n цифр, направление: up ?? (1/2 → вверх).
+    mi1317: (d: unknown, n?: unknown, up?: unknown) => {
+      const N = n === undefined ? null : checkSigN(n);
+      const UP = up === undefined ? null : needUpFlag(up);
+      return mapSig(d, (z) => miRoundScalar(z, N, UP).rd);
+    },
+    // miRes(x, d, n?, up?) — результат до разряда mi1317(d, n, up)
+    // (п.1.3: наименьший разряд результата = наименьшему разряду погрешности).
+    miRes: (x: unknown, d: unknown, n?: unknown, up?: unknown) => {
+      const D = needNum(d);
+      const N = n === undefined ? null : checkSigN(n);
+      const UP = up === undefined ? null : needUpFlag(up);
+      const { rd, nn } = miRoundScalar(D, N, UP);
+      const place = sigPlace(rd, nn);
+      return mapSig(x, (v) => roundToPlace(v, place));
     },
     // ── Монте-Карло: GUM Supplement 1 (JCGM 101:2008), воспроизводимый seed.
     // uMC("R1*R2/(R1+R2)", [[R1, 100, 1, "rect"], [R2, 50, 0.5, "norm"]], 200000) →
@@ -2670,6 +2838,67 @@ export function buildPackScope(math: MathJsInstance): Scope {
       if (!(SS + ST > 0)) return E + T;
       const K = (E + T) / (SS + ST);
       return K * Math.sqrt(SS * SS + ST * ST); // Δ = K·S_Σ
+    },
+    // ── Промахи (грубые погрешности): проверка выборки ДО расчёта СКО ──
+    // grubbsCrit(n, P) — точное критическое значение (формула выше, без таблиц).
+    grubbsCrit: (n: unknown, P?: unknown) => {
+      const N = truncI(n);
+      const PP = P === undefined ? 0.95 : needNum(P);
+      if (N < 3 || !(PP > 0 && PP < 1)) throw new Error(t('e.calcArgs'));
+      return grubbsCritNum(N, PP);
+    },
+    // grubbs(x, P) → [Gmax, Gкрит, k]: Gmax = max|x−x̄|/S (S — по n−1),
+    // k — 1-based индекс подозреваемого выброса или 0 (выбросов нет).
+    // Найденный выброс исключают из выборки, СКО считают заново.
+    grubbs: (x: unknown, P?: unknown) => {
+      const a = needNumVec(x);
+      if (a.length < 3) throw new Error(t('e.calcArgs'));
+      const PP = P === undefined ? 0.95 : needNum(P);
+      if (!(PP > 0 && PP < 1)) throw new Error(t('e.calcArgs'));
+      const gc = grubbsCritNum(a.length, PP);
+      const m = a.reduce((s, z) => s + z, 0) / a.length;
+      const dev = a.map((z) => Math.abs(z - m));
+      const S = Math.sqrt(dev.reduce((s, z) => s + z * z, 0) / (a.length - 1));
+      if (!(S > 0)) return math.matrix([0, gc, 0]);
+      let k = 0;
+      let gm = 0;
+      for (let i = 0; i < a.length; i++) {
+        const g = (dev[i] as number) / S;
+        if (g > gm) {
+          gm = g;
+          k = i + 1;
+        }
+      }
+      return math.matrix([gm, gc, gm > gc ? k : 0]);
+    },
+    // dixonCrit(n, P) — табличный Q_крит (см. выше).
+    dixonCrit: (n: unknown, P?: unknown) => {
+      const N = truncI(n);
+      const PP = P === undefined ? 0.95 : needNum(P);
+      if (!(PP > 0 && PP < 1)) throw new Error(t('e.calcArgs'));
+      return dixonCritNum(N, PP);
+    },
+    // dixon(x, P) → [Q, Qкрит, k]: Q = зазор/размах для крайнего значения
+    // (верхнего или нижнего — берётся больший зазор), k — 1-based индекс
+    // подозреваемого выброса или 0. Один выброс за проверку; n = 3…10.
+    dixon: (x: unknown, P?: unknown) => {
+      const a = needNumVec(x);
+      if (a.length < 3 || a.length > 10) throw new Error(t('e.calcArgs'));
+      const PP = P === undefined ? 0.95 : needNum(P);
+      if (!(PP > 0 && PP < 1)) throw new Error(t('e.calcArgs'));
+      const qc = dixonCritNum(a.length, PP);
+      const idx = a.map((_, i) => i).sort((p, q) => (a[p] as number) - (a[q] as number));
+      const s = idx.map((i) => a[i] as number);
+      const range = (s[s.length - 1] as number) - (s[0] as number);
+      if (!(range > 0)) return math.matrix([0, qc, 0]);
+      const qMax = ((s[s.length - 1] as number) - (s[s.length - 2] as number)) / range;
+      const qMin = ((s[1] as number) - (s[0] as number)) / range;
+      if (qMax >= qMin) {
+        const k = (idx[idx.length - 1] as number) + 1;
+        return math.matrix([qMax, qc, qMax > qc ? k : 0]);
+      }
+      const k = (idx[0] as number) + 1;
+      return math.matrix([qMin, qc, qMin > qc ? k : 0]);
     },
     pmgSumAbs: (v: unknown) => {
       const a = needNumVec(v);
@@ -3054,10 +3283,18 @@ export const PACK_NAMES = [
   'uExpand',
   'uncRound',
   'resRound',
+  'roundSig',
+  'ceilSig',
+  'mi1317',
+  'miRes',
   'uMC',
   'confEps',
   'thetaComb',
   'deltaComb',
+  'grubbsCrit',
+  'grubbs',
+  'dixonCrit',
+  'dixon',
   'pmgSumAbs',
   'pmgRSS',
   'pmgExpand',
