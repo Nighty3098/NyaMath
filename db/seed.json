@@ -25572,6 +25572,116 @@
    "desc_en": "Cutoff and attenuation: fc = 1/2πRC, H(fc) ≈ −3 dB (bodeMagDb)",
    "lines_json": "[{\"kind\":\"text\",\"raw\":\"// RC-фильтр нижних частот: срез и АЧХ\"},{\"kind\":\"math\",\"raw\":\"R := 1000 ohm\"},{\"kind\":\"math\",\"raw\":\"C := 160 nF\"},{\"kind\":\"math\",\"raw\":\"RC := R*C\"},{\"kind\":\"math\",\"raw\":\"fc := 1/(2*pi*RC) =\"},{\"kind\":\"math\",\"raw\":\"Hfc = bodeMagDb([1], [inUnits(RC, \\\"s\\\"), 1], inUnits(2*pi*fc, \\\"Hz\\\"))\"},{\"kind\":\"plot\",\"raw\":\"plot\",\"plotFn\":\"bodeMagDb([1], [inUnits(RC, \\\"s\\\"), 1], x)\",\"plotXmin\":10,\"plotXmax\":100000,\"plotLogx\":true}]",
    "standard": null
+  },
+  {
+   "id": "thermal-convection",
+   "section": "thermal",
+   "ord": 16,
+   "title_ru": "Конвекция · закон Ньютона",
+   "title_en": "Convection · Newton law",
+   "desc_ru": "Тепловой поток с поверхности: Q = h·A·ΔT",
+   "desc_en": "Surface heat flow: Q = h·A·ΔT",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Конвективный теплообмен (Ньютон)\"},{\"kind\":\"math\",\"raw\":\"h := 500 W/(m^2*K)\"},{\"kind\":\"math\",\"raw\":\"A := 2 m^2\"},{\"kind\":\"math\",\"raw\":\"delta_T := 40 K\"},{\"kind\":\"math\",\"raw\":\"Q = h*A*delta_T\"},{\"kind\":\"math\",\"raw\":\"R := 1/(h*A)\"},{\"kind\":\"math\",\"raw\":\"R = K/W\"}]",
+   "standard": null
+  },
+  {
+   "id": "thermal-composite-wall",
+   "section": "thermal",
+   "ord": 17,
+   "title_ru": "Многослойная стенка",
+   "title_en": "Composite wall",
+   "desc_ru": "Термосопротивления слоёв и поток: R = Σ d/λ, Q = A·ΔT/R",
+   "desc_en": "Layer resistances and flow: R = Σ d/λ, Q = A·ΔT/R",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Двухслойная стенка\"},{\"kind\":\"math\",\"raw\":\"d1 := 0.2 m\"},{\"kind\":\"math\",\"raw\":\"lam1 := 0.4 W/(m*K)\"},{\"kind\":\"math\",\"raw\":\"d2 := 0.1 m\"},{\"kind\":\"math\",\"raw\":\"lam2 := 0.2 W/(m*K)\"},{\"kind\":\"math\",\"raw\":\"R1 := d1/lam1\"},{\"kind\":\"math\",\"raw\":\"R2 := d2/lam2\"},{\"kind\":\"math\",\"raw\":\"R := R1+R2\"},{\"kind\":\"math\",\"raw\":\"A := 5 m^2\"},{\"kind\":\"math\",\"raw\":\"delta_T := 20 K\"},{\"kind\":\"math\",\"raw\":\"Q = A*delta_T/R\"}]",
+   "standard": null
+  },
+  {
+   "id": "vib-pendulum",
+   "section": "vibration",
+   "ord": 18,
+   "title_ru": "Математический маятник",
+   "title_en": "Simple pendulum",
+   "desc_ru": "Период и частота: T = 2π√(l/g)",
+   "desc_en": "Period and frequency: T = 2π√(l/g)",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Маятник малых колебаний\"},{\"kind\":\"math\",\"raw\":\"l := 1 m\"},{\"kind\":\"math\",\"raw\":\"g := 9.81 m/s^2\"},{\"kind\":\"math\",\"raw\":\"T := 2*pi*sqrt(l/g) =\"},{\"kind\":\"math\",\"raw\":\"f = 1/T\"}]",
+   "standard": null
+  },
+  {
+   "id": "vib-damped",
+   "section": "vibration",
+   "ord": 19,
+   "title_ru": "Осциллятор с демпфированием",
+   "title_en": "Damped oscillator",
+   "desc_ru": "Декремент и частота: ζ = c/2√(kM), ωd = √(k/M)·√(1−ζ²)",
+   "desc_en": "Damping ratio and freq: ζ = c/2√(kM), ωd = √(k/M)·√(1−ζ²)",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Демпфированный осциллятор\"},{\"kind\":\"math\",\"raw\":\"M := 10 kg\"},{\"kind\":\"math\",\"raw\":\"k := 1000 N/m\"},{\"kind\":\"math\",\"raw\":\"c := 40 N*s/m\"},{\"kind\":\"math\",\"raw\":\"zeta := c/(2*sqrt(k*M)) =\"},{\"kind\":\"math\",\"raw\":\"wd := sqrt(k/M)*sqrt(1-zeta^2)\"}]",
+   "standard": null
+  },
+  {
+   "id": "hydro-tank-drain",
+   "section": "hydro",
+   "ord": 20,
+   "title_ru": "Истечение из бака · Торричелли",
+   "title_en": "Tank drain · Torricelli",
+   "desc_ru": "Скорость, расход и время: v = √(2gh)",
+   "desc_en": "Velocity, flow and time: v = √(2gh)",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Слив бака через отверстие\"},{\"kind\":\"math\",\"raw\":\"h := 5 m\"},{\"kind\":\"math\",\"raw\":\"g := 9.81 m/s^2\"},{\"kind\":\"math\",\"raw\":\"v := sqrt(2*g*h) =\"},{\"kind\":\"math\",\"raw\":\"D := 0.05 m\"},{\"kind\":\"math\",\"raw\":\"Cd := 0.6\"},{\"kind\":\"math\",\"raw\":\"Q := Cd*pi*D^2/4*v\"},{\"kind\":\"math\",\"raw\":\"V := 2 m^3\"},{\"kind\":\"math\",\"raw\":\"t = V/Q\"}]",
+   "standard": null
+  },
+  {
+   "id": "hydro-pump",
+   "section": "hydro",
+   "ord": 21,
+   "title_ru": "Мощность насоса",
+   "title_en": "Pump power",
+   "desc_ru": "P = ρ·g·Q·H/η",
+   "desc_en": "P = ρ·g·Q·H/η",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Насос: напор и КПД\"},{\"kind\":\"math\",\"raw\":\"rho := 1000 kg/m^3\"},{\"kind\":\"math\",\"raw\":\"g := 9.81 m/s^2\"},{\"kind\":\"math\",\"raw\":\"Qv := 0.02 m^3/s\"},{\"kind\":\"math\",\"raw\":\"H := 30 m\"},{\"kind\":\"math\",\"raw\":\"eta := 0.75\"},{\"kind\":\"math\",\"raw\":\"P = rho*g*Qv*H/eta\"}]",
+   "standard": null
+  },
+  {
+   "id": "circuit-thevenin",
+   "section": "circuits",
+   "ord": 22,
+   "title_ru": "Эквивалент Тевенена",
+   "title_en": "Thevenin equivalent",
+   "desc_ru": "Uth, Rth и ток в нагрузке",
+   "desc_en": "Uth, Rth and load current",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Тевенен для делителя с нагрузкой\"},{\"kind\":\"math\",\"raw\":\"U := 12 V\"},{\"kind\":\"math\",\"raw\":\"R1 := 4 ohm\"},{\"kind\":\"math\",\"raw\":\"R2 := 8 ohm\"},{\"kind\":\"math\",\"raw\":\"Uth := U*R2/(R1+R2)\"},{\"kind\":\"math\",\"raw\":\"Rth := R1*R2/(R1+R2)\"},{\"kind\":\"math\",\"raw\":\"RL := 8 ohm\"},{\"kind\":\"math\",\"raw\":\"IL = Uth/(Rth+RL)\"}]",
+   "standard": null
+  },
+  {
+   "id": "circuit-reactance",
+   "section": "circuits",
+   "ord": 23,
+   "title_ru": "Реактансы RLC · 50 Гц",
+   "title_en": "RLC reactances · 50 Hz",
+   "desc_ru": "XL, XC и модуль импеданса",
+   "desc_en": "XL, XC and impedance magnitude",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Последовательная цепь на 50 Гц\"},{\"kind\":\"math\",\"raw\":\"f := 50 Hz\"},{\"kind\":\"math\",\"raw\":\"w := 2*pi*f\"},{\"kind\":\"math\",\"raw\":\"R := 10 ohm\"},{\"kind\":\"math\",\"raw\":\"L := 0.1 H\"},{\"kind\":\"math\",\"raw\":\"C := 100 uF\"},{\"kind\":\"math\",\"raw\":\"XL := w*L\"},{\"kind\":\"math\",\"raw\":\"XC := 1/(w*C)\"},{\"kind\":\"math\",\"raw\":\"Z = sqrt(R^2+(XL-XC)^2)\"}]",
+   "standard": null
+  },
+  {
+   "id": "signal-noninv-amp",
+   "section": "signal",
+   "ord": 24,
+   "title_ru": "Неинвертирующий усилитель",
+   "title_en": "Non-inverting amplifier",
+   "desc_ru": "G = 1+Rf/R1, Uout = G·Uin",
+   "desc_en": "G = 1+Rf/R1, Uout = G·Uin",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// ОУ с обратной связью\"},{\"kind\":\"math\",\"raw\":\"R1 := 4700 ohm\"},{\"kind\":\"math\",\"raw\":\"Rf := 47000 ohm\"},{\"kind\":\"math\",\"raw\":\"G := 1+Rf/R1\"},{\"kind\":\"math\",\"raw\":\"Uin := 0.5 V\"},{\"kind\":\"math\",\"raw\":\"Uout = G*Uin\"}]",
+   "standard": null
+  },
+  {
+   "id": "tolerance-clearance",
+   "section": "tolerances",
+   "ord": 25,
+   "title_ru": "Посадка с зазором",
+   "title_en": "Clearance fit",
+   "desc_ru": "Smax/Smin по предельным размерам, ГОСТ 25346-2013",
+   "desc_en": "Smax/Smin from limits, ISO 286",
+   "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Зазор отверстие–вал\"},{\"kind\":\"math\",\"raw\":\"Dmax := 50.03 mm\"},{\"kind\":\"math\",\"raw\":\"Dmin := 50 mm\"},{\"kind\":\"math\",\"raw\":\"dmax := 49.97 mm\"},{\"kind\":\"math\",\"raw\":\"dmin := 49.94 mm\"},{\"kind\":\"math\",\"raw\":\"Smax = Dmax-dmin\"},{\"kind\":\"math\",\"raw\":\"Smin = Dmin-dmax\"}]",
+   "standard": "ГОСТ 25346-2013"
   }
  ],
  "elements": [

@@ -5,10 +5,13 @@
  * (фигуры забираются через PNG-экспорт из приложения).
  */
 import type { MathBlockData } from '../engine/dependencies';
+import { isReportVisible, visibilityOf } from './blocks';
 import { downloadTextFile } from './exportFiles';
 
 function sortedBlocks(blocks: Record<string, MathBlockData>): MathBlockData[] {
-  return Object.values(blocks).sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
+  return Object.values(blocks)
+    .filter(isReportVisible)
+    .sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
 }
 
 function esc(s: string): string {
@@ -23,11 +26,14 @@ function commentText(raw: string): string {
   return raw.replace(/^(\/\/|#)\s?/, '').trim();
 }
 
-/** Одна формула: `raw = result` или предупреждение об ошибке. */
+/** Одна формула: `raw = result` или предупреждение об ошибке (с учётом visibility). */
 function mathPara(b: MathBlockData): string {
+  const vis = visibilityOf(b);
   const raw = esc(b.rawInput.trim().split('\n').join(' ')).slice(0, 500) || '—';
   if (b.error) return `<p class="err">⚠ ${raw}: ${esc(b.error).slice(0, 300)}</p>`;
   const res = (b.resultStr || '').trim();
+  if (vis === 'input') return `<p class="math">${raw}</p>`;
+  if (vis === 'result') return `<p class="math">${res ? esc(res).slice(0, 300) : '—'}</p>`;
   return `<p class="math">${raw}${res ? ` = ${esc(res).slice(0, 300)}` : ''}</p>`;
 }
 
@@ -41,19 +47,24 @@ export function blocksToWordHtml(
   const date = new Date().toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US');
   const body: string[] = [`<h1>${esc(title)}</h1>`, `<p class="meta">${esc(date)}</p>`];
   for (const b of sortedBlocks(blocks)) {
+    const vis = visibilityOf(b);
     if (b.kind === 'text') {
       const c = commentText(b.rawInput);
       if (c) body.push(`<h2>${esc(c).slice(0, 200)}</h2>`);
     } else if (b.kind === 'math' || b.kind === 'program' || b.kind === 'slider') {
       if (b.kind === 'program') {
-        body.push(`<pre>${esc(b.rawInput).slice(0, 2000)}</pre>`);
-        if ((b.resultStr || '').trim())
-          body.push(`<p class="math">→ ${esc(b.resultStr.trim()).slice(0, 300)}</p>`);
-        else if (b.error) body.push(`<p class="err">⚠ ${esc(b.error).slice(0, 300)}</p>`);
+        if (vis !== 'result') body.push(`<pre>${esc(b.rawInput).slice(0, 2000)}</pre>`);
+        if (vis !== 'input') {
+          if ((b.resultStr || '').trim())
+            body.push(`<p class="math">→ ${esc(b.resultStr.trim()).slice(0, 300)}</p>`);
+          else if (b.error) body.push(`<p class="err">⚠ ${esc(b.error).slice(0, 300)}</p>`);
+        }
       } else if (b.kind === 'slider') {
-        body.push(
-          `<p class="math">${esc(b.sliderVar ?? 'k')} = ${esc((b.resultStr || '—').slice(0, 120))}</p>`,
-        );
+        const name = esc(b.sliderVar ?? 'k');
+        const val = esc((b.resultStr || '—').slice(0, 120));
+        if (vis === 'input') body.push(`<p class="math">${name}</p>`);
+        else if (vis === 'result') body.push(`<p class="math">${val}</p>`);
+        else body.push(`<p class="math">${name} = ${val}</p>`);
       } else {
         body.push(mathPara(b));
       }

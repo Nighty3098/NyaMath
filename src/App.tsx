@@ -141,6 +141,18 @@ export default function App() {
   // afterprint сбрасывает data-print, чтобы ч/б не прилипал к экрану.
   useEffect(() => installPrintCleanup(), []);
 
+  // TimeTravel: тихий автоснапшот раз в минуту (кольцо 20 в localStorage).
+  useEffect(() => {
+    const id = setInterval(() => {
+      try {
+        useCanvasStore.getState().snapshotNow(false);
+      } catch {
+        /* ignore */
+      }
+    }, 60000);
+    return () => clearInterval(id);
+  }, []);
+
   // Входящая share-ссылка: `&lang=` применяем сразу (и в localStorage),
   // `#t=…` (пример) или `#d=…` (данные) — грузим лист, справку не показываем.
   const [shareIncoming, setShareIncoming] = useState(

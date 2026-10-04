@@ -53,6 +53,7 @@ export default function Canvas() {
   const [size, setSize] = useState({ w: 1200, h: 800 });
   // печать: виртуализация выключена (флаг в сторе — printDocument греет заранее)
   const printing = useCanvasStore((s) => s.printing);
+  const reportPreview = useCanvasStore((s) => s.reportPreview);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -808,6 +809,7 @@ export default function Canvas() {
       {/* бесконечный слой блоков (нулевой размер, hit-area только у самих блоков) */}
       <div
         className="absolute left-0 top-0 nya-sheet"
+        data-report-preview={reportPreview ? 'on' : 'off'}
         style={{
           transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`,
           transformOrigin: '0 0',

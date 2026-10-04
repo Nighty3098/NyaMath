@@ -259,6 +259,7 @@ function ContourBlockView({ block, scale }: { block: MathBlockData; scale: numbe
         width: pw,
         height: data.err ? 'auto' : ph + chromeH,
       }}
+      data-visibility={block.visibility ?? 'show'}
     >
       <div
         data-block-id={block.id}

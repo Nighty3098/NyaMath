@@ -63,6 +63,37 @@ describe('report export', () => {
     expect(md).toContain('$$k = 3$$');
   });
 
+  it('respects visibility: hide skipped, input/result partial', () => {
+    const doc = liveDoc();
+    const ids = Object.keys(doc);
+    const hidden = doc[ids[1]];
+    const mdHide = blocksToMarkdown({ ...doc, [hidden.id]: { ...hidden, visibility: 'hide' } });
+    expect(mdHide).not.toContain('$$y :=');
+    expect(mdHide).toContain('## Проверка');
+
+    const mdInput = blocksToMarkdown({
+      ...doc,
+      [hidden.id]: { ...hidden, visibility: 'input' },
+    });
+    expect(mdInput).toContain('$$y :=');
+    expect(mdInput).not.toContain('Result: `6`');
+
+    const mdResult = blocksToMarkdown({
+      ...doc,
+      [hidden.id]: { ...hidden, visibility: 'result' },
+    });
+    expect(mdResult).not.toContain('$$y :=');
+    expect(mdResult).toContain('$$6$$');
+  });
+
+  it('plot caption uses title and units, sim lists solver', () => {
+    const p = block('plot', 10, { plotFn: 'sin(x)', plotTitle: 'Sine', plotYUnit: 'V' });
+    const s = block('sim', 20, { simStates: 'x, v', simSolver: 'rk4', simT0: 0, simT1: 10 });
+    const md = blocksToMarkdown({ [p.id]: p, [s.id]: s });
+    expect(md).toContain('Sine');
+    expect(md).toContain('rk4');
+  });
+
   it('latex is a standalone document', () => {
     const tex = blocksToLatex(liveDoc());
     expect(tex).toContain('\\documentclass');

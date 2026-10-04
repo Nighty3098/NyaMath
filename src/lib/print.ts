@@ -12,13 +12,13 @@ export type PrintMode = 'color' | 'bw';
 import { useCanvasStore } from '../store/canvasStore';
 import { getLang, t } from '../i18n';
 
-/** Заполнить шапку печатного отчёта (название + дата + счётчики). */
+/** Заполнить шапку печатного отчёта (название + дата + счётчики видимых блоков). */
 export function fillPrintHead(): void {
   try {
     const el = document.getElementById('nya-print-head');
     if (!el) return;
     const st = useCanvasStore.getState();
-    const blocks = Object.values(st.blocks);
+    const blocks = Object.values(st.blocks).filter((b) => (b.visibility ?? 'show') !== 'hide');
     const errs = blocks.filter((b) => b.error).length;
     const date = new Date().toLocaleDateString(getLang() === 'ru' ? 'ru-RU' : 'en-US');
     const title = el.querySelector('[data-ph="title"]');

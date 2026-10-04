@@ -23,7 +23,8 @@ export type CmdId =
   | 'ex20'
   | 'ex-advanced'
   | 'theme'
-  | 'grid';
+  | 'grid'
+  | 'report-preview';
 
 export interface CmdSpec {
   id: CmdId;
@@ -125,6 +126,12 @@ export const COMMANDS: CmdSpec[] = [
     keywords: ['theme', 'dark', 'тема', 'темная', 'тёмная'],
   },
   { id: 'grid', ru: 'Переключить сетку', en: 'Toggle grid', keywords: ['grid', 'сетка', 'snap'] },
+  {
+    id: 'report-preview',
+    ru: 'Превью отчёта',
+    en: 'Report preview',
+    keywords: ['report', 'отчет', 'отчёт', 'preview', 'печать', 'print', 'hide', '#hide'],
+  },
 ];
 
 export interface RankedCmd {

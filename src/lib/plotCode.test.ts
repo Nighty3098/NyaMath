@@ -77,4 +77,15 @@ describe('plotCode', () => {
     expect(p.plotErr).toBeUndefined();
     expect(p.plotYmin).toBeUndefined();
   });
+
+  it('y2 и paper отражаются в коде и патче', () => {
+    const b = plotBlock({ plotY2Fn: '0.001*sin(x)', plotY2Label: 'psi', plotPaper: true });
+    const code = plotBlockToCode(b);
+    expect(code).toContain('y2: 0.001*sin(x) (psi)');
+    expect(code).toContain('paper');
+    const p = plotBlockPatch(b);
+    expect(p.plotY2Fn).toBe('0.001*sin(x)');
+    expect(p.plotY2Label).toBe('psi');
+    expect(p.plotPaper).toBe(true);
+  });
 });

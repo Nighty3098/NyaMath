@@ -97,7 +97,7 @@ function ProgramBlockView({ block, scale, lateDeps }: Props) {
   };
 
   return (
-    <div className="nya-region absolute z-10" style={{ left: block.x, top: block.y }}>
+    <div className="nya-region absolute z-10" style={{ left: block.x, top: block.y }} data-visibility={block.visibility ?? 'show'}>
       <div
         ref={regionRef}
         data-block-id={block.id}

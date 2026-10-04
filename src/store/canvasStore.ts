@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { v4 as uuid } from 'uuid';
-import type { MathBlockData } from '../engine/dependencies';
+import type { BlockVisibility, MathBlockData } from '../engine/dependencies';
 import { getDemoItems, getDemoLines, getTemplate } from '../lib/db';
 import { loadTheme, saveTheme, THEMES, type ThemeName } from '../theme';
 import { getSimModel, listSimModels, simModelPatch } from '../engine/simEngine';
@@ -42,6 +42,8 @@ import {
   saveUnitSys,
 } from './persist';
 import { engineMismatch, parseDocFile } from '../lib/docFile';
+import * as tableIO from '../lib/tableIO';
+import * as snapshots from '../lib/snapshots';
 import { ENGINE_VERSION } from '../engine/version';
 import {
   blankBlock,
@@ -154,9 +156,24 @@ export interface CanvasState {
   /** Печать: виртуализация выключена, рендерим всё */
   printing: boolean;
   setPrinting: (v: boolean) => void;
+  /** Режим «Отчёт»: подсветить на холсте, что уйдёт в печать/экспорт (hide — приглушён) */
+  reportPreview: boolean;
+  setReportPreview: (v: boolean) => void;
+  /** Видимость блока в отчёте (один блок / всё выделение — один undo-шаг) */
+  setBlockVisibility: (id: string, v: BlockVisibility) => void;
+  setSelectedVisibility: (v: BlockVisibility) => void;
+  /** TimeTravel: ручной/авто-снапшот текущего листа в кольцо localStorage */
+  snapshotNow: (manual?: boolean) => void;
+  /** TimeTravel: восстановить снапшот по времени (один undo-шаг) */
+  restoreSnapshot: (at: number) => boolean;
   addBlock: (x: number, y: number, raw?: string, edit?: boolean) => void;
   /** Пакетная вставка построчно: каждая строка — отдельный мат-блок лесенкой вниз (один undo-шаг). */
   addBlocks: (lines: string[], x: number, y: number, dy?: number) => void;
+  /**
+   * Импорт CSV/TSV-текста (Excel copy-paste) матрицей: `M := [..]` новым
+   * мат-блоком в точке прицела. Возвращает false, если чисел нет.
+   */
+  importCsvMatrix: (text: string) => boolean;
   addPlotBlock: (x: number, y: number, fn?: string, patch?: Partial<MathBlockData>) => void;
   addContourBlock: (x: number, y: number, fn?: string) => void;
   addPlot3dBlock: (x: number, y: number, fn?: string) => void;
@@ -999,6 +1016,58 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   setPrinting: (v) => {
     if (get().printing !== v) set({ printing: v });
   },
+  reportPreview: false,
+  setReportPreview: (v) => {
+    if (get().reportPreview !== v) set({ reportPreview: v });
+  },
+  setBlockVisibility: (id, v) => {
+    const cur = get().blocks[id];
+    if (!cur) return;
+    if ((cur.visibility ?? 'show') === v) return;
+    pushHistory(get, set as SetFn, true);
+    const next = { ...get().blocks, [id]: { ...cur, visibility: v } };
+    persist(next);
+    set({ blocks: next });
+  },
+  setSelectedVisibility: (v) => {
+    const st = get();
+    const ids = st.selectedIds.filter((id) => st.blocks[id]);
+    if (!ids.length) return;
+    pushHistory(get, set as SetFn, true);
+    const next = { ...get().blocks };
+    for (const id of ids) next[id] = { ...next[id], visibility: v };
+    persist(next);
+    set({ blocks: next });
+  },
+  snapshotNow: (manual = true) => {
+    try {
+      const { pushSnapshot, takeSnapshot } = snapshots;
+      pushSnapshot(takeSnapshot(get().blocks, manual));
+    } catch {
+      /* ignore */
+    }
+  },
+  restoreSnapshot: (at) => {
+    try {
+      const { readSnapshots, snapshotToRecord } = snapshots;
+      const snap = readSnapshots().find((s) => s.at === at);
+      if (!snap) return false;
+      const rec = snapshotToRecord(snap);
+      if (!Object.keys(rec).length) return false;
+      pushHistory(get, set as SetFn, true);
+      persist(rec);
+      set((s) => ({
+        blocks: rec,
+        selectedIds: [],
+        recalcCounter: s.recalcCounter + 1,
+        staleIds: [],
+      }));
+      scheduleRecalcAsync(60);
+      return true;
+    } catch {
+      return false;
+    }
+  },
   past: [],
   future: [],
 
@@ -1133,6 +1202,20 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     persist(next);
     set({ blocks: next, selectedIds: [id] });
     scheduleRecalcAsync(60);
+  },
+
+  importCsvMatrix: (text) => {
+    const { numericTableToMatrix, parseTable } = tableIO;
+    const lit = numericTableToMatrix(parseTable(text));
+    if (!lit) return false;
+    pushHistory(get, set as SetFn, true);
+    const id = uuid();
+    const p = get().cross;
+    const next = { ...get().blocks, [id]: { ...blank(id, p.x, p.y), rawInput: `M := ${lit}` } };
+    persist(next);
+    set({ blocks: next, selectedIds: [id], pendingEditId: null });
+    scheduleRecalcAsync(60);
+    return true;
   },
 
   addContourBlock: (x, y, fn = 'sin(sqrt(x^2+y^2))') => {

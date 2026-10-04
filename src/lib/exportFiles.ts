@@ -76,6 +76,37 @@ export function columnsToCsv(headers: string[], columns: (number | null)[][]): s
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
+ * Отрендеренный <svg> → standalone `.svg`-файл для статьи (zero-deps):
+ * инлайн viewBox/размеры/шрифт + фон, чтобы файл открывался сам по себе
+ * и вставлялся в LaTeX/Word без артефактов.
+ */
+export function serializeSvgElement(svg: SVGSVGElement): string {
+  const w = Math.max(1, Math.round(Number(svg.getAttribute('width')) || svg.clientWidth || 600));
+  const h = Math.max(1, Math.round(Number(svg.getAttribute('height')) || svg.clientHeight || 400));
+  const bg = svg.style.backgroundColor || getComputedStyle(svg).backgroundColor;
+  const opaque = bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)';
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.setAttribute('xmlns', SVG_NS);
+  clone.setAttribute('width', String(w));
+  clone.setAttribute('height', String(h));
+  clone.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  clone.setAttribute('font-family', 'Inter, system-ui, -apple-system, "Segoe UI", sans-serif');
+  if (opaque) {
+    const rect = document.createElementNS(SVG_NS, 'rect');
+    rect.setAttribute('width', String(w));
+    rect.setAttribute('height', String(h));
+    rect.setAttribute('fill', bg);
+    clone.insertBefore(rect, clone.firstChild);
+  }
+  return new XMLSerializer().serializeToString(clone);
+}
+
+/** Отрендеренный <svg> → `.svg`-файл. */
+export function exportSvgElementToFile(svg: SVGSVGElement, filename: string): void {
+  downloadTextFile(filename, serializeSvgElement(svg), 'image/svg+xml;charset=utf-8');
+}
+
+/**
  * Отрендеренный <svg> → PNG-файл (scale 2 по умолчанию для чёткости).
  * Добавляет viewBox и фон, чтобы PNG совпадал с видом на экране.
  */

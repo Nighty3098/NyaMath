@@ -13,6 +13,7 @@ import {
   columnsToCsv,
   copyTextToClipboard,
   downloadTextFile,
+  exportSvgElementToFile,
   exportSvgElementToPng,
   safeFilename,
 } from '../lib/exportFiles';
@@ -87,7 +88,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   const selectedIds = useCanvasStore((s) => s.selectedIds);
   const blocks = useCanvasStore((s) => s.blocks);
   const theme = useCanvasStore((s) => s.theme);
-  const pal = plotPalettes[theme];
+  const palBase = plotPalettes[theme];
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
 
@@ -111,6 +112,25 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   const unitBad = (!xU.ok && xUnitRaw !== '') || (!yU.ok && yUnitRaw !== '');
   const showGrid = block.plotGrid ?? true;
   const showLegend = block.plotLegend ?? true;
+  const paper = block.plotPaper === true;
+  // Вторая ось Y: только xy; в polar места под правую шкалу нет — игнорируем.
+  const y2Text = proj === 'xy' ? (block.plotY2Fn ?? '').trim() : '';
+  const y2Label = (block.plotY2Label ?? '').trim();
+  // Публикационный стиль: своя палитра поверх темы (белый фон, чёрные оси).
+  const pal = paper
+    ? {
+        ...palBase,
+        svgBg: '#ffffff',
+        grid: '#d4d4d4',
+        tick: '#111111',
+        axis: '#000000',
+        frame: '#000000',
+        legend: '#000000',
+      }
+    : palBase;
+  const tickFont = paper ? 'Georgia, "Times New Roman", serif' : undefined;
+  // При активной Y2 расширяем правое поле под тики второй шкалы.
+  const padR = y2Text ? 46 : PAD_R;
   const padT = title ? 26 : PAD_T;
   // Ручной размер: ширина/высота области графика (шапка +chromeH)
   const pw = block.w ?? W;
@@ -120,14 +140,14 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
     () => ({
       X: (x: number) =>
         logx
-          ? PAD_L + (Math.log(x / xmin) / Math.log(xmax / xmin)) * (pw - PAD_L - PAD_R)
-          : PAD_L + ((x - xmin) / (xmax - xmin)) * (pw - PAD_L - PAD_R),
+          ? PAD_L + (Math.log(x / xmin) / Math.log(xmax / xmin)) * (pw - PAD_L - padR)
+          : PAD_L + ((x - xmin) / (xmax - xmin)) * (pw - PAD_L - padR),
       xAt: (k: number): number => {
         const tt = k / (N_PTS - 1);
         return logx ? xmin * Math.pow(xmax / xmin, tt) : xmin + (xmax - xmin) * tt;
       },
     }),
-    [xmin, xmax, pw, logx],
+    [xmin, xmax, pw, logx, padR],
   );
   const X = geom.X;
   const xAt = geom.xAt;
@@ -414,6 +434,81 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
 
   const Y = (y: number) => ph - PAD_B - ((y - ymin) / (ymax - ymin)) * (ph - padT - PAD_B);
 
+  /**
+   * Вторая ось Y (P1 multi-axis): `plotY2Fn(x)` со своей правой шкалой.
+   * Семплируем тем же шагом xAt; пунктир отличает серию визуально.
+   */
+  const y2 = useMemo(() => {
+    if (!y2Text) return null;
+    try {
+      const compiled = compilePlotExpr(preprocessRanges(`(${preprocessJ(y2Text, false)})`));
+      if (!compiled?.code) return null;
+      const evalScope: Record<string, unknown> = { ...base };
+      const xs: number[] = [];
+      const ys: number[] = [];
+      const hasX = /\bx\b/.test(preprocessJ(y2Text, false));
+      if (!hasX) {
+        let v: unknown = null;
+        try {
+          v = evaluateLine(`(${preprocessJ(y2Text, false)})`, base).value;
+        } catch {
+          v = null;
+        }
+        const y0 = typeof v === 'number' && isFinite(v) ? v : null;
+        if (y0 === null) return null;
+        for (let k = 0; k < N_PTS; k++) {
+          xs.push(xAt(k));
+          ys.push(y0);
+        }
+      } else {
+        for (let k = 0; k < N_PTS; k++) {
+          const x = xAt(k);
+          let y: number | null = null;
+          try {
+            evalScope.x = x;
+            const vv = compiled.code.evaluate(evalScope) as unknown;
+            if (typeof vv === 'number' && isFinite(vv)) y = vv;
+            else if (vv !== null && typeof vv === 'object' && 're' in (vv as object)) {
+              const re = Number((vv as { re: number }).re);
+              if (isFinite(re)) y = re;
+            }
+          } catch {
+            y = null;
+          }
+          xs.push(x);
+          ys.push(y ?? NaN);
+        }
+      }
+      const fin = ys.filter((v) => isFinite(v));
+      if (!fin.length) return null;
+      let lo = Math.min(...fin);
+      let hi = Math.max(...fin);
+      if (lo === hi) {
+        lo -= 1;
+        hi += 1;
+      }
+      const span = hi - lo;
+      lo -= span * 0.12;
+      hi += span * 0.12;
+      const Y2 = (y: number) => ph - PAD_B - ((y - lo) / (hi - lo)) * (ph - padT - PAD_B);
+      let d = '';
+      xs.forEach((x, k) => {
+        const y = ys[k];
+        if (!isFinite(y)) return;
+        d += `${d ? 'L' : 'M'}${X(x).toFixed(1)},${Y2(y as number).toFixed(1)}`;
+      });
+      if (!d) return null;
+      return {
+        d,
+        ticks: niceTicks(lo, hi),
+        Y2,
+        color: pal.series[series.length % pal.series.length] ?? '#c026d3',
+      };
+    } catch {
+      return null;
+    }
+  }, [y2Text, base, xAt, X, ph, padT, pal, series.length]);
+
   useEffect(() => {
     const measure = () => {
       setChromeH((headRef.current?.offsetHeight ?? 0) + (footRef.current?.offsetHeight ?? 0) + 12);
@@ -451,6 +546,19 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
     for (const s of table) columns.push(s.ys.map(num));
     downloadTextFile(`${baseName}.csv`, columnsToCsv(headers, columns), 'text/csv;charset=utf-8');
   };
+
+  /** SVG для статьи: standalone-вектор без артефактов (вставка в LaTeX/Word). */
+  const doExportSvg = () => {
+    if (!svgRef.current) {
+      alert(t('p2.noData'));
+      return;
+    }
+    try {
+      exportSvgElementToFile(svgRef.current, `${baseName}.svg`);
+    } catch {
+      alert(t('p2.noData'));
+    }
+  };
   const zeroY = proj === 'xy' && ymin < 0 && ymax > 0 ? Y(0) : null;
   const zeroX = proj === 'xy' && xmin < 0 && xmax > 0 ? X(0) : null;
   const svgW = pw - 24;
@@ -480,6 +588,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
       ref={boxRef}
       className="absolute z-10"
       style={{ left: block.x, top: block.y, width: pw, height: err ? 'auto' : ph + chromeH }}
+      data-visibility={block.visibility ?? 'show'}
     >
       <div
         data-block-id={block.id}
@@ -545,6 +654,19 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
               aria-label={t('p2.csv')}
             >
               <ITable />
+            </button>
+            <button
+              type="button"
+              className="p-1.5 text-[var(--faint)] hover:text-[var(--accent-line)] cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                doExportSvg();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              title={t('p2.svg')}
+              aria-label={t('p2.svg')}
+            >
+              <ITune />
             </button>
             <button
               type="button"
@@ -702,6 +824,44 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
                 />
                 {t('p2.legend')}
               </label>
+              <label className="inline-flex items-center gap-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-current"
+                  checked={paper}
+                  aria-label={t('p2.paper')}
+                  onChange={(e) => updatePlot(block.id, { plotPaper: e.target.checked })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                {t('p2.paper')}
+              </label>
+              <label className="flex-1 min-w-[160px]" title={t('p2.y2Title')}>
+                {t('p2.y2')}{' '}
+                <input
+                  className="w-full max-w-[220px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                  value={block.plotY2Fn ?? ''}
+                  placeholder="0.001*sin(x)"
+                  aria-label={t('p2.y2')}
+                  onChange={(e) => updatePlot(block.id, { plotY2Fn: e.target.value })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  spellCheck={false}
+                />
+              </label>
+              <label title={t('p2.y2labelTitle')}>
+                {t('p2.y2label')}{' '}
+                <input
+                  className="w-[80px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                  value={block.plotY2Label ?? ''}
+                  placeholder="y2"
+                  aria-label={t('p2.y2label')}
+                  onChange={(e) => updatePlot(block.id, { plotY2Label: e.target.value })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  spellCheck={false}
+                />
+              </label>
               <label className="flex-1 min-w-[120px]">
                 {t('p2.title')}{' '}
                 <input
@@ -843,6 +1003,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             height={ph}
             className="rounded-lg border border-[var(--line)]"
             style={{ background: pal.svgBg }}
+            fontFamily={tickFont}
             role="img"
             aria-label={t('p2.aria', {
               fn: fnText,
@@ -940,9 +1101,10 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             height={ph}
             className="rounded-lg border border-[var(--line)]"
             style={{ background: pal.svgBg }}
+            fontFamily={tickFont}
             role="img"
             aria-label={t('p2.aria', {
-              fn: fnText,
+              fn: y2 ? `${fnText} | y2: ${y2Text}` : fnText,
               lo: fmtTick(ymin),
               hi: fmtTick(ymax),
               x0: xmin,
@@ -990,7 +1152,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
                   <line
                     x1={PAD_L}
                     y1={Y(v)}
-                    x2={pw - PAD_R}
+                    x2={pw - padR}
                     y2={Y(v)}
                     stroke={pal.grid}
                     strokeOpacity={pal.gridOpacity}
@@ -1005,7 +1167,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
               <line
                 x1={PAD_L}
                 y1={zeroY}
-                x2={pw - PAD_R}
+                x2={pw - padR}
                 y2={zeroY}
                 stroke={pal.axis}
                 strokeWidth={1.2}
@@ -1025,11 +1187,45 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             <rect
               x={PAD_L}
               y={padT}
-              width={pw - PAD_L - PAD_R}
+              width={pw - PAD_L - padR}
               height={ph - padT - PAD_B}
               fill="none"
               stroke={pal.frame}
             />
+            {/* вторая ось Y: пунктирная серия + правая шкала */}
+            {y2 && (
+              <g>
+                <line
+                  x1={pw - padR}
+                  y1={padT}
+                  x2={pw - padR}
+                  y2={ph - PAD_B}
+                  stroke={pal.axis}
+                  strokeWidth={1.2}
+                />
+                {y2.ticks.map((v) => (
+                  <g key={`y2-${v}`}>
+                    <line
+                      x1={pw - padR}
+                      y1={y2.Y2(v)}
+                      x2={pw - padR + 4}
+                      y2={y2.Y2(v)}
+                      stroke={pal.axis}
+                    />
+                    <text
+                      x={pw - padR + 6}
+                      y={y2.Y2(v) + 3}
+                      fontSize={9}
+                      fill={y2.color}
+                      textAnchor="start"
+                    >
+                      {fmtTick(v)}
+                    </text>
+                  </g>
+                ))}
+                <path d={y2.d} fill="none" stroke={y2.color} strokeWidth={2} strokeDasharray="6 3" />
+              </g>
+            )}
             {series.map((s, i) =>
               s.d ? <path key={i} d={s.d} fill="none" stroke={s.color} strokeWidth={2} /> : null,
             )}
@@ -1070,7 +1266,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
             {series.map((s, i) => renderErrors(s.errs, s.color, i))}
             {/* подписи осей */}
             {xAxisLabel && (
-              <text x={pw - PAD_R} y={ph - 4} fontSize={10} fill={pal.tick} textAnchor="end">
+              <text x={pw - padR} y={ph - 4} fontSize={10} fill={pal.tick} textAnchor="end">
                 {xAxisLabel}
               </text>
             )}
@@ -1084,6 +1280,18 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
                 transform={`rotate(-90 12 ${padT + 4})`}
               >
                 {yAxisLabel}
+              </text>
+            )}
+            {y2 && (y2Label || y2Text) && (
+              <text
+                x={pw - 4}
+                y={padT + 4}
+                fontSize={10}
+                fill={y2.color}
+                textAnchor="end"
+                transform={`rotate(90 ${pw - 4} ${padT + 4})`}
+              >
+                {(y2Label || y2Text).slice(0, 40)}
               </text>
             )}
             {/* легенда */}
@@ -1103,6 +1311,27 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
                   </text>
                 </g>
               ))}
+            {showLegend && y2 && (
+              <g>
+                <line
+                  x1={PAD_L + 8}
+                  y1={legY + series.length * 15}
+                  x2={PAD_L + 26}
+                  y2={legY + series.length * 15}
+                  stroke={y2.color}
+                  strokeWidth={2.5}
+                  strokeDasharray="6 3"
+                />
+                <text
+                  x={PAD_L + 30}
+                  y={legY + 3 + series.length * 15}
+                  fontSize={10}
+                  fill={pal.legend}
+                >
+                  {(y2Label ? `${y2Text} (${y2Label})` : y2Text).slice(0, 34)}
+                </text>
+              </g>
+            )}
           </svg>
         )}
         <div ref={footRef} className="text-[11px] text-[var(--faint)] mt-1 truncate">

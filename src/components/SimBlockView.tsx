@@ -161,6 +161,7 @@ function SimBlockView({ block, scale }: { block: MathBlockData; scale: number })
       ref={boxRef}
       className="absolute z-10 min-h-fit"
       style={{ left: block.x, top: block.y, width: pw, height: ph + headH }}
+      data-visibility={block.visibility ?? 'show'}
     >
       <div
         data-block-id={block.id}

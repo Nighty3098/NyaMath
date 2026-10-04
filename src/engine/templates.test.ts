@@ -50,9 +50,9 @@ const byRaw = (blocks: Record<string, MathBlockData>, raw: string): MathBlockDat
  * движком без ошибок, контрольные значения — по ручному расчёту.
  */
 describe('templates: library integrity', () => {
-  it('16 шаблонов в 8 разделах с описаниями', () => {
+  it('26 шаблонов в 8 разделах с описаниями', () => {
     const all = listTemplates();
-    expect(all.length).toBe(16);
+    expect(all.length).toBe(26);
     expect(new Set(all.map((t) => t.section))).toEqual(
       new Set([
         'beams',
@@ -181,5 +181,68 @@ describe('templates: library integrity', () => {
     expect(
       byRaw(b, 'Hfc = bodeMagDb([1], [inUnits(RC, "s"), 1], inUnits(2*pi*fc, "Hz"))').resultStr,
     ).toContain('-3.01');
+  });
+
+  it('конвекция: Q=40 кВт, R=0.001 К/Вт', () => {
+    const b = calcAll('thermal-convection');
+    expect(byRaw(b, 'Q = h*A*delta_T').resultStr).toBe('40 kW');
+    expect(byRaw(b, 'R = K/W').resultStr).toBe('0.001 K / W');
+  });
+
+  it('стенка: R1=R2=0.5, Q=100 Вт', () => {
+    const b = calcAll('thermal-composite-wall');
+    expect(byRaw(b, 'R1 := d1/lam1').resultStr).toContain('0.5');
+    expect(byRaw(b, 'R2 := d2/lam2').resultStr).toContain('0.5');
+    expect(byRaw(b, 'Q = A*delta_T/R').resultStr).toBe('100 W');
+  });
+
+  it('маятник 1 м: T≈2.006 с, f≈0.4985 Гц', () => {
+    const b = calcAll('vib-pendulum');
+    expect(byRaw(b, 'T := 2*pi*sqrt(l/g) =').resultStr).toContain('2.006');
+    expect(byRaw(b, 'f = 1/T').resultStr).toContain('0.498');
+  });
+
+  it('демпфирование: ζ=0.2, ωd≈9.798 Гц', () => {
+    const b = calcAll('vib-damped');
+    expect(byRaw(b, 'zeta := c/(2*sqrt(k*M)) =').resultStr).toBe('0.2');
+    expect(byRaw(b, 'wd := sqrt(k/M)*sqrt(1-zeta^2)').resultStr).toContain('9.797');
+  });
+
+  it('слив бака: v≈9.905 м/с, t≈171 с', () => {
+    const b = calcAll('hydro-tank-drain');
+    expect(byRaw(b, 'v := sqrt(2*g*h) =').resultStr).toContain('9.9045');
+    expect(byRaw(b, 'Q := Cd*pi*D^2/4*v').resultStr).toContain('0.0116');
+    expect(byRaw(b, 't = V/Q').resultStr).toContain('171.4');
+  });
+
+  it('насос: P=7.848 кВт', () => {
+    const b = calcAll('hydro-pump');
+    expect(byRaw(b, 'P = rho*g*Qv*H/eta').resultStr).toBe('7.848 kW');
+  });
+
+  it('тевенен: 8 В, 2.667 Ом, 0.75 А', () => {
+    const b = calcAll('circuit-thevenin');
+    expect(byRaw(b, 'Uth := U*R2/(R1+R2)').resultStr).toBe('8 V');
+    expect(byRaw(b, 'Rth := R1*R2/(R1+R2)').resultStr).toContain('2.666');
+    expect(byRaw(b, 'IL = Uth/(Rth+RL)').resultStr).toBe('0.75 A');
+  });
+
+  it('реактансы: XL≈31.416, XC≈31.831, Z≈10.009 Ом', () => {
+    const b = calcAll('circuit-reactance');
+    expect(byRaw(b, 'XL := w*L').resultStr).toContain('31.415');
+    expect(byRaw(b, 'XC := 1/(w*C)').resultStr).toContain('31.831');
+    expect(byRaw(b, 'Z = sqrt(R^2+(XL-XC)^2)').resultStr).toContain('10.008');
+  });
+
+  it('неинвертирующий ОУ: G=11, Uout=5.5 В', () => {
+    const b = calcAll('signal-noninv-amp');
+    expect(byRaw(b, 'G := 1+Rf/R1').resultStr).toBe('11');
+    expect(byRaw(b, 'Uout = G*Uin').resultStr).toBe('5.5 V');
+  });
+
+  it('зазор: Smax=90 мкм, Smin=30 мкм', () => {
+    const b = calcAll('tolerance-clearance');
+    expect(byRaw(b, 'Smax = Dmax-dmin').resultStr).toBe('90 um');
+    expect(byRaw(b, 'Smin = Dmin-dmax').resultStr).toBe('30 um');
   });
 });

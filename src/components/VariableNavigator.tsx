@@ -13,6 +13,7 @@ import {
   IMoon,
   IPlot,
   IPlot3d,
+  IPrint,
   IProgram,
   IRecalc,
   ISignal,
@@ -73,6 +74,7 @@ const CMD_ICON: Record<CmdId, () => React.JSX.Element> = {
   'ex-advanced': IDemo,
   theme: IMoon,
   grid: IGrid,
+  'report-preview': IPrint,
 };
 
 /** Выполнить команду палитры: вставка — в точку прицела, как из меню. */
@@ -135,6 +137,9 @@ function runCmd(id: CmdId): void {
       break;
     case 'grid':
       st.toggleGrid();
+      break;
+    case 'report-preview':
+      st.setReportPreview(!st.reportPreview);
       break;
   }
 }

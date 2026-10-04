@@ -105,7 +105,7 @@ function SliderBlockView({ block, scale }: Props) {
   );
 
   return (
-    <div className="nya-region absolute z-10" style={{ left: block.x, top: block.y }}>
+    <div className="nya-region absolute z-10" style={{ left: block.x, top: block.y }} data-visibility={block.visibility ?? 'show'}>
       <div
         data-block-id={block.id}
         className={`nya-block relative rounded-xl px-2 py-1.5 group min-w-[240px] ${

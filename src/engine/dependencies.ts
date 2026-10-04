@@ -31,6 +31,9 @@ import {
 } from './simEngine';
 import { t } from '../i18n';
 
+/** Режим видимости блока в отчёте. Вынесен сюда, чтобы его видели движок, стор и экспорт. */
+export type BlockVisibility = 'show' | 'hide' | 'input' | 'result';
+
 export interface MathBlockData {
   id: string;
   x: number;
@@ -55,6 +58,14 @@ export interface MathBlockData {
   kind: 'math' | 'plot' | 'text' | 'program' | 'plot3d' | 'sim' | 'contour' | 'slider';
   /** Disable Evaluation: регион не считается, его имена не видны ниже */
   disabled?: boolean;
+  /**
+   * Видимость в отчёте/печати (Calcpad-паттерн #hide/#pre/#post):
+   * - show: всё как на экране (по умолчанию)
+   * - hide: пропустить в Markdown/LaTeX/Word/печати
+   * - input: только ввод/код, без результата (промежуточные выкладки)
+   * - result: только результат, без ввода (чистый отчёт для экспертизы)
+   */
+  visibility?: BlockVisibility;
   /** Слайдер: имя переменной, диапазон, шаг и текущее значение */
   sliderVar?: string;
   sliderMin?: number;
@@ -77,6 +88,14 @@ export interface MathBlockData {
   plotYLabel?: string;
   plotGrid?: boolean;
   plotLegend?: boolean;
+  /**
+   * Вторая ось Y (multi-axis, Origin-паттерн): выражение `plotY2Fn(x)` со своей
+   * правой шкалой + подпись. Только xy-проекция, рисуется линией поверх.
+   */
+  plotY2Fn?: string;
+  plotY2Label?: string;
+  /** Стиль «для статьи»: белый фон, чёрные оси, serif-тики (влияет и на SVG/PNG-экспорт). */
+  plotPaper?: boolean;
   /** 3D: диапазон по y, режим, разрешение сетки, каркас поверх поверхности */
   plotYmin?: number;
   plotYmax?: number;

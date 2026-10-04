@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { blankBlock, normalizeBlock, slimBlock, slimBlocks } from './blocks';
+import {
+  blankBlock,
+  isReportVisible,
+  normalizeBlock,
+  slimBlock,
+  slimBlocks,
+  visibilityOf,
+} from './blocks';
 import type { MathBlockData } from '../engine/dependencies';
 
 function full(): MathBlockData {
@@ -70,5 +77,46 @@ describe('slimBlock', () => {
     expect(s.simResult).toBeUndefined();
     expect(s.simMode).toBe('fdtd');
     expect(slimBlocks([b])).toHaveLength(1);
+  });
+});
+
+describe('visibility', () => {
+  it('по умолчанию show, мусор → show', () => {
+    expect(visibilityOf({})).toBe('show');
+    expect(visibilityOf({ visibility: 'hide' })).toBe('hide');
+    expect(visibilityOf({ visibility: 'input' })).toBe('input');
+    expect(visibilityOf({ visibility: 'result' })).toBe('result');
+    expect(visibilityOf({ visibility: 'nope' as never })).toBe('show');
+    expect(isReportVisible({ visibility: 'hide' })).toBe(false);
+    expect(isReportVisible({})).toBe(true);
+  });
+
+  it('normalizeBlock сохраняет и чистит visibility', () => {
+    expect(normalizeBlock({ x: 1, y: 2, rawInput: 'a', visibility: 'hide' })?.visibility).toBe(
+      'hide',
+    );
+    expect(
+      normalizeBlock({ x: 1, y: 2, rawInput: 'a', visibility: 'nope' })?.visibility,
+    ).toBeUndefined();
+  });
+
+  it('slim сохраняет visibility для persist/share/sync', () => {
+    const b = { ...full(), visibility: 'input' as const };
+    expect(slimBlock(b).visibility).toBe('input');
+  });
+
+  it('normalizeBlock сохраняет plotY2/paper (P1 multi-axis + paper)', () => {
+    const b = normalizeBlock({
+      x: 1,
+      y: 2,
+      rawInput: 'plot',
+      kind: 'plot',
+      plotY2Fn: '0.5*x',
+      plotY2Label: 'psi',
+      plotPaper: true,
+    });
+    expect(b?.plotY2Fn).toBe('0.5*x');
+    expect(b?.plotY2Label).toBe('psi');
+    expect(b?.plotPaper).toBe(true);
   });
 });

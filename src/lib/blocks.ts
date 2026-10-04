@@ -8,9 +8,11 @@
  * Зависит только от типа MathBlockData (type-only, без рантайм-цикла).
  */
 import { v4 as uuid } from 'uuid';
-import type { MathBlockData } from '../engine/dependencies';
+import type { BlockVisibility, MathBlockData } from '../engine/dependencies';
 
 export type BlockKind = MathBlockData['kind'];
+
+export type { BlockVisibility };
 
 const KINDS: ReadonlySet<string> = new Set([
   'math',
@@ -22,6 +24,17 @@ const KINDS: ReadonlySet<string> = new Set([
   'contour',
   'slider',
 ]);
+
+/** Нормализованная видимость (битые значения → show, чтобы не терять блоки). */
+export function visibilityOf(b: Pick<MathBlockData, 'visibility'>): BlockVisibility {
+  const v = b.visibility;
+  return v === 'hide' || v === 'input' || v === 'result' ? v : 'show';
+}
+
+/** true — блок попадает в отчёт/печать (всё кроме hide). */
+export function isReportVisible(b: Pick<MathBlockData, 'visibility'>): boolean {
+  return visibilityOf(b) !== 'hide';
+}
 
 /** Пустой блок (канонический blank: стор и MCP используют один и тот же). */
 export function blankBlock(id: string, x: number, y: number, kind: BlockKind = 'math'): MathBlockData {
@@ -84,6 +97,13 @@ export function normalizeBlock(raw: unknown): MathBlockData | null {
     b.simSolver === 'trbdf2'
       ? b.simSolver
       : undefined;
+  const visibility: BlockVisibility | undefined =
+    b.visibility === 'hide' ||
+    b.visibility === 'input' ||
+    b.visibility === 'result' ||
+    b.visibility === 'show'
+      ? b.visibility
+      : undefined;
   return {
     ...blankBlock(id, b.x, b.y),
     ...b,
@@ -94,6 +114,7 @@ export function normalizeBlock(raw: unknown): MathBlockData | null {
     // boolean без эха: slim без disabled vs slim с disabled:false
     // иначе давал вечный push-loop в live sync
     disabled: b.disabled === true,
+    visibility,
     plotPreview: null,
     simResult: null,
     exportName: strOrUndef(b.exportName),
@@ -118,6 +139,9 @@ export function normalizeBlock(raw: unknown): MathBlockData | null {
     plotYLabel: strOrUndef(b.plotYLabel),
     plotGrid: boolOrUndef(b.plotGrid),
     plotLegend: boolOrUndef(b.plotLegend),
+    plotY2Fn: strOrUndef(b.plotY2Fn),
+    plotY2Label: strOrUndef(b.plotY2Label),
+    plotPaper: boolOrUndef(b.plotPaper),
     simModel: strOrUndef(b.simModel),
     simMode: b.simMode === 'fdtd' ? 'fdtd' : undefined,
     simStates: strOrUndef(b.simStates),

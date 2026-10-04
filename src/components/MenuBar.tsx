@@ -4,6 +4,8 @@ import { saveDocument } from '../lib/saveDocument';
 import { printDocument } from '../lib/print';
 import { downloadLatexReport, downloadMarkdown } from '../lib/report';
 import { downloadWordDoc } from '../lib/wordExport';
+import { downloadScopeCsv, downloadScopeXls, parseTable } from '../lib/tableIO';
+import { formatSnapTime, readSnapshots } from '../lib/snapshots';
 import { SHARE_WARN_CHARS, shareDocument } from '../lib/share';
 import { THEMES } from '../theme';
 import { t, themeLabel, type Lang, type StrKey } from '../i18n';
@@ -56,6 +58,7 @@ import {
   ICheck,
   IPlay,
   IX,
+  ITable,
   IZap,
   ISun,
   IMoon,
@@ -148,6 +151,11 @@ export default function MenuBar({
   const separateRegions = useCanvasStore((s) => s.separateRegions);
   const toggleSelectedDisabled = useCanvasStore((s) => s.toggleSelectedDisabled);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
+  const reportPreview = useCanvasStore((s) => s.reportPreview);
+  const setReportPreview = useCanvasStore((s) => s.setReportPreview);
+  const setSelectedVisibility = useCanvasStore((s) => s.setSelectedVisibility);
+  const snapshotNow = useCanvasStore((s) => s.snapshotNow);
+  const restoreSnapshot = useCanvasStore((s) => s.restoreSnapshot);
   const addTextBlock = useCanvasStore((s) => s.addTextBlock);
   const scopeMonOpen = useCanvasStore((s) => s.scopeMonOpen);
   const toggleScopeMon = useCanvasStore((s) => s.toggleScopeMon);
@@ -242,6 +250,49 @@ export default function MenuBar({
     });
   };
 
+  /** Импорт CSV/TSV из Excel: файл → матрица M новым блоком. */
+  const importCsvFile = () => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = '.csv,.tsv,.txt,text/csv,text/plain';
+    inp.onchange = () => {
+      const f = inp.files?.[0];
+      if (!f) return;
+      void f.text().then((text) => {
+        const rows = parseTable(text);
+        const n = rows.length;
+        const m = rows[0]?.length ?? 0;
+        const ok = useCanvasStore.getState().importCsvMatrix(text);
+        alert(ok ? t('csv.imported', { n, m }) : t('csv.failed'));
+      });
+    };
+    inp.click();
+  };
+
+  /** Снапшоты для подменю (новые сверху). */
+  const snapChildren = (): Entry[] => {
+    const out: Entry[] = [
+      { id: 'snap-now', label: t('menu.snapNow'), action: run(() => snapshotNow(true)) },
+      { sep: true },
+    ];
+    const snaps = readSnapshots().slice(-10).reverse();
+    if (!snaps.length) out.push({ head: t('menu.snapsEmpty') });
+    for (const s of snaps) {
+      const label = `${formatSnapTime(s.at, lang)} · ${s.count} · ${s.manual ? '✋' : '⏱'}`;
+      out.push({
+        id: `snap-${s.at}`,
+        label,
+        action: run(() => {
+          const ok = restoreSnapshot(s.at);
+          if (ok) {
+            const n = Object.keys(useCanvasStore.getState().blocks).length;
+            alert(t('snap.restored', { n }));
+          } else alert(t('snap.failed'));
+        }),
+      });
+    }
+    return out;
+  };
   /** Поделиться: JSON → slim → фразы → deflate → base64url → ссылка в буфере (+язык). */
   const shareCurrentSheet = async () => {
     const cur = useCanvasStore.getState().blocks;
@@ -336,6 +387,31 @@ export default function MenuBar({
           icon: <ICopy />,
           label: t('menu.exportDoc'),
           action: run(() => downloadWordDoc(blocks, lang)),
+        },
+        { sep: true },
+        {
+          id: 'import-csv',
+          icon: <ITable />,
+          label: t('menu.importCsv'),
+          action: run(importCsvFile),
+        },
+        {
+          id: 'export-scope-csv',
+          icon: <ICopy />,
+          label: t('menu.exportScopeCsv'),
+          action: run(() => downloadScopeCsv(blocks)),
+        },
+        {
+          id: 'export-scope-xls',
+          icon: <ICopy />,
+          label: t('menu.exportScopeXls'),
+          action: run(() => downloadScopeXls(blocks, lang)),
+        },
+        {
+          id: 'snaps-sub',
+          icon: <IPlay />,
+          label: t('menu.snaps'),
+          children: snapChildren(),
         },
         { sep: true },
         {
@@ -563,6 +639,44 @@ export default function MenuBar({
           label: t('menu.toggleDisabled'),
           disabled: selectedIds.length === 0,
           action: run(toggleSelectedDisabled),
+        },
+        {
+          id: 'report-sub',
+          icon: <IPrint />,
+          label: t('menu.report'),
+          children: [
+            {
+              id: 'report-preview',
+              label: t('menu.reportPreview'),
+              checked: reportPreview,
+              action: run(() => setReportPreview(!reportPreview)),
+            },
+            { sep: true },
+            {
+              id: 'vis-show',
+              label: t('menu.visShow'),
+              disabled: selectedIds.length === 0,
+              action: run(() => setSelectedVisibility('show')),
+            },
+            {
+              id: 'vis-hide',
+              label: t('menu.visHide'),
+              disabled: selectedIds.length === 0,
+              action: run(() => setSelectedVisibility('hide')),
+            },
+            {
+              id: 'vis-input',
+              label: t('menu.visInput'),
+              disabled: selectedIds.length === 0,
+              action: run(() => setSelectedVisibility('input')),
+            },
+            {
+              id: 'vis-result',
+              label: t('menu.visResult'),
+              disabled: selectedIds.length === 0,
+              action: run(() => setSelectedVisibility('result')),
+            },
+          ],
         },
         {
           id: 'palette',

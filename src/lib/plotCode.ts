@@ -28,6 +28,12 @@ export function plotBlockToCode(b: MathBlockData, lang: 'ru' | 'en' = 'ru'): str
   if (yl) lines.push(`ylabel: ${yl}`);
   const err = (b.plotErr ?? '').trim();
   if (err) lines.push(`${L ? 'погрешности' : 'error bars'}: ${err}`);
+  const y2 = (b.plotY2Fn ?? '').trim();
+  if (y2) {
+    const y2l = (b.plotY2Label ?? '').trim();
+    lines.push(`y2: ${y2}${y2l ? ` (${y2l})` : ''}`);
+  }
+  if (b.plotPaper === true) lines.push(L ? 'стиль: для статьи (paper)' : 'style: paper');
   return lines.join('\n') + '\n';
 }
 
@@ -61,6 +67,9 @@ export function plotBlockPatch(b: MathBlockData): Partial<MathBlockData> {
     plotYLabel: b.plotYLabel,
     plotGrid: b.plotGrid,
     plotLegend: b.plotLegend,
+    plotY2Fn: b.plotY2Fn,
+    plotY2Label: b.plotY2Label,
+    plotPaper: b.plotPaper,
     w: b.w ?? null,
     h: b.h ?? null,
   };

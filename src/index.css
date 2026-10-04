@@ -993,4 +993,19 @@ textarea.nya-editor {
     background: #ffffff !important;
     filter: grayscale(1) contrast(1.05);
   }
+  /* Отчёт: hide-блоки не печатаются (Calcpad #hide) */
+  .nya-sheet > [data-visibility='hide'],
+  .nya-sheet [data-visibility='hide'].nya-region {
+    display: none !important;
+  }
+}
+
+/* Превью отчёта на холсте: hide — штриховка и полупрозрачность, input/result — бейдж-метка */
+.nya-sheet[data-report-preview='on'] [data-visibility='hide'] .nya-block {
+  opacity: 0.45;
+  outline: 1px dashed var(--warn, #b45309) !important;
+}
+.nya-sheet[data-report-preview='on'] [data-visibility='input'] .nya-block,
+.nya-sheet[data-report-preview='on'] [data-visibility='result'] .nya-block {
+  outline: 1px dashed var(--accent-line) !important;
 }

@@ -70,6 +70,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const updateInput = useCanvasStore((s) => s.updateInput);
   const removeBlock = useCanvasStore((s) => s.removeBlock);
   const toggleBlockDisabled = useCanvasStore((s) => s.toggleBlockDisabled);
+  const setBlockVisibility = useCanvasStore((s) => s.setBlockVisibility);
   const addBlock = useCanvasStore((s) => s.addBlock);
   const addPlotBlock = useCanvasStore((s) => s.addPlotBlock);
   const select = useCanvasStore((s) => s.select);
@@ -301,6 +302,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
     <div
       className={`nya-region absolute ${editing ? 'z-20' : 'z-10'}`}
       style={{ left: block.x, top: block.y }}
+      data-visibility={block.visibility ?? 'show'}
       onMouseEnter={() => {
         if (!editing) setHoveredVar(hoverNameOf(block));
       }}
@@ -686,6 +688,18 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                 <IPause /> {t('m.disabled')}
               </div>
             )}
+            {(block.visibility ?? 'show') !== 'show' && (
+              <div className="text-[11px] leading-5 text-[var(--faint)]">
+                {t('m.visLabel', {
+                  v:
+                    block.visibility === 'hide'
+                      ? t('m.visHide')
+                      : block.visibility === 'input'
+                        ? t('m.visInput')
+                        : t('m.visResult'),
+                })}
+              </div>
+            )}
             {!block.disabled && lateDeps && lateDeps.length > 0 && (
               <div
                 className="flex items-center gap-1.5 text-[12px] leading-5 text-[var(--accent-line)]"
@@ -794,6 +808,34 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                 onRun={() => {
                   setCtx(null);
                   toggleBlockDisabled(block.id);
+                }}
+              />
+              <CtxItem
+                label={t('m.visLabel', { v: t('m.visShow') })}
+                onRun={() => {
+                  setCtx(null);
+                  setBlockVisibility(block.id, 'show');
+                }}
+              />
+              <CtxItem
+                label={t('m.visLabel', { v: t('m.visHide') })}
+                onRun={() => {
+                  setCtx(null);
+                  setBlockVisibility(block.id, 'hide');
+                }}
+              />
+              <CtxItem
+                label={t('m.visLabel', { v: t('m.visInput') })}
+                onRun={() => {
+                  setCtx(null);
+                  setBlockVisibility(block.id, 'input');
+                }}
+              />
+              <CtxItem
+                label={t('m.visLabel', { v: t('m.visResult') })}
+                onRun={() => {
+                  setCtx(null);
+                  setBlockVisibility(block.id, 'result');
                 }}
               />
               <CtxItem

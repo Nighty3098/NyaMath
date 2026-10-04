@@ -382,6 +382,7 @@ function Plot3dBlockView({ block, scale }: { block: MathBlockData; scale: number
         width: pw,
         height: err || !sample ? 'auto' : ph + chromeH,
       }}
+      data-visibility={block.visibility ?? 'show'}
     >
       <div
         data-block-id={block.id}
