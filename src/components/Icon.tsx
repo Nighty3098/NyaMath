@@ -25,6 +25,7 @@ import {
   faGripVertical,
   faInfinity,
   faLayerGroup,
+  faLocationArrow,
   faMicrochip,
   faMinus,
   faMoon,
@@ -120,6 +121,7 @@ export const IChip = () => <Fa icon={faMicrochip} />;
 export const ITune = () => <Fa icon={faSliders} />;
 /** ЭМ поля: атом */
 export const IField = () => <Fa icon={faAtom} />;
+export const IVector = () => <Fa icon={faLocationArrow} />;
 /** Сайдпанель (единое окно палитр): двухколоночный layout */
 export const ISidebar = () => <Fa icon={faTableColumns} />;
 /** Физические константы: бесконечность (константа как вечная величина) */

@@ -13,6 +13,7 @@ import {
 } from './mathEngine';
 import type { Scope } from './core';
 import { complexReOrNull, flattenValue, padRange } from './core';
+import { arrowsFromValue, fieldArrows, freeVarsOf, type ArrowDatum } from './vectorPlot';
 
 export interface PlotSample {
   /** подпись серии */
@@ -25,6 +26,8 @@ export interface PlotSample {
   xmax: number;
   ymin: number;
   ymax: number;
+  /** 'vector' — превью компонент вектора (столбики), иначе функция */
+  source?: 'fn' | 'vector';
 }
 
 export interface SampleOpts {
@@ -84,12 +87,21 @@ export interface PlotSeriesData {
   indexMode: boolean;
   xs: number[];
   ys: (number | null)[];
+  /** стиль «Стрелки»/«Векторное поле»: стрелки в данных координатах */
+  arrows?: ArrowDatum[];
 }
 
 export interface PlotBlockSample {
   series: PlotSeriesData[];
   ymin: number;
   ymax: number;
+}
+
+/** Необязательные настройки семплинга: стиль трейса и y-диапазон поля. */
+export interface PlotSampleOpts {
+  trace?: 'line' | 'bar' | 'stem' | 'arrow' | 'field';
+  plotYmin?: number;
+  plotYmax?: number;
 }
 
 function numOf(v: unknown): number | null {
@@ -103,8 +115,8 @@ function toFlatArray(v: unknown): unknown[] | null {
 
 /**
  * Сэмплинг plot-блока: несколько серий через `;`, выражения от x,
- * векторы из документа (по индексу), скаляры (горизонталь).
- * Та же математика, что в PlotBlockView.
+ * векторы из документа (по индексу), скаляры (горизонталь),
+ * векторное поле F(x, y) (сетка стрелок). Та же математика, что в PlotBlockView.
  */
 export function samplePlotBlock(
   plotFn: string,
@@ -112,6 +124,7 @@ export function samplePlotBlock(
   xmin: number,
   xmax: number,
   n = 240,
+  opts?: PlotSampleOpts,
 ): PlotBlockSample | null {
   const exprs = plotFn
     .split(/[;\n]/)
@@ -119,6 +132,10 @@ export function samplePlotBlock(
     .filter(Boolean)
     .slice(0, 5);
   if (!exprs.length || !(xmin < xmax)) return null;
+  const trace = opts?.trace;
+  // поле: явный стиль field или свободная y (не определённая в документе)
+  const fieldBox = { xmin, xmax, ymin: opts?.plotYmin ?? -5, ymax: opts?.plotYmax ?? 5 };
+  let usedField = false;
 
   const evalWithX = (() => {
     // Серии компилируем один раз; точки гоняем через общий scope-объект.
@@ -143,6 +160,23 @@ export function samplePlotBlock(
   const allY: number[] = [];
   const series: PlotSeriesData[] = [];
   for (const expr of exprs) {
+    const free = freeVarsOf(expr);
+    const bivariate = !!free && free.includes('x') && free.includes('y');
+    const isField =
+      bivariate &&
+      (trace === 'field' || ((trace === undefined || trace === 'line') && !('y' in scope)));
+    if (isField) {
+      const arrows = fieldArrows(expr, scope, fieldBox, numOf);
+      if (!arrows) {
+        series.push({ expr, indexMode: false, xs: [], ys: [] });
+        continue;
+      }
+      usedField = true;
+      const xs = arrows.map((a) => a.x);
+      const ys = arrows.map((a) => Math.hypot(a.dx, a.dy));
+      series.push({ expr, indexMode: false, xs, ys, arrows });
+      continue;
+    }
     const hasX = /\bx\b/.test(preprocessJ(expr, false));
     const xs: number[] = [];
     const ys: (number | null)[] = [];
@@ -159,7 +193,8 @@ export function samplePlotBlock(
           xs.push(k);
           ys.push(numOf(item));
         });
-        series.push({ expr, indexMode: true, xs, ys });
+        const arrows = trace === 'arrow' ? arrowsFromValue(v, numOf) : null;
+        series.push(arrows ? { expr, indexMode: true, xs, ys, arrows } : { expr, indexMode: true, xs, ys });
       } else {
         const y0 = numOf(v);
         if (y0 === null) {
@@ -186,6 +221,9 @@ export function samplePlotBlock(
       }
       series.push({ expr, indexMode: false, xs, ys });
     }
+  }
+  if (usedField && fieldBox.ymin < fieldBox.ymax) {
+    return { series, ymin: fieldBox.ymin, ymax: fieldBox.ymax };
   }
   for (const s of series) {
     for (const y of s.ys) if (typeof y === 'number' && isFinite(y)) allY.push(y);

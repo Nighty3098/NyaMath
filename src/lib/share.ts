@@ -101,6 +101,8 @@ function slimBlocks(blocks: Record<string, SlimSource>): CompactBlock[] {
         put(extra, 'd', b.plotYmax, 5);
         put(extra, 'r', b.plotResolution, undefined as unknown as number);
       } else {
+        put(extra, 'c', b.plotYmin, -5);
+        put(extra, 'd', b.plotYmax, 5);
         if (b.plotProj !== undefined) extra.p = b.plotProj;
         if (b.plotTrace !== undefined && b.plotTrace !== 'line') extra.q = b.plotTrace;
         if (b.plotErr) extra.E = b.plotErr;

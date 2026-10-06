@@ -23,6 +23,7 @@ import {
 } from '../lib/assistant';
 import { collectScopeVars } from '../lib/scopeVars';
 import { TraceLine } from './TraceLine';
+import MiniPlot from './MiniPlot';
 
 /** Высота редактора под контент: rows знает только `\n`, а длинные формулы
  *  переносятся — без подстройки появляется внутренний скроллбар.
@@ -269,7 +270,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   const doVisualize = () => {
     const v = block.visualize;
     if (!v || editing) return;
-    if (v.kind === 'vector') addPlotBlock(block.x, block.y + 260, v.expr);
+    if (v.kind === 'vector') addPlotBlock(block.x, block.y + 260, v.expr, { plotTrace: 'arrow' });
     else addPlot3dBlock(block.x, block.y + 420, v.expr);
   };
 
@@ -722,6 +723,11 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
             )}
             {block.plotPreview && !block.error && (
               <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+                {block.plotPreview.source === 'vector' && (
+                  <div className="mt-1">
+                    <MiniPlot sample={block.plotPreview} />
+                  </div>
+                )}
                 <div className="flex items-center gap-2 mt-1">
                   <button
                     type="button"
@@ -730,7 +736,14 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                     onClick={(e) => {
                       e.stopPropagation();
                       if (block.plotPreview)
-                        addPlotBlock(block.x, block.y + 260, block.plotPreview.expr);
+                        addPlotBlock(
+                          block.x,
+                          block.y + 260,
+                          block.plotPreview.expr,
+                          block.plotPreview.source === 'vector'
+                            ? { plotTrace: 'arrow' }
+                            : undefined,
+                        );
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
@@ -783,7 +796,14 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
                   onRun={() => {
                     setCtx(null);
                     if (block.plotPreview)
-                      addPlotBlock(block.x, block.y + 260, block.plotPreview.expr);
+                      addPlotBlock(
+                        block.x,
+                        block.y + 260,
+                        block.plotPreview.expr,
+                        block.plotPreview.source === 'vector'
+                          ? { plotTrace: 'arrow' }
+                          : undefined,
+                      );
                   }}
                 />
               )}

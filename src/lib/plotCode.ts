@@ -17,6 +17,9 @@ export function plotBlockToCode(b: MathBlockData, lang: 'ru' | 'en' = 'ru'): str
       : '// NyaMath plot: paste into a new plot block, set the range',
     `expression: ${fn}`,
     `x: [${xmin}, ${xmax}]`,
+    ...(traceOf(b) === 'field'
+      ? [`y: [${b.plotYmin ?? -5}, ${b.plotYmax ?? 5}]`]
+      : []),
     `projection: ${b.plotProj === 'polar' ? 'polar' : 'xy'} | trace: ${traceOf(b)} | logx: ${b.plotLogx === true ? 'on' : 'off'}`,
     `grid: ${(b.plotGrid ?? true) ? 'on' : 'off'} | legend: ${(b.plotLegend ?? true) ? 'on' : 'off'}`,
   ];
@@ -38,7 +41,12 @@ export function plotBlockToCode(b: MathBlockData, lang: 'ru' | 'en' = 'ru'): str
 }
 
 function traceOf(b: MathBlockData): string {
-  return b.plotTrace === 'bar' || b.plotTrace === 'stem' ? b.plotTrace : 'line';
+  return b.plotTrace === 'bar' ||
+    b.plotTrace === 'stem' ||
+    b.plotTrace === 'arrow' ||
+    b.plotTrace === 'field'
+    ? b.plotTrace
+    : 'line';
 }
 
 function axisLabel(label: string | undefined, unit: string | undefined): string {
@@ -56,6 +64,8 @@ export function plotBlockPatch(b: MathBlockData): Partial<MathBlockData> {
     plotFn: b.plotFn,
     plotXmin: b.plotXmin,
     plotXmax: b.plotXmax,
+    plotYmin: b.plotYmin,
+    plotYmax: b.plotYmax,
     plotProj: b.plotProj,
     plotTrace: b.plotTrace,
     plotErr: b.plotErr,

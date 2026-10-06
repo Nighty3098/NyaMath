@@ -998,74 +998,80 @@
    "label_en": "Math · algebra"
   },
   {
-   "id": "mathtrig",
+   "id": "mathvectors",
    "ord": 10,
+   "label_ru": "Математика · векторы",
+   "label_en": "Math · vectors"
+  },
+  {
+   "id": "mathtrig",
+   "ord": 11,
    "label_ru": "Математика · тригонометрия",
    "label_en": "Math · trigonometry"
   },
   {
    "id": "mathcalc",
-   "ord": 11,
+   "ord": 12,
    "label_ru": "Математика · анализ",
    "label_en": "Math · calculus"
   },
   {
    "id": "probability",
-   "ord": 12,
+   "ord": 13,
    "label_ru": "Вероятность и статистика",
    "label_en": "Probability & statistics"
   },
   {
    "id": "statistics",
-   "ord": 13,
+   "ord": 14,
    "label_ru": "Статистика данных",
    "label_en": "Data statistics"
   },
   {
    "id": "emfields",
-   "ord": 14,
+   "ord": 15,
    "label_ru": "ЭМ поля и волны",
    "label_en": "EM fields & waves"
   },
   {
    "id": "semiconductors",
-   "ord": 15,
+   "ord": 16,
    "label_ru": "Полупроводники",
    "label_en": "Semiconductors"
   },
   {
    "id": "telecom",
-   "ord": 16,
+   "ord": 17,
    "label_ru": "Телеком и сети",
    "label_en": "Telecom & networks"
   },
   {
    "id": "logic",
-   "ord": 17,
+   "ord": 18,
    "label_ru": "Логика и биты",
    "label_en": "Logic & bits"
   },
   {
    "id": "nuclear",
-   "ord": 18,
+   "ord": 19,
    "label_ru": "Ядерная физика",
    "label_en": "Nuclear physics"
   },
   {
    "id": "mathcomplex",
-   "ord": 19,
+   "ord": 20,
    "label_ru": "Математика · комплексные",
    "label_en": "Math · complex"
   },
   {
    "id": "mathseries",
-   "ord": 20,
+   "ord": 21,
    "label_ru": "Математика · ряды",
    "label_en": "Math · series"
   },
   {
    "id": "mathode",
-   "ord": 21,
+   "ord": 22,
    "label_ru": "Математика · ДУ",
    "label_en": "Math · ODE"
   }
@@ -4063,8 +4069,8 @@
   },
   {
    "id": "vec-norm",
-   "section": "mathalgebra",
-   "ord": 230,
+   "section": "mathvectors",
+   "ord": 0,
    "label_ru": "Норма вектора",
    "label_en": "Vector norm",
    "hint_ru": "‖v‖ = √(Σv_i²)",
@@ -4076,8 +4082,8 @@
   },
   {
    "id": "dot-product",
-   "section": "mathalgebra",
-   "ord": 231,
+   "section": "mathvectors",
+   "ord": 1,
    "label_ru": "Скалярное произведение",
    "label_en": "Dot product",
    "hint_ru": "a·b = Σa_i b_i",
@@ -4089,8 +4095,8 @@
   },
   {
    "id": "cross-product",
-   "section": "mathalgebra",
-   "ord": 232,
+   "section": "mathvectors",
+   "ord": 2,
    "label_ru": "Векторное произведение",
    "label_en": "Cross product",
    "hint_ru": "i×j = k",
@@ -8051,6 +8057,266 @@
    "plot2d": null,
    "plot3d": null,
    "sim": null
+  },
+  {
+   "id": "dot-magnitude",
+   "section": "mathvectors",
+   "ord": 3,
+   "label_ru": "Скалярное произведение через угол",
+   "label_en": "Dot product via angle",
+   "hint_ru": "a·b = ‖a‖·‖b‖·cos θ",
+   "hint_en": "a·b = ‖a‖·‖b‖·cos θ",
+   "code": "a_d := [1, 0]\nb_d := [1, 1]\ndot(a_d, b_d) =\nnorm(a_d)*norm(b_d)*cos(angle(a_d, b_d)) =",
+   "plot2d": "dot([1, 0], [cos(x), sin(x)])",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "angle-between",
+   "section": "mathvectors",
+   "ord": 4,
+   "label_ru": "Угол между векторами",
+   "label_en": "Angle between vectors",
+   "hint_ru": "cos θ = (a·b) / (‖a‖·‖b‖)",
+   "hint_en": "cos θ = (a·b) / (‖a‖·‖b‖)",
+   "code": "a_an := [3, 1]\nb_an := [1, 2]\nangleDeg(a_an, b_an) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "unit-vector",
+   "section": "mathvectors",
+   "ord": 5,
+   "label_ru": "Единичный вектор",
+   "label_en": "Unit vector",
+   "hint_ru": "e = v / ‖v‖",
+   "hint_en": "e = v / ‖v‖",
+   "code": "v_u := [3, 4]\nnormalize(v_u) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "vector-projection",
+   "section": "mathvectors",
+   "ord": 6,
+   "label_ru": "Проекция вектора",
+   "label_en": "Vector projection",
+   "hint_ru": "proj_b a = (a·b)/‖b‖² · b",
+   "hint_en": "proj_b a = (a·b)/‖b‖² · b",
+   "code": "a_p := [3, 4]\nb_p := [1, 0]\nproj(a_p, b_p) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "scalar-projection",
+   "section": "mathvectors",
+   "ord": 7,
+   "label_ru": "Скалярная проекция",
+   "label_en": "Scalar projection",
+   "hint_ru": "comp_b a = (a·b) / ‖b‖",
+   "hint_en": "comp_b a = (a·b) / ‖b‖",
+   "code": "a_c := [3, 4]\nb_c := [0, 2]\ncomp(a_c, b_c) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "point-distance",
+   "section": "mathvectors",
+   "ord": 8,
+   "label_ru": "Расстояние между точками",
+   "label_en": "Distance between points",
+   "hint_ru": "d = ‖B − A‖",
+   "hint_en": "d = ‖B − A‖",
+   "code": "A_pt := [0, 0]\nB_pt := [3, 4]\ndist(A_pt, B_pt) =",
+   "plot2d": "dist([0, 0], [x, 0])",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "segment-midpoint",
+   "section": "mathvectors",
+   "ord": 9,
+   "label_ru": "Середина отрезка",
+   "label_en": "Segment midpoint",
+   "hint_ru": "M = (A + B) / 2",
+   "hint_en": "M = (A + B) / 2",
+   "code": "A_ms := [0, 0]\nB_ms := [2, 4]\nmid(A_ms, B_ms) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "parallelogram-area",
+   "section": "mathvectors",
+   "ord": 10,
+   "label_ru": "Площадь параллелограмма",
+   "label_en": "Parallelogram area",
+   "hint_ru": "S = ‖a × b‖",
+   "hint_en": "S = ‖a × b‖",
+   "code": "a_pa := [3, 0]\nb_pa := [0, 4]\nareaPar(a_pa, b_pa) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "triangle-area-vectors",
+   "section": "mathvectors",
+   "ord": 11,
+   "label_ru": "Площадь треугольника (векторы)",
+   "label_en": "Triangle area (vectors)",
+   "hint_ru": "S = ‖a × b‖ / 2",
+   "hint_en": "S = ‖a × b‖ / 2",
+   "code": "a_ta := [3, 0]\nb_ta := [0, 4]\nareaTri(a_ta, b_ta) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "scalar-triple-product",
+   "section": "mathvectors",
+   "ord": 12,
+   "label_ru": "Смешанное произведение",
+   "label_en": "Scalar triple product",
+   "hint_ru": "[a b c] = a·(b×c); |[a b c]| — объём параллелепипеда",
+   "hint_en": "[a b c] = a·(b×c); |[a b c]| — parallelepiped volume",
+   "code": "a_tp := [1, 0, 0]\nb_tp := [0, 1, 0]\nc_tp := [0, 0, 1]\ntriple(a_tp, b_tp, c_tp) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "triple-det-check",
+   "section": "mathvectors",
+   "ord": 13,
+   "label_ru": "Смешанное = определитель",
+   "label_en": "Triple product = determinant",
+   "hint_ru": "[a b c] = det[a; b; c]",
+   "hint_en": "[a b c] = det[a; b; c]",
+   "code": "triple([1, 2, 3], [4, 5, 6], [7, 8, 10]) =\ndet([1, 2, 3; 4, 5, 6; 7, 8, 10]) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "vector-triple-product",
+   "section": "mathvectors",
+   "ord": 14,
+   "label_ru": "Тройное векторное произведение",
+   "label_en": "Vector triple product",
+   "hint_ru": "a×(b×c) = b(a·c) − c(a·b)",
+   "hint_en": "a×(b×c) = b(a·c) − c(a·b)",
+   "code": "tripleV([1, 2, 3], [4, 5, 6], [7, 8, 9]) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "collinearity",
+   "section": "mathvectors",
+   "ord": 15,
+   "label_ru": "Коллинеарность векторов",
+   "label_en": "Collinearity",
+   "hint_ru": "a ∥ b ⇔ a×b = 0",
+   "hint_en": "a ∥ b ⇔ a×b = 0",
+   "code": "a_cl := [1, 2]\nb_cl := [2, 4]\ncollinear(a_cl, b_cl) =\ncross(a_cl, b_cl) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "orthogonality",
+   "section": "mathvectors",
+   "ord": 16,
+   "label_ru": "Ортогональность векторов",
+   "label_en": "Orthogonality",
+   "hint_ru": "a ⟂ b ⇔ a·b = 0",
+   "hint_en": "a ⟂ b ⇔ a·b = 0",
+   "code": "a_ot := [1, 2]\nb_ot := [2, -1]\ndot(a_ot, b_ot) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "vector-rotation",
+   "section": "mathvectors",
+   "ord": 17,
+   "label_ru": "Поворот вектора",
+   "label_en": "Vector rotation",
+   "hint_ru": "x′ = x·cos φ − y·sin φ; y′ = x·sin φ + y·cos φ",
+   "hint_en": "x′ = x·cos φ − y·sin φ; y′ = x·sin φ + y·cos φ",
+   "code": "v_rt := [1, 0]\nphi_rt := pi/4\nrot2(v_rt, phi_rt) =",
+   "plot2d": "comp(rot2([1, 0], x), [1, 0])",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "perpendicular-2d",
+   "section": "mathvectors",
+   "ord": 18,
+   "label_ru": "Перпендикуляр (2D)",
+   "label_en": "Perpendicular (2D)",
+   "hint_ru": "v⊥ = (−y, x)",
+   "hint_en": "v⊥ = (−y, x)",
+   "code": "v_pd := [3, 4]\nperp(v_pd) =\ndot(perp(v_pd), v_pd) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "direction-unit",
+   "section": "mathvectors",
+   "ord": 19,
+   "label_ru": "Вектор направления",
+   "label_en": "Direction vector",
+   "hint_ru": "AB̂ = (B − A) / ‖B − A‖",
+   "hint_en": "AB̂ = (B − A) / ‖B − A‖",
+   "code": "A_dir := [0, 0]\nB_dir := [3, 4]\nvdir(A_dir, B_dir) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "direction-cosines",
+   "section": "mathvectors",
+   "ord": 20,
+   "label_ru": "Направляющие косинусы",
+   "label_en": "Direction cosines",
+   "hint_ru": "cos α = x/‖v‖; Σcos² = 1",
+   "hint_en": "cos α = x/‖v‖; Σcos² = 1",
+   "code": "v_dc := [1, 2, 3]\nC_dc := normalize(v_dc)\nC_dc =\nsum(C_dc.^2) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "vector-components",
+   "section": "mathvectors",
+   "ord": 21,
+   "label_ru": "Разложение на компоненты",
+   "label_en": "Vector components",
+   "hint_ru": "v = projᵢ v + projⱼ v",
+   "hint_en": "v = projᵢ v + projⱼ v",
+   "code": "v_kp := [3, 4]\nproj(v_kp, [1, 0]) + proj(v_kp, [0, 1]) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "resultant-parallelogram",
+   "section": "mathvectors",
+   "ord": 22,
+   "label_ru": "Равнодействующая векторов",
+   "label_en": "Resultant vector",
+   "hint_ru": "r = a + b (правило параллелограмма)",
+   "hint_en": "r = a + b (parallelogram law)",
+   "code": "a_rs := [2, 0]\nb_rs := [0, 3]\nr_rs := a_rs + b_rs\nr_rs =\nnorm(r_rs) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
   }
  ],
  "formula_sources": [
@@ -11323,6 +11589,126 @@
    "ord": 1,
    "title": "Вероятность — Википедия",
    "url": "https://ru.wikipedia.org/wiki/Вероятность"
+  },
+  {
+   "formula_id": "dot-magnitude",
+   "ord": 0,
+   "title": "Dot product — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Dot_product"
+  },
+  {
+   "formula_id": "angle-between",
+   "ord": 0,
+   "title": "Angle — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Angle"
+  },
+  {
+   "formula_id": "unit-vector",
+   "ord": 0,
+   "title": "Unit vector — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Unit_vector"
+  },
+  {
+   "formula_id": "vector-projection",
+   "ord": 0,
+   "title": "Projection (linear algebra) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Projection_(linear_algebra)"
+  },
+  {
+   "formula_id": "scalar-projection",
+   "ord": 0,
+   "title": "Projection (linear algebra) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Projection_(linear_algebra)"
+  },
+  {
+   "formula_id": "point-distance",
+   "ord": 0,
+   "title": "Distance — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Distance"
+  },
+  {
+   "formula_id": "segment-midpoint",
+   "ord": 0,
+   "title": "Midpoint — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Midpoint"
+  },
+  {
+   "formula_id": "parallelogram-area",
+   "ord": 0,
+   "title": "Parallelogram — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Parallelogram"
+  },
+  {
+   "formula_id": "triangle-area-vectors",
+   "ord": 0,
+   "title": "Triangle — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Triangle"
+  },
+  {
+   "formula_id": "scalar-triple-product",
+   "ord": 0,
+   "title": "Triple product — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Triple_product"
+  },
+  {
+   "formula_id": "triple-det-check",
+   "ord": 0,
+   "title": "Triple product — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Triple_product"
+  },
+  {
+   "formula_id": "vector-triple-product",
+   "ord": 0,
+   "title": "Vector triple product — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Vector_triple_product"
+  },
+  {
+   "formula_id": "collinearity",
+   "ord": 0,
+   "title": "Collinearity — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Collinearity"
+  },
+  {
+   "formula_id": "orthogonality",
+   "ord": 0,
+   "title": "Orthogonality — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Orthogonality"
+  },
+  {
+   "formula_id": "vector-rotation",
+   "ord": 0,
+   "title": "Rotation matrix — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Rotation_matrix"
+  },
+  {
+   "formula_id": "perpendicular-2d",
+   "ord": 0,
+   "title": "Perpendicular — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Perpendicular"
+  },
+  {
+   "formula_id": "direction-unit",
+   "ord": 0,
+   "title": "Unit vector — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Unit_vector"
+  },
+  {
+   "formula_id": "direction-cosines",
+   "ord": 0,
+   "title": "Direction cosine — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Direction_cosine"
+  },
+  {
+   "formula_id": "vector-components",
+   "ord": 0,
+   "title": "Linear combination — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Linear_combination"
+  },
+  {
+   "formula_id": "resultant-parallelogram",
+   "ord": 0,
+   "title": "Parallelogram law — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Parallelogram_law"
   }
  ],
  "formula_vars": [
@@ -21636,6 +22022,251 @@
    "name": "P_rep",
    "label_ru": "перестановки",
    "label_en": "permutations"
+  },
+  {
+   "formula_id": "dot-magnitude",
+   "ord": 0,
+   "name": "a_d",
+   "label_ru": "первый вектор",
+   "label_en": "first vector"
+  },
+  {
+   "formula_id": "dot-magnitude",
+   "ord": 1,
+   "name": "b_d",
+   "label_ru": "второй вектор",
+   "label_en": "second vector"
+  },
+  {
+   "formula_id": "angle-between",
+   "ord": 0,
+   "name": "a_an",
+   "label_ru": "первый вектор",
+   "label_en": "first vector"
+  },
+  {
+   "formula_id": "angle-between",
+   "ord": 1,
+   "name": "b_an",
+   "label_ru": "второй вектор",
+   "label_en": "second vector"
+  },
+  {
+   "formula_id": "unit-vector",
+   "ord": 0,
+   "name": "v_u",
+   "label_ru": "вектор",
+   "label_en": "vector"
+  },
+  {
+   "formula_id": "vector-projection",
+   "ord": 0,
+   "name": "a_p",
+   "label_ru": "вектор",
+   "label_en": "vector"
+  },
+  {
+   "formula_id": "vector-projection",
+   "ord": 1,
+   "name": "b_p",
+   "label_ru": "направление проекции",
+   "label_en": "projection direction"
+  },
+  {
+   "formula_id": "scalar-projection",
+   "ord": 0,
+   "name": "a_c",
+   "label_ru": "вектор",
+   "label_en": "vector"
+  },
+  {
+   "formula_id": "scalar-projection",
+   "ord": 1,
+   "name": "b_c",
+   "label_ru": "направление проекции",
+   "label_en": "projection direction"
+  },
+  {
+   "formula_id": "point-distance",
+   "ord": 0,
+   "name": "A_pt",
+   "label_ru": "точка A",
+   "label_en": "point A"
+  },
+  {
+   "formula_id": "point-distance",
+   "ord": 1,
+   "name": "B_pt",
+   "label_ru": "точка B",
+   "label_en": "point B"
+  },
+  {
+   "formula_id": "segment-midpoint",
+   "ord": 0,
+   "name": "A_ms",
+   "label_ru": "точка A",
+   "label_en": "point A"
+  },
+  {
+   "formula_id": "segment-midpoint",
+   "ord": 1,
+   "name": "B_ms",
+   "label_ru": "точка B",
+   "label_en": "point B"
+  },
+  {
+   "formula_id": "parallelogram-area",
+   "ord": 0,
+   "name": "a_pa",
+   "label_ru": "сторона a",
+   "label_en": "side a"
+  },
+  {
+   "formula_id": "parallelogram-area",
+   "ord": 1,
+   "name": "b_pa",
+   "label_ru": "сторона b",
+   "label_en": "side b"
+  },
+  {
+   "formula_id": "triangle-area-vectors",
+   "ord": 0,
+   "name": "a_ta",
+   "label_ru": "сторона a",
+   "label_en": "side a"
+  },
+  {
+   "formula_id": "triangle-area-vectors",
+   "ord": 1,
+   "name": "b_ta",
+   "label_ru": "сторона b",
+   "label_en": "side b"
+  },
+  {
+   "formula_id": "scalar-triple-product",
+   "ord": 0,
+   "name": "a_tp",
+   "label_ru": "вектор a",
+   "label_en": "vector a"
+  },
+  {
+   "formula_id": "scalar-triple-product",
+   "ord": 1,
+   "name": "b_tp",
+   "label_ru": "вектор b",
+   "label_en": "vector b"
+  },
+  {
+   "formula_id": "scalar-triple-product",
+   "ord": 2,
+   "name": "c_tp",
+   "label_ru": "вектор c",
+   "label_en": "vector c"
+  },
+  {
+   "formula_id": "collinearity",
+   "ord": 0,
+   "name": "a_cl",
+   "label_ru": "вектор a",
+   "label_en": "vector a"
+  },
+  {
+   "formula_id": "collinearity",
+   "ord": 1,
+   "name": "b_cl",
+   "label_ru": "вектор b",
+   "label_en": "vector b"
+  },
+  {
+   "formula_id": "orthogonality",
+   "ord": 0,
+   "name": "a_ot",
+   "label_ru": "вектор a",
+   "label_en": "vector a"
+  },
+  {
+   "formula_id": "orthogonality",
+   "ord": 1,
+   "name": "b_ot",
+   "label_ru": "вектор b",
+   "label_en": "vector b"
+  },
+  {
+   "formula_id": "vector-rotation",
+   "ord": 0,
+   "name": "v_rt",
+   "label_ru": "вектор",
+   "label_en": "vector"
+  },
+  {
+   "formula_id": "vector-rotation",
+   "ord": 1,
+   "name": "phi_rt",
+   "label_ru": "угол поворота",
+   "label_en": "rotation angle"
+  },
+  {
+   "formula_id": "perpendicular-2d",
+   "ord": 0,
+   "name": "v_pd",
+   "label_ru": "вектор",
+   "label_en": "vector"
+  },
+  {
+   "formula_id": "direction-unit",
+   "ord": 0,
+   "name": "A_dir",
+   "label_ru": "точка A",
+   "label_en": "point A"
+  },
+  {
+   "formula_id": "direction-unit",
+   "ord": 1,
+   "name": "B_dir",
+   "label_ru": "точка B",
+   "label_en": "point B"
+  },
+  {
+   "formula_id": "direction-cosines",
+   "ord": 0,
+   "name": "v_dc",
+   "label_ru": "вектор",
+   "label_en": "vector"
+  },
+  {
+   "formula_id": "direction-cosines",
+   "ord": 1,
+   "name": "C_dc",
+   "label_ru": "единичный вектор",
+   "label_en": "unit vector"
+  },
+  {
+   "formula_id": "vector-components",
+   "ord": 0,
+   "name": "v_kp",
+   "label_ru": "вектор",
+   "label_en": "vector"
+  },
+  {
+   "formula_id": "resultant-parallelogram",
+   "ord": 0,
+   "name": "a_rs",
+   "label_ru": "вектор a",
+   "label_en": "vector a"
+  },
+  {
+   "formula_id": "resultant-parallelogram",
+   "ord": 1,
+   "name": "b_rs",
+   "label_ru": "вектор b",
+   "label_en": "vector b"
+  },
+  {
+   "formula_id": "resultant-parallelogram",
+   "ord": 2,
+   "name": "r_rs",
+   "label_ru": "равнодействующая",
+   "label_en": "resultant"
   }
  ],
  "const_sections": [
@@ -22375,63 +23006,63 @@
    "label_en": "Result rounding",
    "hint_ru": "2 значащие цифры (GUM 7)",
    "hint_en": "2 significant digits (GUM 7)",
-    "code": "u := uncRound(0.02341)\nresRound(10.0613, u) =",
-    "doc": "GUM 7.2 · ГОСТ 34100.3-2017",
-    "exportName": null,
-    "vars": null,
-    "plot2d": null,
-    "plot_json": null
-   },
-   {
-    "ord": 17,
-    "pack": "uncertainty",
-    "kind": "math",
-    "label_ru": "МИ 1317: погрешность (авто)",
-    "label_en": "MI 1317: error (auto)",
-    "hint_ru": "1/2 → две цифры вверх, 3+ → одна матем.",
-    "hint_en": "1/2 → two digits up, 3+ → one math",
-    "code": "mi1317(0.0142) =\nmi1317(0.067, 2) =",
-    "doc": "МИ 1317-2004, п.3.4",
-    "exportName": null,
-    "vars": null,
-    "plot2d": null,
-    "plot_json": null
-   },
-   {
-    "ord": 18,
-    "pack": "uncertainty",
-    "kind": "math",
-    "label_ru": "МИ 1317: результат",
-    "label_en": "MI 1317: result",
-    "hint_ru": "разряд результата = разряду погрешности",
-    "hint_en": "result place = error place",
-    "code": "d := mi1317(0.02341)\nmiRes(10.0613, d) =",
-    "doc": "МИ 1317-2004, п.1.3 · п.3.4",
-    "exportName": null,
-    "vars": null,
-    "plot2d": null,
-    "plot_json": null
-   },
-   {
-    "ord": 19,
-    "pack": "uncertainty",
-    "kind": "math",
-    "label_ru": "Значащие цифры: 1, 2, 3",
-    "label_en": "Significant digits: 1, 2, 3",
-    "hint_ru": "ceilSig — вверх, roundSig — матем.",
-    "hint_en": "ceilSig — up, roundSig — nearest",
-    "code": "ceilSig(0.02341, 1) =\nroundSig(0.02341, 1) =\nceilSig(0.02341, 3) =",
-    "doc": "МИ 1317-2004, п.3.4 · GUM 7.2.6",
-    "exportName": null,
-    "vars": null,
-    "plot2d": null,
-    "plot_json": null
-   },
+   "code": "u := uncRound(0.02341)\nresRound(10.0613, u) =",
+   "doc": "GUM 7.2 · ГОСТ 34100.3-2017",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
   {
-    "ord": 127,
-    "pack": "uncertainty",
-    "kind": "math",
-    "label_ru": "Монте-Карло uMC",
+   "ord": 17,
+   "pack": "uncertainty",
+   "kind": "math",
+   "label_ru": "МИ 1317: погрешность (авто)",
+   "label_en": "MI 1317: error (auto)",
+   "hint_ru": "1/2 → две цифры вверх, 3+ → одна матем.",
+   "hint_en": "1/2 → two digits up, 3+ → one math",
+   "code": "mi1317(0.0142) =\nmi1317(0.067, 2) =",
+   "doc": "МИ 1317-2004, п.3.4",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 18,
+   "pack": "uncertainty",
+   "kind": "math",
+   "label_ru": "МИ 1317: результат",
+   "label_en": "MI 1317: result",
+   "hint_ru": "разряд результата = разряду погрешности",
+   "hint_en": "result place = error place",
+   "code": "d := mi1317(0.02341)\nmiRes(10.0613, d) =",
+   "doc": "МИ 1317-2004, п.1.3 · п.3.4",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 19,
+   "pack": "uncertainty",
+   "kind": "math",
+   "label_ru": "Значащие цифры: 1, 2, 3",
+   "label_en": "Significant digits: 1, 2, 3",
+   "hint_ru": "ceilSig — вверх, roundSig — матем.",
+   "hint_en": "ceilSig — up, roundSig — nearest",
+   "code": "ceilSig(0.02341, 1) =\nroundSig(0.02341, 1) =\nceilSig(0.02341, 3) =",
+   "doc": "МИ 1317-2004, п.3.4 · GUM 7.2.6",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 127,
+   "pack": "uncertainty",
+   "kind": "math",
+   "label_ru": "Монте-Карло uMC",
    "label_en": "Monte-Carlo uMC",
    "hint_ru": "GUM-S1: модель + распределения входов",
    "hint_en": "GUM-S1: model + input PDFs",
@@ -22443,10 +23074,10 @@
    "plot_json": null
   },
   {
-    "ord": 128,
-    "pack": "uncertainty",
-    "kind": "math",
-    "label_ru": "МИ: прямые многократные",
+   "ord": 128,
+   "pack": "uncertainty",
+   "kind": "math",
+   "label_ru": "МИ: прямые многократные",
    "label_en": "MI: repeated direct",
    "hint_ru": "ε, θ, Δ по ГОСТ 8.736",
    "hint_en": "ε, θ, Δ per GOST 8.736",
@@ -22458,10 +23089,10 @@
    "plot_json": null
   },
   {
-    "ord": 129,
-    "pack": "uncertainty",
-    "kind": "math",
-    "label_ru": "ПМГ: суммирование",
+   "ord": 129,
+   "pack": "uncertainty",
+   "kind": "math",
+   "label_ru": "ПМГ: суммирование",
    "label_en": "PMG: combination",
    "hint_ru": "Б.3–Б.5: |Δ|, RSS, K_P",
    "hint_en": "B.3–B.5: |Δ|, RSS, K_P",
@@ -22473,10 +23104,10 @@
    "plot_json": null
   },
   {
-    "ord": 130,
-    "pack": "uncertainty",
-    "kind": "math",
-    "label_ru": "Прецизионность p×n",
+   "ord": 130,
+   "pack": "uncertainty",
+   "kind": "math",
+   "label_ru": "Прецизионность p×n",
    "label_en": "Precision p×n",
    "hint_ru": "s_r, s_L, s_R (схема 5725-2)",
    "hint_en": "s_r, s_L, s_R (5725-2 scheme)",
@@ -22488,10 +23119,10 @@
    "plot_json": null
   },
   {
-    "ord": 131,
-    "pack": "uncertainty",
-    "kind": "math",
-    "label_ru": "Top-down оценка",
+   "ord": 131,
+   "pack": "uncertainty",
+   "kind": "math",
+   "label_ru": "Top-down оценка",
    "label_en": "Top-down estimate",
    "hint_ru": "упрощённо по 21748",
    "hint_en": "simplified per 21748",
@@ -22503,53 +23134,53 @@
    "plot_json": null
   },
   {
-    "ord": 132,
-    "pack": "uncertainty",
-    "kind": "math",
-    "label_ru": "Пределы r, R",
+   "ord": 132,
+   "pack": "uncertainty",
+   "kind": "math",
+   "label_ru": "Пределы r, R",
    "label_en": "Limits r, R",
    "hint_ru": "2.8·s (5725-6)",
    "hint_en": "2.8·s (5725-6)",
-    "code": "repLim(0.12) =",
-    "doc": "ГОСТ Р ИСО 5725-6",
-    "exportName": null,
-    "vars": null,
-    "plot2d": "repLim(x)",
-    "plot_json": null
-   },
-   {
-    "ord": 133,
-    "pack": "uncertainty",
-    "kind": "math",
-    "label_ru": "Граббс: промахи",
-    "label_en": "Grubbs: outliers",
-    "hint_ru": "Gрасч vs Gтабл, номер выброса",
-    "hint_en": "G vs critical, outlier index",
-    "code": "grubbs([10.1, 10.3, 9.9, 10.2, 12.5]) =",
-    "doc": "критерий Граббса, один выброс (точная формула через Стьюдента)",
-    "exportName": null,
-    "vars": null,
-    "plot2d": null,
-    "plot_json": null
-   },
-   {
-    "ord": 134,
-    "pack": "uncertainty",
-    "kind": "math",
-    "label_ru": "Диксон: промахи (n<10)",
-    "label_en": "Dixon: outliers (n<10)",
-    "hint_ru": "Q-тест, зазор/размах, n = 3…10",
-    "hint_en": "Q-test, gap/range, n = 3…10",
-    "code": "dixon([2.31, 2.29, 2.33, 2.30, 2.65]) =",
-    "doc": "критерий Диксона, Q-тест (Dixon 1950)",
-    "exportName": null,
-    "vars": null,
-    "plot2d": null,
-    "plot_json": null
-   },
-   {
-    "ord": 23,
-    "pack": "physics",
+   "code": "repLim(0.12) =",
+   "doc": "ГОСТ Р ИСО 5725-6",
+   "exportName": null,
+   "vars": null,
+   "plot2d": "repLim(x)",
+   "plot_json": null
+  },
+  {
+   "ord": 133,
+   "pack": "uncertainty",
+   "kind": "math",
+   "label_ru": "Граббс: промахи",
+   "label_en": "Grubbs: outliers",
+   "hint_ru": "Gрасч vs Gтабл, номер выброса",
+   "hint_en": "G vs critical, outlier index",
+   "code": "grubbs([10.1, 10.3, 9.9, 10.2, 12.5]) =",
+   "doc": "критерий Граббса, один выброс (точная формула через Стьюдента)",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 134,
+   "pack": "uncertainty",
+   "kind": "math",
+   "label_ru": "Диксон: промахи (n<10)",
+   "label_en": "Dixon: outliers (n<10)",
+   "hint_ru": "Q-тест, зазор/размах, n = 3…10",
+   "hint_en": "Q-test, gap/range, n = 3…10",
+   "code": "dixon([2.31, 2.29, 2.33, 2.30, 2.65]) =",
+   "doc": "критерий Диксона, Q-тест (Dixon 1950)",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 23,
+   "pack": "physics",
    "kind": "math",
    "label_ru": "Фотон 650 нм",
    "label_en": "650 nm photon",
@@ -24106,6 +24737,336 @@
    "vars": null,
    "plot2d": null,
    "plot_json": null
+  },
+  {
+   "ord": 135,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Вектор (строка)",
+   "label_en": "Vector (row)",
+   "hint_ru": "[a, b, c] — строка; [a; b; c] — столбец",
+   "hint_en": "[a, b, c] — row; [a; b; c] — column",
+   "code": "v_a := [3, 4]",
+   "doc": "[a, b, c] — строка, [a; b; c] — столбец; обращение v[1] (с 1)",
+   "exportName": null,
+   "vars": null,
+   "plot2d": "v_a",
+   "plot_json": null
+  },
+  {
+   "ord": 136,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Скалярное произведение",
+   "label_en": "Dot product",
+   "hint_ru": "dot(a, b) = Σaᵢbᵢ",
+   "hint_en": "dot(a, b) = Σaᵢbᵢ",
+   "code": "dot([1, 2, 3], [4, 5, 6]) =",
+   "doc": "dot(a, b) — проекция a на b, число; работает и для 2D",
+   "exportName": null,
+   "vars": null,
+   "plot2d": "dot([1, 0], [cos(x), sin(x)])",
+   "plot_json": null
+  },
+  {
+   "ord": 137,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Векторное произведение",
+   "label_en": "Cross product",
+   "hint_ru": "cross(a, b): 2D → скаляр, 3D → вектор",
+   "hint_en": "cross(a, b): 2D → scalar, 3D → vector",
+   "code": "cross([1, 0, 0], [0, 1, 0]) =",
+   "doc": "cross(a, b) — 2D: a₁b₂−a₂b₁; 3D: вектор, перпендикулярный обеим",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 138,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Норма вектора",
+   "label_en": "Vector norm",
+   "hint_ru": "norm(v) — длина ‖v‖",
+   "hint_en": "norm(v) — length ‖v‖",
+   "code": "norm([3, 4]) =",
+   "doc": "norm(v) — евклидова длина; vecNorm(v, p) — p-норма",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 139,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Единичный вектор",
+   "label_en": "Unit vector",
+   "hint_ru": "normalize(v) = v / ‖v‖",
+   "hint_en": "normalize(v) = v / ‖v‖",
+   "code": "normalize([3, 4]) =",
+   "doc": "normalize(v) = v / ‖v‖ — единичный вектор того же направления",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 140,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Угол между векторами",
+   "label_en": "Angle between vectors",
+   "hint_ru": "angleDeg(a, b) — градусы; angle(a, b) — радианы",
+   "hint_en": "angleDeg(a, b) — degrees; angle(a, b) — radians",
+   "code": "angleDeg([1, 0], [1, 1]) =",
+   "doc": "angle(a, b) ∈ [0, π] радианы; angleDeg(a, b) — градусы",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 141,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Проекция вектора",
+   "label_en": "Vector projection",
+   "hint_ru": "proj(a, b) — векторная проекция",
+   "hint_en": "proj(a, b) — vector projection",
+   "code": "proj([3, 4], [1, 0]) =",
+   "doc": "proj(a, b) = (a·b)/‖b‖² · b — векторная проекция a на b",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 142,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Скалярная проекция",
+   "label_en": "Scalar projection",
+   "hint_ru": "comp(a, b) — скалярная проекция",
+   "hint_en": "comp(a, b) — scalar projection",
+   "code": "comp([3, 4], [0, 2]) =",
+   "doc": "comp(a, b) = (a·b)/‖b‖ — скалярная проекция a на b",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 143,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Расстояние между точками",
+   "label_en": "Distance between points",
+   "hint_ru": "dist(a, b) = ‖a − b‖",
+   "hint_en": "dist(a, b) = ‖a − b‖",
+   "code": "dist([0, 0], [3, 4]) =",
+   "doc": "dist(a, b) = ‖a − b‖ — расстояние между точками",
+   "exportName": null,
+   "vars": null,
+   "plot2d": "dist([0, 0], [x, 0])",
+   "plot_json": null
+  },
+  {
+   "ord": 144,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Середина отрезка",
+   "label_en": "Segment midpoint",
+   "hint_ru": "mid(a, b) = (a + b)/2",
+   "hint_en": "mid(a, b) = (a + b)/2",
+   "code": "mid([0, 0], [2, 4]) =",
+   "doc": "mid(a, b) = (a + b)/2 — координаты середины отрезка AB",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 145,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Площадь треугольника",
+   "label_en": "Triangle area",
+   "hint_ru": "areaTri(a, b) = ‖a×b‖/2",
+   "hint_en": "areaTri(a, b) = ‖a×b‖/2",
+   "code": "areaTri([3, 0], [0, 4]) =",
+   "doc": "areaTri(a, b) = ‖a × b‖/2 — по двум сторонам-векторам",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 146,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Площадь параллелограмма",
+   "label_en": "Parallelogram area",
+   "hint_ru": "areaPar(a, b) = ‖a×b‖",
+   "hint_en": "areaPar(a, b) = ‖a×b‖",
+   "code": "areaPar([3, 0], [0, 4]) =",
+   "doc": "areaPar(a, b) = ‖a × b‖ — в любом измерении",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 147,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Смешанное произведение",
+   "label_en": "Scalar triple product",
+   "hint_ru": "triple(a, b, c) = a·(b×c)",
+   "hint_en": "triple(a, b, c) = a·(b×c)",
+   "code": "triple([1, 0, 0], [0, 1, 0], [0, 0, 1]) =",
+   "doc": "triple(a, b, c) = a·(b×c) = det[a; b; c] — объём параллелепипеда",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 148,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Тройное векторное произведение",
+   "label_en": "Vector triple product",
+   "hint_ru": "tripleV(a, b, c) = a×(b×c)",
+   "hint_en": "tripleV(a, b, c) = a×(b×c)",
+   "code": "tripleV([1, 2, 3], [4, 5, 6], [7, 8, 9]) =",
+   "doc": "tripleV(a, b, c) = a×(b×c) = b(a·c) − c(a·b)",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 149,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Коллинеарность",
+   "label_en": "Collinearity",
+   "hint_ru": "collinear(a, b) — true, если θ = 0° или 180°",
+   "hint_en": "collinear(a, b) — true if θ = 0° or 180°",
+   "code": "collinear([1, 2], [2, 4]) =",
+   "doc": "collinear(a, b) — true, если векторы сонаправлены или противоположны",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 150,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Перпендикуляр (2D)",
+   "label_en": "Perpendicular (2D)",
+   "hint_ru": "perp(v) = (−v₂, v₁)",
+   "hint_en": "perp(v) = (−v₂, v₁)",
+   "code": "perp([3, 4]) =",
+   "doc": "perp(v) = (−y, x) — поворот вектора на +90°",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 151,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Поворот вектора",
+   "label_en": "Vector rotation",
+   "hint_ru": "rot2(v, φ) — поворот на φ, радианы",
+   "hint_en": "rot2(v, φ) — rotate by φ, radians",
+   "code": "rot2([1, 0], pi/4) =",
+   "doc": "rot2(v, φ) — поворот 2D-вектора; deg2rad(30) — из градусов",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 152,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Вектор направления",
+   "label_en": "Direction vector",
+   "hint_ru": "vdir(a, b) = normalize(b − a)",
+   "hint_en": "vdir(a, b) = normalize(b − a)",
+   "code": "vdir([0, 0], [3, 4]) =",
+   "doc": "vdir(a, b) = normalize(b − a) — единичный вектор из a в b",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 153,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Градусы → радианы",
+   "label_en": "Degrees → radians",
+   "hint_ru": "deg2rad(x) / rad2deg(x)",
+   "hint_en": "deg2rad(x) / rad2deg(x)",
+   "code": "deg2rad(30) =",
+   "doc": "deg2rad(x) / rad2deg(x) — поэлементно для массивов",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 154,
+   "pack": "vectors",
+   "kind": "math",
+   "label_ru": "Нормировка угла",
+   "label_en": "Angle wrap",
+   "hint_ru": "wrapAngle(φ) → [−π, π)",
+   "hint_en": "wrapAngle(φ) → [−π, π)",
+   "code": "wrapAngle(3*pi) =",
+   "doc": "wrapAngle(φ) — приводит угол к диапазону [−π, π)",
+   "exportName": null,
+   "vars": null,
+   "plot2d": null,
+   "plot_json": null
+  },
+  {
+   "ord": 155,
+   "pack": "vectors",
+   "kind": "plot",
+   "label_ru": "Стрелки: вектор",
+   "label_en": "Arrows: vector",
+   "hint_ru": "2D-вектор → стрелка из начала координат",
+   "hint_en": "2D vector → arrow from origin",
+   "code": "v_a",
+   "doc": "стиль «Стрелки»: одиночный 2D-вектор → стрелка из начала координат",
+   "exportName": null,
+   "vars": "v_a := [3, 4]",
+   "plot2d": null,
+   "plot_json": "{\"plotTrace\":\"arrow\"}"
+  },
+  {
+   "ord": 156,
+   "pack": "vectors",
+   "kind": "plot",
+   "label_ru": "Векторное поле: вихрь",
+   "label_en": "Vector field: vortex",
+   "hint_ru": "F(x, y) = (−y, x) — сетка стрелок",
+   "hint_en": "F(x, y) = (−y, x) — grid of arrows",
+   "code": "[-om_f*y, om_f*x]",
+   "doc": "стиль «Векторное поле»: F(x, y) → сетка стрелок",
+   "exportName": null,
+   "vars": "om_f := 1",
+   "plot2d": null,
+   "plot_json": "{\"plotTrace\":\"field\",\"plotXmin\":-3,\"plotXmax\":3,\"plotYmin\":-3,\"plotYmax\":3}"
   }
  ],
  "sim_models": [

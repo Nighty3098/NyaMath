@@ -27,12 +27,14 @@ import {
   IField,
   IZap,
   IPlay,
+  IVector,
 } from './Icon';
 
 export type PaletteVariant = 'functions' | 'formulas' | 'constants';
 
 const PACKS: PackId[] = [
   'matrices',
+  'vectors',
   'stats',
   'uncertainty',
   'physics',
@@ -50,6 +52,7 @@ const PACKS: PackId[] = [
 
 const PACK_ICONS: Record<PackId, () => React.JSX.Element> = {
   matrices: IGrid,
+  vectors: IVector,
   stats: IChart,
   uncertainty: IScale,
   physics: IZap,

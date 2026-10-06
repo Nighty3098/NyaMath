@@ -16,6 +16,7 @@ import {
   valueToLatex,
 } from './mathEngine';
 import type { Scope } from './core';
+import { padRange } from './core';
 import { resetSolverTrace, takeSolverTrace } from './numeric';
 import { analyzeProgram, runProgram } from './program';
 import { sampleExpression, type PlotSample } from './plotSample';
@@ -33,6 +34,9 @@ import { t } from '../i18n';
 
 /** Режим видимости блока в отчёте. Вынесен сюда, чтобы его видели движок, стор и экспорт. */
 export type BlockVisibility = 'show' | 'hide' | 'input' | 'result';
+
+/** Стиль серии 2D-графика: линия / столбцы / стебли / стрелки / векторное поле. */
+export type PlotTrace = 'line' | 'bar' | 'stem' | 'arrow' | 'field';
 
 export interface MathBlockData {
   id: string;
@@ -77,7 +81,7 @@ export interface MathBlockData {
   plotXmax?: number;
   /** Проекция/стиль 2D-графика и оформление для публикации */
   plotProj?: 'xy' | 'polar';
-  plotTrace?: 'line' | 'bar' | 'stem';
+  plotTrace?: PlotTrace;
   plotErr?: string;
   plotLogx?: boolean;
   /** Единица оси (масштаб тиков), например «ГГц», «рад/с», «мм» */
@@ -1037,7 +1041,8 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
 
   // ----- Автографик -----
   // 1) определение функции одной переменной: f(t) := t^2 → превью;
-  // 2) последняя строка упала, но читается как функция от x: sin(x) = → превью вместо ошибки.
+  // 2) последняя строка упала, но читается как функция от x: sin(x) = → превью вместо ошибки;
+  // 3) значение — числовой вектор: превью компонент столбиками (source: 'vector').
   let sampledParam: string | null = null;
   if (lastP?.kind === 'assign' && lastP.isFunctionDef && lastP.fnParams.length === 1) {
     const param = lastP.fnParams[0];
@@ -1060,6 +1065,27 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
         // выражение осмысленно как график — ошибку не показываем
         lastError = null;
         lastValue = null;
+      }
+    }
+  } else if (lastOk && !lastError && lastP) {
+    const cells = toNumberCells(lastValue);
+    if (cells && (cells.cols === 1 || cells.rows === 1) && cells.flat.length >= 2) {
+      const exprV =
+        definedVar ??
+        (lastP.kind === 'assign' ? lastP.expr.replace(/=+\s*$/, '').trim() : lastP.expr);
+      if (exprV) {
+        const [lo, hi] = padRange(Math.min(...cells.flat), Math.max(...cells.flat));
+        cur.plotPreview = {
+          source: 'vector',
+          label: definedVar ?? exprV,
+          expr: exprV,
+          xs: cells.flat.map((_, k) => k),
+          ys: cells.flat,
+          xmin: -0.5,
+          xmax: cells.flat.length - 0.5,
+          ymin: lo,
+          ymax: hi,
+        };
       }
     }
   }

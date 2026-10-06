@@ -387,6 +387,9 @@ const ru = {
   'p2.traceLine': 'Линия',
   'p2.traceBar': 'Столбцы',
   'p2.traceStem': 'Стебли',
+  'p2.traceArrow': 'Стрелки',
+  'p2.traceField': 'Векторное поле',
+  'p2.fieldY': 'y ∈',
   'p2.errExpr': 'Погрешности',
   'p2.errPh': 'напр. 0.1',
   'p2.errTitle': 'Выражение погрешностей ±err(x), видит x и переменные документа',
@@ -930,6 +933,9 @@ const en: Record<StrKey, string> = {
   'p2.traceLine': 'Line',
   'p2.traceBar': 'Bars',
   'p2.traceStem': 'Stem',
+  'p2.traceArrow': 'Arrows',
+  'p2.traceField': 'Vector field',
+  'p2.fieldY': 'y ∈',
   'p2.errExpr': 'Errors',
   'p2.errPh': 'e.g. 0.1',
   'p2.errTitle': 'Error expression ±err(x), sees x and document variables',
@@ -1167,6 +1173,7 @@ export function themeLabel(id: ThemeName): string {
 
 export type PackId =
   | 'matrices'
+  | 'vectors'
   | 'stats'
   | 'uncertainty'
   | 'physics'
@@ -1183,6 +1190,7 @@ export type PackId =
 
 const packNames: Record<PackId, { ru: string; en: string }> = {
   matrices: { ru: 'Матрицы', en: 'Matrices' },
+  vectors: { ru: 'Векторы', en: 'Vectors' },
   stats: { ru: 'Статистика', en: 'Statistics' },
   uncertainty: { ru: 'Неопределённость', en: 'Uncertainty' },
   physics: { ru: 'Физика', en: 'Physics' },

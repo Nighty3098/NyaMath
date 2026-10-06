@@ -35,6 +35,10 @@ function diffExtra(b: MathBlockData): string {
     if (b.plotProj && b.plotProj !== 'xy') extra['proj'] = b.plotProj;
     if (b.plotTrace && b.plotTrace !== 'line') extra['trace'] = b.plotTrace;
   }
+  if (b.kind === 'plot' && b.plotTrace === 'field') {
+    if (b.plotYmin !== undefined) extra['ymin'] = b.plotYmin;
+    if (b.plotYmax !== undefined) extra['ymax'] = b.plotYmax;
+  }
   const keys = Object.keys(extra).sort();
   if (!keys.length) return '';
   return ` ${JSON.stringify(extra, keys)}`;

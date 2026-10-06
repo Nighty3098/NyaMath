@@ -19,6 +19,7 @@ import {
 } from '../lib/exportFiles';
 import { plotBlockToCode } from '../lib/plotCode';
 import { formatTick as fmtTick, logTicks, niceTicks } from '../lib/plotTicks';
+import { arrowsFromValue, fieldArrows, type ArrowDatum } from '../engine/vectorPlot';
 
 const W = 460;
 const H = 300;
@@ -40,6 +41,8 @@ interface Series {
   bars?: { x: number; y: number; w: number; h: number }[];
   /** Стебли (stem): отрезки от базы до точки + маркеры */
   stems?: { x1: number; y1: number; x2: number; y2: number }[];
+  /** Стрелки (arrow/field) в SVG-координатах: из (x1,y1) в (x2,y2) */
+  arrows?: { x1: number; y1: number; x2: number; y2: number }[];
   /** Усы погрешностей ±err */
   errs?: { x1: number; y1: number; x2: number; y2: number; cx: number; cy: number }[];
 }
@@ -96,7 +99,17 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
   const xmin = block.plotXmin ?? -10;
   const xmax = block.plotXmax ?? 10;
   const proj = block.plotProj === 'polar' ? 'polar' : 'xy';
-  const trace = block.plotTrace === 'bar' || block.plotTrace === 'stem' ? block.plotTrace : 'line';
+  const trace =
+    block.plotTrace === 'bar' ||
+    block.plotTrace === 'stem' ||
+    block.plotTrace === 'arrow' ||
+    block.plotTrace === 'field'
+      ? block.plotTrace
+      : 'line';
+  const isField = trace === 'field' && proj === 'xy';
+  const isArrow = trace === 'arrow' && proj === 'xy';
+  const fieldYmin = block.plotYmin ?? -5;
+  const fieldYmax = block.plotYmax ?? 5;
   const logx = block.plotLogx === true;
   const errText = (block.plotErr ?? '').trim();
   const title = (block.plotTitle ?? '').trim();
@@ -207,6 +220,120 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
         }
         return null;
       };
+
+      // Векторные стили: стрелки из начала координат (arrow) и векторное поле (field).
+      if (isArrow || isField) {
+        const yMap = (lo: number, hi: number) => (y: number) =>
+          ph - PAD_B - ((y - lo) / (hi - lo)) * (ph - padT - PAD_B);
+
+        if (isField) {
+          if (!(fieldYmin < fieldYmax)) return fail(t('p2.needRange'));
+          const outF: Series[] = [];
+          const rawF: RawRow[] = [];
+          exprs.forEach((expr, si) => {
+            const arr = fieldArrows(
+              expr,
+              base,
+              { xmin, xmax, ymin: fieldYmin, ymax: fieldYmax },
+              numOf,
+            );
+            if (!arr) return;
+            const Y = yMap(fieldYmin, fieldYmax);
+            const arrows = arr.map((a) => ({
+              x1: X(a.x),
+              y1: Y(a.y),
+              x2: X(a.x + a.dx),
+              y2: Y(a.y + a.dy),
+            }));
+            outF.push({
+              expr,
+              color: pal.series[si % pal.series.length],
+              d: '',
+              arrows,
+            });
+            rawF.push({
+              expr,
+              xs: arr.map((a) => a.x),
+              ys: arr.map((a) => Math.hypot(a.dx, a.dy)),
+              es: arr.map(() => null),
+            });
+          });
+          if (!outF.length) return fail(t('p2.noData'));
+          return {
+            series: outF,
+            ymin: fieldYmin,
+            ymax: fieldYmax,
+            err: null as string | null,
+            xticks: niceTicks(xmin, xmax),
+            yticks: niceTicks(fieldYmin, fieldYmax),
+            polar: null as PolarGrid | null,
+            raw: rawF,
+          };
+        }
+
+        const dsets: { expr: string; arrows: ArrowDatum[] }[] = [];
+        let ok = true;
+        for (const expr of exprs) {
+          let v: unknown = null;
+          try {
+            v = evaluateLine(`(${preprocessJ(expr, false)})`, base).value;
+          } catch {
+            v = null;
+          }
+          const arr = arrowsFromValue(v, numOf);
+          if (!arr) {
+            ok = false;
+            break;
+          }
+          dsets.push({ expr, arrows: arr });
+        }
+        if (ok && dsets.length) {
+          const pts = dsets.flatMap((d) => d.arrows);
+          let lo = Math.min(0, ...pts.map((a) => Math.min(0, a.dy)));
+          let hi = Math.max(0, ...pts.map((a) => Math.max(0, a.dy)));
+          if (lo === hi) {
+            lo -= 1;
+            hi += 1;
+          }
+          const span = hi - lo;
+          lo -= span * 0.12;
+          hi += span * 0.12;
+          const Y = yMap(lo, hi);
+          const outA: Series[] = [];
+          const rawA: RawRow[] = [];
+          dsets.forEach((dset, si) => {
+            const arrows = dset.arrows.map((a) => ({
+              x1: X(a.x),
+              y1: Y(a.y),
+              x2: X(a.x + a.dx),
+              y2: Y(a.y + a.dy),
+            }));
+            outA.push({
+              expr: dset.expr,
+              color: pal.series[si % pal.series.length],
+              d: '',
+              arrows,
+            });
+            rawA.push({
+              expr: dset.expr,
+              xs: dset.arrows.map((a) => a.dx),
+              ys: dset.arrows.map((a) => a.dy),
+              es: dset.arrows.map(() => null),
+            });
+          });
+          return {
+            series: outA,
+            ymin: lo,
+            ymax: hi,
+            err: null as string | null,
+            xticks: niceTicks(xmin, xmax),
+            yticks: niceTicks(lo, hi),
+            polar: null as PolarGrid | null,
+            raw: rawA,
+          };
+        }
+        // значение не подходит под вектор → обычная линия ниже
+      }
 
       const allY: number[] = [];
       const raw: RawRow[] = [];
@@ -430,7 +557,7 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
     } catch (e) {
       return fail(e instanceof Error ? e.message : String(e));
     }
-  }, [fnText, xmin, xmax, proj, trace, errText, logx, base, pw, ph, padT, pal, X, xAt]);
+  }, [fnText, xmin, xmax, proj, trace, errText, logx, base, pw, ph, padT, pal, X, xAt, isArrow, isField, fieldYmin, fieldYmax]);
 
   const Y = (y: number) => ph - PAD_B - ((y - ymin) / (ymax - ymin)) * (ph - padT - PAD_B);
 
@@ -757,7 +884,9 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
                     className="min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1 text-[var(--ink)]"
                     value={trace}
                     onChange={(e) =>
-                      updatePlot(block.id, { plotTrace: e.target.value as 'line' | 'bar' | 'stem' })
+                      updatePlot(block.id, {
+                        plotTrace: e.target.value as 'line' | 'bar' | 'stem' | 'arrow' | 'field',
+                      })
                     }
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
@@ -765,8 +894,38 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
                     <option value="line">{t('p2.traceLine')}</option>
                     <option value="bar">{t('p2.traceBar')}</option>
                     <option value="stem">{t('p2.traceStem')}</option>
+                    <option value="arrow">{t('p2.traceArrow')}</option>
+                    <option value="field">{t('p2.traceField')}</option>
                   </select>
                 </label>
+              )}
+              {isField && (
+                <>
+                  <label title={t('p2.fieldY')}>
+                    ymin{' '}
+                    <input
+                      type="number"
+                      aria-label={t('p2.fieldY')}
+                      className="w-[70px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                      value={fieldYmin}
+                      onChange={(e) => updatePlot(block.id, { plotYmin: Number(e.target.value) })}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </label>
+                  <label title={t('p2.fieldY')}>
+                    ymax{' '}
+                    <input
+                      type="number"
+                      aria-label={t('p2.fieldY')}
+                      className="w-[70px] min-h-[32px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-1.5 text-[var(--ink)] select-text"
+                      value={fieldYmax}
+                      onChange={(e) => updatePlot(block.id, { plotYmax: Number(e.target.value) })}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </label>
+                </>
               )}
               {proj === 'xy' && (
                 <label title={t('p2.errTitle')}>
@@ -1260,6 +1419,24 @@ function PlotBlockView({ block, scale }: { block: MathBlockData; scale: number }
                       stroke="none"
                     />
                   ))}
+                </g>
+              ) : null,
+            )}
+            {series.map((s, i) =>
+              s.arrows?.length ? (
+                <g key={`a${i}`} stroke={s.color} strokeWidth={1.6} fill={s.color}>
+                  {s.arrows.map((a, k) => {
+                    const ang = Math.atan2(a.y2 - a.y1, a.x2 - a.x1);
+                    const h = 7;
+                    const p2 = `${a.x2 - h * Math.cos(ang - 0.4)},${a.y2 - h * Math.sin(ang - 0.4)}`;
+                    const p3 = `${a.x2 - h * Math.cos(ang + 0.4)},${a.y2 - h * Math.sin(ang + 0.4)}`;
+                    return (
+                      <g key={k}>
+                        <line x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2} />
+                        <polygon points={`${a.x2},${a.y2} ${p2} ${p3}`} stroke="none" />
+                      </g>
+                    );
+                  })}
                 </g>
               ) : null,
             )}

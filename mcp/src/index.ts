@@ -264,8 +264,12 @@ const AddBlockShape = {
     ),
   plotXmin: z.number().optional(),
   plotXmax: z.number().optional(),
-  plotYmin: z.number().optional().describe('Для plot3d: минимум y'),
-  plotYmax: z.number().optional().describe('Для plot3d: максимум y'),
+  plotYmin: z.number().optional().describe('Для plot3d/field: минимум y'),
+  plotYmax: z.number().optional().describe('Для plot3d/field: максимум y'),
+  plotTrace: z
+    .enum(['line', 'bar', 'stem', 'arrow', 'field'])
+    .optional()
+    .describe('Для plot: стиль (arrow — вектор из начала координат, field — векторное поле)'),
   plotMode: z
     .enum(['auto', 'surface', 'points', 'matrix'])
     .optional()
@@ -314,6 +318,7 @@ server.tool(
       plotXmax: args.plotXmax ?? (is3d ? 5 : undefined),
       plotYmin: args.plotYmin ?? (is3d ? -5 : undefined),
       plotYmax: args.plotYmax ?? (is3d ? 5 : undefined),
+      plotTrace: args.plotTrace ?? undefined,
       plotMode: args.plotMode ?? (is3d ? 'auto' : undefined),
       plotResolution: args.plotResolution ?? (is3d ? 48 : undefined),
       plotWireframe: args.plotWireframe ?? (is3d ? false : undefined),
@@ -341,6 +346,7 @@ server.tool(
     plotXmax: z.number().optional(),
     plotYmin: z.number().optional(),
     plotYmax: z.number().optional(),
+    plotTrace: z.enum(['line', 'bar', 'stem', 'arrow', 'field']).optional(),
     plotMode: z.enum(['auto', 'surface', 'points', 'matrix']).optional(),
     plotResolution: z.number().int().min(8).max(100).optional(),
     plotWireframe: z.boolean().optional(),
@@ -359,6 +365,7 @@ server.tool(
     plotXmax,
     plotYmin,
     plotYmax,
+    plotTrace,
     plotMode,
     plotResolution,
     plotWireframe,
@@ -377,6 +384,7 @@ server.tool(
     if (plotXmax !== undefined) b.plotXmax = plotXmax;
     if (plotYmin !== undefined) b.plotYmin = plotYmin;
     if (plotYmax !== undefined) b.plotYmax = plotYmax;
+    if (plotTrace !== undefined) b.plotTrace = plotTrace;
     if (plotMode !== undefined) b.plotMode = plotMode;
     if (plotResolution !== undefined) b.plotResolution = plotResolution;
     if (plotWireframe !== undefined) b.plotWireframe = plotWireframe;
@@ -623,6 +631,12 @@ server.tool(
         lastScope,
         b.plotXmin ?? -10,
         b.plotXmax ?? 10,
+        240,
+        {
+          trace: b.plotTrace,
+          plotYmin: b.plotYmin,
+          plotYmax: b.plotYmax,
+        },
       );
       if (!s) return fail('Нет данных: проверьте выражения и диапазон');
       return ok({
@@ -636,6 +650,7 @@ server.tool(
           indexMode: ser.indexMode,
           xs: stride(ser.xs, max_points),
           ys: stride(ser.ys, max_points),
+          ...(ser.arrows ? { arrows: ser.arrows } : {}),
         })),
       });
     }

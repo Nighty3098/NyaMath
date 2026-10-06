@@ -2069,6 +2069,122 @@ export function buildPackScope(math: MathJsInstance): Scope {
       }
     },
 
+    // ---------- векторы ----------
+    // normalize([3, 4]) — единичный вектор v/‖v‖
+    normalize: (v: unknown) => {
+      const a = needNumVec(v);
+      const n = Math.hypot(...a);
+      if (!(n > 0)) throw new Error(t('e.calcArgs'));
+      return a.map((z) => z / n);
+    },
+    // cross — перекрывает mathjs: 2D → скаляр a₁b₂−a₂b₁, 3D → вектор
+    cross: (a: unknown, b: unknown) => crossOf(a, b),
+    // angle([1, 0], [0, 1]) — угол между векторами, радианы [0, π]
+    angle: (a: unknown, b: unknown) => angleOf(a, b),
+    // angleDeg([1, 0], [0, 1]) — угол между векторами, градусы
+    angleDeg: (a: unknown, b: unknown) => (angleOf(a, b) * 180) / Math.PI,
+    // proj([3, 4], [1, 0]) — векторная проекция a на b
+    proj: (a: unknown, b: unknown) => {
+      const x = needNumVec(a);
+      const y = needNumVec(b);
+      if (x.length !== y.length) throw new Error(t('e.calcArgs'));
+      const yy = y.reduce((s, z) => s + z * z, 0);
+      if (!(yy > 0)) throw new Error(t('e.calcArgs'));
+      const k = x.reduce((s, z, i) => s + z * y[i], 0) / yy;
+      return y.map((z) => k * z);
+    },
+    // comp([3, 4], [1, 0]) — скалярная проекция a на b: (a·b)/‖b‖
+    comp: (a: unknown, b: unknown) => {
+      const x = needNumVec(a);
+      const y = needNumVec(b);
+      if (x.length !== y.length) throw new Error(t('e.calcArgs'));
+      const n = Math.hypot(...y);
+      if (!(n > 0)) throw new Error(t('e.calcArgs'));
+      return x.reduce((s, z, i) => s + z * y[i], 0) / n;
+    },
+    // dist([0, 0], [3, 4]) — расстояние между точками
+    dist: (a: unknown, b: unknown) => {
+      const x = needNumVec(a);
+      const y = needNumVec(b);
+      if (x.length !== y.length) throw new Error(t('e.calcArgs'));
+      return Math.hypot(...x.map((z, i) => z - y[i]));
+    },
+    // mid([0, 0], [2, 4]) — середина отрезка
+    mid: (a: unknown, b: unknown) => {
+      const x = needNumVec(a);
+      const y = needNumVec(b);
+      if (x.length !== y.length) throw new Error(t('e.calcArgs'));
+      return x.map((z, i) => (z + y[i]) / 2);
+    },
+    // areaPar([3, 0], [0, 4]) — площадь параллелограмма |a×b|
+    areaPar: (a: unknown, b: unknown) => areaParOf(a, b),
+    // areaTri([3, 0], [0, 4]) — площадь треугольника ½|a×b|
+    areaTri: (a: unknown, b: unknown) => areaParOf(a, b) / 2,
+    // triple([1,0,0],[0,1,0],[0,0,1]) — смешанное a·(b×c) = det[a; b; c]
+    triple: (a: unknown, b: unknown, c: unknown) => {
+      const x = needNumVec(a);
+      const y = needNumVec(b);
+      const z = needNumVec(c);
+      if (x.length !== 3 || y.length !== 3 || z.length !== 3) throw new Error(t('e.calcArgs'));
+      return (
+        x[0] * (y[1] * z[2] - y[2] * z[1]) +
+        x[1] * (y[2] * z[0] - y[0] * z[2]) +
+        x[2] * (y[0] * z[1] - y[1] * z[0])
+      );
+    },
+    // tripleV(a, b, c) — векторное тройное a×(b×c) = b(a·c) − c(a·b)
+    tripleV: (a: unknown, b: unknown, c: unknown) => {
+      const x = needNumVec(a);
+      const y = needNumVec(b);
+      const z = needNumVec(c);
+      if (x.length !== 3 || y.length !== 3 || z.length !== 3) throw new Error(t('e.calcArgs'));
+      const ac = x.reduce((s, q, i) => s + q * z[i], 0);
+      const ab = x.reduce((s, q, i) => s + q * y[i], 0);
+      return y.map((q, i) => q * ac - z[i] * ab);
+    },
+    // collinear([1, 2], [2, 4]) — коллинеарны ли векторы (θ = 0 или π)
+    collinear: (a: unknown, b: unknown) => {
+      const x = needNumVec(a);
+      const y = needNumVec(b);
+      if (x.length !== y.length) throw new Error(t('e.calcArgs'));
+      const nx = Math.hypot(...x);
+      const ny = Math.hypot(...y);
+      if (!(nx > 0) || !(ny > 0)) return true;
+      const d = Math.abs(x.reduce((s, z, i) => s + z * y[i], 0));
+      return d >= (1 - 1e-12) * nx * ny;
+    },
+    // perp([3, 4]) — перпендикуляр 2D: (−v₂, v₁), поворот на +90°
+    perp: (v: unknown) => {
+      const a = needNumVec(v);
+      if (a.length !== 2) throw new Error(t('e.calcArgs'));
+      return [-a[1], a[0]];
+    },
+    // rot2([1, 0], pi/2) — поворот 2D-вектора на угол, радианы
+    rot2: (v: unknown, th: unknown) => {
+      const a = needNumVec(v);
+      if (a.length !== 2) throw new Error(t('e.calcArgs'));
+      const q = needNum(th);
+      const c = Math.cos(q);
+      const s = Math.sin(q);
+      return [a[0] * c - a[1] * s, a[0] * s + a[1] * c];
+    },
+    // vdir([0, 0], [3, 4]) — единичный вектор от a к b
+    vdir: (a: unknown, b: unknown) => {
+      const x = needNumVec(a);
+      const y = needNumVec(b);
+      if (x.length !== y.length) throw new Error(t('e.calcArgs'));
+      const d = y.map((z, i) => z - x[i]);
+      const n = Math.hypot(...d);
+      if (!(n > 0)) throw new Error(t('e.calcArgs'));
+      return d.map((z) => z / n);
+    },
+    // wrapAngle(3*pi) — привести угол к [−π, π); поэлементно для массивов
+    wrapAngle: (x: unknown) => mapElems(x, wrapPi),
+    // deg2rad(180) — градусы → радианы; поэлементно для массивов
+    deg2rad: (x: unknown) => mapElems(x, (z) => (z * Math.PI) / 180),
+    // rad2deg(pi) — радианы → градусы; поэлементно для массивов
+    rad2deg: (x: unknown) => mapElems(x, (z) => (z * 180) / Math.PI),
+
     // ---------- вычислительная техника: системы счисления и биты ----------
     // dec2bin(13) → "1101"; dec2bin(-3, 8) → дополнительный код "11111101"
     dec2bin: (n: unknown, w?: unknown) => dec2base(n, w, 2),
@@ -3612,6 +3728,57 @@ export function buildPackScope(math: MathJsInstance): Scope {
     return [v];
   }
 
+  /** cross: 2D → скаляр a₁b₂−a₂b₁, 3D → вектор; иначе ошибка (перекрывает mathjs). */
+  function crossOf(a: unknown, b: unknown): number | number[] {
+    const x = needNumVec(a);
+    const y = needNumVec(b);
+    if (x.length !== y.length || (x.length !== 2 && x.length !== 3)) {
+      throw new Error(t('e.calcArgs'));
+    }
+    if (x.length === 2) return x[0] * y[1] - x[1] * y[0];
+    return [
+      x[1] * y[2] - x[2] * y[1],
+      x[2] * y[0] - x[0] * y[2],
+      x[0] * y[1] - x[1] * y[0],
+    ];
+  }
+
+  /** Угол между векторами, радианы [0, π]. */
+  function angleOf(a: unknown, b: unknown): number {
+    const x = needNumVec(a);
+    const y = needNumVec(b);
+    if (x.length !== y.length) throw new Error(t('e.calcArgs'));
+    const nx = Math.hypot(...x);
+    const ny = Math.hypot(...y);
+    if (!(nx > 0) || !(ny > 0)) throw new Error(t('e.calcArgs'));
+    const d = x.reduce((s, z, i) => s + z * y[i], 0) / (nx * ny);
+    return Math.acos(Math.max(-1, Math.min(1, d)));
+  }
+
+  /** Площадь параллелограмма √(|a|²|b|² − (a·b)²) — работает в любом измерении. */
+  function areaParOf(a: unknown, b: unknown): number {
+    const x = needNumVec(a);
+    const y = needNumVec(b);
+    if (x.length !== y.length) throw new Error(t('e.calcArgs'));
+    const nn = x.reduce((s, z) => s + z * z, 0) * y.reduce((s, z) => s + z * z, 0);
+    const dp = x.reduce((s, z, i) => s + z * y[i], 0);
+    return Math.sqrt(Math.max(0, nn - dp * dp));
+  }
+
+  /** Поэлементное применение: скаляр → скаляр, массив/матрица → массив. */
+  function mapElems(v: unknown, f: (z: number) => number): number | number[] {
+    const isArrLike =
+      Array.isArray(v) || (v !== null && typeof v === 'object' && 'toArray' in (v as object));
+    if (isArrLike) return needNumVec(v).map(f);
+    return f(needNum(v));
+  }
+
+  /** Приведение угла к [−π, π). */
+  function wrapPi(th: number): number {
+    const r = (((th + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    return r - Math.PI;
+  }
+
   function sumProdArgs(
     args: MathNode[],
     scope: Scope,
@@ -3880,6 +4047,26 @@ export const PACK_NAMES = [
   'repLim',
   'uTopDown',
   'prec5725',
+  // векторы
+  'normalize',
+  'cross',
+  'angle',
+  'angleDeg',
+  'proj',
+  'comp',
+  'dist',
+  'mid',
+  'areaPar',
+  'areaTri',
+  'triple',
+  'tripleV',
+  'collinear',
+  'perp',
+  'rot2',
+  'vdir',
+  'wrapAngle',
+  'deg2rad',
+  'rad2deg',
 ];
 
 /* ---------------- Палитра вставки ---------------- */
@@ -3906,7 +4093,7 @@ export interface Snippet {
   /** Преднастройки plot-блока (проекция, стиль, оформление) */
   plot?: {
     plotProj?: 'xy' | 'polar';
-    plotTrace?: 'line' | 'bar' | 'stem';
+    plotTrace?: 'line' | 'bar' | 'stem' | 'arrow' | 'field';
     plotErr?: string;
     plotTitle?: string;
     plotXLabel?: string;
@@ -3915,5 +4102,7 @@ export interface Snippet {
     plotLegend?: boolean;
     plotXmin?: number;
     plotXmax?: number;
+    plotYmin?: number;
+    plotYmax?: number;
   };
 }

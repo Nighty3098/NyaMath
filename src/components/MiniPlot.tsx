@@ -30,6 +30,22 @@ function MiniPlot({ sample }: { sample: PlotSample }) {
   });
 
   const zeroY = sample.ymin < 0 && sample.ymax > 0 ? Y(0) : null;
+  // Векторный автопревью: столбики компонент вместо линии.
+  const vecBars =
+    sample.source === 'vector' && sample.ys.length
+      ? (() => {
+          const plotW = VW - PL - PR;
+          const slot = plotW / Math.max(1, sample.ys.length);
+          const bw = slot * 0.6;
+          const base = zeroY ?? VH - PB;
+          return sample.ys.map((y, k) => {
+            if (typeof y !== 'number' || !isFinite(y)) return null;
+            const cx = PL + (k + 0.5) * slot;
+            const yy = Y(y);
+            return { x: cx - bw / 2, y: Math.min(base, yy), w: bw, h: Math.abs(yy - base) };
+          });
+        })()
+      : null;
   const f = (v: number) => {
     if (v === 0) return '0';
     const a = Math.abs(v);
@@ -57,7 +73,17 @@ function MiniPlot({ sample }: { sample: PlotSample }) {
         fill="none"
         stroke={pal.frame}
       />
-      {d ? <path d={d} fill="none" stroke={color} strokeWidth={2} /> : null}
+      {vecBars ? (
+        <g fill={color} opacity={0.85}>
+          {vecBars.map((b, k) =>
+            b ? (
+              <rect key={k} x={b.x} y={b.y} width={Math.max(1, b.w)} height={Math.max(1, b.h)} />
+            ) : null,
+          )}
+        </g>
+      ) : d ? (
+        <path d={d} fill="none" stroke={color} strokeWidth={2} />
+      ) : null}
       {/* подпись серии + диапазон */}
       <circle cx={PL + 8} cy={PT + 10} r={3} fill={color} />
       <text x={PL + 16} y={PT + 13} fontSize={10} fill={pal.legend}>

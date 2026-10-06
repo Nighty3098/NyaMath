@@ -8,7 +8,7 @@
  * Зависит только от типа MathBlockData (type-only, без рантайм-цикла).
  */
 import { v4 as uuid } from 'uuid';
-import type { BlockVisibility, MathBlockData } from '../engine/dependencies';
+import type { BlockVisibility, MathBlockData, PlotTrace } from '../engine/dependencies';
 
 export type BlockKind = MathBlockData['kind'];
 
@@ -86,8 +86,12 @@ export function normalizeBlock(raw: unknown): MathBlockData | null {
   const id = typeof b.id === 'string' && b.id ? b.id : uuid();
   const kind: BlockKind = typeof b.kind === 'string' && KINDS.has(b.kind) ? b.kind : 'math';
   const plotProj = b.plotProj === 'polar' || b.plotProj === 'xy' ? b.plotProj : undefined;
-  const plotTrace =
-    b.plotTrace === 'bar' || b.plotTrace === 'stem' || b.plotTrace === 'line'
+  const plotTrace: PlotTrace | undefined =
+    b.plotTrace === 'bar' ||
+    b.plotTrace === 'stem' ||
+    b.plotTrace === 'arrow' ||
+    b.plotTrace === 'field' ||
+    b.plotTrace === 'line'
       ? b.plotTrace
       : undefined;
   const simSolver =
