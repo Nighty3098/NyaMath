@@ -187,7 +187,7 @@ export default function MenuBar({
 
   const [open, setOpen] = useState<string | null>(null);
   const [subOpen, setSubOpen] = useState<string | null>(null);
-  // Мобильный шит: текстовые меню скрыты (hidden md:block), весь их состав — сюда
+  // Мобильный шит: при узком экране весь их состав — сюда
   const [mOpen, setMOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -932,7 +932,7 @@ export default function MenuBar({
 
   const mobileSheet = mOpen && (
     <div
-      className="fixed inset-0 z-[70] md:hidden"
+      className="fixed inset-0 z-[70] lg:hidden"
       role="dialog"
       aria-modal="true"
       aria-label={t('menu.main')}
@@ -990,19 +990,8 @@ export default function MenuBar({
     >
       {/* меню слева, частые действия — справа */}
       <div className="flex items-center min-w-0 shrink-0">
-        {/* гамбургер: на телефоне текстовые меню скрыты — всё дублируется в шит */}
-        <button
-          type="button"
-          className="nya-tbtn nya-tbtn-big md:hidden"
-          onClick={() => setMOpen(true)}
-          aria-label={t('menu.main')}
-          aria-expanded={mOpen}
-          aria-haspopup="dialog"
-        >
-          <IMenu />
-        </button>
         {menus.map((m) => (
-          <div key={m.id} className="relative hidden md:block">
+          <div key={m.id} className="relative">
             <button
               type="button"
               role="menuitem"

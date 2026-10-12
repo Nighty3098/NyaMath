@@ -153,6 +153,7 @@ const ru = {
   'tplsec.hydro': 'Гидравлика',
   'tplsec.fea': 'МКЭ',
   'tplsec.signal': 'Сигналы',
+  'tplsec.metrology': 'Метрология',
 
   'prob.empty': 'Ошибок нет — расчёт чист',
   'prob.close': 'Закрыть панель',
@@ -700,6 +701,7 @@ const en: Record<StrKey, string> = {
   'tplsec.hydro': 'Hydraulics',
   'tplsec.fea': 'FEM',
   'tplsec.signal': 'Signals',
+  'tplsec.metrology': 'Metrology',
 
   'prob.empty': 'No errors — calculation is clean',
   'prob.close': 'Close panel',
