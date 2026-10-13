@@ -62,7 +62,6 @@ import {
   IZap,
   ISun,
   IMoon,
-  IMenu,
   ISidebar,
   ICopy,
   ISignal,
