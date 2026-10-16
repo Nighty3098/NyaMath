@@ -887,6 +887,22 @@
    "ct": 0.6,
    "cp": 4186,
    "bandgap": null
+  },
+  {
+   "id": "fresh-water",
+   "en": "Fresh water",
+   "ru": "Пресная вода",
+   "formula": "H2O",
+   "type": "dielectric",
+   "sigma": 0.002,
+   "rho": 1000,
+   "eps_r": 80,
+   "mu_r": null,
+   "alpha_res": null,
+   "melting": 0,
+   "ct": 0.6,
+   "cp": 4186,
+   "bandgap": null
   }
  ],
  "mat_prop_names": [
@@ -1074,6 +1090,30 @@
    "ord": 22,
    "label_ru": "Математика · ДУ",
    "label_en": "Math · ODE"
+  },
+  {
+   "id": "maxwell",
+   "ord": 23,
+   "label_ru": "Электродинамика · основы",
+   "label_en": "Electrodynamics · fundamentals"
+  },
+  {
+   "id": "planewaves",
+   "ord": 24,
+   "label_ru": "Плоские волны и границы раздела",
+   "label_en": "Plane waves & interfaces"
+  },
+  {
+   "id": "waveguides",
+   "ord": 25,
+   "label_ru": "Волноводы и резонаторы",
+   "label_en": "Waveguides & resonators"
+  },
+  {
+   "id": "longlines",
+   "ord": 26,
+   "label_ru": "Длинные линии",
+   "label_en": "Transmission lines"
   }
  ],
  "formulas": [
@@ -8317,6 +8357,1319 @@
    "plot2d": null,
    "plot3d": null,
    "sim": null
+  },
+  {
+   "id": "lorentz-force-full",
+   "section": "maxwell",
+   "ord": 529,
+   "label_ru": "Сила Лоренца",
+   "label_en": "Lorentz force",
+   "hint_ru": "F = q·E + q·[v×B]; при E ⊥ v ⊥ B: F = √((qE)² + (qvB)²)",
+   "hint_en": "F = q·E + q·[v×B]; for E ⊥ v ⊥ B: F = √((qE)² + (qvB)²)",
+   "code": "q_t := 1.6*10^-19 C\nE_f := 1000 V/m\nv_c := 1*10^6 m/s\nB_f := 0.1 T\nF_l := sqrt((q_t*E_f)^2 + (q_t*v_c*B_f)^2)\nF_l =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "ohm-diff-form",
+   "section": "maxwell",
+   "ord": 530,
+   "label_ru": "Закон Ома в дифференциальной форме",
+   "label_en": "Ohm's law (differential form)",
+   "hint_ru": "J = σ·E; плотность тока проводимости",
+   "hint_en": "J = σ·E; conduction current density",
+   "code": "sig_m := 5.8*10^7 S/m\nE_f := 0.01 V/m\nJ_c := sig_m*E_f\nJ_c =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "electric-induction-d",
+   "section": "maxwell",
+   "ord": 531,
+   "label_ru": "Электрическая индукция",
+   "label_en": "Electric displacement",
+   "hint_ru": "D = ε₀·εᵣ·E",
+   "hint_en": "D = ε₀·εᵣ·E",
+   "code": "eps_r := 2.1\nE_f := 100 V/m\nD_f := eps_0*eps_r*E_f\nD_f =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "polarization-vector",
+   "section": "maxwell",
+   "ord": 532,
+   "label_ru": "Вектор поляризации",
+   "label_en": "Polarization density",
+   "hint_ru": "P = ε₀·(εᵣ − 1)·E = ε₀·χₑ·E",
+   "hint_en": "P = ε₀·(εᵣ − 1)·E = ε₀·χₑ·E",
+   "code": "eps_r := 2.1\nE_f := 100 V/m\nchi_e := eps_r - 1\nP_pol := eps_0*chi_e*E_f\nP_pol =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "magnetic-induction-b",
+   "section": "maxwell",
+   "ord": 533,
+   "label_ru": "Магнитная индукция",
+   "label_en": "Magnetic flux density",
+   "hint_ru": "B = μ₀·μᵣ·H",
+   "hint_en": "B = μ₀·μᵣ·H",
+   "code": "mu_r := 100\nH_f := 1000 A/m\nB_f := mu_0*mu_r*H_f\nB_f =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "magnetization-vector",
+   "section": "maxwell",
+   "ord": 534,
+   "label_ru": "Намагниченность",
+   "label_en": "Magnetization",
+   "hint_ru": "M = μ₀·(μᵣ − 1)·H = μ₀·χm·H",
+   "hint_en": "M = μ₀·(μᵣ − 1)·H = μ₀·χm·H",
+   "code": "mu_r := 100\nH_f := 1000 A/m\nchi_m := mu_r - 1\nM_mag := mu_0*chi_m*H_f\nM_mag =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "gauss-d-flux",
+   "section": "maxwell",
+   "ord": 535,
+   "label_ru": "Теорема Гаусса для D",
+   "label_en": "Gauss's law for D",
+   "hint_ru": "∮D·ds = Q; для сферы радиусом r: D = Q/(4πr²)",
+   "hint_en": "∮D·ds = Q; on a sphere of radius r: D = Q/(4πr²)",
+   "code": "Q_ch := 1*10^-9 C\nr_s := 0.05 m\nD_f := Q_ch/(4*pi*r_s^2)\nD_f =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "gauss-b-zero-flux",
+   "section": "maxwell",
+   "ord": 536,
+   "label_ru": "Поток B через замкнутую поверхность",
+   "label_en": "Magnetic flux through closed surface",
+   "hint_ru": "∮B·ds = 0; входящий поток равен выходящему",
+   "hint_en": "∮B·ds = 0; flux in equals flux out",
+   "code": "B_f := 0.5 T\nA_in := 0.02 m^2\nA_out := 0.02 m^2\nPhi_net := B_f*A_in - B_f*A_out\nPhi_net =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "faraday-emf-flux",
+   "section": "maxwell",
+   "ord": 537,
+   "label_ru": "Закон Фарадея через поток",
+   "label_en": "Faraday's law (flux)",
+   "hint_ru": "ε = −dΦ/dt",
+   "hint_en": "ε = −dΦ/dt",
+   "code": "dPhi := 0.02 Wb\ndt := 0.5 s\nemf_ind := -dPhi/dt\nemf_ind =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "faraday-emf-area",
+   "section": "maxwell",
+   "ord": 538,
+   "label_ru": "ЭДС через площадь контура",
+   "label_en": "Induced EMF via area",
+   "hint_ru": "ε = −S·dB/dt",
+   "hint_en": "ε = −S·dB/dt",
+   "code": "S_loop := 0.01 m^2\ndBdt := 0.4 T/s\nemf_s := -S_loop*dBdt\nemf_s =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "charge-conservation-i",
+   "section": "maxwell",
+   "ord": 539,
+   "label_ru": "Закон сохранения заряда",
+   "label_en": "Charge conservation",
+   "hint_ru": "I = −dQ/dt; ток равен убыли заряда",
+   "hint_en": "I = −dQ/dt; current equals rate of charge loss",
+   "code": "Q0 := 10*10^-6 C\nQ1 := 6*10^-6 C\ndt_t := 2 s\nI_out := (Q0 - Q1)/dt_t\nI_out =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "continuity-j-dc",
+   "section": "maxwell",
+   "ord": 540,
+   "label_ru": "Уравнение непрерывности (постоянный ток)",
+   "label_en": "Continuity equation (DC)",
+   "hint_ru": "div J = −dρ/dt; при постоянном токе ∫J·ds = 0",
+   "hint_en": "div J = −dρ/dt; for steady current ∫J·ds = 0",
+   "code": "J_in := 2 A/m^2\nA_in := 0.01 m^2\nJ_out := 2 A/m^2\nA_out := 0.01 m^2\nI_net := J_in*A_in - J_out*A_out\nI_net =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "ampere-wire-h",
+   "section": "maxwell",
+   "ord": 541,
+   "label_ru": "Поле прямого провода",
+   "label_en": "Field of a straight wire",
+   "hint_ru": "H = I/(2πr); закон полного тока",
+   "hint_en": "H = I/(2πr); Ampère's circuital law",
+   "code": "I_wire := 5 A\nr_c := 0.1 m\nH_f := I_wire/(2*pi*r_c)\nH_f =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "d-field-rate",
+   "section": "maxwell",
+   "ord": 542,
+   "label_ru": "Скорость изменения индукции",
+   "label_en": "Rate of change of D",
+   "hint_ru": "dD/dt = ε₀·εᵣ·dE/dt",
+   "hint_en": "dD/dt = ε₀·εᵣ·dE/dt",
+   "code": "eps_r := 1\ndEdt := 1*10^9 V/(m*s)\ndDdt := eps_0*eps_r*dEdt\ndDdt =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "joule-lenz-diff",
+   "section": "maxwell",
+   "ord": 543,
+   "label_ru": "Закон Джоуля–Ленца (дифф.)",
+   "label_en": "Joule heating (differential)",
+   "hint_ru": "p = J·E = σ·E²; удельная мощность потерь",
+   "hint_en": "p = J·E = σ·E²; specific loss power",
+   "code": "sig_m := 5.8*10^7 S/m\nE_f := 0.01 V/m\np_loss := sig_m*E_f^2\np_loss =",
+   "plot2d": "sin(x)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "boundary-bn",
+   "section": "maxwell",
+   "ord": 544,
+   "label_ru": "Граница: непрерывность Bₙ",
+   "label_en": "Boundary: Bₙ continuity",
+   "hint_ru": "B₁ₙ = B₂ₙ; нормальная составляющая B непрерывна",
+   "hint_en": "B₁ₙ = B₂ₙ; normal B is continuous",
+   "code": "B1n := 0.35 T\nB2n := B1n\ndB := B2n - B1n\ndB =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "boundary-et",
+   "section": "maxwell",
+   "ord": 545,
+   "label_ru": "Граница: непрерывность Eτ",
+   "label_en": "Boundary: Eτ continuity",
+   "hint_ru": "E₁τ = E₂τ; касательная составляющая E непрерывна",
+   "hint_en": "E₁τ = E₂τ; tangential E is continuous",
+   "code": "E1t := 120 V/m\nE2t := E1t\ndE := E2t - E1t\ndE =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "boundary-ideal-conductor",
+   "section": "maxwell",
+   "ord": 546,
+   "label_ru": "Граница с идеальным проводником",
+   "label_en": "Ideal-conductor boundary",
+   "hint_ru": "E₁ₙ = ρs/εₐ; поверхностный заряд из нормальной E",
+   "hint_en": "E₁ₙ = ρs/εₐ; surface charge from normal E",
+   "code": "rho_s := 5*10^-9 C/m^2\neps_r := 1\nE1n := rho_s/(eps_0*eps_r)\nE1n =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "surface-resistance-rs",
+   "section": "maxwell",
+   "ord": 547,
+   "label_ru": "Поверхностное сопротивление",
+   "label_en": "Surface resistance",
+   "hint_ru": "Rs = √(ω·μ₀/(2σ)); для меди на 10 ГГц ≈ 0.026 Ом",
+   "hint_en": "Rs = √(ω·μ₀/(2σ)); ≈ 0.026 Ω for copper at 10 GHz",
+   "code": "f_hz := 10*10^9 Hz\nsig_m := 5.8*10^7 S/m\nRs := sqrt(2*pi*f_hz*mu_0/(2*sig_m))\nRs =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "helmholtz-k",
+   "section": "maxwell",
+   "ord": 548,
+   "label_ru": "Волновое число среды",
+   "label_en": "Medium wavenumber",
+   "hint_ru": "k = ω·√(εₐ·μₐ)",
+   "hint_en": "k = ω·√(εₐ·μₐ)",
+   "code": "f_hz := 10*10^9 Hz\neps_r := 1\nk_wn := 2*pi*f_hz*sqrt(eps_0*eps_r*mu_0)\nk_wn =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "vector-potential-a",
+   "section": "maxwell",
+   "ord": 549,
+   "label_ru": "Векторный потенциал A",
+   "label_en": "Magnetic vector potential",
+   "hint_ru": "|A| = μₐ·I·l/(4πr) для элемента тока",
+   "hint_en": "|A| = μₐ·I·l/(4πr) for a current element",
+   "code": "I_wire := 1 A\nlen_l := 0.05 m\nr_p := 10 m\nA_p := mu_0*I_wire*len_l/(4*pi*r_p)\nA_p =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "radiation-resistance",
+   "section": "maxwell",
+   "ord": 550,
+   "label_ru": "Сопротивление излучения",
+   "label_en": "Radiation resistance",
+   "hint_ru": "Rизл = (2π/3)·Z₀·(l/λ)²",
+   "hint_en": "Rrad = (2π/3)·Z₀·(l/λ)²",
+   "code": "len_l := 0.05 m\nlam_w := 0.3 m\nZ_c := eta0\nR_rad := (2*pi/3)*Z_c*(len_l/lam_w)^2\nR_rad =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "radiation-power-dipole",
+   "section": "maxwell",
+   "ord": 551,
+   "label_ru": "Мощность излучения диполя",
+   "label_en": "Power radiated by a dipole",
+   "hint_ru": "Pизл = ½·I²·Rизл",
+   "hint_en": "Prad = ½·I²·Rrad",
+   "code": "I_dip := 2 A\nR_rad := 1.97*ohm\nP_rad := 0.5*I_dip^2*R_rad\nP_rad =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "radiation-pattern",
+   "section": "maxwell",
+   "ord": 552,
+   "label_ru": "Диаграмма направленности диполя",
+   "label_en": "Dipole radiation pattern",
+   "hint_ru": "F(θ) = sin θ; максимум при θ = 90°",
+   "hint_en": "F(θ) = sin θ; maximum at θ = 90°",
+   "code": "theta_d := pi/2\nF_rad := sin(theta_d)\nF_rad =",
+   "plot2d": "abs(sin(x))",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "zone-parameter-kr",
+   "section": "maxwell",
+   "ord": 553,
+   "label_ru": "Параметр ближней/дальней зоны",
+   "label_en": "Near/far zone parameter",
+   "hint_ru": "kr = 2πr/λ; kr ≫ 1 — дальняя зона",
+   "hint_en": "kr = 2πr/λ; kr ≫ 1 is the far zone",
+   "code": "r_p := 100 m\nlam_w := 0.3 m\nkr := 2*pi*r_p/lam_w\nkr =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "magnetic-moment-loop",
+   "section": "maxwell",
+   "ord": 554,
+   "label_ru": "Магнитный момент рамки",
+   "label_en": "Magnetic moment of a loop",
+   "hint_ru": "M = μ₀·I·S",
+   "hint_en": "M = μ₀·I·S",
+   "code": "I_loop := 3 A\nS_loop := 0.01 m^2\nM_mag := mu_0*I_loop*S_loop\nM_mag =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "effective-loop-length",
+   "section": "maxwell",
+   "ord": 555,
+   "label_ru": "Действующая длина рамки",
+   "label_en": "Effective length of a loop",
+   "hint_ru": "lд = k·S = (2π/λ)·S",
+   "hint_en": "leff = k·S = (2π/λ)·S",
+   "code": "S_loop := 0.01 m^2\nlam_w := 0.5 m\nk_wn := 2*pi/lam_w\nl_eff := k_wn*S_loop\nl_eff =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "plane-wave-phase",
+   "section": "planewaves",
+   "ord": 556,
+   "label_ru": "Фаза плоской волны",
+   "label_en": "Phase of a plane wave",
+   "hint_ru": "Φ = k·z − ω·t",
+   "hint_en": "Φ = k·z − ω·t",
+   "code": "k_wn := 20/m\nz_p := 0.5 m\nf_hz := 1*10^9 Hz\nw_0 := 2*pi*f_hz\nt_s := 1*10^-9 s\nPhi_w := k_wn*z_p - w_0*t_s\nPhi_w =",
+   "plot2d": "sin(2*x)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "plane-period",
+   "section": "planewaves",
+   "ord": 557,
+   "label_ru": "Период колебаний",
+   "label_en": "Wave period",
+   "hint_ru": "T = 1/f",
+   "hint_en": "T = 1/f",
+   "code": "f_hz := 1*10^9 Hz\nT_w := 1/f_hz\nT_w =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "plane-wavelength-k",
+   "section": "planewaves",
+   "ord": 558,
+   "label_ru": "Длина волны через k",
+   "label_en": "Wavelength from k",
+   "hint_ru": "λ = 2π/k",
+   "hint_en": "λ = 2π/k",
+   "code": "k_wn := 20/m\nlam_w := 2*pi/k_wn\nlam_w =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "phase-velocity-medium",
+   "section": "planewaves",
+   "ord": 559,
+   "label_ru": "Фазовая скорость",
+   "label_en": "Phase velocity",
+   "hint_ru": "Vф = ω/k",
+   "hint_en": "Vph = ω/k",
+   "code": "w_0 := 2*pi*1*10^9/s\nk_wn := 20/m\nV_ph := w_0/k_wn\nV_ph =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "loss-tangent",
+   "section": "planewaves",
+   "ord": 560,
+   "label_ru": "Тангенс угла потерь",
+   "label_en": "Loss tangent",
+   "hint_ru": "tg δ = σ/(ω·ε₀·εᵣ)",
+   "hint_en": "tan δ = σ/(ω·ε₀·εᵣ)",
+   "code": "sig_m := 0.01 S/m\nf_hz := 1*10^9 Hz\neps_r := 2.1\ntg_d := sig_m/(2*pi*f_hz*eps_0*eps_r)\ntg_d =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "beta-lossy",
+   "section": "planewaves",
+   "ord": 561,
+   "label_ru": "Коэффициент фазы (с потерями)",
+   "label_en": "Phase constant (lossy)",
+   "hint_ru": "β = ω·√(εₐμₐ/2·[1 + √(1 + tg²δ)])",
+   "hint_en": "β = ω·√(εₐμₐ/2·[1 + √(1 + tan²δ)])",
+   "code": "f_hz := 1*10^9 Hz\neps_r := 2.1\ntg_d := 0.086\neps_a := eps_0*eps_r\nbeta_w := 2*pi*f_hz*sqrt(eps_a*mu_0/2 * (1 + sqrt(1 + tg_d^2)))\nbeta_w =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "kappa-lossy",
+   "section": "planewaves",
+   "ord": 562,
+   "label_ru": "Коэффициент затухания",
+   "label_en": "Attenuation constant",
+   "hint_ru": "κ = ω·√(εₐμₐ/2·[√(1 + tg²δ) − 1])",
+   "hint_en": "κ = ω·√(εₐμₐ/2·[√(1 + tan²δ) − 1])",
+   "code": "f_hz := 1*10^9 Hz\neps_r := 2.1\ntg_d := 0.086\neps_a := eps_0*eps_r\nkappa_w := 2*pi*f_hz*sqrt(eps_a*mu_0/2 * (sqrt(1 + tg_d^2) - 1))\nkappa_w =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "attenuation-db",
+   "section": "planewaves",
+   "ord": 563,
+   "label_ru": "Затухание в децибелах",
+   "label_en": "Attenuation in dB",
+   "hint_ru": "A = 8.686·κ·l (дБ)",
+   "hint_en": "A = 8.686·κ·l (dB)",
+   "code": "kappa_w := 0.5/m\nlen_m := 10 m\nA_db := 8.686*kappa_w*len_m\nA_db =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "wave-impedance-medium",
+   "section": "planewaves",
+   "ord": 564,
+   "label_ru": "Волновое сопротивление среды",
+   "label_en": "Wave impedance of a medium",
+   "hint_ru": "Zc = Z₀·√(μᵣ/εᵣ)",
+   "hint_en": "Zc = Z₀·√(μᵣ/εᵣ)",
+   "code": "eps_r := 2.1\nmu_r := 1\nZ_c := eta0*sqrt(mu_r/eps_r)\nZ_c =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "field-ratio-exhy",
+   "section": "planewaves",
+   "ord": 565,
+   "label_ru": "Связь E и H в волне",
+   "label_en": "E–H relation in a wave",
+   "hint_ru": "H = E/Zc",
+   "hint_en": "H = E/Zc",
+   "code": "E_f := 100 V/m\nZ_c := eta0\nH_f := E_f/Z_c\nH_f =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "normal-reflection-gamma",
+   "section": "planewaves",
+   "ord": 566,
+   "label_ru": "Коэффициент отражения (нормальное падение)",
+   "label_en": "Reflection coefficient (normal)",
+   "hint_ru": "Γ = (Zc₂ − Zc₁)/(Zc₂ + Zc₁)",
+   "hint_en": "Γ = (Zc₂ − Zc₁)/(Zc₂ + Zc₁)",
+   "code": "Z1 := eta0\nZ2 := eta0/sqrt(9)\nGamma_r := (Z2 - Z1)/(Z2 + Z1)\nGamma_r =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "normal-transmission-t",
+   "section": "planewaves",
+   "ord": 567,
+   "label_ru": "Коэффициент прохождения (нормальное падение)",
+   "label_en": "Transmission coefficient (normal)",
+   "hint_ru": "T = 2·Zc₂/(Zc₂ + Zc₁)",
+   "hint_en": "T = 2·Zc₂/(Zc₂ + Zc₁)",
+   "code": "Z1 := eta0\nZ2 := eta0/sqrt(9)\nT_tr := 2*Z2/(Z2 + Z1)\nT_tr =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "normal-t-gamma-sum",
+   "section": "planewaves",
+   "ord": 568,
+   "label_ru": "Связь коэффициентов",
+   "label_en": "Relation of coefficients",
+   "hint_ru": "T = 1 + Γ при нормальном падении",
+   "hint_en": "T = 1 + Γ for normal incidence",
+   "code": "Gamma_r := 0.6\nT_tr := 1 + Gamma_r\nT_tr =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "relative-index-n",
+   "section": "planewaves",
+   "ord": 569,
+   "label_ru": "Показатель преломления",
+   "label_en": "Refractive index",
+   "hint_ru": "n = √(εᵣ·μᵣ)",
+   "hint_en": "n = √(εᵣ·μᵣ)",
+   "code": "eps_r := 2.25\nmu_r := 1\nn_idx := sqrt(eps_r*mu_r)\nn_idx =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "fresnel-horizontal-refl",
+   "section": "planewaves",
+   "ord": 570,
+   "label_ru": "Формула Френеля (∥): отражение",
+   "label_en": "Fresnel (∥): reflection",
+   "hint_ru": "Γ∥ = (Zc₂cosφ₁ − Zc₁cosφ₃)/(Zc₂cosφ₁ + Zc₁cosφ₃)",
+   "hint_en": "Γ∥ = (Zc₂cosφ₁ − Zc₁cosφ₃)/(Zc₂cosφ₁ + Zc₁cosφ₃)",
+   "code": "Zc1 := eta0\nZc2 := eta0/sqrt(9)\nphi1 := pi/6\nn1 := 1\nn2 := 3\nphi3 := asin(n1*sin(phi1)/n2)\nGamma_h := (Zc2*cos(phi1) - Zc1*cos(phi3))/(Zc2*cos(phi1) + Zc1*cos(phi3))\nGamma_h =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "fresnel-horizontal-trans",
+   "section": "planewaves",
+   "ord": 571,
+   "label_ru": "Формула Френеля (∥): прохождение",
+   "label_en": "Fresnel (∥): transmission",
+   "hint_ru": "T∥ = 2·Zc₂cosφ₁/(Zc₂cosφ₁ + Zc₁cosφ₃)",
+   "hint_en": "T∥ = 2·Zc₂cosφ₁/(Zc₂cosφ₁ + Zc₁cosφ₃)",
+   "code": "Zc1 := eta0\nZc2 := eta0/sqrt(9)\nphi1 := pi/6\nn1 := 1\nn2 := 3\nphi3 := asin(n1*sin(phi1)/n2)\nT_h := 2*Zc2*cos(phi1)/(Zc2*cos(phi1) + Zc1*cos(phi3))\nT_h =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "fresnel-vertical-refl",
+   "section": "planewaves",
+   "ord": 572,
+   "label_ru": "Формула Френеля (⊥): отражение",
+   "label_en": "Fresnel (⊥): reflection",
+   "hint_ru": "Γ⊥ = (Zc₂cosφ₃ − Zc₁cosφ₁)/(Zc₂cosφ₃ + Zc₁cosφ₁)",
+   "hint_en": "Γ⊥ = (Zc₂cosφ₃ − Zc₁cosφ₁)/(Zc₂cosφ₃ + Zc₁cosφ₁)",
+   "code": "Zc1 := eta0\nZc2 := eta0/sqrt(9)\nphi1 := pi/6\nn1 := 1\nn2 := 3\nphi3 := asin(n1*sin(phi1)/n2)\nGamma_v := (Zc2*cos(phi3) - Zc1*cos(phi1))/(Zc2*cos(phi3) + Zc1*cos(phi1))\nGamma_v =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "fresnel-vertical-trans",
+   "section": "planewaves",
+   "ord": 573,
+   "label_ru": "Формула Френеля (⊥): прохождение",
+   "label_en": "Fresnel (⊥): transmission",
+   "hint_ru": "T⊥ = 2·Zc₂cosφ₁/(Zc₂cosφ₃ + Zc₁cosφ₁)",
+   "hint_en": "T⊥ = 2·Zc₂cosφ₁/(Zc₂cosφ₃ + Zc₁cosφ₁)",
+   "code": "Zc1 := eta0\nZc2 := eta0/sqrt(9)\nphi1 := pi/6\nn1 := 1\nn2 := 3\nphi3 := asin(n1*sin(phi1)/n2)\nT_v := 2*Zc2*cos(phi1)/(Zc2*cos(phi3) + Zc1*cos(phi1))\nT_v =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "fresnel-h-angle-form",
+   "section": "planewaves",
+   "ord": 574,
+   "label_ru": "Френель (∥) через углы",
+   "label_en": "Fresnel (∥) in angle form",
+   "hint_ru": "Γ∥ = sin(φ₃ − φ₁)/sin(φ₃ + φ₁)",
+   "hint_en": "Γ∥ = sin(φ₃ − φ₁)/sin(φ₃ + φ₁)",
+   "code": "phi1 := pi/6\nphi3 := asin(sin(phi1)/1.5)\nGamma_ha := sin(phi3 - phi1)/sin(phi3 + phi1)\nGamma_ha =",
+   "plot2d": "sin(x)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "fresnel-v-angle-form",
+   "section": "planewaves",
+   "ord": 575,
+   "label_ru": "Френель (⊥) через тангенсы",
+   "label_en": "Fresnel (⊥) in tangent form",
+   "hint_ru": "Γ⊥ = tg(φ₃ − φ₁)/tg(φ₃ + φ₁)",
+   "hint_en": "Γ⊥ = tan(φ₃ − φ₁)/tan(φ₃ + φ₁)",
+   "code": "phi1 := pi/6\nphi3 := asin(sin(phi1)/1.5)\nGamma_va := tan(phi3 - phi1)/tan(phi3 + phi1)\nGamma_va =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "tir-attenuation",
+   "section": "planewaves",
+   "ord": 576,
+   "label_ru": "Затухание при полном отражении",
+   "label_en": "Evanescent decay (TIR)",
+   "hint_ru": "α = k₁·√(sin²φ₁ − ε₂/ε₁)",
+   "hint_en": "α = k₁·√(sin²φ₁ − ε₂/ε₁)",
+   "code": "lam_w := 0.1 m\nk1 := 2*pi/lam_w\nphi1 := pi/3\nratio := 0.5\nalpha_w := k1*sqrt(sin(phi1)^2 - ratio)\nalpha_w =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "metal-surface-reflection",
+   "section": "planewaves",
+   "ord": 577,
+   "label_ru": "Отражение от металла",
+   "label_en": "Reflection from metal",
+   "hint_ru": "Γ ≈ −1 + 2·Rs/Zc₁",
+   "hint_en": "Γ ≈ −1 + 2·Rs/Zc₁",
+   "code": "Rs := 0.026*ohm\nZc1 := eta0\nGamma_m := -1 + 2*Rs/Zc1\nGamma_m =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "surface-wave-beta",
+   "section": "planewaves",
+   "ord": 578,
+   "label_ru": "Продольное волновое число",
+   "label_en": "Longitudinal wavenumber",
+   "hint_ru": "β = k₁·sin φ₁; бегущая вдоль границы волна",
+   "hint_en": "β = k₁·sin φ₁; wave travelling along the surface",
+   "code": "ang1 := pi/6\nlam_w := 0.1 m\nk1 := 2*pi/lam_w\nbeta_s := k1*sin(ang1)\nbeta_s =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "surface-wave-gamma",
+   "section": "planewaves",
+   "ord": 579,
+   "label_ru": "Поперечное волновое число",
+   "label_en": "Transverse wavenumber",
+   "hint_ru": "γ = k₁·cos φ₁; стоячая волна по нормали",
+   "hint_en": "γ = k₁·cos φ₁; standing wave normal to the surface",
+   "code": "ang1 := pi/6\nlam_w := 0.1 m\nk1 := 2*pi/lam_w\ngamma_s := k1*cos(ang1)\ngamma_s =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "standing-wave-envelope",
+   "section": "planewaves",
+   "ord": 580,
+   "label_ru": "Огибающая стоячей волны",
+   "label_en": "Standing-wave envelope",
+   "hint_ru": "|E(z)| = A·|1 + Γ·e^(j2kz)|",
+   "hint_en": "|E(z)| = A·|1 + Γ·e^(j2kz)|",
+   "code": "A_m := 1\nGamma_r := 0.6\nk1 := 2*pi/0.1/m\nz_p := 0.02 m\nE_env := A_m*abs(1 + Gamma_r*exp(2*j*k1*z_p))\nE_env =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "transverse-wavenumber",
+   "section": "waveguides",
+   "ord": 581,
+   "label_ru": "Поперечное волновое число",
+   "label_en": "Transverse wavenumber",
+   "hint_ru": "γ = m·π/a",
+   "hint_en": "γ = m·π/a",
+   "code": "m_idx := 1\na_wg := 23*10^-3 m\ngamma_g := m_idx*pi/a_wg\ngamma_g =",
+   "plot2d": "sin(x)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "rect-cutoff-wavelength",
+   "section": "waveguides",
+   "ord": 582,
+   "label_ru": "Критическая длина волны",
+   "label_en": "Cutoff wavelength",
+   "hint_ru": "λкр = 2/√((m/a)² + (n/b)²)",
+   "hint_en": "λc = 2/√((m/a)² + (n/b)²)",
+   "code": "m_idx := 1\nn_idx := 0\na_wg := 23*10^-3 m\nb_wg := 10*10^-3 m\nlam_c := 2/sqrt((m_idx/a_wg)^2 + (n_idx/b_wg)^2)\nlam_c =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "rect-propagation-beta",
+   "section": "waveguides",
+   "ord": 583,
+   "label_ru": "Коэффициент фазы в волноводе",
+   "label_en": "Guide phase constant",
+   "hint_ru": "β = 2π·√(1/λ² − 1/λкр²)",
+   "hint_en": "β = 2π·√(1/λ² − 1/λc²)",
+   "code": "lam_w := 0.03 m\nlam_c := 0.046 m\nbeta_g := 2*pi*sqrt(1/lam_w^2 - 1/lam_c^2)\nbeta_g =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "phase-velocity-guide",
+   "section": "waveguides",
+   "ord": 584,
+   "label_ru": "Фазовая скорость в волноводе",
+   "label_en": "Guide phase velocity",
+   "hint_ru": "Vф = c/√(1 − (λ/λкр)²)",
+   "hint_en": "Vph = c/√(1 − (λ/λc)²)",
+   "code": "lam_w := 0.03 m\nlam_c := 0.046 m\nV_ph := c_light/sqrt(1 - (lam_w/lam_c)^2)\nV_ph =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "group-velocity-guide",
+   "section": "waveguides",
+   "ord": 585,
+   "label_ru": "Групповая скорость",
+   "label_en": "Group velocity",
+   "hint_ru": "Vгр = c·√(1 − (λ/λкр)²)",
+   "hint_en": "Vg = c·√(1 − (λ/λc)²)",
+   "code": "lam_w := 0.03 m\nlam_c := 0.046 m\nV_gr := c_light*sqrt(1 - (lam_w/lam_c)^2)\nV_gr =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "vf-vgr-product",
+   "section": "waveguides",
+   "ord": 586,
+   "label_ru": "Произведение скоростей",
+   "label_en": "Velocity product",
+   "hint_ru": "Vф·Vгр = c²",
+   "hint_en": "Vph·Vg = c²",
+   "code": "V_ph := 4*10^8 m/s\nV_gr := c_light^2/V_ph\nprod := V_ph*V_gr\nprod =\nc_light^2 =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "guide-angle-cos",
+   "section": "waveguides",
+   "ord": 587,
+   "label_ru": "Угол наклона луча",
+   "label_en": "Ray tilt angle",
+   "hint_ru": "cos φ = λ/λкр",
+   "hint_en": "cos φ = λ/λc",
+   "code": "lam_w := 0.03 m\nlam_c := 0.046 m\ncos_phi := lam_w/lam_c\ncos_phi =",
+   "plot2d": "cos(x)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "h10-cutoff-wavelength",
+   "section": "waveguides",
+   "ord": 588,
+   "label_ru": "Критическая длина волны H₁₀",
+   "label_en": "H₁₀ cutoff wavelength",
+   "hint_ru": "λкр(H₁₀) = 2a",
+   "hint_en": "λc(H₁₀) = 2a",
+   "code": "a_wg := 23*10^-3 m\nlam_c10 := 2*a_wg\nlam_c10 =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "e11-cutoff-wavelength",
+   "section": "waveguides",
+   "ord": 589,
+   "label_ru": "Критическая длина волны E₁₁",
+   "label_en": "E₁₁ cutoff wavelength",
+   "hint_ru": "λкр(E₁₁) = 2/√(1/a² + 1/b²)",
+   "hint_en": "λc(E₁₁) = 2/√(1/a² + 1/b²)",
+   "code": "a_wg := 23*10^-3 m\nb_wg := 10*10^-3 m\nlam_c11 := 2/sqrt(1/a_wg^2 + 1/b_wg^2)\nlam_c11 =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "round-cutoff-e01",
+   "section": "waveguides",
+   "ord": 590,
+   "label_ru": "Круглый волновод: E₀₁",
+   "label_en": "Circular guide: E₀₁",
+   "hint_ru": "λкр = 2πR/V₀₁; V₀₁ = 2.405",
+   "hint_en": "λc = 2πR/V₀₁; V₀₁ = 2.405",
+   "code": "R_wg := 0.01 m\nV01 := 2.405\nlam_c := 2*pi*R_wg/V01\nlam_c =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "round-cutoff-h11",
+   "section": "waveguides",
+   "ord": 591,
+   "label_ru": "Круглый волновод: H₁₁",
+   "label_en": "Circular guide: H₁₁",
+   "hint_ru": "λкр = 2πR/U₁₁; U₁₁ = 1.841",
+   "hint_en": "λc = 2πR/U₁₁; U₁₁ = 1.841",
+   "code": "R_wg := 0.01 m\nU11 := 1.841\nlam_c := 2*pi*R_wg/U11\nlam_c =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "round-cutoff-h01",
+   "section": "waveguides",
+   "ord": 592,
+   "label_ru": "Круглый волновод: H₀₁",
+   "label_en": "Circular guide: H₀₁",
+   "hint_ru": "λкр = 2πR/U₀₁; U₀₁ = 3.832",
+   "hint_en": "λc = 2πR/U₀₁; U₀₁ = 3.832",
+   "code": "R_wg := 0.01 m\nU01 := 3.832\nlam_c := 2*pi*R_wg/U01\nlam_c =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "te-impedance-guide",
+   "section": "waveguides",
+   "ord": 593,
+   "label_ru": "Волновое сопротивление TE",
+   "label_en": "TE wave impedance",
+   "hint_ru": "Z_TE = Z₀/√(1 − (λ/λкр)²)",
+   "hint_en": "Z_TE = Z₀/√(1 − (λ/λc)²)",
+   "code": "Z0 := eta0\nlam_w := 0.03 m\nlam_c := 0.046 m\nZ_TE := Z0/sqrt(1 - (lam_w/lam_c)^2)\nZ_TE =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "rect-resonant-freq",
+   "section": "waveguides",
+   "ord": 594,
+   "label_ru": "Резонансная частота",
+   "label_en": "Resonant frequency",
+   "hint_ru": "f = (c/2)·√((m/a)² + (n/b)² + (p/l)²)",
+   "hint_en": "f = (c/2)·√((m/a)² + (n/b)² + (p/l)²)",
+   "code": "a_cav := 23*10^-3 m\nb_cav := 10*10^-3 m\nl_cav := 23*10^-3 m\nm_idx := 1\nn_idx := 0\np_idx := 1\nf_res := c_light/2*sqrt((m_idx/a_cav)^2 + (n_idx/b_cav)^2 + (p_idx/l_cav)^2)\nf_res =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "resonator-q-def",
+   "section": "waveguides",
+   "ord": 595,
+   "label_ru": "Добротность резонатора",
+   "label_en": "Resonator quality factor",
+   "hint_ru": "Q = ω₀·Wзап/Pпотерь",
+   "hint_en": "Q = ω₀·Wst/Ploss",
+   "code": "w_0 := 2*pi*10*10^9/s\nW_st := 1*10^-6 J\nP_loss := 0.5 W\nQ_res := w_0*W_st/P_loss\nQ_res =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "resonator-quality-decay",
+   "section": "waveguides",
+   "ord": 596,
+   "label_ru": "Время затухания энергии",
+   "label_en": "Energy decay time",
+   "hint_ru": "τ = Q/ω₀; энергия убывает как e^(−ωt/Q)",
+   "hint_en": "τ = Q/ω₀; energy decays as e^(−ωt/Q)",
+   "code": "Q_res := 5000\nf_hz := 10*10^9 Hz\nw_0 := 2*pi*f_hz\ntau_r := Q_res/w_0\ntau_r =",
+   "plot2d": "exp(-abs(x)/5)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "resonator-loaded-q",
+   "section": "waveguides",
+   "ord": 597,
+   "label_ru": "Нагруженная добротность",
+   "label_en": "Loaded quality factor",
+   "hint_ru": "1/Qн = 1/Qс + 1/Qд + 1/Qвн",
+   "hint_en": "1/QL = 1/Q0 + 1/Qd + 1/Qext",
+   "code": "Q_st := 8000\nQ_d := 50000\nQ_e := 12000\nQ_L := 1/(1/Q_st + 1/Q_d + 1/Q_e)\nQ_L =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "resonator-q-power",
+   "section": "waveguides",
+   "ord": 598,
+   "label_ru": "Мощность потерь из добротности",
+   "label_en": "Loss power from Q",
+   "hint_ru": "Pпотерь = ω₀·Wзап/Q",
+   "hint_en": "Ploss = ω₀·Wst/Q",
+   "code": "W_st := 1*10^-6 J\nf_hz := 10*10^9 Hz\nQ_res := 5000\nw_0 := 2*pi*f_hz\nP_loss := w_0*W_st/Q_res\nP_loss =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "resonator-wall-loss",
+   "section": "waveguides",
+   "ord": 599,
+   "label_ru": "Потери в стенках",
+   "label_en": "Wall losses",
+   "hint_ru": "Pст = ½·Rs·∮|H|²·ds",
+   "hint_en": "Pwall = ½·Rs·∮|H|²·ds",
+   "code": "Rs := 0.026*ohm\nH_f := 100 A/m\nS_wall := 0.01 m^2\nP_wall := 0.5*Rs*H_f^2*S_wall\nP_wall =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "resonator-dielectric-loss",
+   "section": "waveguides",
+   "ord": 600,
+   "label_ru": "Потери в диэлектрике",
+   "label_en": "Dielectric losses",
+   "hint_ru": "Pд = ½·ω·ε₀εᵣ·tgδ·E²·V",
+   "hint_en": "Pd = ½·ω·ε₀εᵣ·tanδ·E²·V",
+   "code": "w_0 := 2*pi*10*10^9/s\neps_r := 2.1\ntg_d := 1*10^-4\nE_f := 1000 V/m\nV_cav := 5*10^-6 m^3\nP_d := 0.5*w_0*eps_0*eps_r*tg_d*E_f^2*V_cav\nP_d =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "slab-critical-wavelength",
+   "section": "waveguides",
+   "ord": 601,
+   "label_ru": "Критическая длина волны слоя",
+   "label_en": "Slab critical wavelength",
+   "hint_ru": "λкр = 2d/(n·√(εᵣ − 1))",
+   "hint_en": "λc = 2d/(n·√(εᵣ − 1))",
+   "code": "d_slab := 4*10^-3 m\neps_r := 2\nn_idx := 1\nlam_c := 2*d_slab/(n_idx*sqrt(eps_r - 1))\nlam_c =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "slab-dispersion",
+   "section": "waveguides",
+   "ord": 602,
+   "label_ru": "Дисперсионное соотношение слоя",
+   "label_en": "Slab dispersion relation",
+   "hint_ru": "(αd)² + (γd)² = (2πd/λ)²·(εᵣ − 1)",
+   "hint_en": "(αd)² + (γd)² = (2πd/λ)²·(εᵣ − 1)",
+   "code": "d_slab := 4*10^-3 m\nlam_w := 0.03 m\neps_r := 2\nrhs := 2*pi*d_slab/lam_w*sqrt(eps_r - 1)\nrhs =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "slab-transcendental",
+   "section": "waveguides",
+   "ord": 603,
+   "label_ru": "Характеристическое уравнение слоя",
+   "label_en": "Slab characteristic equation",
+   "hint_ru": "αd = (γd/εᵣ)·tg(γd)",
+   "hint_en": "αd = (γd/εᵣ)·tan(γd)",
+   "code": "alpha_d := 0.5\neps_r := 2\ngamma_d := 1.2\nlhs := alpha_d\nrhs := (gamma_d/eps_r)*tan(gamma_d)\nlhs =\nrhs =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "guide-power-te10",
+   "section": "waveguides",
+   "ord": 604,
+   "label_ru": "Переносимая мощность H₁₀",
+   "label_en": "TE₁₀ carried power",
+   "hint_ru": "P = E²·a·b/(4·Z_TE)",
+   "hint_en": "P = E²·a·b/(4·Z_TE)",
+   "code": "E_f := 1000 V/m\na_wg := 23*10^-3 m\nb_wg := 10*10^-3 m\nZ_TE := 500*ohm\nP_wg := E_f^2*a_wg*b_wg/(4*Z_TE)\nP_wg =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "round-guide-wavelength-h11",
+   "section": "waveguides",
+   "ord": 605,
+   "label_ru": "Длина волны в круглом волноводе",
+   "label_en": "Wavelength in a circular guide",
+   "hint_ru": "λв = λ/√(1 − (λ/λкр)²)",
+   "hint_en": "λg = λ/√(1 − (λ/λc)²)",
+   "code": "lam_w := 0.03 m\nR_wg := 0.01 m\nU11 := 1.841\nlam_c := 2*pi*R_wg/U11\nlam_g := lam_w/sqrt(1 - (lam_w/lam_c)^2)\nlam_g =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-propagation-const",
+   "section": "longlines",
+   "ord": 606,
+   "label_ru": "Коэффициент распространения",
+   "label_en": "Propagation constant",
+   "hint_ru": "γ = √((R + jωL)·(G + jωC))",
+   "hint_en": "γ = √((R + jωL)·(G + jωC))",
+   "code": "R_l := 2*ohm/m\nL_l := 0.25*10^-6 H/m\nG_l := 0.001*S/m\nC_l := 100*10^-12 F/m\nf_hz := 1*10^9 Hz\nw_0 := 2*pi*f_hz\ngamma_l := sqrt((R_l + j*w_0*L_l)*(G_l + j*w_0*C_l))\ngamma_l =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-lossless-beta",
+   "section": "longlines",
+   "ord": 607,
+   "label_ru": "Коэффициент фазы (без потерь)",
+   "label_en": "Phase constant (lossless)",
+   "hint_ru": "β = ω·√(L·C)",
+   "hint_en": "β = ω·√(L·C)",
+   "code": "L_l := 0.25*10^-6 H/m\nC_l := 100*10^-12 F/m\nbeta_l := 2*pi*1*10^9/s*sqrt(L_l*C_l)\nbeta_l =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-alpha-small-loss",
+   "section": "longlines",
+   "ord": 608,
+   "label_ru": "Затухание при малых потерях",
+   "label_en": "Attenuation (small loss)",
+   "hint_ru": "α = (R/2)·√(C/L) + (G/2)·√(L/C)",
+   "hint_en": "α = (R/2)·√(C/L) + (G/2)·√(L/C)",
+   "code": "R_l := 2*ohm/m\nL_l := 0.25*10^-6 H/m\nG_l := 0.001*S/m\nC_l := 100*10^-12 F/m\nalpha_l := R_l/2*sqrt(C_l/L_l) + G_l/2*sqrt(L_l/C_l)\nalpha_l =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-beta-small-loss",
+   "section": "longlines",
+   "ord": 609,
+   "label_ru": "Коэффициент фазы (малые потери)",
+   "label_en": "Phase constant (small loss)",
+   "hint_ru": "β = ω·√(L·C)",
+   "hint_en": "β = ω·√(L·C)",
+   "code": "L_l := 0.25*10^-6 H/m\nC_l := 100*10^-12 F/m\nf_hz := 1*10^9 Hz\nbeta_l := 2*pi*f_hz*sqrt(L_l*C_l)\nbeta_l =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-wave-impedance",
+   "section": "longlines",
+   "ord": 610,
+   "label_ru": "Волновое сопротивление линии",
+   "label_en": "Line characteristic impedance",
+   "hint_ru": "ρ = √(L/C)",
+   "hint_en": "ρ = √(L/C)",
+   "code": "L_l := 0.25*10^-6 H/m\nC_l := 100*10^-12 F/m\nrho_l := sqrt(L_l/C_l)\nrho_l =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-complex-impedance",
+   "section": "longlines",
+   "ord": 611,
+   "label_ru": "Комплексное сопротивление линии",
+   "label_en": "Complex line impedance",
+   "hint_ru": "ρ = √((R + jωL)/(G + jωC))",
+   "hint_en": "ρ = √((R + jωL)/(G + jωC))",
+   "code": "R_l := 2*ohm/m\nL_l := 0.25*10^-6 H/m\nG_l := 0.001*S/m\nC_l := 100*10^-12 F/m\nf_hz := 1*10^9 Hz\nw_0 := 2*pi*f_hz\nrho_c := sqrt((R_l + j*w_0*L_l)/(G_l + j*w_0*C_l))\nrho_c =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-phase-velocity",
+   "section": "longlines",
+   "ord": 612,
+   "label_ru": "Скорость в линии",
+   "label_en": "Velocity in a line",
+   "hint_ru": "V = 1/√(L·C)",
+   "hint_en": "V = 1/√(L·C)",
+   "code": "L_l := 0.25*10^-6 H/m\nC_l := 100*10^-12 F/m\nV_line := 1/sqrt(L_l*C_l)\nV_line =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-wavelength",
+   "section": "longlines",
+   "ord": 613,
+   "label_ru": "Длина волны в линии",
+   "label_en": "Wavelength in a line",
+   "hint_ru": "λ = 2π/β",
+   "hint_en": "λ = 2π/β",
+   "code": "beta_l := 20/m\nlam_l := 2*pi/beta_l\nlam_l =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-gamma-load",
+   "section": "longlines",
+   "ord": 614,
+   "label_ru": "Коэффициент отражения от нагрузки",
+   "label_en": "Load reflection coefficient",
+   "hint_ru": "Γн = (Zн − ρ)/(Zн + ρ)",
+   "hint_en": "ΓL = (ZL − ρ)/(ZL + ρ)",
+   "code": "Z_n := 75*ohm\nrho_l := 50*ohm\nGamma_l := (Z_n - rho_l)/(Z_n + rho_l)\nGamma_l =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-gamma-l",
+   "section": "longlines",
+   "ord": 615,
+   "label_ru": "Отражение вдоль линии",
+   "label_en": "Reflection along the line",
+   "hint_ru": "Γ(l) = Γн·e^(−j2βl)",
+   "hint_en": "Γ(l) = ΓL·e^(−j2βl)",
+   "code": "Gamma_n := 0.2\nbeta_l := 20/m\nlen_m := 0.05 m\nGamma_l := Gamma_n*exp(-2*j*beta_l*len_m)\nabs(Gamma_l) =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-input-impedance",
+   "section": "longlines",
+   "ord": 616,
+   "label_ru": "Входное сопротивление линии",
+   "label_en": "Line input impedance",
+   "hint_ru": "Zвх = ρ·(Zн + jρ·tgβl)/(ρ + jZн·tgβl)",
+   "hint_en": "Zin = ρ·(ZL + jρ·tanβl)/(ρ + jZL·tanβl)",
+   "code": "Z_n := 75*ohm\nrho_l := 50*ohm\nbeta_l := 20/m\nlen_m := 0.05 m\nZ_in := rho_l*(Z_n + j*rho_l*tan(beta_l*len_m))/(rho_l + j*Z_n*tan(beta_l*len_m))\nZ_in =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-short-input",
+   "section": "longlines",
+   "ord": 617,
+   "label_ru": "Вход закороченной линии",
+   "label_en": "Short-circuited line input",
+   "hint_ru": "Zвх = jρ·tgβl",
+   "hint_en": "Zin = jρ·tanβl",
+   "code": "rho_l := 50*ohm\nbeta_l := 20/m\nlen_m := 0.05 m\nZ_sh := j*rho_l*tan(beta_l*len_m)\nZ_sh =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-open-input",
+   "section": "longlines",
+   "ord": 618,
+   "label_ru": "Вход разомкнутой линии",
+   "label_en": "Open-circuited line input",
+   "hint_ru": "Zвх = −jρ/tgβl",
+   "hint_en": "Zin = −jρ/tanβl",
+   "code": "rho_l := 50*ohm\nbeta_l := 20/m\nlen_m := 0.05 m\nZ_op := -j*rho_l/tan(beta_l*len_m)\nZ_op =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-quarter-transformer",
+   "section": "longlines",
+   "ord": 619,
+   "label_ru": "Четвертьволновый трансформатор",
+   "label_en": "Quarter-wave transformer",
+   "hint_ru": "Zвх = ρ²/Zн при l = λ/4",
+   "hint_en": "Zin = ρ²/ZL at l = λ/4",
+   "code": "rho_l := 50*ohm\nZ_n := 200*ohm\nZ_q := rho_l^2/Z_n\nZ_q =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-voltage-envelope",
+   "section": "longlines",
+   "ord": 620,
+   "label_ru": "Огибающая напряжения",
+   "label_en": "Voltage envelope",
+   "hint_ru": "|U(l)| = Uпад·√(1 + |Γ|² + 2|Γ|·cos(2βl + φ))",
+   "hint_en": "|U(l)| = Uinc·√(1 + |Γ|² + 2|Γ|·cos(2βl + φ))",
+   "code": "U_pad := 1\nGamma_n := 0.3\nbeta_l := 20/m\nlen_m := 0.05 m\nphi_g := 0\nU_env := U_pad*sqrt(1 + Gamma_n^2 + 2*Gamma_n*cos(2*beta_l*len_m + phi_g))\nU_env =",
+   "plot2d": "sqrt(1.09 + 0.6*cos(2*x))",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-power-load",
+   "section": "longlines",
+   "ord": 621,
+   "label_ru": "Мощность в нагрузке",
+   "label_en": "Power delivered to load",
+   "hint_ru": "Pн = Pпад·(1 − |Γ|²)",
+   "hint_en": "PL = Pinc·(1 − |Γ|²)",
+   "code": "P_pad := 1 W\nGamma_n := 0.3\nP_load := P_pad*(1 - Gamma_n^2)\nP_load =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-phase-rotation-length",
+   "section": "longlines",
+   "ord": 622,
+   "label_ru": "Длина одного оборота Γ",
+   "label_en": "Length of one Γ turn",
+   "hint_ru": "l = π/β = λ/2 при повороте вектора на 2π",
+   "hint_en": "l = π/β = λ/2 for a full 2π rotation",
+   "code": "beta_l := 2*pi/0.1/m\nlen_turn := pi/beta_l\nlen_turn =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-attenuation-e",
+   "section": "longlines",
+   "ord": 623,
+   "label_ru": "Затухание напряжения",
+   "label_en": "Voltage attenuation",
+   "hint_ru": "U = U₀·e^(−αl)",
+   "hint_en": "U = U₀·e^(−αl)",
+   "code": "alpha_l := 0.05/m\nlen_m := 20 m\nU_out := exp(-alpha_l*len_m)\nU_out =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-power-attenuation",
+   "section": "longlines",
+   "ord": 624,
+   "label_ru": "Затухание мощности",
+   "label_en": "Power attenuation",
+   "hint_ru": "P = P₀·e^(−2αl)",
+   "hint_en": "P = P₀·e^(−2αl)",
+   "code": "alpha_l := 0.05/m\nlen_m := 20 m\nP_out := exp(-2*alpha_l*len_m)\nP_out =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-transfer-coeff",
+   "section": "longlines",
+   "ord": 625,
+   "label_ru": "Коэффициент передачи",
+   "label_en": "Transfer coefficient",
+   "hint_ru": "K = e^(−2αl)·(1 − |Γн|²)",
+   "hint_en": "K = e^(−2αl)·(1 − |ΓL|²)",
+   "code": "alpha_l := 0.05/m\nlen_m := 20 m\nGamma_n := 0.3\nK_p := exp(-2*alpha_l*len_m)*(1 - Gamma_n^2)\nK_p =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-kpd",
+   "section": "longlines",
+   "ord": 626,
+   "label_ru": "КПД линии",
+   "label_en": "Line efficiency",
+   "hint_ru": "η = e^(−2αl)·100%",
+   "hint_en": "η = e^(−2αl)·100%",
+   "code": "alpha_l := 0.02/m\nlen_m := 10 m\nKPD := exp(-2*alpha_l*len_m)\nKPD =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-conjugate-match",
+   "section": "longlines",
+   "ord": 627,
+   "label_ru": "Согласование (комплексно-сопряжённое)",
+   "label_en": "Conjugate matching",
+   "hint_ru": "Zвх = Zг*; R и X компенсируются",
+   "hint_en": "Zin = Zg*; R and X cancel",
+   "code": "R_g := 50*ohm\nX_g := -10*ohm\nZ_g := R_g + j*X_g\nZ_in := R_g - j*X_g\nsum_z := Z_g + Z_in\nsum_z =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-node-distance",
+   "section": "longlines",
+   "ord": 628,
+   "label_ru": "Расстояние до узла напряжения",
+   "label_en": "Distance to voltage node",
+   "hint_ru": "lmin = (π − φ)/(2β)",
+   "hint_en": "lmin = (π − φ)/(2β)",
+   "code": "phi_g := pi/2\nbeta_l := 2*pi/0.2/m\nlen_min := (pi - phi_g)/(2*beta_l)\nlen_min =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "line-full-turn-length",
+   "section": "longlines",
+   "ord": 629,
+   "label_ru": "Длина полуволны в линии",
+   "label_en": "Half-wavelength in a line",
+   "hint_ru": "l = λ/2 (период диаграммы)",
+   "hint_en": "l = λ/2 (chart period)",
+   "code": "lam_l := 0.2 m\nlen_turn := lam_l/2\nlen_turn =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
   }
  ],
  "formula_sources": [
@@ -11709,6 +13062,624 @@
    "ord": 0,
    "title": "Parallelogram law — Wikipedia",
    "url": "https://en.wikipedia.org/wiki/Parallelogram_law"
+  },
+  {
+   "formula_id": "lorentz-force-full",
+   "ord": 0,
+   "title": "Lorentz force — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Lorentz_force"
+  },
+  {
+   "formula_id": "lorentz-force-full",
+   "ord": 1,
+   "title": "Сила Лоренца — научная библиотека",
+   "url": "https://ru.wikipedia.org/wiki/Сила_Лоренца"
+  },
+  {
+   "formula_id": "ohm-diff-form",
+   "ord": 0,
+   "title": "Ohm's law — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Ohm%27s_law"
+  },
+  {
+   "formula_id": "electric-induction-d",
+   "ord": 0,
+   "title": "Electric displacement field — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Electric_displacement_field"
+  },
+  {
+   "formula_id": "polarization-vector",
+   "ord": 0,
+   "title": "Polarization density — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Polarization_density"
+  },
+  {
+   "formula_id": "magnetic-induction-b",
+   "ord": 0,
+   "title": "Magnetic field — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Magnetic_field"
+  },
+  {
+   "formula_id": "magnetization-vector",
+   "ord": 0,
+   "title": "Magnetization — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Magnetization"
+  },
+  {
+   "formula_id": "gauss-d-flux",
+   "ord": 0,
+   "title": "Gauss's law — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Gauss%27s_law"
+  },
+  {
+   "formula_id": "gauss-b-zero-flux",
+   "ord": 0,
+   "title": "Gauss's law for magnetism — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Gauss%27s_law_for_magnetism"
+  },
+  {
+   "formula_id": "faraday-emf-flux",
+   "ord": 0,
+   "title": "Faraday's law — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Faraday%27s_law_of_induction"
+  },
+  {
+   "formula_id": "faraday-emf-flux",
+   "ord": 1,
+   "title": "Закон электромагнитной индукции — ru",
+   "url": "https://ru.wikipedia.org/wiki/Закон_электромагнитной_индукции"
+  },
+  {
+   "formula_id": "faraday-emf-area",
+   "ord": 0,
+   "title": "Faraday's law — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Faraday%27s_law_of_induction"
+  },
+  {
+   "formula_id": "charge-conservation-i",
+   "ord": 0,
+   "title": "Continuity equation — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Continuity_equation"
+  },
+  {
+   "formula_id": "continuity-j-dc",
+   "ord": 0,
+   "title": "Continuity equation — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Continuity_equation"
+  },
+  {
+   "formula_id": "ampere-wire-h",
+   "ord": 0,
+   "title": "Ampère's circuital law — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Amp%C3%A8re%27s_circuital_law"
+  },
+  {
+   "formula_id": "d-field-rate",
+   "ord": 0,
+   "title": "Electric displacement field — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Electric_displacement_field"
+  },
+  {
+   "formula_id": "joule-lenz-diff",
+   "ord": 0,
+   "title": "Joule heating — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Joule_heating"
+  },
+  {
+   "formula_id": "boundary-bn",
+   "ord": 0,
+   "title": "Interface conditions — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Interface_conditions_for_electromagnetic_fields"
+  },
+  {
+   "formula_id": "boundary-et",
+   "ord": 0,
+   "title": "Interface conditions — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Interface_conditions_for_electromagnetic_fields"
+  },
+  {
+   "formula_id": "boundary-ideal-conductor",
+   "ord": 0,
+   "title": "Interface conditions — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Interface_conditions_for_electromagnetic_fields"
+  },
+  {
+   "formula_id": "surface-resistance-rs",
+   "ord": 0,
+   "title": "Skin effect — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Skin_effect"
+  },
+  {
+   "formula_id": "helmholtz-k",
+   "ord": 0,
+   "title": "Helmholtz equation — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Helmholtz_equation"
+  },
+  {
+   "formula_id": "vector-potential-a",
+   "ord": 0,
+   "title": "Magnetic vector potential — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Magnetic_vector_potential"
+  },
+  {
+   "formula_id": "radiation-resistance",
+   "ord": 0,
+   "title": "Dipole antenna — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Dipole_antenna"
+  },
+  {
+   "formula_id": "radiation-power-dipole",
+   "ord": 0,
+   "title": "Dipole antenna — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Dipole_antenna"
+  },
+  {
+   "formula_id": "radiation-pattern",
+   "ord": 0,
+   "title": "Dipole antenna — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Dipole_antenna"
+  },
+  {
+   "formula_id": "zone-parameter-kr",
+   "ord": 0,
+   "title": "Near and far field — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Near_and_far_field"
+  },
+  {
+   "formula_id": "magnetic-moment-loop",
+   "ord": 0,
+   "title": "Magnetic dipole — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Magnetic_dipole"
+  },
+  {
+   "formula_id": "effective-loop-length",
+   "ord": 0,
+   "title": "Loop antenna — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Loop_antenna"
+  },
+  {
+   "formula_id": "plane-wave-phase",
+   "ord": 0,
+   "title": "Plane wave — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Plane_wave"
+  },
+  {
+   "formula_id": "plane-period",
+   "ord": 0,
+   "title": "Frequency — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Frequency"
+  },
+  {
+   "formula_id": "plane-wavelength-k",
+   "ord": 0,
+   "title": "Wavenumber — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Wavenumber"
+  },
+  {
+   "formula_id": "phase-velocity-medium",
+   "ord": 0,
+   "title": "Phase velocity — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Phase_velocity"
+  },
+  {
+   "formula_id": "loss-tangent",
+   "ord": 0,
+   "title": "Dielectric loss — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Dielectric_loss"
+  },
+  {
+   "formula_id": "beta-lossy",
+   "ord": 0,
+   "title": "Propagation constant — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Propagation_constant"
+  },
+  {
+   "formula_id": "kappa-lossy",
+   "ord": 0,
+   "title": "Attenuation — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Attenuation"
+  },
+  {
+   "formula_id": "attenuation-db",
+   "ord": 0,
+   "title": "Attenuation — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Attenuation"
+  },
+  {
+   "formula_id": "wave-impedance-medium",
+   "ord": 0,
+   "title": "Wave impedance — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Wave_impedance"
+  },
+  {
+   "formula_id": "field-ratio-exhy",
+   "ord": 0,
+   "title": "Wave impedance — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Wave_impedance"
+  },
+  {
+   "formula_id": "normal-reflection-gamma",
+   "ord": 0,
+   "title": "Reflection coefficient — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Reflection_coefficient"
+  },
+  {
+   "formula_id": "normal-transmission-t",
+   "ord": 0,
+   "title": "Fresnel equations — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Fresnel_equations"
+  },
+  {
+   "formula_id": "normal-t-gamma-sum",
+   "ord": 0,
+   "title": "Fresnel equations — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Fresnel_equations"
+  },
+  {
+   "formula_id": "relative-index-n",
+   "ord": 0,
+   "title": "Refractive index — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Refractive_index"
+  },
+  {
+   "formula_id": "fresnel-horizontal-refl",
+   "ord": 0,
+   "title": "Fresnel equations — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Fresnel_equations"
+  },
+  {
+   "formula_id": "fresnel-horizontal-trans",
+   "ord": 0,
+   "title": "Fresnel equations — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Fresnel_equations"
+  },
+  {
+   "formula_id": "fresnel-vertical-refl",
+   "ord": 0,
+   "title": "Fresnel equations — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Fresnel_equations"
+  },
+  {
+   "formula_id": "fresnel-vertical-trans",
+   "ord": 0,
+   "title": "Fresnel equations — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Fresnel_equations"
+  },
+  {
+   "formula_id": "fresnel-h-angle-form",
+   "ord": 0,
+   "title": "Fresnel equations — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Fresnel_equations"
+  },
+  {
+   "formula_id": "fresnel-v-angle-form",
+   "ord": 0,
+   "title": "Fresnel equations — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Fresnel_equations"
+  },
+  {
+   "formula_id": "tir-attenuation",
+   "ord": 0,
+   "title": "Total internal reflection — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Total_internal_reflection"
+  },
+  {
+   "formula_id": "metal-surface-reflection",
+   "ord": 0,
+   "title": "Reflection coefficient — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Reflection_coefficient"
+  },
+  {
+   "formula_id": "surface-wave-beta",
+   "ord": 0,
+   "title": "Surface wave — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Surface_wave"
+  },
+  {
+   "formula_id": "surface-wave-gamma",
+   "ord": 0,
+   "title": "Surface wave — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Surface_wave"
+  },
+  {
+   "formula_id": "standing-wave-envelope",
+   "ord": 0,
+   "title": "Standing wave — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Standing_wave"
+  },
+  {
+   "formula_id": "transverse-wavenumber",
+   "ord": 0,
+   "title": "Waveguide (radio frequency) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(radio_frequency)"
+  },
+  {
+   "formula_id": "rect-cutoff-wavelength",
+   "ord": 0,
+   "title": "Cutoff frequency — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Cutoff_frequency"
+  },
+  {
+   "formula_id": "rect-propagation-beta",
+   "ord": 0,
+   "title": "Waveguide (radio frequency) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(radio_frequency)"
+  },
+  {
+   "formula_id": "phase-velocity-guide",
+   "ord": 0,
+   "title": "Phase velocity — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Phase_velocity"
+  },
+  {
+   "formula_id": "group-velocity-guide",
+   "ord": 0,
+   "title": "Group velocity — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Group_velocity"
+  },
+  {
+   "formula_id": "vf-vgr-product",
+   "ord": 0,
+   "title": "Group velocity — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Group_velocity"
+  },
+  {
+   "formula_id": "guide-angle-cos",
+   "ord": 0,
+   "title": "Waveguide (radio frequency) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(radio_frequency)"
+  },
+  {
+   "formula_id": "h10-cutoff-wavelength",
+   "ord": 0,
+   "title": "Waveguide (radio frequency) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(radio_frequency)"
+  },
+  {
+   "formula_id": "e11-cutoff-wavelength",
+   "ord": 0,
+   "title": "Waveguide (radio frequency) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(radio_frequency)"
+  },
+  {
+   "formula_id": "round-cutoff-e01",
+   "ord": 0,
+   "title": "Waveguide (radio frequency) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(radio_frequency)"
+  },
+  {
+   "formula_id": "round-cutoff-h11",
+   "ord": 0,
+   "title": "Waveguide (radio frequency) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(radio_frequency)"
+  },
+  {
+   "formula_id": "round-cutoff-h01",
+   "ord": 0,
+   "title": "Waveguide (radio frequency) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(radio_frequency)"
+  },
+  {
+   "formula_id": "te-impedance-guide",
+   "ord": 0,
+   "title": "Wave impedance — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Wave_impedance"
+  },
+  {
+   "formula_id": "rect-resonant-freq",
+   "ord": 0,
+   "title": "Microwave cavity — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Microwave_cavity"
+  },
+  {
+   "formula_id": "resonator-q-def",
+   "ord": 0,
+   "title": "Q factor — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Q_factor"
+  },
+  {
+   "formula_id": "resonator-quality-decay",
+   "ord": 0,
+   "title": "Q factor — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Q_factor"
+  },
+  {
+   "formula_id": "resonator-loaded-q",
+   "ord": 0,
+   "title": "Q factor — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Q_factor"
+  },
+  {
+   "formula_id": "resonator-q-power",
+   "ord": 0,
+   "title": "Q factor — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Q_factor"
+  },
+  {
+   "formula_id": "resonator-wall-loss",
+   "ord": 0,
+   "title": "Microwave cavity — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Microwave_cavity"
+  },
+  {
+   "formula_id": "resonator-dielectric-loss",
+   "ord": 0,
+   "title": "Dielectric loss — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Dielectric_loss"
+  },
+  {
+   "formula_id": "slab-critical-wavelength",
+   "ord": 0,
+   "title": "Waveguide (optics) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(optics)"
+  },
+  {
+   "formula_id": "slab-dispersion",
+   "ord": 0,
+   "title": "Waveguide (optics) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(optics)"
+  },
+  {
+   "formula_id": "slab-transcendental",
+   "ord": 0,
+   "title": "Waveguide (optics) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(optics)"
+  },
+  {
+   "formula_id": "guide-power-te10",
+   "ord": 0,
+   "title": "Waveguide (radio frequency) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(radio_frequency)"
+  },
+  {
+   "formula_id": "round-guide-wavelength-h11",
+   "ord": 0,
+   "title": "Waveguide (radio frequency) — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Waveguide_(radio_frequency)"
+  },
+  {
+   "formula_id": "line-propagation-const",
+   "ord": 0,
+   "title": "Telegrapher's equations — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Telegrapher%27s_equations"
+  },
+  {
+   "formula_id": "line-lossless-beta",
+   "ord": 0,
+   "title": "Telegrapher's equations — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Telegrapher%27s_equations"
+  },
+  {
+   "formula_id": "line-alpha-small-loss",
+   "ord": 0,
+   "title": "Attenuation — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Attenuation"
+  },
+  {
+   "formula_id": "line-beta-small-loss",
+   "ord": 0,
+   "title": "Telegrapher's equations — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Telegrapher%27s_equations"
+  },
+  {
+   "formula_id": "line-wave-impedance",
+   "ord": 0,
+   "title": "Characteristic impedance — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Characteristic_impedance"
+  },
+  {
+   "formula_id": "line-complex-impedance",
+   "ord": 0,
+   "title": "Characteristic impedance — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Characteristic_impedance"
+  },
+  {
+   "formula_id": "line-phase-velocity",
+   "ord": 0,
+   "title": "Transmission line — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Transmission_line"
+  },
+  {
+   "formula_id": "line-wavelength",
+   "ord": 0,
+   "title": "Transmission line — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Transmission_line"
+  },
+  {
+   "formula_id": "line-gamma-load",
+   "ord": 0,
+   "title": "Reflection coefficient — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Reflection_coefficient"
+  },
+  {
+   "formula_id": "line-gamma-l",
+   "ord": 0,
+   "title": "Reflection coefficient — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Reflection_coefficient"
+  },
+  {
+   "formula_id": "line-input-impedance",
+   "ord": 0,
+   "title": "Input impedance — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Input_impedance"
+  },
+  {
+   "formula_id": "line-short-input",
+   "ord": 0,
+   "title": "Input impedance — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Input_impedance"
+  },
+  {
+   "formula_id": "line-open-input",
+   "ord": 0,
+   "title": "Input impedance — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Input_impedance"
+  },
+  {
+   "formula_id": "line-quarter-transformer",
+   "ord": 0,
+   "title": "Quarter-wave impedance transformer — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Quarter-wave_impedance_transformer"
+  },
+  {
+   "formula_id": "line-voltage-envelope",
+   "ord": 0,
+   "title": "Standing wave ratio — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Standing_wave_ratio"
+  },
+  {
+   "formula_id": "line-power-load",
+   "ord": 0,
+   "title": "Impedance matching — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Impedance_matching"
+  },
+  {
+   "formula_id": "line-phase-rotation-length",
+   "ord": 0,
+   "title": "Smith chart — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Smith_chart"
+  },
+  {
+   "formula_id": "line-attenuation-e",
+   "ord": 0,
+   "title": "Attenuation — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Attenuation"
+  },
+  {
+   "formula_id": "line-power-attenuation",
+   "ord": 0,
+   "title": "Attenuation — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Attenuation"
+  },
+  {
+   "formula_id": "line-transfer-coeff",
+   "ord": 0,
+   "title": "Impedance matching — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Impedance_matching"
+  },
+  {
+   "formula_id": "line-kpd",
+   "ord": 0,
+   "title": "Transmission line — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Transmission_line"
+  },
+  {
+   "formula_id": "line-conjugate-match",
+   "ord": 0,
+   "title": "Impedance matching — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Impedance_matching"
+  },
+  {
+   "formula_id": "line-node-distance",
+   "ord": 0,
+   "title": "Standing wave ratio — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Standing_wave_ratio"
+  },
+  {
+   "formula_id": "line-full-turn-length",
+   "ord": 0,
+   "title": "Smith chart — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Smith_chart"
   }
  ],
  "formula_vars": [
@@ -22267,6 +24238,2582 @@
    "name": "r_rs",
    "label_ru": "равнодействующая",
    "label_en": "resultant"
+  },
+  {
+   "formula_id": "lorentz-force-full",
+   "ord": 0,
+   "name": "q_t",
+   "label_ru": "заряд",
+   "label_en": "charge"
+  },
+  {
+   "formula_id": "lorentz-force-full",
+   "ord": 1,
+   "name": "E_f",
+   "label_ru": "напряжённость E",
+   "label_en": "electric field E"
+  },
+  {
+   "formula_id": "lorentz-force-full",
+   "ord": 2,
+   "name": "v_c",
+   "label_ru": "скорость",
+   "label_en": "velocity"
+  },
+  {
+   "formula_id": "lorentz-force-full",
+   "ord": 3,
+   "name": "B_f",
+   "label_ru": "магнитная индукция B",
+   "label_en": "magnetic flux density B"
+  },
+  {
+   "formula_id": "lorentz-force-full",
+   "ord": 4,
+   "name": "F_l",
+   "label_ru": "сила Лоренца",
+   "label_en": "Lorentz force"
+  },
+  {
+   "formula_id": "ohm-diff-form",
+   "ord": 0,
+   "name": "sig_m",
+   "label_ru": "проводимость σ",
+   "label_en": "conductivity σ"
+  },
+  {
+   "formula_id": "ohm-diff-form",
+   "ord": 1,
+   "name": "E_f",
+   "label_ru": "напряжённость E",
+   "label_en": "electric field E"
+  },
+  {
+   "formula_id": "ohm-diff-form",
+   "ord": 2,
+   "name": "J_c",
+   "label_ru": "плотность тока J",
+   "label_en": "current density J"
+  },
+  {
+   "formula_id": "electric-induction-d",
+   "ord": 0,
+   "name": "eps_r",
+   "label_ru": "относительная диэлектрическая проницаемость",
+   "label_en": "relative permittivity"
+  },
+  {
+   "formula_id": "electric-induction-d",
+   "ord": 1,
+   "name": "E_f",
+   "label_ru": "напряжённость E",
+   "label_en": "electric field E"
+  },
+  {
+   "formula_id": "electric-induction-d",
+   "ord": 2,
+   "name": "D_f",
+   "label_ru": "индукция D",
+   "label_en": "displacement D"
+  },
+  {
+   "formula_id": "polarization-vector",
+   "ord": 0,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "polarization-vector",
+   "ord": 1,
+   "name": "chi_e",
+   "label_ru": "восприимчивость χₑ",
+   "label_en": "susceptibility χₑ"
+  },
+  {
+   "formula_id": "polarization-vector",
+   "ord": 2,
+   "name": "E_f",
+   "label_ru": "напряжённость E",
+   "label_en": "electric field E"
+  },
+  {
+   "formula_id": "polarization-vector",
+   "ord": 3,
+   "name": "P_pol",
+   "label_ru": "поляризованность P",
+   "label_en": "polarization P"
+  },
+  {
+   "formula_id": "magnetic-induction-b",
+   "ord": 0,
+   "name": "mu_r",
+   "label_ru": "магнитная проницаемость μᵣ",
+   "label_en": "relative permeability μᵣ"
+  },
+  {
+   "formula_id": "magnetic-induction-b",
+   "ord": 1,
+   "name": "H_f",
+   "label_ru": "напряжённость H",
+   "label_en": "magnetic field H"
+  },
+  {
+   "formula_id": "magnetic-induction-b",
+   "ord": 2,
+   "name": "B_f",
+   "label_ru": "индукция B",
+   "label_en": "flux density B"
+  },
+  {
+   "formula_id": "magnetization-vector",
+   "ord": 0,
+   "name": "mu_r",
+   "label_ru": "проницаемость μᵣ",
+   "label_en": "permeability μᵣ"
+  },
+  {
+   "formula_id": "magnetization-vector",
+   "ord": 1,
+   "name": "chi_m",
+   "label_ru": "восприимчивость χm",
+   "label_en": "susceptibility χm"
+  },
+  {
+   "formula_id": "magnetization-vector",
+   "ord": 2,
+   "name": "H_f",
+   "label_ru": "напряжённость H",
+   "label_en": "field H"
+  },
+  {
+   "formula_id": "magnetization-vector",
+   "ord": 3,
+   "name": "M_mag",
+   "label_ru": "намагниченность M",
+   "label_en": "magnetization M"
+  },
+  {
+   "formula_id": "gauss-d-flux",
+   "ord": 0,
+   "name": "Q_ch",
+   "label_ru": "заряд Q",
+   "label_en": "charge Q"
+  },
+  {
+   "formula_id": "gauss-d-flux",
+   "ord": 1,
+   "name": "r_s",
+   "label_ru": "радиус",
+   "label_en": "radius"
+  },
+  {
+   "formula_id": "gauss-d-flux",
+   "ord": 2,
+   "name": "D_f",
+   "label_ru": "индукция D",
+   "label_en": "displacement D"
+  },
+  {
+   "formula_id": "gauss-b-zero-flux",
+   "ord": 0,
+   "name": "B_f",
+   "label_ru": "индукция B",
+   "label_en": "flux density B"
+  },
+  {
+   "formula_id": "gauss-b-zero-flux",
+   "ord": 1,
+   "name": "A_in",
+   "label_ru": "площадь входа",
+   "label_en": "inlet area"
+  },
+  {
+   "formula_id": "gauss-b-zero-flux",
+   "ord": 2,
+   "name": "A_out",
+   "label_ru": "площадь выхода",
+   "label_en": "outlet area"
+  },
+  {
+   "formula_id": "gauss-b-zero-flux",
+   "ord": 3,
+   "name": "Phi_net",
+   "label_ru": "поток Φ",
+   "label_en": "net flux Φ"
+  },
+  {
+   "formula_id": "faraday-emf-flux",
+   "ord": 0,
+   "name": "dPhi",
+   "label_ru": "изменение потока dΦ",
+   "label_en": "flux change dΦ"
+  },
+  {
+   "formula_id": "faraday-emf-flux",
+   "ord": 1,
+   "name": "dt",
+   "label_ru": "интервал dt",
+   "label_en": "time interval dt"
+  },
+  {
+   "formula_id": "faraday-emf-flux",
+   "ord": 2,
+   "name": "emf_ind",
+   "label_ru": "ЭДС ε",
+   "label_en": "EMF ε"
+  },
+  {
+   "formula_id": "faraday-emf-area",
+   "ord": 0,
+   "name": "S_loop",
+   "label_ru": "площадь S",
+   "label_en": "loop area S"
+  },
+  {
+   "formula_id": "faraday-emf-area",
+   "ord": 1,
+   "name": "dBdt",
+   "label_ru": "скорость dB/dt",
+   "label_en": "rate dB/dt"
+  },
+  {
+   "formula_id": "faraday-emf-area",
+   "ord": 2,
+   "name": "emf_s",
+   "label_ru": "ЭДС ε",
+   "label_en": "EMF ε"
+  },
+  {
+   "formula_id": "charge-conservation-i",
+   "ord": 0,
+   "name": "Q0",
+   "label_ru": "начальный заряд",
+   "label_en": "initial charge"
+  },
+  {
+   "formula_id": "charge-conservation-i",
+   "ord": 1,
+   "name": "Q1",
+   "label_ru": "конечный заряд",
+   "label_en": "final charge"
+  },
+  {
+   "formula_id": "charge-conservation-i",
+   "ord": 2,
+   "name": "dt_t",
+   "label_ru": "интервал dt",
+   "label_en": "time interval"
+  },
+  {
+   "formula_id": "charge-conservation-i",
+   "ord": 3,
+   "name": "I_out",
+   "label_ru": "ток I",
+   "label_en": "current I"
+  },
+  {
+   "formula_id": "continuity-j-dc",
+   "ord": 0,
+   "name": "J_in",
+   "label_ru": "входящая плотность тока",
+   "label_en": "inlet current density"
+  },
+  {
+   "formula_id": "continuity-j-dc",
+   "ord": 1,
+   "name": "J_out",
+   "label_ru": "выходящая плотность тока",
+   "label_en": "outlet current density"
+  },
+  {
+   "formula_id": "continuity-j-dc",
+   "ord": 2,
+   "name": "A_in",
+   "label_ru": "площадь входа",
+   "label_en": "inlet area"
+  },
+  {
+   "formula_id": "continuity-j-dc",
+   "ord": 3,
+   "name": "A_out",
+   "label_ru": "площадь выхода",
+   "label_en": "outlet area"
+  },
+  {
+   "formula_id": "continuity-j-dc",
+   "ord": 4,
+   "name": "I_net",
+   "label_ru": "полный ток",
+   "label_en": "net current"
+  },
+  {
+   "formula_id": "ampere-wire-h",
+   "ord": 0,
+   "name": "I_wire",
+   "label_ru": "ток I",
+   "label_en": "current I"
+  },
+  {
+   "formula_id": "ampere-wire-h",
+   "ord": 1,
+   "name": "r_c",
+   "label_ru": "расстояние r",
+   "label_en": "distance r"
+  },
+  {
+   "formula_id": "ampere-wire-h",
+   "ord": 2,
+   "name": "H_f",
+   "label_ru": "напряжённость H",
+   "label_en": "field H"
+  },
+  {
+   "formula_id": "d-field-rate",
+   "ord": 0,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "d-field-rate",
+   "ord": 1,
+   "name": "dEdt",
+   "label_ru": "скорость dE/dt",
+   "label_en": "rate dE/dt"
+  },
+  {
+   "formula_id": "d-field-rate",
+   "ord": 2,
+   "name": "dDdt",
+   "label_ru": "скорость dD/dt",
+   "label_en": "rate dD/dt"
+  },
+  {
+   "formula_id": "joule-lenz-diff",
+   "ord": 0,
+   "name": "sig_m",
+   "label_ru": "проводимость σ",
+   "label_en": "conductivity σ"
+  },
+  {
+   "formula_id": "joule-lenz-diff",
+   "ord": 1,
+   "name": "E_f",
+   "label_ru": "напряжённость E",
+   "label_en": "electric field E"
+  },
+  {
+   "formula_id": "joule-lenz-diff",
+   "ord": 2,
+   "name": "p_loss",
+   "label_ru": "удельная мощность p",
+   "label_en": "loss power density p"
+  },
+  {
+   "formula_id": "boundary-bn",
+   "ord": 0,
+   "name": "B1n",
+   "label_ru": "Bₙ в среде 1",
+   "label_en": "Bₙ in medium 1"
+  },
+  {
+   "formula_id": "boundary-bn",
+   "ord": 1,
+   "name": "B2n",
+   "label_ru": "Bₙ в среде 2",
+   "label_en": "Bₙ in medium 2"
+  },
+  {
+   "formula_id": "boundary-bn",
+   "ord": 2,
+   "name": "dB",
+   "label_ru": "скачок",
+   "label_en": "jump"
+  },
+  {
+   "formula_id": "boundary-et",
+   "ord": 0,
+   "name": "E1t",
+   "label_ru": "Eτ в среде 1",
+   "label_en": "Eτ in medium 1"
+  },
+  {
+   "formula_id": "boundary-et",
+   "ord": 1,
+   "name": "E2t",
+   "label_ru": "Eτ в среде 2",
+   "label_en": "Eτ in medium 2"
+  },
+  {
+   "formula_id": "boundary-et",
+   "ord": 2,
+   "name": "dE",
+   "label_ru": "скачок",
+   "label_en": "jump"
+  },
+  {
+   "formula_id": "boundary-ideal-conductor",
+   "ord": 0,
+   "name": "rho_s",
+   "label_ru": "поверхностный заряд ρs",
+   "label_en": "surface charge ρs"
+  },
+  {
+   "formula_id": "boundary-ideal-conductor",
+   "ord": 1,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "boundary-ideal-conductor",
+   "ord": 2,
+   "name": "E1n",
+   "label_ru": "нормальная E",
+   "label_en": "normal E"
+  },
+  {
+   "formula_id": "surface-resistance-rs",
+   "ord": 0,
+   "name": "f_hz",
+   "label_ru": "частота f",
+   "label_en": "frequency f"
+  },
+  {
+   "formula_id": "surface-resistance-rs",
+   "ord": 1,
+   "name": "sig_m",
+   "label_ru": "проводимость σ",
+   "label_en": "conductivity σ"
+  },
+  {
+   "formula_id": "surface-resistance-rs",
+   "ord": 2,
+   "name": "Rs",
+   "label_ru": "поверхностное сопротивление Rs",
+   "label_en": "surface resistance Rs"
+  },
+  {
+   "formula_id": "helmholtz-k",
+   "ord": 0,
+   "name": "f_hz",
+   "label_ru": "частота f",
+   "label_en": "frequency f"
+  },
+  {
+   "formula_id": "helmholtz-k",
+   "ord": 1,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "helmholtz-k",
+   "ord": 2,
+   "name": "k_wn",
+   "label_ru": "волновое число k",
+   "label_en": "wavenumber k"
+  },
+  {
+   "formula_id": "vector-potential-a",
+   "ord": 0,
+   "name": "I_wire",
+   "label_ru": "ток I",
+   "label_en": "current I"
+  },
+  {
+   "formula_id": "vector-potential-a",
+   "ord": 1,
+   "name": "len_l",
+   "label_ru": "длина l",
+   "label_en": "length l"
+  },
+  {
+   "formula_id": "vector-potential-a",
+   "ord": 2,
+   "name": "r_p",
+   "label_ru": "расстояние r",
+   "label_en": "distance r"
+  },
+  {
+   "formula_id": "vector-potential-a",
+   "ord": 3,
+   "name": "A_p",
+   "label_ru": "потенциал A",
+   "label_en": "potential A"
+  },
+  {
+   "formula_id": "radiation-resistance",
+   "ord": 0,
+   "name": "len_l",
+   "label_ru": "длина l",
+   "label_en": "length l"
+  },
+  {
+   "formula_id": "radiation-resistance",
+   "ord": 1,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "radiation-resistance",
+   "ord": 2,
+   "name": "Z_c",
+   "label_ru": "волновое сопротивление Z₀",
+   "label_en": "wave impedance Z₀"
+  },
+  {
+   "formula_id": "radiation-resistance",
+   "ord": 3,
+   "name": "R_rad",
+   "label_ru": "сопротивление излучения",
+   "label_en": "radiation resistance"
+  },
+  {
+   "formula_id": "radiation-power-dipole",
+   "ord": 0,
+   "name": "I_dip",
+   "label_ru": "ток I",
+   "label_en": "current I"
+  },
+  {
+   "formula_id": "radiation-power-dipole",
+   "ord": 1,
+   "name": "R_rad",
+   "label_ru": "сопротивление излучения",
+   "label_en": "radiation resistance"
+  },
+  {
+   "formula_id": "radiation-power-dipole",
+   "ord": 2,
+   "name": "P_rad",
+   "label_ru": "мощность излучения",
+   "label_en": "radiated power"
+  },
+  {
+   "formula_id": "radiation-pattern",
+   "ord": 0,
+   "name": "theta_d",
+   "label_ru": "угол θ",
+   "label_en": "angle θ"
+  },
+  {
+   "formula_id": "radiation-pattern",
+   "ord": 1,
+   "name": "F_rad",
+   "label_ru": "множитель F",
+   "label_en": "pattern factor F"
+  },
+  {
+   "formula_id": "zone-parameter-kr",
+   "ord": 0,
+   "name": "r_p",
+   "label_ru": "расстояние r",
+   "label_en": "distance r"
+  },
+  {
+   "formula_id": "zone-parameter-kr",
+   "ord": 1,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "zone-parameter-kr",
+   "ord": 2,
+   "name": "kr",
+   "label_ru": "параметр kr",
+   "label_en": "parameter kr"
+  },
+  {
+   "formula_id": "magnetic-moment-loop",
+   "ord": 0,
+   "name": "I_loop",
+   "label_ru": "ток I",
+   "label_en": "current I"
+  },
+  {
+   "formula_id": "magnetic-moment-loop",
+   "ord": 1,
+   "name": "S_loop",
+   "label_ru": "площадь S",
+   "label_en": "loop area S"
+  },
+  {
+   "formula_id": "magnetic-moment-loop",
+   "ord": 2,
+   "name": "M_mag",
+   "label_ru": "магнитный момент M",
+   "label_en": "magnetic moment M"
+  },
+  {
+   "formula_id": "effective-loop-length",
+   "ord": 0,
+   "name": "S_loop",
+   "label_ru": "площадь S",
+   "label_en": "loop area S"
+  },
+  {
+   "formula_id": "effective-loop-length",
+   "ord": 1,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "effective-loop-length",
+   "ord": 2,
+   "name": "k_wn",
+   "label_ru": "волновое число k",
+   "label_en": "wavenumber k"
+  },
+  {
+   "formula_id": "effective-loop-length",
+   "ord": 3,
+   "name": "l_eff",
+   "label_ru": "действующая длина",
+   "label_en": "effective length"
+  },
+  {
+   "formula_id": "plane-wave-phase",
+   "ord": 0,
+   "name": "k_wn",
+   "label_ru": "волновое число k",
+   "label_en": "wavenumber k"
+  },
+  {
+   "formula_id": "plane-wave-phase",
+   "ord": 1,
+   "name": "z_p",
+   "label_ru": "координата z",
+   "label_en": "coordinate z"
+  },
+  {
+   "formula_id": "plane-wave-phase",
+   "ord": 2,
+   "name": "f_hz",
+   "label_ru": "частота f",
+   "label_en": "frequency f"
+  },
+  {
+   "formula_id": "plane-wave-phase",
+   "ord": 3,
+   "name": "t_s",
+   "label_ru": "время t",
+   "label_en": "time t"
+  },
+  {
+   "formula_id": "plane-wave-phase",
+   "ord": 4,
+   "name": "Phi_w",
+   "label_ru": "фаза Φ",
+   "label_en": "phase Φ"
+  },
+  {
+   "formula_id": "plane-period",
+   "ord": 0,
+   "name": "f_hz",
+   "label_ru": "частота f",
+   "label_en": "frequency f"
+  },
+  {
+   "formula_id": "plane-period",
+   "ord": 1,
+   "name": "T_w",
+   "label_ru": "период T",
+   "label_en": "period T"
+  },
+  {
+   "formula_id": "plane-wavelength-k",
+   "ord": 0,
+   "name": "k_wn",
+   "label_ru": "волновое число k",
+   "label_en": "wavenumber k"
+  },
+  {
+   "formula_id": "plane-wavelength-k",
+   "ord": 1,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "phase-velocity-medium",
+   "ord": 0,
+   "name": "w_0",
+   "label_ru": "круговая частота ω",
+   "label_en": "angular frequency ω"
+  },
+  {
+   "formula_id": "phase-velocity-medium",
+   "ord": 1,
+   "name": "k_wn",
+   "label_ru": "волновое число k",
+   "label_en": "wavenumber k"
+  },
+  {
+   "formula_id": "phase-velocity-medium",
+   "ord": 2,
+   "name": "V_ph",
+   "label_ru": "фазовая скорость",
+   "label_en": "phase velocity"
+  },
+  {
+   "formula_id": "loss-tangent",
+   "ord": 0,
+   "name": "sig_m",
+   "label_ru": "проводимость σ",
+   "label_en": "conductivity σ"
+  },
+  {
+   "formula_id": "loss-tangent",
+   "ord": 1,
+   "name": "f_hz",
+   "label_ru": "частота f",
+   "label_en": "frequency f"
+  },
+  {
+   "formula_id": "loss-tangent",
+   "ord": 2,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "loss-tangent",
+   "ord": 3,
+   "name": "tg_d",
+   "label_ru": "тангенс потерь",
+   "label_en": "loss tangent"
+  },
+  {
+   "formula_id": "beta-lossy",
+   "ord": 0,
+   "name": "f_hz",
+   "label_ru": "частота f",
+   "label_en": "frequency f"
+  },
+  {
+   "formula_id": "beta-lossy",
+   "ord": 1,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "beta-lossy",
+   "ord": 2,
+   "name": "tg_d",
+   "label_ru": "тангенс потерь",
+   "label_en": "loss tangent"
+  },
+  {
+   "formula_id": "beta-lossy",
+   "ord": 3,
+   "name": "beta_w",
+   "label_ru": "коэффициент фазы β",
+   "label_en": "phase constant β"
+  },
+  {
+   "formula_id": "kappa-lossy",
+   "ord": 0,
+   "name": "f_hz",
+   "label_ru": "частота f",
+   "label_en": "frequency f"
+  },
+  {
+   "formula_id": "kappa-lossy",
+   "ord": 1,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "kappa-lossy",
+   "ord": 2,
+   "name": "tg_d",
+   "label_ru": "тангенс потерь",
+   "label_en": "loss tangent"
+  },
+  {
+   "formula_id": "kappa-lossy",
+   "ord": 3,
+   "name": "kappa_w",
+   "label_ru": "коэффициент затухания κ",
+   "label_en": "attenuation constant κ"
+  },
+  {
+   "formula_id": "attenuation-db",
+   "ord": 0,
+   "name": "kappa_w",
+   "label_ru": "коэффициент затухания κ",
+   "label_en": "attenuation constant κ"
+  },
+  {
+   "formula_id": "attenuation-db",
+   "ord": 1,
+   "name": "len_m",
+   "label_ru": "длина l",
+   "label_en": "length l"
+  },
+  {
+   "formula_id": "attenuation-db",
+   "ord": 2,
+   "name": "A_db",
+   "label_ru": "затухание A",
+   "label_en": "attenuation A"
+  },
+  {
+   "formula_id": "wave-impedance-medium",
+   "ord": 0,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "wave-impedance-medium",
+   "ord": 1,
+   "name": "mu_r",
+   "label_ru": "проницаемость μᵣ",
+   "label_en": "permeability μᵣ"
+  },
+  {
+   "formula_id": "wave-impedance-medium",
+   "ord": 2,
+   "name": "Z_c",
+   "label_ru": "волновое сопротивление Zc",
+   "label_en": "wave impedance Zc"
+  },
+  {
+   "formula_id": "field-ratio-exhy",
+   "ord": 0,
+   "name": "E_f",
+   "label_ru": "напряжённость E",
+   "label_en": "electric field E"
+  },
+  {
+   "formula_id": "field-ratio-exhy",
+   "ord": 1,
+   "name": "Z_c",
+   "label_ru": "волновое сопротивление Zc",
+   "label_en": "wave impedance Zc"
+  },
+  {
+   "formula_id": "field-ratio-exhy",
+   "ord": 2,
+   "name": "H_f",
+   "label_ru": "напряжённость H",
+   "label_en": "magnetic field H"
+  },
+  {
+   "formula_id": "normal-reflection-gamma",
+   "ord": 0,
+   "name": "Z1",
+   "label_ru": "Zc₁",
+   "label_en": "Zc₁"
+  },
+  {
+   "formula_id": "normal-reflection-gamma",
+   "ord": 1,
+   "name": "Z2",
+   "label_ru": "Zc₂",
+   "label_en": "Zc₂"
+  },
+  {
+   "formula_id": "normal-reflection-gamma",
+   "ord": 2,
+   "name": "Gamma_r",
+   "label_ru": "коэффициент отражения Γ",
+   "label_en": "reflection coefficient Γ"
+  },
+  {
+   "formula_id": "normal-transmission-t",
+   "ord": 0,
+   "name": "Z1",
+   "label_ru": "Zc₁",
+   "label_en": "Zc₁"
+  },
+  {
+   "formula_id": "normal-transmission-t",
+   "ord": 1,
+   "name": "Z2",
+   "label_ru": "Zc₂",
+   "label_en": "Zc₂"
+  },
+  {
+   "formula_id": "normal-transmission-t",
+   "ord": 2,
+   "name": "T_tr",
+   "label_ru": "коэффициент прохождения T",
+   "label_en": "transmission coefficient T"
+  },
+  {
+   "formula_id": "normal-t-gamma-sum",
+   "ord": 0,
+   "name": "Gamma_r",
+   "label_ru": "коэффициент отражения Γ",
+   "label_en": "reflection coefficient Γ"
+  },
+  {
+   "formula_id": "normal-t-gamma-sum",
+   "ord": 1,
+   "name": "T_tr",
+   "label_ru": "коэффициент прохождения T",
+   "label_en": "transmission coefficient T"
+  },
+  {
+   "formula_id": "relative-index-n",
+   "ord": 0,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "relative-index-n",
+   "ord": 1,
+   "name": "mu_r",
+   "label_ru": "проницаемость μᵣ",
+   "label_en": "permeability μᵣ"
+  },
+  {
+   "formula_id": "relative-index-n",
+   "ord": 2,
+   "name": "n_idx",
+   "label_ru": "показатель преломления n",
+   "label_en": "refractive index n"
+  },
+  {
+   "formula_id": "fresnel-horizontal-refl",
+   "ord": 0,
+   "name": "Zc1",
+   "label_ru": "волновое сопротивление Zc₁",
+   "label_en": "wave impedance Zc₁"
+  },
+  {
+   "formula_id": "fresnel-horizontal-refl",
+   "ord": 1,
+   "name": "Zc2",
+   "label_ru": "волновое сопротивление Zc₂",
+   "label_en": "wave impedance Zc₂"
+  },
+  {
+   "formula_id": "fresnel-horizontal-refl",
+   "ord": 2,
+   "name": "phi1",
+   "label_ru": "угол падения φ₁",
+   "label_en": "incidence angle φ₁"
+  },
+  {
+   "formula_id": "fresnel-horizontal-refl",
+   "ord": 3,
+   "name": "phi3",
+   "label_ru": "угол преломления φ₃",
+   "label_en": "refraction angle φ₃"
+  },
+  {
+   "formula_id": "fresnel-horizontal-refl",
+   "ord": 4,
+   "name": "Gamma_h",
+   "label_ru": "коэффициент отражения Γ∥",
+   "label_en": "reflection Γ∥"
+  },
+  {
+   "formula_id": "fresnel-horizontal-trans",
+   "ord": 0,
+   "name": "Zc1",
+   "label_ru": "волновое сопротивление Zc₁",
+   "label_en": "wave impedance Zc₁"
+  },
+  {
+   "formula_id": "fresnel-horizontal-trans",
+   "ord": 1,
+   "name": "Zc2",
+   "label_ru": "волновое сопротивление Zc₂",
+   "label_en": "wave impedance Zc₂"
+  },
+  {
+   "formula_id": "fresnel-horizontal-trans",
+   "ord": 2,
+   "name": "phi1",
+   "label_ru": "угол падения φ₁",
+   "label_en": "incidence angle φ₁"
+  },
+  {
+   "formula_id": "fresnel-horizontal-trans",
+   "ord": 3,
+   "name": "phi3",
+   "label_ru": "угол преломления φ₃",
+   "label_en": "refraction angle φ₃"
+  },
+  {
+   "formula_id": "fresnel-horizontal-trans",
+   "ord": 4,
+   "name": "T_h",
+   "label_ru": "коэффициент прохождения T∥",
+   "label_en": "transmission T∥"
+  },
+  {
+   "formula_id": "fresnel-vertical-refl",
+   "ord": 0,
+   "name": "Zc1",
+   "label_ru": "волновое сопротивление Zc₁",
+   "label_en": "wave impedance Zc₁"
+  },
+  {
+   "formula_id": "fresnel-vertical-refl",
+   "ord": 1,
+   "name": "Zc2",
+   "label_ru": "волновое сопротивление Zc₂",
+   "label_en": "wave impedance Zc₂"
+  },
+  {
+   "formula_id": "fresnel-vertical-refl",
+   "ord": 2,
+   "name": "phi1",
+   "label_ru": "угол падения φ₁",
+   "label_en": "incidence angle φ₁"
+  },
+  {
+   "formula_id": "fresnel-vertical-refl",
+   "ord": 3,
+   "name": "phi3",
+   "label_ru": "угол преломления φ₃",
+   "label_en": "refraction angle φ₃"
+  },
+  {
+   "formula_id": "fresnel-vertical-refl",
+   "ord": 4,
+   "name": "Gamma_v",
+   "label_ru": "коэффициент отражения Γ⊥",
+   "label_en": "reflection Γ⊥"
+  },
+  {
+   "formula_id": "fresnel-vertical-trans",
+   "ord": 0,
+   "name": "Zc1",
+   "label_ru": "волновое сопротивление Zc₁",
+   "label_en": "wave impedance Zc₁"
+  },
+  {
+   "formula_id": "fresnel-vertical-trans",
+   "ord": 1,
+   "name": "Zc2",
+   "label_ru": "волновое сопротивление Zc₂",
+   "label_en": "wave impedance Zc₂"
+  },
+  {
+   "formula_id": "fresnel-vertical-trans",
+   "ord": 2,
+   "name": "phi1",
+   "label_ru": "угол падения φ₁",
+   "label_en": "incidence angle φ₁"
+  },
+  {
+   "formula_id": "fresnel-vertical-trans",
+   "ord": 3,
+   "name": "phi3",
+   "label_ru": "угол преломления φ₃",
+   "label_en": "refraction angle φ₃"
+  },
+  {
+   "formula_id": "fresnel-vertical-trans",
+   "ord": 4,
+   "name": "T_v",
+   "label_ru": "коэффициент прохождения T⊥",
+   "label_en": "transmission T⊥"
+  },
+  {
+   "formula_id": "fresnel-h-angle-form",
+   "ord": 0,
+   "name": "phi1",
+   "label_ru": "угол падения φ₁",
+   "label_en": "incidence angle φ₁"
+  },
+  {
+   "formula_id": "fresnel-h-angle-form",
+   "ord": 1,
+   "name": "phi3",
+   "label_ru": "угол преломления φ₃",
+   "label_en": "refraction angle φ₃"
+  },
+  {
+   "formula_id": "fresnel-h-angle-form",
+   "ord": 2,
+   "name": "Gamma_ha",
+   "label_ru": "коэффициент отражения Γ∥",
+   "label_en": "reflection Γ∥"
+  },
+  {
+   "formula_id": "fresnel-v-angle-form",
+   "ord": 0,
+   "name": "phi1",
+   "label_ru": "угол падения φ₁",
+   "label_en": "incidence angle φ₁"
+  },
+  {
+   "formula_id": "fresnel-v-angle-form",
+   "ord": 1,
+   "name": "phi3",
+   "label_ru": "угол преломления φ₃",
+   "label_en": "refraction angle φ₃"
+  },
+  {
+   "formula_id": "fresnel-v-angle-form",
+   "ord": 2,
+   "name": "Gamma_va",
+   "label_ru": "коэффициент отражения Γ⊥",
+   "label_en": "reflection Γ⊥"
+  },
+  {
+   "formula_id": "tir-attenuation",
+   "ord": 0,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "tir-attenuation",
+   "ord": 1,
+   "name": "k1",
+   "label_ru": "волновое число k₁",
+   "label_en": "wavenumber k₁"
+  },
+  {
+   "formula_id": "tir-attenuation",
+   "ord": 2,
+   "name": "phi1",
+   "label_ru": "угол падения φ₁",
+   "label_en": "incidence angle φ₁"
+  },
+  {
+   "formula_id": "tir-attenuation",
+   "ord": 3,
+   "name": "alpha_w",
+   "label_ru": "затухание α",
+   "label_en": "decay α"
+  },
+  {
+   "formula_id": "metal-surface-reflection",
+   "ord": 0,
+   "name": "Rs",
+   "label_ru": "поверхностное сопротивление",
+   "label_en": "surface resistance"
+  },
+  {
+   "formula_id": "metal-surface-reflection",
+   "ord": 1,
+   "name": "Zc1",
+   "label_ru": "волновое сопротивление Zc₁",
+   "label_en": "wave impedance Zc₁"
+  },
+  {
+   "formula_id": "metal-surface-reflection",
+   "ord": 2,
+   "name": "Gamma_m",
+   "label_ru": "коэффициент отражения Γ",
+   "label_en": "reflection Γ"
+  },
+  {
+   "formula_id": "surface-wave-beta",
+   "ord": 0,
+   "name": "ang1",
+   "label_ru": "угол падения",
+   "label_en": "incidence angle"
+  },
+  {
+   "formula_id": "surface-wave-beta",
+   "ord": 1,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "surface-wave-beta",
+   "ord": 2,
+   "name": "k1",
+   "label_ru": "волновое число k₁",
+   "label_en": "wavenumber k₁"
+  },
+  {
+   "formula_id": "surface-wave-beta",
+   "ord": 3,
+   "name": "beta_s",
+   "label_ru": "продольное число β",
+   "label_en": "longitudinal wavenumber β"
+  },
+  {
+   "formula_id": "surface-wave-gamma",
+   "ord": 0,
+   "name": "ang1",
+   "label_ru": "угол падения",
+   "label_en": "incidence angle"
+  },
+  {
+   "formula_id": "surface-wave-gamma",
+   "ord": 1,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "surface-wave-gamma",
+   "ord": 2,
+   "name": "k1",
+   "label_ru": "волновое число k₁",
+   "label_en": "wavenumber k₁"
+  },
+  {
+   "formula_id": "surface-wave-gamma",
+   "ord": 3,
+   "name": "gamma_s",
+   "label_ru": "поперечное число γ",
+   "label_en": "transverse wavenumber γ"
+  },
+  {
+   "formula_id": "standing-wave-envelope",
+   "ord": 0,
+   "name": "A_m",
+   "label_ru": "амплитуда A",
+   "label_en": "amplitude A"
+  },
+  {
+   "formula_id": "standing-wave-envelope",
+   "ord": 1,
+   "name": "Gamma_r",
+   "label_ru": "коэффициент отражения Γ",
+   "label_en": "reflection Γ"
+  },
+  {
+   "formula_id": "standing-wave-envelope",
+   "ord": 2,
+   "name": "k1",
+   "label_ru": "волновое число k",
+   "label_en": "wavenumber k"
+  },
+  {
+   "formula_id": "standing-wave-envelope",
+   "ord": 3,
+   "name": "z_p",
+   "label_ru": "координата z",
+   "label_en": "coordinate z"
+  },
+  {
+   "formula_id": "standing-wave-envelope",
+   "ord": 4,
+   "name": "E_env",
+   "label_ru": "огибающая |E|",
+   "label_en": "envelope |E|"
+  },
+  {
+   "formula_id": "transverse-wavenumber",
+   "ord": 0,
+   "name": "m_idx",
+   "label_ru": "индекс m",
+   "label_en": "index m"
+  },
+  {
+   "formula_id": "transverse-wavenumber",
+   "ord": 1,
+   "name": "a_wg",
+   "label_ru": "ширина a",
+   "label_en": "width a"
+  },
+  {
+   "formula_id": "transverse-wavenumber",
+   "ord": 2,
+   "name": "gamma_g",
+   "label_ru": "поперечное число γ",
+   "label_en": "transverse wavenumber γ"
+  },
+  {
+   "formula_id": "rect-cutoff-wavelength",
+   "ord": 0,
+   "name": "m_idx",
+   "label_ru": "индекс m",
+   "label_en": "index m"
+  },
+  {
+   "formula_id": "rect-cutoff-wavelength",
+   "ord": 1,
+   "name": "n_idx",
+   "label_ru": "индекс n",
+   "label_en": "index n"
+  },
+  {
+   "formula_id": "rect-cutoff-wavelength",
+   "ord": 2,
+   "name": "a_wg",
+   "label_ru": "ширина a",
+   "label_en": "width a"
+  },
+  {
+   "formula_id": "rect-cutoff-wavelength",
+   "ord": 3,
+   "name": "b_wg",
+   "label_ru": "высота b",
+   "label_en": "height b"
+  },
+  {
+   "formula_id": "rect-cutoff-wavelength",
+   "ord": 4,
+   "name": "lam_c",
+   "label_ru": "критическая λ",
+   "label_en": "cutoff λ"
+  },
+  {
+   "formula_id": "rect-propagation-beta",
+   "ord": 0,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "rect-propagation-beta",
+   "ord": 1,
+   "name": "lam_c",
+   "label_ru": "критическая λ",
+   "label_en": "cutoff λ"
+  },
+  {
+   "formula_id": "rect-propagation-beta",
+   "ord": 2,
+   "name": "beta_g",
+   "label_ru": "коэффициент фазы β",
+   "label_en": "phase constant β"
+  },
+  {
+   "formula_id": "phase-velocity-guide",
+   "ord": 0,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "phase-velocity-guide",
+   "ord": 1,
+   "name": "lam_c",
+   "label_ru": "критическая λ",
+   "label_en": "cutoff λ"
+  },
+  {
+   "formula_id": "phase-velocity-guide",
+   "ord": 2,
+   "name": "V_ph",
+   "label_ru": "фазовая скорость",
+   "label_en": "phase velocity"
+  },
+  {
+   "formula_id": "group-velocity-guide",
+   "ord": 0,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "group-velocity-guide",
+   "ord": 1,
+   "name": "lam_c",
+   "label_ru": "критическая λ",
+   "label_en": "cutoff λ"
+  },
+  {
+   "formula_id": "group-velocity-guide",
+   "ord": 2,
+   "name": "V_gr",
+   "label_ru": "групповая скорость",
+   "label_en": "group velocity"
+  },
+  {
+   "formula_id": "vf-vgr-product",
+   "ord": 0,
+   "name": "V_ph",
+   "label_ru": "фазовая скорость",
+   "label_en": "phase velocity"
+  },
+  {
+   "formula_id": "vf-vgr-product",
+   "ord": 1,
+   "name": "V_gr",
+   "label_ru": "групповая скорость",
+   "label_en": "group velocity"
+  },
+  {
+   "formula_id": "vf-vgr-product",
+   "ord": 2,
+   "name": "prod",
+   "label_ru": "произведение",
+   "label_en": "product"
+  },
+  {
+   "formula_id": "guide-angle-cos",
+   "ord": 0,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "guide-angle-cos",
+   "ord": 1,
+   "name": "lam_c",
+   "label_ru": "критическая λ",
+   "label_en": "cutoff λ"
+  },
+  {
+   "formula_id": "guide-angle-cos",
+   "ord": 2,
+   "name": "cos_phi",
+   "label_ru": "cos φ",
+   "label_en": "cos φ"
+  },
+  {
+   "formula_id": "h10-cutoff-wavelength",
+   "ord": 0,
+   "name": "a_wg",
+   "label_ru": "ширина a",
+   "label_en": "width a"
+  },
+  {
+   "formula_id": "h10-cutoff-wavelength",
+   "ord": 1,
+   "name": "lam_c10",
+   "label_ru": "критическая λ H₁₀",
+   "label_en": "H₁₀ cutoff λ"
+  },
+  {
+   "formula_id": "e11-cutoff-wavelength",
+   "ord": 0,
+   "name": "a_wg",
+   "label_ru": "ширина a",
+   "label_en": "width a"
+  },
+  {
+   "formula_id": "e11-cutoff-wavelength",
+   "ord": 1,
+   "name": "b_wg",
+   "label_ru": "высота b",
+   "label_en": "height b"
+  },
+  {
+   "formula_id": "e11-cutoff-wavelength",
+   "ord": 2,
+   "name": "lam_c11",
+   "label_ru": "критическая λ E₁₁",
+   "label_en": "E₁₁ cutoff λ"
+  },
+  {
+   "formula_id": "round-cutoff-e01",
+   "ord": 0,
+   "name": "R_wg",
+   "label_ru": "радиус R",
+   "label_en": "radius R"
+  },
+  {
+   "formula_id": "round-cutoff-e01",
+   "ord": 1,
+   "name": "V01",
+   "label_ru": "корень V₀₁",
+   "label_en": "root V₀₁"
+  },
+  {
+   "formula_id": "round-cutoff-e01",
+   "ord": 2,
+   "name": "lam_c",
+   "label_ru": "критическая λ",
+   "label_en": "cutoff λ"
+  },
+  {
+   "formula_id": "round-cutoff-h11",
+   "ord": 0,
+   "name": "R_wg",
+   "label_ru": "радиус R",
+   "label_en": "radius R"
+  },
+  {
+   "formula_id": "round-cutoff-h11",
+   "ord": 1,
+   "name": "U11",
+   "label_ru": "корень U₁₁",
+   "label_en": "root U₁₁"
+  },
+  {
+   "formula_id": "round-cutoff-h11",
+   "ord": 2,
+   "name": "lam_c",
+   "label_ru": "критическая λ",
+   "label_en": "cutoff λ"
+  },
+  {
+   "formula_id": "round-cutoff-h01",
+   "ord": 0,
+   "name": "R_wg",
+   "label_ru": "радиус R",
+   "label_en": "radius R"
+  },
+  {
+   "formula_id": "round-cutoff-h01",
+   "ord": 1,
+   "name": "U01",
+   "label_ru": "корень U₀₁",
+   "label_en": "root U₀₁"
+  },
+  {
+   "formula_id": "round-cutoff-h01",
+   "ord": 2,
+   "name": "lam_c",
+   "label_ru": "критическая λ",
+   "label_en": "cutoff λ"
+  },
+  {
+   "formula_id": "te-impedance-guide",
+   "ord": 0,
+   "name": "Z0",
+   "label_ru": "волновое сопротивление Z₀",
+   "label_en": "wave impedance Z₀"
+  },
+  {
+   "formula_id": "te-impedance-guide",
+   "ord": 1,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "te-impedance-guide",
+   "ord": 2,
+   "name": "lam_c",
+   "label_ru": "критическая λ",
+   "label_en": "cutoff λ"
+  },
+  {
+   "formula_id": "te-impedance-guide",
+   "ord": 3,
+   "name": "Z_TE",
+   "label_ru": "сопротивление Z_TE",
+   "label_en": "impedance Z_TE"
+  },
+  {
+   "formula_id": "rect-resonant-freq",
+   "ord": 0,
+   "name": "a_cav",
+   "label_ru": "размер a",
+   "label_en": "size a"
+  },
+  {
+   "formula_id": "rect-resonant-freq",
+   "ord": 1,
+   "name": "b_cav",
+   "label_ru": "размер b",
+   "label_en": "size b"
+  },
+  {
+   "formula_id": "rect-resonant-freq",
+   "ord": 2,
+   "name": "l_cav",
+   "label_ru": "длина l",
+   "label_en": "length l"
+  },
+  {
+   "formula_id": "rect-resonant-freq",
+   "ord": 3,
+   "name": "m_idx",
+   "label_ru": "индекс m",
+   "label_en": "index m"
+  },
+  {
+   "formula_id": "rect-resonant-freq",
+   "ord": 4,
+   "name": "n_idx",
+   "label_ru": "индекс n",
+   "label_en": "index n"
+  },
+  {
+   "formula_id": "rect-resonant-freq",
+   "ord": 5,
+   "name": "p_idx",
+   "label_ru": "индекс p",
+   "label_en": "index p"
+  },
+  {
+   "formula_id": "rect-resonant-freq",
+   "ord": 6,
+   "name": "f_res",
+   "label_ru": "резонансная f",
+   "label_en": "resonant f"
+  },
+  {
+   "formula_id": "resonator-q-def",
+   "ord": 0,
+   "name": "w_0",
+   "label_ru": "круговая частота ω₀",
+   "label_en": "angular frequency ω₀"
+  },
+  {
+   "formula_id": "resonator-q-def",
+   "ord": 1,
+   "name": "W_st",
+   "label_ru": "запасённая энергия",
+   "label_en": "stored energy"
+  },
+  {
+   "formula_id": "resonator-q-def",
+   "ord": 2,
+   "name": "P_loss",
+   "label_ru": "мощность потерь",
+   "label_en": "loss power"
+  },
+  {
+   "formula_id": "resonator-q-def",
+   "ord": 3,
+   "name": "Q_res",
+   "label_ru": "добротность Q",
+   "label_en": "quality factor Q"
+  },
+  {
+   "formula_id": "resonator-quality-decay",
+   "ord": 0,
+   "name": "Q_res",
+   "label_ru": "добротность Q",
+   "label_en": "quality factor Q"
+  },
+  {
+   "formula_id": "resonator-quality-decay",
+   "ord": 1,
+   "name": "f_hz",
+   "label_ru": "частота f",
+   "label_en": "frequency f"
+  },
+  {
+   "formula_id": "resonator-quality-decay",
+   "ord": 2,
+   "name": "w_0",
+   "label_ru": "круговая частота ω₀",
+   "label_en": "angular frequency ω₀"
+  },
+  {
+   "formula_id": "resonator-quality-decay",
+   "ord": 3,
+   "name": "tau_r",
+   "label_ru": "время затухания τ",
+   "label_en": "decay time τ"
+  },
+  {
+   "formula_id": "resonator-loaded-q",
+   "ord": 0,
+   "name": "Q_st",
+   "label_ru": "собственная Q",
+   "label_en": "unloaded Q"
+  },
+  {
+   "formula_id": "resonator-loaded-q",
+   "ord": 1,
+   "name": "Q_d",
+   "label_ru": "Q диэлектрика",
+   "label_en": "dielectric Q"
+  },
+  {
+   "formula_id": "resonator-loaded-q",
+   "ord": 2,
+   "name": "Q_e",
+   "label_ru": "внешняя Q",
+   "label_en": "external Q"
+  },
+  {
+   "formula_id": "resonator-loaded-q",
+   "ord": 3,
+   "name": "Q_L",
+   "label_ru": "нагруженная Q",
+   "label_en": "loaded Q"
+  },
+  {
+   "formula_id": "resonator-q-power",
+   "ord": 0,
+   "name": "W_st",
+   "label_ru": "запасённая энергия",
+   "label_en": "stored energy"
+  },
+  {
+   "formula_id": "resonator-q-power",
+   "ord": 1,
+   "name": "f_hz",
+   "label_ru": "частота f",
+   "label_en": "frequency f"
+  },
+  {
+   "formula_id": "resonator-q-power",
+   "ord": 2,
+   "name": "Q_res",
+   "label_ru": "добротность Q",
+   "label_en": "quality factor Q"
+  },
+  {
+   "formula_id": "resonator-q-power",
+   "ord": 3,
+   "name": "w_0",
+   "label_ru": "частота ω₀",
+   "label_en": "angular frequency ω₀"
+  },
+  {
+   "formula_id": "resonator-q-power",
+   "ord": 4,
+   "name": "P_loss",
+   "label_ru": "мощность потерь",
+   "label_en": "loss power"
+  },
+  {
+   "formula_id": "resonator-wall-loss",
+   "ord": 0,
+   "name": "Rs",
+   "label_ru": "поверхностное сопротивление",
+   "label_en": "surface resistance"
+  },
+  {
+   "formula_id": "resonator-wall-loss",
+   "ord": 1,
+   "name": "H_f",
+   "label_ru": "напряжённость H",
+   "label_en": "field H"
+  },
+  {
+   "formula_id": "resonator-wall-loss",
+   "ord": 2,
+   "name": "S_wall",
+   "label_ru": "площадь стенок",
+   "label_en": "wall area"
+  },
+  {
+   "formula_id": "resonator-wall-loss",
+   "ord": 3,
+   "name": "P_wall",
+   "label_ru": "мощность потерь",
+   "label_en": "loss power"
+  },
+  {
+   "formula_id": "resonator-dielectric-loss",
+   "ord": 0,
+   "name": "w_0",
+   "label_ru": "круговая частота ω",
+   "label_en": "angular frequency ω"
+  },
+  {
+   "formula_id": "resonator-dielectric-loss",
+   "ord": 1,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "resonator-dielectric-loss",
+   "ord": 2,
+   "name": "tg_d",
+   "label_ru": "тангенс потерь",
+   "label_en": "loss tangent"
+  },
+  {
+   "formula_id": "resonator-dielectric-loss",
+   "ord": 3,
+   "name": "E_f",
+   "label_ru": "напряжённость E",
+   "label_en": "field E"
+  },
+  {
+   "formula_id": "resonator-dielectric-loss",
+   "ord": 4,
+   "name": "V_cav",
+   "label_ru": "объём V",
+   "label_en": "volume V"
+  },
+  {
+   "formula_id": "resonator-dielectric-loss",
+   "ord": 5,
+   "name": "P_d",
+   "label_ru": "мощность потерь",
+   "label_en": "loss power"
+  },
+  {
+   "formula_id": "slab-critical-wavelength",
+   "ord": 0,
+   "name": "d_slab",
+   "label_ru": "толщина d",
+   "label_en": "thickness d"
+  },
+  {
+   "formula_id": "slab-critical-wavelength",
+   "ord": 1,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "slab-critical-wavelength",
+   "ord": 2,
+   "name": "n_idx",
+   "label_ru": "номер моды n",
+   "label_en": "mode number n"
+  },
+  {
+   "formula_id": "slab-critical-wavelength",
+   "ord": 3,
+   "name": "lam_c",
+   "label_ru": "критическая λ",
+   "label_en": "cutoff λ"
+  },
+  {
+   "formula_id": "slab-dispersion",
+   "ord": 0,
+   "name": "d_slab",
+   "label_ru": "толщина d",
+   "label_en": "thickness d"
+  },
+  {
+   "formula_id": "slab-dispersion",
+   "ord": 1,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "slab-dispersion",
+   "ord": 2,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "slab-dispersion",
+   "ord": 3,
+   "name": "rhs",
+   "label_ru": "радиус круга",
+   "label_en": "dispersion radius"
+  },
+  {
+   "formula_id": "slab-transcendental",
+   "ord": 0,
+   "name": "alpha_d",
+   "label_ru": "αd",
+   "label_en": "αd"
+  },
+  {
+   "formula_id": "slab-transcendental",
+   "ord": 1,
+   "name": "eps_r",
+   "label_ru": "проницаемость εᵣ",
+   "label_en": "permittivity εᵣ"
+  },
+  {
+   "formula_id": "slab-transcendental",
+   "ord": 2,
+   "name": "gamma_d",
+   "label_ru": "γd",
+   "label_en": "γd"
+  },
+  {
+   "formula_id": "slab-transcendental",
+   "ord": 3,
+   "name": "lhs",
+   "label_ru": "левая часть",
+   "label_en": "left side"
+  },
+  {
+   "formula_id": "slab-transcendental",
+   "ord": 4,
+   "name": "rhs",
+   "label_ru": "правая часть",
+   "label_en": "right side"
+  },
+  {
+   "formula_id": "guide-power-te10",
+   "ord": 0,
+   "name": "E_f",
+   "label_ru": "амплитуда E",
+   "label_en": "field amplitude E"
+  },
+  {
+   "formula_id": "guide-power-te10",
+   "ord": 1,
+   "name": "a_wg",
+   "label_ru": "ширина a",
+   "label_en": "width a"
+  },
+  {
+   "formula_id": "guide-power-te10",
+   "ord": 2,
+   "name": "b_wg",
+   "label_ru": "высота b",
+   "label_en": "height b"
+  },
+  {
+   "formula_id": "guide-power-te10",
+   "ord": 3,
+   "name": "Z_TE",
+   "label_ru": "сопротивление Z_TE",
+   "label_en": "impedance Z_TE"
+  },
+  {
+   "formula_id": "guide-power-te10",
+   "ord": 4,
+   "name": "P_wg",
+   "label_ru": "мощность P",
+   "label_en": "power P"
+  },
+  {
+   "formula_id": "round-guide-wavelength-h11",
+   "ord": 0,
+   "name": "lam_w",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "round-guide-wavelength-h11",
+   "ord": 1,
+   "name": "R_wg",
+   "label_ru": "радиус R",
+   "label_en": "radius R"
+  },
+  {
+   "formula_id": "round-guide-wavelength-h11",
+   "ord": 2,
+   "name": "U11",
+   "label_ru": "корень U₁₁",
+   "label_en": "root U₁₁"
+  },
+  {
+   "formula_id": "round-guide-wavelength-h11",
+   "ord": 3,
+   "name": "lam_c",
+   "label_ru": "критическая λ",
+   "label_en": "cutoff λ"
+  },
+  {
+   "formula_id": "round-guide-wavelength-h11",
+   "ord": 4,
+   "name": "lam_g",
+   "label_ru": "длина волны в волноводе",
+   "label_en": "guide wavelength"
+  },
+  {
+   "formula_id": "line-propagation-const",
+   "ord": 0,
+   "name": "R_l",
+   "label_ru": "сопротивление R",
+   "label_en": "resistance R"
+  },
+  {
+   "formula_id": "line-propagation-const",
+   "ord": 1,
+   "name": "L_l",
+   "label_ru": "индуктивность L",
+   "label_en": "inductance L"
+  },
+  {
+   "formula_id": "line-propagation-const",
+   "ord": 2,
+   "name": "G_l",
+   "label_ru": "проводимость G",
+   "label_en": "conductance G"
+  },
+  {
+   "formula_id": "line-propagation-const",
+   "ord": 3,
+   "name": "C_l",
+   "label_ru": "ёмкость C",
+   "label_en": "capacitance C"
+  },
+  {
+   "formula_id": "line-propagation-const",
+   "ord": 4,
+   "name": "f_hz",
+   "label_ru": "частота f",
+   "label_en": "frequency f"
+  },
+  {
+   "formula_id": "line-propagation-const",
+   "ord": 5,
+   "name": "gamma_l",
+   "label_ru": "коэффициент γ",
+   "label_en": "propagation constant γ"
+  },
+  {
+   "formula_id": "line-lossless-beta",
+   "ord": 0,
+   "name": "L_l",
+   "label_ru": "индуктивность L",
+   "label_en": "inductance L"
+  },
+  {
+   "formula_id": "line-lossless-beta",
+   "ord": 1,
+   "name": "C_l",
+   "label_ru": "ёмкость C",
+   "label_en": "capacitance C"
+  },
+  {
+   "formula_id": "line-lossless-beta",
+   "ord": 2,
+   "name": "beta_l",
+   "label_ru": "коэффициент фазы β",
+   "label_en": "phase constant β"
+  },
+  {
+   "formula_id": "line-alpha-small-loss",
+   "ord": 0,
+   "name": "R_l",
+   "label_ru": "сопротивление R",
+   "label_en": "resistance R"
+  },
+  {
+   "formula_id": "line-alpha-small-loss",
+   "ord": 1,
+   "name": "L_l",
+   "label_ru": "индуктивность L",
+   "label_en": "inductance L"
+  },
+  {
+   "formula_id": "line-alpha-small-loss",
+   "ord": 2,
+   "name": "G_l",
+   "label_ru": "проводимость G",
+   "label_en": "conductance G"
+  },
+  {
+   "formula_id": "line-alpha-small-loss",
+   "ord": 3,
+   "name": "C_l",
+   "label_ru": "ёмкость C",
+   "label_en": "capacitance C"
+  },
+  {
+   "formula_id": "line-alpha-small-loss",
+   "ord": 4,
+   "name": "alpha_l",
+   "label_ru": "затухание α",
+   "label_en": "attenuation α"
+  },
+  {
+   "formula_id": "line-beta-small-loss",
+   "ord": 0,
+   "name": "L_l",
+   "label_ru": "индуктивность L",
+   "label_en": "inductance L"
+  },
+  {
+   "formula_id": "line-beta-small-loss",
+   "ord": 1,
+   "name": "C_l",
+   "label_ru": "ёмкость C",
+   "label_en": "capacitance C"
+  },
+  {
+   "formula_id": "line-beta-small-loss",
+   "ord": 2,
+   "name": "f_hz",
+   "label_ru": "частота f",
+   "label_en": "frequency f"
+  },
+  {
+   "formula_id": "line-beta-small-loss",
+   "ord": 3,
+   "name": "beta_l",
+   "label_ru": "коэффициент фазы β",
+   "label_en": "phase constant β"
+  },
+  {
+   "formula_id": "line-wave-impedance",
+   "ord": 0,
+   "name": "L_l",
+   "label_ru": "индуктивность L",
+   "label_en": "inductance L"
+  },
+  {
+   "formula_id": "line-wave-impedance",
+   "ord": 1,
+   "name": "C_l",
+   "label_ru": "ёмкость C",
+   "label_en": "capacitance C"
+  },
+  {
+   "formula_id": "line-wave-impedance",
+   "ord": 2,
+   "name": "rho_l",
+   "label_ru": "волновое сопротивление ρ",
+   "label_en": "characteristic impedance ρ"
+  },
+  {
+   "formula_id": "line-complex-impedance",
+   "ord": 0,
+   "name": "R_l",
+   "label_ru": "сопротивление R",
+   "label_en": "resistance R"
+  },
+  {
+   "formula_id": "line-complex-impedance",
+   "ord": 1,
+   "name": "L_l",
+   "label_ru": "индуктивность L",
+   "label_en": "inductance L"
+  },
+  {
+   "formula_id": "line-complex-impedance",
+   "ord": 2,
+   "name": "G_l",
+   "label_ru": "проводимость G",
+   "label_en": "conductance G"
+  },
+  {
+   "formula_id": "line-complex-impedance",
+   "ord": 3,
+   "name": "C_l",
+   "label_ru": "ёмкость C",
+   "label_en": "capacitance C"
+  },
+  {
+   "formula_id": "line-complex-impedance",
+   "ord": 4,
+   "name": "f_hz",
+   "label_ru": "частота f",
+   "label_en": "frequency f"
+  },
+  {
+   "formula_id": "line-complex-impedance",
+   "ord": 5,
+   "name": "rho_c",
+   "label_ru": "комплексное ρ",
+   "label_en": "complex ρ"
+  },
+  {
+   "formula_id": "line-phase-velocity",
+   "ord": 0,
+   "name": "L_l",
+   "label_ru": "индуктивность L",
+   "label_en": "inductance L"
+  },
+  {
+   "formula_id": "line-phase-velocity",
+   "ord": 1,
+   "name": "C_l",
+   "label_ru": "ёмкость C",
+   "label_en": "capacitance C"
+  },
+  {
+   "formula_id": "line-phase-velocity",
+   "ord": 2,
+   "name": "V_line",
+   "label_ru": "скорость V",
+   "label_en": "velocity V"
+  },
+  {
+   "formula_id": "line-wavelength",
+   "ord": 0,
+   "name": "beta_l",
+   "label_ru": "коэффициент фазы β",
+   "label_en": "phase constant β"
+  },
+  {
+   "formula_id": "line-wavelength",
+   "ord": 1,
+   "name": "lam_l",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "line-gamma-load",
+   "ord": 0,
+   "name": "Z_n",
+   "label_ru": "сопротивление нагрузки Zн",
+   "label_en": "load impedance ZL"
+  },
+  {
+   "formula_id": "line-gamma-load",
+   "ord": 1,
+   "name": "rho_l",
+   "label_ru": "волновое сопротивление ρ",
+   "label_en": "characteristic impedance ρ"
+  },
+  {
+   "formula_id": "line-gamma-load",
+   "ord": 2,
+   "name": "Gamma_l",
+   "label_ru": "коэффициент отражения Γ",
+   "label_en": "reflection coefficient Γ"
+  },
+  {
+   "formula_id": "line-gamma-l",
+   "ord": 0,
+   "name": "Gamma_n",
+   "label_ru": "Γ на нагрузке",
+   "label_en": "Γ at load"
+  },
+  {
+   "formula_id": "line-gamma-l",
+   "ord": 1,
+   "name": "beta_l",
+   "label_ru": "коэффициент фазы β",
+   "label_en": "phase constant β"
+  },
+  {
+   "formula_id": "line-gamma-l",
+   "ord": 2,
+   "name": "len_m",
+   "label_ru": "расстояние l",
+   "label_en": "distance l"
+  },
+  {
+   "formula_id": "line-gamma-l",
+   "ord": 3,
+   "name": "Gamma_l",
+   "label_ru": "Γ(l)",
+   "label_en": "Γ(l)"
+  },
+  {
+   "formula_id": "line-input-impedance",
+   "ord": 0,
+   "name": "Z_n",
+   "label_ru": "сопротивление нагрузки Zн",
+   "label_en": "load impedance ZL"
+  },
+  {
+   "formula_id": "line-input-impedance",
+   "ord": 1,
+   "name": "rho_l",
+   "label_ru": "волновое сопротивление ρ",
+   "label_en": "characteristic impedance ρ"
+  },
+  {
+   "formula_id": "line-input-impedance",
+   "ord": 2,
+   "name": "beta_l",
+   "label_ru": "коэффициент фазы β",
+   "label_en": "phase constant β"
+  },
+  {
+   "formula_id": "line-input-impedance",
+   "ord": 3,
+   "name": "len_m",
+   "label_ru": "длина l",
+   "label_en": "length l"
+  },
+  {
+   "formula_id": "line-input-impedance",
+   "ord": 4,
+   "name": "Z_in",
+   "label_ru": "входное сопротивление",
+   "label_en": "input impedance"
+  },
+  {
+   "formula_id": "line-short-input",
+   "ord": 0,
+   "name": "rho_l",
+   "label_ru": "волновое сопротивление ρ",
+   "label_en": "characteristic impedance ρ"
+  },
+  {
+   "formula_id": "line-short-input",
+   "ord": 1,
+   "name": "beta_l",
+   "label_ru": "коэффициент фазы β",
+   "label_en": "phase constant β"
+  },
+  {
+   "formula_id": "line-short-input",
+   "ord": 2,
+   "name": "len_m",
+   "label_ru": "длина l",
+   "label_en": "length l"
+  },
+  {
+   "formula_id": "line-short-input",
+   "ord": 3,
+   "name": "Z_sh",
+   "label_ru": "входное сопротивление",
+   "label_en": "input impedance"
+  },
+  {
+   "formula_id": "line-open-input",
+   "ord": 0,
+   "name": "rho_l",
+   "label_ru": "волновое сопротивление ρ",
+   "label_en": "characteristic impedance ρ"
+  },
+  {
+   "formula_id": "line-open-input",
+   "ord": 1,
+   "name": "beta_l",
+   "label_ru": "коэффициент фазы β",
+   "label_en": "phase constant β"
+  },
+  {
+   "formula_id": "line-open-input",
+   "ord": 2,
+   "name": "len_m",
+   "label_ru": "длина l",
+   "label_en": "length l"
+  },
+  {
+   "formula_id": "line-open-input",
+   "ord": 3,
+   "name": "Z_op",
+   "label_ru": "входное сопротивление",
+   "label_en": "input impedance"
+  },
+  {
+   "formula_id": "line-quarter-transformer",
+   "ord": 0,
+   "name": "rho_l",
+   "label_ru": "волновое сопротивление ρ",
+   "label_en": "characteristic impedance ρ"
+  },
+  {
+   "formula_id": "line-quarter-transformer",
+   "ord": 1,
+   "name": "Z_n",
+   "label_ru": "сопротивление нагрузки",
+   "label_en": "load impedance"
+  },
+  {
+   "formula_id": "line-quarter-transformer",
+   "ord": 2,
+   "name": "Z_q",
+   "label_ru": "входное сопротивление",
+   "label_en": "input impedance"
+  },
+  {
+   "formula_id": "line-voltage-envelope",
+   "ord": 0,
+   "name": "U_pad",
+   "label_ru": "падающее напряжение",
+   "label_en": "incident voltage"
+  },
+  {
+   "formula_id": "line-voltage-envelope",
+   "ord": 1,
+   "name": "Gamma_n",
+   "label_ru": "коэффициент отражения Γ",
+   "label_en": "reflection Γ"
+  },
+  {
+   "formula_id": "line-voltage-envelope",
+   "ord": 2,
+   "name": "beta_l",
+   "label_ru": "коэффициент фазы β",
+   "label_en": "phase constant β"
+  },
+  {
+   "formula_id": "line-voltage-envelope",
+   "ord": 3,
+   "name": "len_m",
+   "label_ru": "расстояние l",
+   "label_en": "distance l"
+  },
+  {
+   "formula_id": "line-voltage-envelope",
+   "ord": 4,
+   "name": "phi_g",
+   "label_ru": "фаза Γ",
+   "label_en": "phase of Γ"
+  },
+  {
+   "formula_id": "line-voltage-envelope",
+   "ord": 5,
+   "name": "U_env",
+   "label_ru": "огибающая |U|",
+   "label_en": "envelope |U|"
+  },
+  {
+   "formula_id": "line-power-load",
+   "ord": 0,
+   "name": "P_pad",
+   "label_ru": "падающая мощность",
+   "label_en": "incident power"
+  },
+  {
+   "formula_id": "line-power-load",
+   "ord": 1,
+   "name": "Gamma_n",
+   "label_ru": "коэффициент отражения Γ",
+   "label_en": "reflection Γ"
+  },
+  {
+   "formula_id": "line-power-load",
+   "ord": 2,
+   "name": "P_load",
+   "label_ru": "мощность нагрузки",
+   "label_en": "load power"
+  },
+  {
+   "formula_id": "line-phase-rotation-length",
+   "ord": 0,
+   "name": "beta_l",
+   "label_ru": "коэффициент фазы β",
+   "label_en": "phase constant β"
+  },
+  {
+   "formula_id": "line-phase-rotation-length",
+   "ord": 1,
+   "name": "len_turn",
+   "label_ru": "длина оборота",
+   "label_en": "turn length"
+  },
+  {
+   "formula_id": "line-attenuation-e",
+   "ord": 0,
+   "name": "alpha_l",
+   "label_ru": "затухание α",
+   "label_en": "attenuation α"
+  },
+  {
+   "formula_id": "line-attenuation-e",
+   "ord": 1,
+   "name": "len_m",
+   "label_ru": "длина l",
+   "label_en": "length l"
+  },
+  {
+   "formula_id": "line-attenuation-e",
+   "ord": 2,
+   "name": "U_out",
+   "label_ru": "относительное U",
+   "label_en": "relative U"
+  },
+  {
+   "formula_id": "line-power-attenuation",
+   "ord": 0,
+   "name": "alpha_l",
+   "label_ru": "затухание α",
+   "label_en": "attenuation α"
+  },
+  {
+   "formula_id": "line-power-attenuation",
+   "ord": 1,
+   "name": "len_m",
+   "label_ru": "длина l",
+   "label_en": "length l"
+  },
+  {
+   "formula_id": "line-power-attenuation",
+   "ord": 2,
+   "name": "P_out",
+   "label_ru": "относительная P",
+   "label_en": "relative P"
+  },
+  {
+   "formula_id": "line-transfer-coeff",
+   "ord": 0,
+   "name": "alpha_l",
+   "label_ru": "затухание α",
+   "label_en": "attenuation α"
+  },
+  {
+   "formula_id": "line-transfer-coeff",
+   "ord": 1,
+   "name": "len_m",
+   "label_ru": "длина l",
+   "label_en": "length l"
+  },
+  {
+   "formula_id": "line-transfer-coeff",
+   "ord": 2,
+   "name": "Gamma_n",
+   "label_ru": "коэффициент отражения Γ",
+   "label_en": "reflection Γ"
+  },
+  {
+   "formula_id": "line-transfer-coeff",
+   "ord": 3,
+   "name": "K_p",
+   "label_ru": "коэффициент передачи",
+   "label_en": "transfer coefficient"
+  },
+  {
+   "formula_id": "line-kpd",
+   "ord": 0,
+   "name": "alpha_l",
+   "label_ru": "затухание α",
+   "label_en": "attenuation α"
+  },
+  {
+   "formula_id": "line-kpd",
+   "ord": 1,
+   "name": "len_m",
+   "label_ru": "длина l",
+   "label_en": "length l"
+  },
+  {
+   "formula_id": "line-kpd",
+   "ord": 2,
+   "name": "KPD",
+   "label_ru": "КПД",
+   "label_en": "efficiency"
+  },
+  {
+   "formula_id": "line-conjugate-match",
+   "ord": 0,
+   "name": "R_g",
+   "label_ru": "активная часть",
+   "label_en": "real part"
+  },
+  {
+   "formula_id": "line-conjugate-match",
+   "ord": 1,
+   "name": "X_g",
+   "label_ru": "реактивная часть",
+   "label_en": "imaginary part"
+  },
+  {
+   "formula_id": "line-conjugate-match",
+   "ord": 2,
+   "name": "Z_g",
+   "label_ru": "сопротивление генератора",
+   "label_en": "generator impedance"
+  },
+  {
+   "formula_id": "line-conjugate-match",
+   "ord": 3,
+   "name": "Z_in",
+   "label_ru": "входное сопротивление",
+   "label_en": "input impedance"
+  },
+  {
+   "formula_id": "line-conjugate-match",
+   "ord": 4,
+   "name": "sum_z",
+   "label_ru": "сумма",
+   "label_en": "sum"
+  },
+  {
+   "formula_id": "line-node-distance",
+   "ord": 0,
+   "name": "phi_g",
+   "label_ru": "фаза Γ",
+   "label_en": "phase of Γ"
+  },
+  {
+   "formula_id": "line-node-distance",
+   "ord": 1,
+   "name": "beta_l",
+   "label_ru": "коэффициент фазы β",
+   "label_en": "phase constant β"
+  },
+  {
+   "formula_id": "line-node-distance",
+   "ord": 2,
+   "name": "len_min",
+   "label_ru": "расстояние до узла",
+   "label_en": "distance to node"
+  },
+  {
+   "formula_id": "line-full-turn-length",
+   "ord": 0,
+   "name": "lam_l",
+   "label_ru": "длина волны λ",
+   "label_en": "wavelength λ"
+  },
+  {
+   "formula_id": "line-full-turn-length",
+   "ord": 1,
+   "name": "len_turn",
+   "label_ru": "длина",
+   "label_en": "length"
   }
  ],
  "const_sections": [
