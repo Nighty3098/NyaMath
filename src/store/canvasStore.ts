@@ -5,10 +5,11 @@ import { getDemoItems, getDemoLines, getTemplate } from '../lib/db';
 import { loadTheme, saveTheme, THEMES, type ThemeName } from '../theme';
 import { getSimModel, listSimModels, simModelPatch } from '../engine/simEngine';
 import {
-  separateBlocksVertically,
+  separateBlocks,
   snapToGrid,
   GRID_STEP_FINE,
   GRID_STEP_STANDARD,
+  type LayoutRect,
 } from '../lib/canvasLayout';
 import { getLang, loadLang, setLangState, t, type Lang } from '../i18n';
 import { RECALC_TIMEOUT_MS, recalcInWorker } from '../lib/recalcWorker';
@@ -280,6 +281,78 @@ function blank(id: string, x: number, y: number, kind: BlockKind = 'math'): Math
 function fitViewportWidth(def: number): number {
   if (typeof window === 'undefined') return def;
   return Math.max(280, Math.min(def, window.innerWidth - 24));
+}
+
+/**
+ * Оценка габаритов, если регион не отрендерен (виртуализация/печать).
+ * Специально с запасом: лучше оставить чуть больше места, чем допустить
+ * наложение, когда блок появится в DOM при прокрутке.
+ * Ширины математических регионов ограничены CSS-ом (max-width: 640px).
+ */
+const FALLBACK_REGION_W: Record<MathBlockData['kind'], number> = {
+  math: 640,
+  text: 640,
+  slider: 640,
+  program: 640,
+  plot: 460,
+  contour: 460,
+  plot3d: 560,
+  sim: 560,
+};
+const FALLBACK_REGION_H: Record<MathBlockData['kind'], number> = {
+  math: 140,
+  text: 140,
+  slider: 140,
+  program: 420,
+  plot: 520,
+  contour: 520,
+  plot3d: 600,
+  sim: 900,
+};
+
+type RegionSize = { w: number; h: number };
+
+/**
+ * Снять размеры всех отрендеренных регионов одним проходом.
+ * offsetWidth/offsetHeight не зависят от zoom-трансформа листа,
+ * а dataset id не требует экранирования (id из файла может быть любым).
+ */
+function measureRegionSizes(list: MathBlockData[]): Map<string, RegionSize> {
+  const out = new Map<string, RegionSize>();
+  if (typeof document === 'undefined') return out;
+  const wanted = new Set(list.map((b) => b.id));
+  for (const node of document.querySelectorAll<HTMLElement>('[data-block-id]')) {
+    const id = node.dataset.blockId;
+    if (!id || !wanted.has(id) || out.has(id)) continue;
+    const region = node.closest('.nya-region') ?? node;
+    if (region instanceof HTMLElement && region.offsetWidth > 0 && region.offsetHeight > 0) {
+      out.set(id, { w: region.offsetWidth, h: region.offsetHeight });
+    }
+  }
+  return out;
+}
+
+/**
+ * Реальный размер региона для авто-раскладки. DOM важнее оценки:
+ * математические блоки имеют высоту по содержимому, а графики — свой h.
+ * Для блоков вне DOM (виртуализация/печать) — консервативный запас,
+ * включая автографик: иначе после прокрутки превью «вырастет» и налезет
+ * на соседей, хотя при разнесении блок считался коротким.
+ */
+function regionSize(b: MathBlockData, measured: Map<string, RegionSize>): RegionSize {
+  const hit = measured.get(b.id);
+  if (hit) return hit;
+  const w = b.w ?? FALLBACK_REGION_W[b.kind] ?? 640;
+  let h = b.h ?? FALLBACK_REGION_H[b.kind] ?? 140;
+  if (b.kind === 'math' && b.plotPreview && !b.error) {
+    // MiniPlot рисуется только для векторных превью: 400×150, ширина
+    // ограничена 420px; ниже — кнопка «Развернуть в plot».
+    const extra =
+      b.plotPreview.source === 'vector' ? Math.round((Math.min(420, w) * 150) / 400) + 44 : 40;
+    h = Math.max(h, 200) + extra;
+  }
+  if (b.solverTrace?.length) h += 28 + b.solverTrace.length * 18;
+  return { w, h };
 }
 
 /** Замер последнего пересчёта для телеметрии пульта (мс, пишет runRecalcJob). */
@@ -613,6 +686,8 @@ let recalcTimer: ReturnType<typeof setTimeout> | null = null;
 let jobRunning = false;
 let rerunRequested = false;
 let recalcRev = 0;
+/** Разнесение ждёт пересчёт/отрисовку — второй клик не запускает параллельный проход. */
+let separatePending = false;
 /** Контроллер текущей джобы: cancelRecalc убивает даже зависший воркер. */
 let currentAbort: AbortController | null = null;
 
@@ -735,6 +810,30 @@ export async function flushRecalc(): Promise<void> {
       await runRecalcJob();
       return;
     }
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
+
+/** Следующий кадр отрисовки: React успевает закоммитить превью в DOM. */
+function nextPaint(): Promise<void> {
+  if (typeof requestAnimationFrame === 'undefined') return Promise.resolve();
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+/**
+ * Дождаться, пока конвейер пересчёта закончит запланированную/текущую
+ * джобу. В ручном режиме (Calculate Now) пересчёт не форсируем: иначе
+ * разнесение молча нарушило бы выбранный пользователем режим.
+ */
+async function awaitRecalcIdle(): Promise<void> {
+  if (useCanvasStore.getState().calcMode === 'manual') return;
+  if (recalcTimer) {
+    clearTimeout(recalcTimer);
+    recalcTimer = null;
+    void runRecalcJob();
+  }
+  // runRecalcJob сериализован: дождёмся и текущую джобу, и возможный rerun.
+  for (let k = 0; k < 500 && jobRunning; k++) {
     await new Promise((r) => setTimeout(r, 10));
   }
 }
@@ -1526,13 +1625,40 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   separateRegions: () => {
-    const list = Object.values(get().blocks);
-    if (list.length < 2) return;
-    const pos = separateBlocksVertically(list);
-    const changed = list.some((b) => pos[b.id] && (pos[b.id].x !== b.x || pos[b.id].y !== b.y));
-    if (!changed) return;
-    pushHistory(get, set as SetFn, true);
-    get().dropBlocks(pos);
+    if (separatePending) return;
+    const initial = get();
+    if (!Object.keys(initial.blocks).length) return;
+    separatePending = true;
+    void (async () => {
+      try {
+        // Пересчёт мог ещё не отрисовать автопревью. Замер до него снимет
+        // старые короткие высоты, и после появления графиков блоки снова
+        // наложатся. Ждём джобу и кадр, в котором React отрисует превью.
+        await awaitRecalcIdle();
+        await nextPaint();
+        await nextPaint();
+
+        const st = get();
+        const list = Object.values(st.blocks);
+        if (!list.length) return;
+        // Выравниваем всегда, даже если сетка скрыта: шаг — текущий размер сетки.
+        // separateBlocks держит порядок решения (y, затем x), поэтому блоки
+        // не обгоняют друг друга и проверка use-before-definition не меняется.
+        const step = st.gridSize === 'fine' ? GRID_STEP_FINE : GRID_STEP_STANDARD;
+        const measured = measureRegionSizes(list);
+        const rects: LayoutRect[] = list.map((b) => {
+          const { w, h } = regionSize(b, measured);
+          return { id: b.id, x: b.x, y: b.y, w, h };
+        });
+        const pos = separateBlocks(rects, { step, gap: Math.max(step, GRID_STEP_STANDARD) });
+        const changed = list.some((b) => pos[b.id] && (pos[b.id].x !== b.x || pos[b.id].y !== b.y));
+        if (!changed) return;
+        pushHistory(get, set as SetFn, true);
+        get().dropBlocks(pos);
+      } finally {
+        separatePending = false;
+      }
+    })();
   },
 
   recalc: () => {
