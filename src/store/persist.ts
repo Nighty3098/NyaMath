@@ -12,12 +12,15 @@ import {
   setUnitSys as setEngineUnitSys,
   setComplexFmt as setEngineComplexFmt,
   setAngleMode as setEngineAngleMode,
+  setCalcPrecision as setEngineCalcPrecision,
   type AngleMode,
+  type CalculationPrecision,
   type ComplexFmt,
   type NumFmt,
   type UnitSys,
 } from '../engine/mathEngine';
 import { normalizeNumFmt } from '../engine/format';
+import { DEFAULT_CALC_PRECISION, normalizeCalcPrecision } from '../engine/precision';
 
 export const STORAGE_KEY = 'nyamath-doc-v1';
 export const STORAGE_KEY_LEGACY = 'wengineering-doc-v1';
@@ -30,6 +33,7 @@ const NUMFMT_KEY = 'nyamath-num-fmt';
 const UNITSYS_KEY = 'nyamath-unit-sys';
 const COMPLEXFMT_KEY = 'nyamath-complex-fmt';
 const ANGLEMODE_KEY = 'nyamath-angle-mode';
+const CALC_PRECISION_KEY = 'nyamath-calc-precision';
 
 export function loadGrid(): boolean {
   try {
@@ -158,6 +162,26 @@ export function loadAngleMode(): AngleMode {
 export function saveAngleMode(m: AngleMode): void {
   try {
     localStorage.setItem(ANGLEMODE_KEY, m);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadCalcPrecision(): CalculationPrecision {
+  let precision = { ...DEFAULT_CALC_PRECISION };
+  try {
+    const raw = localStorage.getItem(CALC_PRECISION_KEY);
+    if (raw) precision = normalizeCalcPrecision(JSON.parse(raw) as Partial<CalculationPrecision>);
+  } catch {
+    precision = { ...DEFAULT_CALC_PRECISION };
+  }
+  setEngineCalcPrecision(precision);
+  return precision;
+}
+
+export function saveCalcPrecision(value: CalculationPrecision): void {
+  try {
+    localStorage.setItem(CALC_PRECISION_KEY, JSON.stringify(value));
   } catch {
     /* ignore */
   }

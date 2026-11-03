@@ -163,21 +163,44 @@ function checkVec(v: number[], n: number) {
 /** Решение J*dx = b методом Гаусса с выбором ведущего. */
 export function solveLinear(J: number[][], b: number[]): number[] {
   const n = b.length;
+  if (J.length !== n || J.some((row) => row.length !== n)) {
+    throw new Error('Matrix must be square and match the right-hand side');
+  }
+  if (
+    J.some((row) => row.some((value) => !Number.isFinite(value))) ||
+    b.some((v) => !Number.isFinite(v))
+  ) {
+    throw new Error('Linear system must contain finite values');
+  }
   const M = J.map((row, i) => [...row, b[i]]);
+  const scales = J.map((row) => row.reduce((scale, value) => Math.max(scale, Math.abs(value)), 0));
+  if (scales.some((scale) => scale === 0)) throw new Error('Singular Jacobian');
   for (let c = 0; c < n; c++) {
     let piv = c;
     for (let r = c + 1; r < n; r++) {
-      if (Math.abs(M[r][c]) > Math.abs(M[piv][c])) piv = r;
+      if (Math.abs(M[r][c]) / scales[r] > Math.abs(M[piv][c]) / scales[piv]) piv = r;
     }
-    if (Math.abs(M[piv][c]) < 1e-15) throw new Error('Singular Jacobian');
+    if (Math.abs(M[piv][c]) / scales[piv] <= Number.EPSILON * n) {
+      throw new Error('Singular Jacobian');
+    }
     [M[c], M[piv]] = [M[piv], M[c]];
-    for (let r = 0; r < n; r++) {
-      if (r === c) continue;
+    [scales[c], scales[piv]] = [scales[piv], scales[c]];
+    for (let r = c + 1; r < n; r++) {
       const f = M[r][c] / M[c][c];
-      for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k];
+      M[r][c] = 0;
+      for (let k = c + 1; k <= n; k++) M[r][k] -= f * M[c][k];
     }
   }
-  return M.map((row, i) => row[n] / M[i][i]);
+  const solution = new Array<number>(n);
+  for (let i = n - 1; i >= 0; i--) {
+    let rhs = M[i][n];
+    for (let j = i + 1; j < n; j++) rhs -= M[i][j] * solution[j];
+    solution[i] = rhs / M[i][i];
+  }
+  if (solution.some((value) => !Number.isFinite(value))) {
+    throw new Error('Linear system produced non-finite results');
+  }
+  return solution;
 }
 
 /** Брент на [a,b], нужна смена знака. */
@@ -189,10 +212,15 @@ export function brent(
   maxIter = 100,
   trace?: TraceFn,
 ): number {
+  if (!Number.isFinite(a) || !Number.isFinite(b) || !Number.isFinite(tol) || tol <= 0) {
+    throw new Error('Invalid Brent interval or tolerance');
+  }
   let fa = f(a);
   let fb = f(b);
   if (!isFinite(fa) || !isFinite(fb)) throw new Error('Function not finite on bracket');
-  if (fa * fb > 0) throw new Error('Root not bracketed');
+  if (fa === 0) return a;
+  if (fb === 0) return b;
+  if ((fa > 0 && fb > 0) || (fa < 0 && fb < 0)) throw new Error('Root not bracketed');
   if (Math.abs(fa) < Math.abs(fb)) {
     [a, b] = [b, a];
     [fa, fb] = [fb, fa];
@@ -202,7 +230,7 @@ export function brent(
   let d = b - a;
   let e = d;
   for (let k = 0; k < maxIter; k++) {
-    if (fb * fc > 0) {
+    if ((fb > 0 && fc > 0) || (fb < 0 && fc < 0)) {
       c = a;
       fc = fa;
       d = b - a;

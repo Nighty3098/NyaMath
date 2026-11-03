@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { recalculateAll, type MathBlockData } from './dependencies';
-import { setNumFmt } from './mathEngine';
+import { setCalcPrecision, setNumFmt } from './mathEngine';
 
 let id = 0;
 function block(y: number, rawInput: string): MathBlockData {
@@ -31,6 +31,7 @@ function calc(raw: string): string {
 
 afterEach(() => {
   setNumFmt({ mode: 'auto', digits: 6 });
+  setCalcPrecision({ mode: 'standard', digits: 50 });
 });
 
 /**

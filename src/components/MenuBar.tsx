@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useCanvasStore } from '../store/canvasStore';
 import { saveDocument } from '../lib/saveDocument';
 import { printDocument } from '../lib/print';
@@ -179,6 +180,8 @@ export default function MenuBar({
   const setGridVisible = useCanvasStore((s) => s.setGridVisible);
   const numFmt = useCanvasStore((s) => s.numFmt);
   const setNumFmt = useCanvasStore((s) => s.setNumFmt);
+  const calcPrecision = useCanvasStore((s) => s.calcPrecision);
+  const setCalcPrecision = useCanvasStore((s) => s.setCalcPrecision);
   const unitSys = useCanvasStore((s) => s.unitSys);
   const setUnitSys = useCanvasStore((s) => s.setUnitSys);
   const complexFmt = useCanvasStore((s) => s.complexFmt);
@@ -250,15 +253,21 @@ export default function MenuBar({
 
   const [open, setOpen] = useState<string | null>(null);
   const [subOpen, setSubOpen] = useState<string | null>(null);
+  const [subMenuPosition, setSubMenuPosition] = useState({ top: 8, left: 8 });
   // Мобильный шит: при узком экране весь их состав — сюда
   const [mOpen, setMOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
+  const subMenuRef = useRef<HTMLDivElement>(null);
+  const subMenuTriggerRef = useRef<HTMLElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
-      if (!barRef.current?.contains(e.target as Node)) {
+      if (
+        !barRef.current?.contains(e.target as Node) &&
+        !subMenuRef.current?.contains(e.target as Node)
+      ) {
         setOpen(null);
         setSubOpen(null);
       }
@@ -280,6 +289,33 @@ export default function MenuBar({
       }
     };
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!subOpen) return;
+    const updatePosition = () => {
+      const trigger = subMenuTriggerRef.current;
+      const menu = subMenuRef.current;
+      if (!trigger || !menu) return;
+
+      const triggerRect = trigger.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const top = Math.max(8, Math.min(triggerRect.top, window.innerHeight - menuRect.height - 8));
+      const right = triggerRect.right + 6;
+      const left =
+        right + menuRect.width <= window.innerWidth - 8
+          ? right
+          : Math.max(8, triggerRect.left - menuRect.width - 6);
+      setSubMenuPosition((p) => (p.top === top && p.left === left ? p : { top, left }));
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [subOpen]);
 
   const run = (fn: () => void) => () => {
     setOpen(null);
@@ -358,13 +394,14 @@ export default function MenuBar({
   };
   /** Поделиться: JSON → slim → фразы → deflate → base64url → ссылка в буфере (+язык). */
   const shareCurrentSheet = async () => {
-    const cur = useCanvasStore.getState().blocks;
+    const state = useCanvasStore.getState();
+    const cur = state.blocks;
     if (!Object.keys(cur).length) {
       alert(t('share.empty'));
       return;
     }
     try {
-      const r = await shareDocument(cur, useCanvasStore.getState().lang);
+      const r = await shareDocument(cur, state.lang, state.calcPrecision);
       const warn =
         r.urlLength > SHARE_WARN_CHARS ? t('share.longWarn', { chars: r.urlLength }) : '';
       if (r.copied) alert(t('share.copied', { n: r.count, chars: r.urlLength }) + warn);
@@ -410,7 +447,7 @@ export default function MenuBar({
           icon: <ISave />,
           label: t('menu.save'),
           hint: 'Ctrl+S',
-          action: run(() => void saveDocument(blocks)),
+          action: run(() => void saveDocument(blocks, calcPrecision)),
         },
         { id: 'open', icon: <IOpen />, label: t('menu.open'), action: run(onOpenFile) },
         {
@@ -605,12 +642,39 @@ export default function MenuBar({
               action: run(() => setNumFmt({ mode: 'fixed', digits: numFmt.digits })),
             },
             { sep: true },
-            ...[3, 4, 5, 6, 8, 10].map((d): Entry => ({
+            ...[3, 4, 5, 6, 8, 10, 15, 34, 50, 100].map((d): Entry => ({
               id: `fmt-d${d}`,
               label: t('menu.numDigits', { n: d }),
               checked: numFmt.digits === d,
               action: run(() => setNumFmt({ mode: numFmt.mode, digits: d })),
             })),
+          ],
+        },
+        {
+          id: 'precision-sub',
+          icon: <IFx />,
+          label: t('menu.calcPrecision'),
+          children: [
+            {
+              id: 'precision-standard',
+              label: t('menu.precisionStandard'),
+              checked: calcPrecision.mode === 'standard',
+              action: run(() => setCalcPrecision({ ...calcPrecision, mode: 'standard' })),
+            },
+            { sep: true },
+            ...[34, 50, 100, 200, 500, 1000].map((digits): Entry => ({
+              id: `precision-${digits}`,
+              label: t('menu.precisionDigits', { n: digits }),
+              checked: calcPrecision.mode === 'arbitrary' && calcPrecision.digits === digits,
+              action: run(() => setCalcPrecision({ mode: 'arbitrary', digits })),
+            })),
+            { sep: true },
+            {
+              id: 'precision-note',
+              label: t('menu.precisionLimit'),
+              disabled: true,
+              action: () => undefined,
+            },
           ],
         },
         {
@@ -937,6 +1001,27 @@ export default function MenuBar({
     </button>
   );
 
+  const cancelSubmenuClose = () => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+
+  const enterSubmenu = (id: string, trigger: HTMLElement) => {
+    cancelSubmenuClose();
+    subMenuTriggerRef.current = trigger;
+    setSubOpen(id);
+  };
+
+  const leaveSubmenu = (id: string) => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => {
+      closeTimer.current = null;
+      setSubOpen((value) => (value === id ? null : value));
+    }, 180);
+  };
+
   const renderItem = (it: Entry, i: number | string, onPick: () => void, tall = false) => {
     if ('sep' in it) return <div key={`sep${i}`} className="menu-sep" role="separator" />;
     if ('head' in it)
@@ -951,28 +1036,19 @@ export default function MenuBar({
         <div
           key={it.id}
           className="relative"
-          onMouseEnter={() => {
-            if (closeTimer.current) {
-              clearTimeout(closeTimer.current);
-              closeTimer.current = null;
-            }
-            setSubOpen(it.id);
-          }}
-          onMouseLeave={() => {
-            // пауза вместо мгновенного закрытия: курсор идёт через зазор к подменю
-            if (closeTimer.current) clearTimeout(closeTimer.current);
-            closeTimer.current = setTimeout(() => {
-              closeTimer.current = null;
-              setSubOpen((v) => (v === it.id ? null : v));
-            }, 180);
-          }}
+          onMouseEnter={(e) => enterSubmenu(it.id, e.currentTarget)}
+          onMouseLeave={() => leaveSubmenu(it.id)}
         >
           <button
             type="button"
             role="menuitem"
             aria-haspopup="menu"
             aria-expanded={expanded}
-            onClick={() => setSubOpen((v) => (v === it.id ? null : it.id))}
+            onClick={(e) => {
+              const next = subOpen === it.id ? null : it.id;
+              subMenuTriggerRef.current = e.currentTarget;
+              setSubOpen(next);
+            }}
             className="menu-item w-full"
           >
             <span className="w-4 shrink-0 inline-flex justify-center" aria-hidden="true">
@@ -983,22 +1059,31 @@ export default function MenuBar({
               ▸
             </span>
           </button>
-          {expanded && (
-            // мост pl-1.5 вместо отступа ml: hover не рвётся между меню и подменю
-            <div className="absolute left-full top-0 z-30 pl-1.5">
+          {expanded &&
+            createPortal(
               <div
+                ref={subMenuRef}
                 role="menu"
                 aria-label={it.label}
-                className="menu-drop min-w-60 border border-[var(--chrome-line)] bg-[var(--chrome)]"
+                className="menu-drop fixed z-[80] min-w-60 border border-[var(--chrome-line)] bg-[var(--chrome)]"
+                style={{ top: subMenuPosition.top, left: subMenuPosition.left }}
+                onMouseEnter={(e) => {
+                  e.stopPropagation();
+                  cancelSubmenuClose();
+                }}
+                onMouseLeave={(e) => {
+                  e.stopPropagation();
+                  leaveSubmenu(it.id);
+                }}
               >
                 {it.children.map((c, j) => {
                   if ('sep' in c || 'head' in c || 'children' in c)
                     return renderItem(c, `${i}-${j}`, () => {});
                   return renderLeaf(c, `${i}-${j}`, c.action);
                 })}
-              </div>
-            </div>
-          )}
+              </div>,
+              document.body,
+            )}
         </div>
       );
     }
@@ -1009,7 +1094,7 @@ export default function MenuBar({
     <div
       role="menu"
       aria-label={m.label}
-      className={`menu-drop absolute top-full mt-1.5 min-w-60 border border-[var(--chrome-line)] bg-[var(--chrome)] z-30 ${
+      className={`menu-drop nya-menu-root absolute top-full mt-1.5 min-w-60 border border-[var(--chrome-line)] bg-[var(--chrome)] z-30 ${
         m.alignRight ? 'right-0' : 'left-0'
       }`}
     >

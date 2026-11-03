@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { createBaseScope, evaluateLine, math } from './mathEngine';
+import { afterEach, describe, expect, it } from 'vitest';
+import { createBaseScope, evaluateLine, math, setCalcPrecision } from './mathEngine';
 import {
   collectDefLines,
   deserializeScopeValue,
@@ -11,6 +11,9 @@ import {
 import type { MathBlockData } from './dependencies';
 
 let id = 0;
+afterEach(() => {
+  setCalcPrecision({ mode: 'standard', digits: 50 });
+});
 function block(y: number, patch: Partial<MathBlockData> = {}): MathBlockData {
   return {
     id: `w${id++}`,
@@ -37,6 +40,24 @@ function hop<T>(v: T): T {
 }
 
 describe('workerProtocol: scope serde', () => {
+  it('BigNumber сохраняет точность через structured clone', () => {
+    setCalcPrecision({ mode: 'arbitrary', digits: 50 });
+    const value = math.evaluate('1 / 3');
+    const s = hop(serializeScopeValue(value) as SerVal);
+    const revived = deserializeScopeValue(s);
+    expect(math.isBigNumber(revived)).toBe(true);
+    expect(String(revived)).toBe(String(value));
+    setCalcPrecision({ mode: 'standard', digits: 50 });
+  });
+
+  it('exact Fraction сохраняет числитель и знаменатель через structured clone', () => {
+    const value = math.fraction('7/12');
+    const s = hop(serializeScopeValue(value) as SerVal);
+    const revived = deserializeScopeValue(s);
+    expect(math.isFraction(revived)).toBe(true);
+    expect(math.format(revived as never)).toBe('7/12');
+  });
+
   it('числа/строки/bool/null едут как есть', () => {
     expect(serializeScopeValue(5)).toBe(5);
     expect(serializeScopeValue('ab')).toBe('ab');

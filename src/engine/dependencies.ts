@@ -393,19 +393,23 @@ export function detectCycles(blocks: MathBlockData[]): Set<string> {
   const visited = new Map<string, number>();
   const cyclic = new Set<string>();
   const stack: string[] = [];
+  const stackIndex = new Map<string, number>();
   const dfs = (id: string) => {
     visited.set(id, 1);
+    stackIndex.set(id, stack.length);
     stack.push(id);
     for (const nb of adj.get(id) ?? []) {
       const st = visited.get(nb) ?? 0;
       if (st === 0) dfs(nb);
       else if (st === 1) {
-        const i = stack.indexOf(nb);
+        const i = stackIndex.get(nb);
+        if (i === undefined) continue;
         for (let k = i; k < stack.length; k++) cyclic.add(stack[k]);
         cyclic.add(nb);
       }
     }
     stack.pop();
+    stackIndex.delete(id);
     visited.set(id, 2);
   };
   for (const b of blocks) {

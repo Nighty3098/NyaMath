@@ -46,8 +46,14 @@ stdio и приложение через _View → Live sync_ видят оди�
   surfaces/point clouds, PNG/CSV export.
 - **Program blocks** with step debugger, **simulations** (RK4/RK45/TR-BDF2, events, FDTD waves).
 - **Units** via mathjs (`m/s`, `GHz`, `mm`, `ohm`, `degC`…), custom units via `defunit`.
+- **Scientific precision**: _View → Calculation precision_ selects IEEE-754 or
+  document-level arbitrary-precision BigNumber arithmetic (34–1000 digit presets).
+  Output digits are configured separately under _View → Number format_; exact
+  rational values are available with mathjs `fraction(...)`. Complex values and
+  numerical solvers/simulations still use double precision.
 - **Serverless sharing**: _File → Share link_ packs the sheet into a URL fragment
-  (`#d=…`, slim tuples → phrase dictionary → deflate-raw → base64url, `&lang=` included);
+  (`#d=…`, slim tuples → phrase dictionary → deflate-raw → base64url, language and
+  arbitrary-precision mode included);
   pristine examples share as tiny `#t=ex20` links. No backend involved.
 - **Project files**: save/open JSON, print/PDF, undo/redo, themes, RU/EN interface.
 - **Reference data in SQLite**: constants, materials, formulas, snippets, sim

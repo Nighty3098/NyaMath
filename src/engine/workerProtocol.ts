@@ -5,11 +5,13 @@ import {
   math,
   parseLine,
   type AngleMode,
+  type CalculationPrecision,
   type ComplexFmt,
   type NumFmt,
   type Scope,
   type UnitSys,
 } from './mathEngine';
+import type { BigNumber, Fraction } from 'mathjs';
 import { sortBlocksTopDown, type MathBlockData } from './dependencies';
 import type { Lang } from '../i18n';
 
@@ -36,6 +38,14 @@ export interface SerUnit {
   __t: 'u';
   s: string;
 }
+export interface SerBigNumber {
+  __t: 'b';
+  s: string;
+}
+export interface SerFraction {
+  __t: 'f';
+  s: string;
+}
 export interface SerMatrix {
   __t: 'm';
   a: SerNode;
@@ -45,7 +55,16 @@ export interface SerNonFinite {
   s: string;
 }
 export type SerVal =
-  number | string | boolean | null | SerComplex | SerUnit | SerMatrix | SerNonFinite;
+  | number
+  | string
+  | boolean
+  | null
+  | SerComplex
+  | SerUnit
+  | SerBigNumber
+  | SerFraction
+  | SerMatrix
+  | SerNonFinite;
 /** Вложенность матриц — обычные массивы (structured clone их умеет). */
 export type SerNode = SerVal | SerNode[];
 
@@ -66,6 +85,14 @@ export function serializeScopeValue(v: unknown, depth = 0): SerVal | undefined {
   if (typeof v === 'boolean') return v;
   if (depth > SER_MAX_DEPTH) return undefined;
   if (typeof v === 'object') {
+    if (math.isFraction(v)) {
+      const s = (v as Fraction).toFraction();
+      return s.length > SER_MAX_STRING ? undefined : { __t: 'f', s };
+    }
+    if (math.isBigNumber(v)) {
+      const s = (v as BigNumber).toString();
+      return s.length > SER_MAX_STRING ? undefined : { __t: 'b', s };
+    }
     if (math.isComplex(v)) {
       const c = v as { re: number; im: number };
       return { __t: 'c', re: c.re, im: c.im };
@@ -130,6 +157,22 @@ export function deserializeScopeValue(s: SerNode): unknown {
     if (t === 'u') {
       try {
         return math.unit((s as SerUnit).s);
+      } catch {
+        return undefined;
+      }
+    }
+    if (t === 'b') {
+      const value = (s as SerBigNumber).s;
+      try {
+        return math.bignumber(value);
+      } catch {
+        return undefined;
+      }
+    }
+    if (t === 'f') {
+      const value = (s as SerFraction).s;
+      try {
+        return math.fraction(value);
       } catch {
         return undefined;
       }
@@ -296,6 +339,8 @@ export interface WorkerReq {
   complexFmt?: ComplexFmt;
   /** Режим углов тригонометрии (опционально — по умолчанию rad). */
   angleMode?: AngleMode;
+  /** Арифметический режим и значащие цифры для BigNumber. */
+  calcPrecision?: CalculationPrecision;
   blocks: SlimBlock[];
   /** Calculate Now: только эти + upstream (пусто/нет = полный пересчёт) */
   only?: string[];

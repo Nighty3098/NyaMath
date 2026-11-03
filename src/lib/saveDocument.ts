@@ -1,6 +1,7 @@
 import type { MathBlockData } from '../engine/dependencies';
 import { serializeDocFile } from './docFile';
 import { t } from '../i18n';
+import type { CalculationPrecision } from '../engine/precision';
 
 /**
  * Сохранение документа в файл.
@@ -8,9 +9,16 @@ import { t } from '../i18n';
  * с выбором пути и имени; иначе — обычное скачивание в папку загрузок
  * (с разовой подсказкой про настройку браузера «всегда спрашивать»).
  */
-export async function saveDocument(blocks: Record<string, MathBlockData>): Promise<void> {
+export async function saveDocument(
+  blocks: Record<string, MathBlockData>,
+  calcPrecision?: CalculationPrecision,
+): Promise<void> {
   // заголовок с пином версии движка (воспроизводимость; читается и legacy-массив)
-  const payload = JSON.stringify(serializeDocFile(Object.values(blocks)), null, 2);
+  const payload = JSON.stringify(
+    serializeDocFile(Object.values(blocks), undefined, calcPrecision),
+    null,
+    2,
+  );
   if (window.showSaveFilePicker) {
     try {
       const handle = await window.showSaveFilePicker({

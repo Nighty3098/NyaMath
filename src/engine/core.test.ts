@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { all, create } from 'mathjs';
 import {
   complexReOrNull,
   createLru,
@@ -31,6 +32,14 @@ describe('createLru', () => {
 });
 
 describe('complexReOrNull', () => {
+  it('converts BigNumber to double for plotting while preserving truthiness', () => {
+    const math = create(all, { number: 'BigNumber', precision: 50 });
+    const small = math.evaluate('1e-40');
+    expect(complexReOrNull(small)).toBe(1e-40);
+    expect(isTruthyValue(small)).toBe(true);
+    expect(isTruthyValue(math.evaluate('0'))).toBe(false);
+  });
+
   it('числа и комплексные', () => {
     expect(complexReOrNull(2.5)).toBe(2.5);
     expect(complexReOrNull({ re: 3, im: 4 })).toBe(3);
@@ -46,10 +55,7 @@ describe('flattenValue / nestedValue', () => {
     expect(flattenValue([1, [2, [3]]])).toEqual([1, 2, 3]);
     expect(flattenValue({ toArray: () => [[1, 2], [3]] })).toEqual([1, 2, 3]);
     expect(flattenValue(5)).toBeNull();
-    expect(nestedValue([[1, 2], [3]])).toEqual([
-      [1, 2],
-      [3],
-    ]);
+    expect(nestedValue([[1, 2], [3]])).toEqual([[1, 2], [3]]);
     expect(nestedValue(5)).toBeNull();
   });
 });

@@ -30,6 +30,7 @@
  */
 import type { MathBlockData } from '../engine/dependencies';
 import type { Lang } from '../i18n';
+import { normalizeCalcPrecision, type CalculationPrecision } from '../engine/precision';
 import { getDemoItems, getDemoLines } from './db';
 import { FROZEN_PHRASES } from './sharePhrases';
 import { copyTextToClipboard } from './exportFiles';
@@ -578,14 +579,47 @@ function langSuffix(lang: unknown): string {
   return l ? `&${LANG_KEY}=${l}` : '';
 }
 
+function precisionSuffix(value: CalculationPrecision | undefined): string {
+  if (!value) return '';
+  const precision = normalizeCalcPrecision(value);
+  return precision.mode === 'arbitrary' ? `&precision=${precision.mode}-${precision.digits}` : '';
+}
+
 /** Полный URL для шаринга (фрагмент — сервер не трогаем, статический хостинг ок). */
-export function buildShareUrl(param: string, lang?: unknown): string {
-  return `${urlBase()}#${SHARE_KEY}=${param}${langSuffix(lang)}`;
+export function buildShareUrl(
+  param: string,
+  lang?: unknown,
+  calcPrecision?: CalculationPrecision,
+): string {
+  return `${urlBase()}#${SHARE_KEY}=${param}${langSuffix(lang)}${precisionSuffix(calcPrecision)}`;
 }
 
 /** Короткая ссылка на нетронутый пример: байт данных нет вообще. */
-export function buildTemplateUrl(key: TemplateKey, lang?: unknown): string {
-  return `${urlBase()}#${TEMPLATE_KEY}=${key}${langSuffix(lang)}`;
+export function buildTemplateUrl(
+  key: TemplateKey,
+  lang?: unknown,
+  calcPrecision?: CalculationPrecision,
+): string {
+  return `${urlBase()}#${TEMPLATE_KEY}=${key}${langSuffix(lang)}${precisionSuffix(calcPrecision)}`;
+}
+
+/** Точность листа из URL; неизвестные и недопустимые значения игнорируются. */
+export function readCalcPrecisionFromUrl(): CalculationPrecision | null {
+  try {
+    const hash = location.hash.startsWith('#') ? location.hash.slice(1) : location.hash;
+    const entry = hash
+      .split('&')
+      .find((part) => part.startsWith('precision='))
+      ?.slice('precision='.length);
+    const raw = entry ?? new URLSearchParams(location.search).get('precision');
+    const match = raw?.match(/^arbitrary-(\d+)$/);
+    if (!match) return null;
+    const digits = Number(match[1]);
+    if (!Number.isInteger(digits) || digits < 16 || digits > 1000) return null;
+    return normalizeCalcPrecision({ mode: 'arbitrary', digits });
+  } catch {
+    return null;
+  }
 }
 
 /** Ключ шаблона из URL (`#t=` / `?t=`), null — обычная ссылка или её нет. */
@@ -640,7 +674,8 @@ export function clearShareParamFromUrl(): void {
     history.replaceState(
       null,
       '',
-      location.pathname + location.search.replace(/([?&])[dst]=[^&]*/g, '$1').replace(/[?&]$/, ''),
+      location.pathname +
+        location.search.replace(/([?&])(?:[dst]|precision)=[^&]*/g, '$1').replace(/[?&]$/, ''),
     );
     if (location.hash.includes(`${SHARE_KEY}=`) || location.hash.includes(`${TEMPLATE_KEY}=`)) {
       history.replaceState(null, '', location.pathname + location.search);
@@ -651,17 +686,18 @@ export function clearShareParamFromUrl(): void {
 }
 
 /**
- * Поделиться: упаковать, прицепить текущий язык (`&lang=`), скопировать в буфер.
+ * Поделиться: упаковать, прицепить язык и режим точности, скопировать в буфер.
  * Ошибки буфера не роняем — ссылку всё равно возвращаем (покажем в диалоге).
  */
 export async function shareDocument(
   blocks: Record<string, MathBlockData>,
   lang?: unknown,
+  calcPrecision?: CalculationPrecision,
 ): Promise<{ url: string; copied: boolean } & ShareEncoded> {
   const enc = await encodeShare(blocks);
   const url = enc.template
-    ? buildTemplateUrl(enc.template, lang)
-    : buildShareUrl(enc.param as string, lang);
+    ? buildTemplateUrl(enc.template, lang, calcPrecision)
+    : buildShareUrl(enc.param as string, lang, calcPrecision);
   const copied = await copyTextToClipboard(url);
   return { ...enc, url, urlLength: url.length, copied };
 }

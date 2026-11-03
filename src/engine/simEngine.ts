@@ -10,7 +10,7 @@
  * выражения `aux` пересчитываются на каждом шаге (напр. r := sqrt(x^2+y^2)).
  */
 import { math, compileRawExpr, preprocessJ, preprocessRanges } from './mathEngine';
-import type { EvalFunction } from 'mathjs';
+import type { BigNumber, EvalFunction } from 'mathjs';
 import type { Scope } from './core';
 import { solveLinear } from './numeric';
 import { formatCompact } from './format';
@@ -290,6 +290,10 @@ function parseFdtdDef(raw: Parameters<typeof parseSimDef>[0]): {
 /** Строгое число из значения mathjs (комплексные/матрицы — не число). */
 function toNum(v: unknown): number | null {
   if (typeof v === 'number' && isFinite(v)) return v;
+  if (math.isBigNumber(v)) {
+    const n = (v as BigNumber).toNumber();
+    return isFinite(n) ? n : null;
+  }
   return null;
 }
 
@@ -346,6 +350,10 @@ function eventTruthy(code: EvalFunction | null, expr: string, s: Scope): boolean
   const v: unknown = evalCodeAny(code, expr, s);
   if (typeof v === 'boolean') return v;
   if (typeof v === 'number' && isFinite(v)) return v !== 0;
+  if (math.isBigNumber(v)) {
+    const n = v as BigNumber;
+    return n.isFinite() && !n.isZero();
+  }
   if (v !== null && typeof v === 'object' && 're' in v && 'im' in v) {
     const c = v as { re: number; im: number };
     return c.re !== 0 || c.im !== 0;

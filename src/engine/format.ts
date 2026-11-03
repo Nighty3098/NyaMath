@@ -15,10 +15,10 @@ export interface NumFmt {
 
 export const DEFAULT_NUM_FMT: NumFmt = { mode: 'auto', digits: 6 };
 
-/** Нормализовать формат (clamp digits 1..15, fallback auto/6). */
+/** Нормализовать формат отображения (clamp digits 1..100, fallback auto/6). */
 export function normalizeNumFmt(f: Partial<NumFmt> | null | undefined): NumFmt {
   const mode = f?.mode === 'sig' || f?.mode === 'fixed' ? f.mode : 'auto';
-  const digits = Math.max(1, Math.min(15, Math.floor(f?.digits ?? 6) || 6));
+  const digits = Math.max(1, Math.min(100, Math.floor(f?.digits ?? 6) || 6));
   return { mode, digits };
 }
 
@@ -47,6 +47,32 @@ export function formatNumberWith(n: number, fmt: NumFmt): string {
   }
   if (abs >= 1e-3 && abs < 1e6) return Number(n.toPrecision(10)).toString();
   return expToSup(n.toExponential(5));
+}
+
+export function formatBigNumberWith(
+  n: {
+    abs(): { gte(value: number): boolean; lt(value: number): boolean };
+    isFinite(): boolean;
+    toExponential(digits?: number): string;
+    toFixed(digits?: number): string;
+    toSignificantDigits(digits?: number): { toString(): string };
+    isZero(): boolean;
+  },
+  fmt: NumFmt,
+): string {
+  if (!n.isFinite()) return n.toString();
+  if (n.isZero()) return fmt.mode === 'fixed' ? (0).toFixed(fmt.digits) : '0';
+  const abs = n.abs();
+  const ordinaryRange = abs.gte(1e-3) && abs.lt(1e6);
+  if (fmt.mode === 'sig') {
+    return ordinaryRange
+      ? n.toSignificantDigits(fmt.digits).toString()
+      : expToSup(n.toExponential(fmt.digits - 1));
+  }
+  if (fmt.mode === 'fixed') {
+    return ordinaryRange ? n.toFixed(fmt.digits) : expToSup(n.toExponential(fmt.digits));
+  }
+  return ordinaryRange ? n.toSignificantDigits(10).toString() : expToSup(n.toExponential(5));
 }
 
 /** Компактный формат для логов решателей (бывший fmtTrace/fmtT).

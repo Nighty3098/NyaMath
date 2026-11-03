@@ -256,6 +256,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
       return '';
     }
   }, [tex]);
+  const hasMatrix = /\\begin\{(?:smallmatrix|[pbBvV]?matrix|array)\}/i.test(tex);
 
   const selected = selectedIds.includes(block.id);
   const isText = block.kind === 'text';
@@ -668,7 +669,9 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
           <div className="cursor-text" onClick={onBodyClick} title={t('ui.editHint')}>
             {html ? (
               <div
-                className="text-[17px] leading-8 max-w-full overflow-x-auto"
+                className={`text-[17px] leading-8 max-w-full ${
+                  hasMatrix ? 'overflow-x-auto' : 'nya-math-wrap'
+                }`}
                 dangerouslySetInnerHTML={{ __html: html }}
               />
             ) : (

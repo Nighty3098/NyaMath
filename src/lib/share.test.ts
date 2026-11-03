@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildShareUrl,
   buildTemplateUrl,
@@ -7,11 +7,16 @@ import {
   normalizeLang,
   phrasePack,
   phraseUnpack,
+  readCalcPrecisionFromUrl,
 } from './share';
 import { getDemoLines } from './db';
 
 const TEST_SCENARIO_LINES = getDemoLines('variant20');
 import type { MathBlockData } from '../engine/dependencies';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function block(
   id: string,
@@ -143,6 +148,21 @@ describe('urls and lang', () => {
     expect(buildShareUrl('4abc', 'de').endsWith('#d=4abc')).toBe(true);
     expect(buildShareUrl('4abc').endsWith('#d=4abc')).toBe(true);
     expect(buildTemplateUrl('ex20', 'en').endsWith('#t=ex20&lang=en')).toBe(true);
+    expect(
+      buildShareUrl('4abc', 'en', { mode: 'arbitrary', digits: 50 }).endsWith(
+        '#d=4abc&lang=en&precision=arbitrary-50',
+      ),
+    ).toBe(true);
+  });
+
+  it('reads only a bounded arbitrary precision from the URL', () => {
+    vi.stubGlobal('location', {
+      hash: '#d=4abc&precision=arbitrary-100',
+      search: '',
+    });
+    expect(readCalcPrecisionFromUrl()).toEqual({ mode: 'arbitrary', digits: 100 });
+    vi.stubGlobal('location', { hash: '#d=4abc&precision=arbitrary-1001', search: '' });
+    expect(readCalcPrecisionFromUrl()).toBeNull();
   });
 
   it('normalizes lang strictly', () => {

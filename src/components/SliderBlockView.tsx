@@ -1,6 +1,7 @@
 import { memo, useRef } from 'react';
 import type { MathBlockData } from '../engine/dependencies';
 import { useCanvasStore } from '../store/canvasStore';
+import { formatNumberWith } from '../engine/format';
 import { useRegionDrag } from './useRegionDrag';
 import { IGrip, IWarn, IX } from './Icon';
 import StaleChip from './StaleChip';
@@ -24,6 +25,7 @@ function SliderBlockView({ block, scale }: Props) {
   const select = useCanvasStore((s) => s.select);
   const toggleSelect = useCanvasStore((s) => s.toggleSelect);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
+  const numFmt = useCanvasStore((s) => s.numFmt);
   // подписка ради перерендера при смене языка
   useCanvasStore((s) => s.lang);
 
@@ -37,8 +39,13 @@ function SliderBlockView({ block, scale }: Props) {
   const step = numOr(block.sliderStep, (hi - lo) / 100 || 1);
   const okRange = hi > lo && isFinite(step) && step > 0;
   const val =
-    typeof block.resultValue === 'number' && isFinite(block.resultValue) ? block.resultValue : lo;
+    typeof block.sliderVal === 'number' && isFinite(block.sliderVal)
+      ? block.sliderVal
+      : typeof block.resultValue === 'number' && isFinite(block.resultValue)
+        ? block.resultValue
+        : lo;
   const frac = okRange ? Math.min(1, Math.max(0, (val - lo) / (hi - lo))) : 0;
+  const valueLabel = okRange ? formatNumberWith(val, numFmt) : block.resultStr || '—';
 
   const snap = (raw: number): number => {
     const n = Math.round((raw - lo) / step);
@@ -105,7 +112,11 @@ function SliderBlockView({ block, scale }: Props) {
   );
 
   return (
-    <div className="nya-region absolute z-10" style={{ left: block.x, top: block.y }} data-visibility={block.visibility ?? 'show'}>
+    <div
+      className="nya-region absolute z-10"
+      style={{ left: block.x, top: block.y }}
+      data-visibility={block.visibility ?? 'show'}
+    >
       <div
         data-block-id={block.id}
         className={`nya-block relative rounded-xl px-2 py-1.5 group min-w-[240px] ${
@@ -167,9 +178,7 @@ function SliderBlockView({ block, scale }: Props) {
             onClick={(e) => e.stopPropagation()}
           />
           <span className="text-[14px] text-[var(--faint)]">=</span>
-          <span className="math-input text-[14px] text-[var(--ink)] truncate">
-            {block.resultStr || '—'}
-          </span>
+          <span className="math-input text-[14px] text-[var(--ink)] truncate">{valueLabel}</span>
         </div>
 
         {/* ползунок */}
@@ -203,6 +212,7 @@ function SliderBlockView({ block, scale }: Props) {
             endGesture();
           }}
           onPointerCancel={endGesture}
+          onLostPointerCapture={endGesture}
           onKeyDown={onKey}
           onClick={(e) => e.stopPropagation()}
           onDoubleClick={(e) => e.stopPropagation()}

@@ -19,6 +19,15 @@ describe('docFile: header with engine pin', () => {
     expect(back.blocks).toHaveLength(1);
   });
 
+  it('roundtrip произвольной точности листа', () => {
+    const file = serializeDocFile([{ id: 'a' }], '2026-09-19T00:00:00.000Z', {
+      mode: 'arbitrary',
+      digits: 100,
+    });
+    const back = parseDocFile(JSON.parse(JSON.stringify(file)));
+    expect(back.calcPrecision).toEqual({ mode: 'arbitrary', digits: 100 });
+  });
+
   it('мусор отвергается', () => {
     expect(() => parseDocFile(42)).toThrow();
     expect(() => parseDocFile({ blocks: 'nope' })).toThrow();

@@ -1,4 +1,9 @@
 import { ENGINE_VERSION } from '../engine/version';
+import {
+  DEFAULT_CALC_PRECISION,
+  normalizeCalcPrecision,
+  type CalculationPrecision,
+} from '../engine/precision';
 
 /**
  * Формат файлов проекта с заголовком версии движка (Pluto-урок: manifest в header).
@@ -11,6 +16,7 @@ import { ENGINE_VERSION } from '../engine/version';
 export interface DocFile {
   engine?: string;
   savedAt?: string;
+  calcPrecision?: CalculationPrecision;
   blocks: unknown[];
 }
 
@@ -19,6 +25,7 @@ export interface ParsedDoc {
   engine: string | null;
   legacy: boolean;
   blocks: unknown[];
+  calcPrecision?: CalculationPrecision;
 }
 
 /** Разобрать содержимое .json: массив (legacy) или объект с заголовком. Бросает на мусоре. */
@@ -30,7 +37,16 @@ export function parseDocFile(raw: unknown): ParsedDoc {
     const o = raw as Record<string, unknown>;
     if (!Array.isArray(o['blocks'])) throw new Error('not a NyaMath document (missing blocks[])');
     const engine = typeof o['engine'] === 'string' ? (o['engine'] as string) : null;
-    return { engine, legacy: false, blocks: o['blocks'] as unknown[] };
+    const calcPrecision =
+      o['calcPrecision'] && typeof o['calcPrecision'] === 'object'
+        ? normalizeCalcPrecision(o['calcPrecision'] as Partial<CalculationPrecision>)
+        : undefined;
+    return {
+      engine,
+      legacy: false,
+      blocks: o['blocks'] as unknown[],
+      ...(calcPrecision ? { calcPrecision } : {}),
+    };
   }
   throw new Error('not a NyaMath document');
 }
@@ -39,8 +55,15 @@ export function parseDocFile(raw: unknown): ParsedDoc {
 export function serializeDocFile(
   blocks: unknown[],
   now: string = new Date().toISOString(),
+  calcPrecision: CalculationPrecision = DEFAULT_CALC_PRECISION,
 ): DocFile {
-  return { engine: ENGINE_VERSION, savedAt: now, blocks };
+  const precision = normalizeCalcPrecision(calcPrecision);
+  return {
+    engine: ENGINE_VERSION,
+    savedAt: now,
+    ...(precision.mode === 'arbitrary' ? { calcPrecision: precision } : {}),
+    blocks,
+  };
 }
 
 /** Совместимость заголовка с текущим движком: major должен совпадать. */

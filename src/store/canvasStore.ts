@@ -18,12 +18,15 @@ import {
   setUnitSys as setEngineUnitSys,
   setComplexFmt as setEngineComplexFmt,
   setAngleMode as setEngineAngleMode,
+  setCalcPrecision as setEngineCalcPrecision,
   type NumFmt,
   type NumFmtMode,
   type UnitSys,
   type ComplexFmt,
   type AngleMode,
+  type CalculationPrecision,
 } from '../engine/mathEngine';
+import { DEFAULT_CALC_PRECISION, normalizeCalcPrecision } from '../engine/precision';
 import {
   STORAGE_KEY,
   STORAGE_KEY_LEGACY,
@@ -35,6 +38,8 @@ import {
   loadNumFmt,
   loadUnitSys,
   saveAngleMode,
+  loadCalcPrecision,
+  saveCalcPrecision,
   saveComplexFmt,
   saveElemOpen,
   saveGrid,
@@ -46,12 +51,7 @@ import { engineMismatch, parseDocFile } from '../lib/docFile';
 import * as tableIO from '../lib/tableIO';
 import * as snapshots from '../lib/snapshots';
 import { ENGINE_VERSION } from '../engine/version';
-import {
-  blankBlock,
-  normalizeBlock,
-  slimBlockRecord,
-  type BlockKind,
-} from '../lib/blocks';
+import { blankBlock, normalizeBlock, slimBlockRecord, type BlockKind } from '../lib/blocks';
 
 /* Настройки листа/форматы/палитры: персист — в store/persist.ts. */
 
@@ -214,6 +214,9 @@ export interface CanvasState {
   /** Режим углов тригонометрии: rad — радианы, deg — градусы (влияет на значения). */
   angleMode: AngleMode;
   setAngleMode: (m: AngleMode) => void;
+  /** Арифметическая точность текущего листа. */
+  calcPrecision: CalculationPrecision;
+  setCalcPrecision: (p: CalculationPrecision) => void;
   /** Disable Evaluation: исключить/вернуть блок из расчёта */
   toggleBlockDisabled: (id: string) => void;
   /** Инверсия флага для всего выделения одним шагом истории */
@@ -705,6 +708,20 @@ function scheduleRecalcAsync(ms: number) {
   }, ms);
 }
 
+/** Throttle slider drag recalculations so continuous movement updates live. */
+function scheduleSliderRecalc() {
+  if (recalcTimer) return;
+  recalcTimer = setTimeout(() => {
+    recalcTimer = null;
+    if (useCanvasStore.getState().calcMode === 'manual') {
+      persist(useCanvasStore.getState().blocks);
+      useCanvasStore.setState({ calcStale: true });
+      return;
+    }
+    void runRecalcJob();
+  }, 50);
+}
+
 /** Замер джобы в state + модуль для обратной совместимости телеметрии. */
 function stampMs(t0: number): number {
   lastCalcMs = performance.now() - t0;
@@ -735,6 +752,7 @@ async function runRecalcJob(only?: Set<string>): Promise<void> {
         unitSys: st0.unitSys,
         complexFmt: st0.complexFmt,
         angleMode: st0.angleMode,
+        calcPrecision: st0.calcPrecision,
         timeoutMs: RECALC_TIMEOUT_MS,
         signal: ctrl.signal,
         only: attemptOnly ? [...attemptOnly] : undefined,
@@ -1429,7 +1447,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const cur = get().blocks[id];
     if (!cur || cur.kind !== 'slider') return;
     set({ blocks: { ...get().blocks, [id]: { ...cur, sliderVal: val } } });
-    scheduleRecalcAsync(120);
+    scheduleSliderRecalc();
   },
 
   updateSlider: (id, patch) => {
@@ -1562,7 +1580,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   numFmt: loadNumFmt(),
   setNumFmt: (f) => {
     const mode: NumFmtMode = f.mode === 'sig' || f.mode === 'fixed' ? f.mode : 'auto';
-    const digits = Math.max(1, Math.min(15, Math.floor(f.digits) || 6));
+    const digits = Math.max(1, Math.min(100, Math.floor(f.digits) || 6));
     const next = { mode, digits };
     saveNumFmt(next);
     // main-thread движок (фолбэк без воркера) читает модульное состояние
@@ -1597,6 +1615,15 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     // main-thread движок (фолбэк без воркера) читает модульное состояние
     setEngineAngleMode(next);
     set({ angleMode: next });
+    scheduleRecalcAsync(60);
+  },
+
+  calcPrecision: loadCalcPrecision(),
+  setCalcPrecision: (value) => {
+    const next = normalizeCalcPrecision(value);
+    saveCalcPrecision(next);
+    setEngineCalcPrecision(next);
+    set({ calcPrecision: next });
     scheduleRecalcAsync(60);
   },
 
@@ -1845,10 +1872,14 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       else bad++;
     }
     if (!Object.keys(rec).length) return { ok: false, message: t('doc.noBlocks') };
+    const calcPrecision = normalizeCalcPrecision(parsed.calcPrecision ?? DEFAULT_CALC_PRECISION);
     pushHistory(get, set as SetFn, true);
     persist(rec);
+    saveCalcPrecision(calcPrecision);
+    setEngineCalcPrecision(calcPrecision);
     set((s) => ({
       blocks: rec,
+      calcPrecision,
       selectedIds: [],
       hoveredVar: null,
       editingId: null,

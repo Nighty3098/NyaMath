@@ -12,6 +12,7 @@ import {
   create,
   all,
   type EvalFunction,
+  type BigNumber,
   type MathJsInstance,
   type MathNode,
   type Unit,
@@ -20,11 +21,41 @@ import { buildPackScope, PACK_NAMES } from './packs';
 
 import { t, getLang } from '../i18n';
 import type { Scope } from './core';
-import { formatNumberWith, normalizeNumFmt } from './format';
+import { formatBigNumberWith, formatNumberWith, normalizeNumFmt } from './format';
+import {
+  DEFAULT_CALC_PRECISION,
+  normalizeCalcPrecision,
+  type CalculationPrecision,
+} from './precision';
 
 export type { Scope } from './core';
+export type { CalculationPrecision, CalculationPrecisionMode } from './precision';
 
 export const math: MathJsInstance = create(all, {});
+const nativeMathFns = math as unknown as Record<string, (...args: unknown[]) => unknown>;
+const nativeLog = nativeMathFns['log'];
+const nativeLog10 = nativeMathFns['log10'];
+
+let calcPrecision: CalculationPrecision = { ...DEFAULT_CALC_PRECISION };
+let arbitraryPi: BigNumber | null = null;
+
+export function setCalcPrecision(value: CalculationPrecision): void {
+  calcPrecision = normalizeCalcPrecision(value);
+  math.config({
+    number: calcPrecision.mode === 'arbitrary' ? 'BigNumber' : 'number',
+    precision: calcPrecision.digits,
+  });
+  arbitraryPi = calcPrecision.mode === 'arbitrary' ? (math.evaluate('pi') as BigNumber) : null;
+}
+
+export function getCalcPrecision(): CalculationPrecision {
+  return { ...calcPrecision };
+}
+
+function getArbitraryPi(): BigNumber {
+  if (!arbitraryPi) throw new Error('Arbitrary-precision constants are not initialized');
+  return arbitraryPi;
+}
 
 // rawArgs-решатели паков: mathjs решает raw/eager на этапе компиляции
 // по math-namespace, поэтому импортируем их туда явно (флаг rawArgs сохраняется).
@@ -75,10 +106,10 @@ math.import(
     Re: (x: unknown) => (math as unknown as { re: (v: unknown) => unknown }).re(x),
     Im: (x: unknown) => (math as unknown as { im: (v: unknown) => unknown }).im(x),
     // ln(x) — натуральный логарифм
-    ln: (x: number) => Math.log(Number(x)),
+    ln: (x: unknown) => (math.isBigNumber(x) ? nativeLog(x) : Math.log(Number(x))),
     // log(x) / log(x, base) — если один аргумент, то десятичный (инженерный);
     // с двумя — по основанию base. Перегружаем поверх mathjs.
-    log10_: (x: number) => Math.log10(Number(x)),
+    log10_: (x: unknown) => (math.isBigNumber(x) ? nativeLog10(x) : Math.log10(Number(x))),
   },
   { override: false },
 );
@@ -88,14 +119,16 @@ math.import(
 math.import(
   {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    log: (x: any, base?: any) => {
+    log: (x: unknown, base?: unknown) => {
+      if (math.isBigNumber(x)) {
+        return base === undefined ? nativeLog10(x) : nativeLog(x, base);
+      }
       const v = Number(x);
       if (base === undefined) return Math.log10(v);
       return Math.log(v) / Math.log(Number(base));
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ln: (x: any) => Math.log(Number(x)),
-    log10: (x: number) => Math.log10(Number(x)),
+    ln: (x: unknown) => (math.isBigNumber(x) ? nativeLog(x) : Math.log(Number(x))),
+    log10: (x: unknown) => (math.isBigNumber(x) ? nativeLog10(x) : Math.log10(Number(x))),
   },
   { override: true },
 );
@@ -133,6 +166,14 @@ const oAtan2 = _trig['atan2'];
 /** Вещественный asin/acos: вне [−1, 1] — ошибка области, а не тихий комплекс. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function realInvTrig(fn: 'asin' | 'acos', x: any, orig: (...a: any[]) => unknown): unknown {
+  if (math.isBigNumber(x)) {
+    const value = x as BigNumber;
+    if (value.abs().gt(1)) throw new Error(t('e.trigDomain', { fn }));
+    const result = orig(x);
+    return angleMode === 'deg'
+      ? (result as BigNumber).mul(math.bignumber(180).div(getArbitraryPi()))
+      : result;
+  }
   if (typeof x === 'number') {
     if (Math.abs(x) > 1) throw new Error(t('e.trigDomain', { fn }));
     return angleMode === 'deg' ? Number(orig(x)) * R2D : orig(x);
@@ -143,25 +184,52 @@ function realInvTrig(fn: 'asin' | 'acos', x: any, orig: (...a: any[]) => unknown
 math.import(
   {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    sin: (x: any) => (typeof x === 'number' ? oSin(angleMode === 'deg' ? x * D2R : x) : oSin(x)),
+    sin: (x: any) =>
+      math.isBigNumber(x)
+        ? oSin(angleMode === 'deg' ? x.mul(getArbitraryPi().div(180)) : x)
+        : typeof x === 'number'
+          ? oSin(angleMode === 'deg' ? x * D2R : x)
+          : oSin(x),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    cos: (x: any) => (typeof x === 'number' ? oCos(angleMode === 'deg' ? x * D2R : x) : oCos(x)),
+    cos: (x: any) =>
+      math.isBigNumber(x)
+        ? oCos(angleMode === 'deg' ? x.mul(getArbitraryPi().div(180)) : x)
+        : typeof x === 'number'
+          ? oCos(angleMode === 'deg' ? x * D2R : x)
+          : oCos(x),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tan: (x: any) => (typeof x === 'number' ? oTan(angleMode === 'deg' ? x * D2R : x) : oTan(x)),
+    tan: (x: any) =>
+      math.isBigNumber(x)
+        ? oTan(angleMode === 'deg' ? x.mul(getArbitraryPi().div(180)) : x)
+        : typeof x === 'number'
+          ? oTan(angleMode === 'deg' ? x * D2R : x)
+          : oTan(x),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     asin: (x: any) => realInvTrig('asin', x, oAsin),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     acos: (x: any) => realInvTrig('acos', x, oAcos),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     atan: (x: any) =>
-      typeof x === 'number' ? (angleMode === 'deg' ? Number(oAtan(x)) * R2D : oAtan(x)) : oAtan(x),
+      math.isBigNumber(x)
+        ? angleMode === 'deg'
+          ? (oAtan(x) as BigNumber).mul(math.bignumber(180).div(getArbitraryPi()))
+          : oAtan(x)
+        : typeof x === 'number'
+          ? angleMode === 'deg'
+            ? Number(oAtan(x)) * R2D
+            : oAtan(x)
+          : oAtan(x),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     atan2: (y: any, x: any) =>
-      typeof y === 'number' && typeof x === 'number'
+      math.isBigNumber(y) && math.isBigNumber(x)
         ? angleMode === 'deg'
-          ? Number(oAtan2(y, x)) * R2D
+          ? (oAtan2(y, x) as BigNumber).mul(math.bignumber(180).div(getArbitraryPi()))
           : oAtan2(y, x)
-        : oAtan2(y, x),
+        : typeof y === 'number' && typeof x === 'number'
+          ? angleMode === 'deg'
+            ? Number(oAtan2(y, x)) * R2D
+            : oAtan2(y, x)
+          : oAtan2(y, x),
   },
   { override: true },
 );
@@ -181,6 +249,71 @@ function lruSet<K, V>(m: Map<K, V>, k: K, v: V): void {
     if (!oldest.done) m.delete(oldest.value);
   }
   m.set(k, v);
+}
+
+function promoteScopedNumbers(value: unknown): unknown {
+  if (typeof value === 'number' && Number.isFinite(value)) return math.bignumber(value);
+  if (Array.isArray(value)) return value.map(promoteScopedNumbers);
+  if (value !== null && typeof value === 'object' && math.isMatrix(value)) {
+    const matrix = value as { map: (fn: (item: unknown) => unknown) => unknown };
+    if (math.isSparseMatrix(value)) {
+      return (
+        matrix as { map: (fn: (item: unknown) => unknown, skipZeros?: boolean) => unknown }
+      ).map(promoteScopedNumbers, true);
+    }
+    return matrix.map(promoteScopedNumbers);
+  }
+  return value;
+}
+
+export function normalizeScopePrecision(scope: object, names?: Iterable<string>): void {
+  if (calcPrecision.mode !== 'arbitrary') return;
+  const mapScope = scope as {
+    get?: (key: string) => unknown;
+    forEach?: (cb: (value: unknown, key: string) => void) => void;
+    set?: (key: string, value: unknown) => void;
+  };
+  const normalize = (key: string, value: unknown) => {
+    if (typeof value !== 'number' && !Array.isArray(value) && !math.isMatrix(value)) return;
+    const promoted = promoteScopedNumbers(value);
+    if (typeof mapScope.set === 'function') mapScope.set(key, promoted);
+    else (scope as Record<string, unknown>)[key] = promoted;
+  };
+  if (names && typeof mapScope.get === 'function') {
+    for (const key of names) normalize(key, mapScope.get(key));
+    return;
+  }
+  if (names) {
+    const record = scope as Record<string, unknown>;
+    for (const key of names) normalize(key, record[key]);
+    return;
+  }
+  if (typeof mapScope.forEach === 'function' && typeof mapScope.set === 'function') {
+    const entries: [string, unknown][] = [];
+    mapScope.forEach((value, key) => entries.push([key, value]));
+    for (const [key, value] of entries) normalize(key, value);
+    return;
+  }
+  const record = scope as Record<string, unknown>;
+  for (const key of Object.keys(record)) normalize(key, record[key]);
+}
+
+function precisionAwareCompile(code: EvalFunction, symbols: string[]): EvalFunction {
+  return {
+    evaluate(scope) {
+      if (scope && typeof scope === 'object') normalizeScopePrecision(scope, symbols);
+      return code.evaluate(scope);
+    },
+  };
+}
+
+function symbolNames(node: MathNode): string[] {
+  const names = new Set<string>();
+  node.traverse((child: unknown) => {
+    const symbol = child as { isSymbolNode?: boolean; name?: string };
+    if (symbol.isSymbolNode && symbol.name) names.add(symbol.name);
+  });
+  return [...names];
 }
 
 const compiledPreCache = new Map<string, EvalFunction | null>();
@@ -209,7 +342,7 @@ export function getCompiledPre(pre: string): EvalFunction | null {
       lruSet(compiledPreCache, pre, out);
       return out;
     }
-    out = assign ? null : node.compile();
+    out = assign ? null : precisionAwareCompile(node.compile(), symbolNames(node));
   } catch {
     out = null;
   }
@@ -266,7 +399,7 @@ export function compilePlotExpr(pre: string): CompiledPlotExpr | null {
       else if (nn.isSymbolNode && nn.name) free.add(String(nn.name));
     });
     if (assign) out = null;
-    else out = { code: node.compile(), freeVars: [...free] };
+    else out = { code: precisionAwareCompile(node.compile(), [...free]), freeVars: [...free] };
   } catch {
     out = null;
   }
@@ -743,6 +876,7 @@ function evalPre(pre: string, scope: Scope): unknown {
 /** Собственно вычисление строки без on-error (fallback — через evaluateLine). */
 function evaluateMain(input: string, scope: Scope): EvalResult {
   try {
+    normalizeScopePrecision(scope);
     const parsed = parseLine(input);
     const lhsIsJ = parsed.kind === 'assign' && parsed.lhs.trim() === 'j';
     const pre = preprocessJ(input, lhsIsJ);
@@ -908,7 +1042,7 @@ function fmtTag(): string {
 
 /** Кэш-партиция пересчёта: язык + формат чисел + система единиц + вид комплексных + углы. */
 export function envTag(): string {
-  return `${getLang()}|${fmtTag()}|${unitSys}|${complexFmt}|${angleMode}`;
+  return `${getLang()}|${fmtTag()}|${unitSys}|${complexFmt}|${angleMode}|${calcPrecision.mode}:${calcPrecision.digits}`;
 }
 
 /** Система единиц для отображения результатов: none — как введено (Prime 11-паттерн). */
@@ -1044,6 +1178,9 @@ export function formatResult(value: unknown): string {
       const c = value as { re: number; im: number };
       return formatComplex(c.re, c.im);
     }
+    if (math.isBigNumber(value)) {
+      return formatBigNumberWith(value, numFmt);
+    }
     if (typeof value === 'number') {
       if (!isFinite(value)) return String(value);
       return formatNumber(value);
@@ -1089,6 +1226,10 @@ function fmtPrecision(): number {
  */
 export function unitToNumber(v: unknown): number | null {
   if (typeof v === 'number') return isFinite(v) ? v : null;
+  if (math.isBigNumber(v)) {
+    const n = (v as BigNumber).toNumber();
+    return isFinite(n) ? n : null;
+  }
   try {
     if (v !== null && typeof v === 'object' && math.isUnit(v)) {
       const u = v as Unit;

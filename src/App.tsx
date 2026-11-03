@@ -14,6 +14,7 @@ import {
   clearShareParamFromUrl,
   decodeShareParam,
   readLangFromUrl,
+  readCalcPrecisionFromUrl,
   readShareParamFromUrl,
   readTemplateFromUrl,
 } from './lib/share';
@@ -97,7 +98,8 @@ export default function App() {
         e.preventDefault();
         // зажатый Ctrl+S не должен спамить диалогами сохранения
         if (e.repeat) return;
-        void saveDocument(useCanvasStore.getState().blocks);
+        const state = useCanvasStore.getState();
+        void saveDocument(state.blocks, state.calcPrecision);
       } else if (e.code === 'KeyZ' && !e.shiftKey) {
         // в поле ввода — нативный undo текста
         if (inField) return;
@@ -162,6 +164,7 @@ export default function App() {
   useEffect(() => {
     const incomingLang = readLangFromUrl();
     if (incomingLang) useCanvasStore.getState().setLang(incomingLang);
+    const incomingPrecision = readCalcPrecisionFromUrl();
     const tpl = readTemplateFromUrl();
     if (tpl) {
       const st = useCanvasStore.getState();
@@ -174,6 +177,7 @@ export default function App() {
       }
       if (tpl === 'ex20') st.loadTestScenario();
       else st.loadAdvancedDemo();
+      if (incomingPrecision) st.setCalcPrecision(incomingPrecision);
       clearShareParamFromUrl();
       setShareIncoming(false);
       alert(t('share.loaded', { n: Object.keys(useCanvasStore.getState().blocks).length }));
@@ -197,7 +201,8 @@ export default function App() {
             return;
           }
         }
-        const r = useCanvasStore.getState().loadDocument(data);
+        const doc = incomingPrecision ? { blocks: data, calcPrecision: incomingPrecision } : data;
+        const r = useCanvasStore.getState().loadDocument(doc);
         clearShareParamFromUrl();
         setShareIncoming(false);
         alert(r.ok ? t('share.loaded', { n: data.length }) : r.message);

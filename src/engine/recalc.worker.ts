@@ -22,6 +22,7 @@ type Engine = {
   setUnitSys: typeof import('./mathEngine').setUnitSys;
   setComplexFmt: typeof import('./mathEngine').setComplexFmt;
   setAngleMode: typeof import('./mathEngine').setAngleMode;
+  setCalcPrecision: typeof import('./mathEngine').setCalcPrecision;
 };
 let enginePromise: Promise<Engine> | null = null;
 function ensureEngine(): Promise<Engine> {
@@ -37,6 +38,7 @@ function ensureEngine(): Promise<Engine> {
       setUnitSys: me.setUnitSys,
       setComplexFmt: me.setComplexFmt,
       setAngleMode: me.setAngleMode,
+      setCalcPrecision: me.setCalcPrecision,
     }));
   }
   return enginePromise;
@@ -91,11 +93,13 @@ export async function runWorkerJob(
       setUnitSys,
       setComplexFmt,
       setAngleMode,
+      setCalcPrecision,
     } = await ensureEngine();
     setNumFmt(req.fmt ?? { mode: 'auto', digits: 6 });
     setUnitSys(req.unitSys ?? 'none');
     setComplexFmt(req.complexFmt ?? 'rect');
     setAngleMode(req.angleMode ?? 'rad');
+    setCalcPrecision(req.calcPrecision ?? { mode: 'standard', digits: 50 });
     const list = req.blocks.map(toFull);
     const outcome = await recalculateAllAsync(
       list,

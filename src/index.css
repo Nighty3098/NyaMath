@@ -564,6 +564,15 @@ body {
   margin: 0;
 }
 
+/* Обычные формулы переносятся по доступной ширине; матрицы сохраняют прокрутку. */
+.nya-math-wrap .katex,
+.nya-math-wrap .katex-html,
+.nya-math-wrap .katex-base {
+  display: inline;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* Уважение к reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -684,8 +693,15 @@ body {
 /* Выпадающие меню: воздушные, с секциями */
 .menu-drop {
   min-width: 15.5rem;
+  max-height: calc(100dvh - 16px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 6px;
   border-radius: var(--radius-m);
+}
+.nya-menu-root {
+  max-height: calc(100dvh - 56px);
 }
 .menu-item {
   display: flex;

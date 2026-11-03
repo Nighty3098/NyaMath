@@ -1,6 +1,13 @@
 import { recalculateAllAsync, setLastScope, type MathBlockData } from '../engine/dependencies';
 import type { Scope } from '../engine/mathEngine';
-import type { AngleMode, ComplexFmt, NumFmt, UnitSys } from '../engine/mathEngine';
+import {
+  setCalcPrecision,
+  type AngleMode,
+  type CalculationPrecision,
+  type ComplexFmt,
+  type NumFmt,
+  type UnitSys,
+} from '../engine/mathEngine';
 import {
   collectDefLines,
   deserializeScopeValue,
@@ -50,6 +57,7 @@ export interface RecalcJobOpts {
   complexFmt?: ComplexFmt;
   /** Режим углов тригонометрии (по умолчанию — из модуля движка). */
   angleMode?: AngleMode;
+  calcPrecision?: CalculationPrecision;
   timeoutMs?: number;
   signal?: AbortSignal;
   onProgress?: (done: number, total: number) => void;
@@ -128,6 +136,7 @@ async function fallbackMain(
   opts: RecalcJobOpts,
   timeoutMs: number,
 ): Promise<RecalcJobOutcome> {
+  if (opts.calcPrecision) setCalcPrecision(opts.calcPrecision);
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
@@ -218,6 +227,7 @@ export async function recalcInWorker(
 ): Promise<RecalcJobOutcome> {
   const timeoutMs = opts.timeoutMs ?? RECALC_TIMEOUT_MS;
   if (opts.signal?.aborted) return { status: 'cancelled' };
+  if (opts.calcPrecision) setCalcPrecision(opts.calcPrecision);
   if (!worker) worker = createWorker();
   if (!worker) return fallbackMain(blocks, opts, timeoutMs);
   // настоящий воркер (не тестовая подмена): сначала снапшот БД, иначе движок
@@ -241,6 +251,7 @@ export async function recalcInWorker(
     unitSys: opts.unitSys,
     complexFmt: opts.complexFmt,
     angleMode: opts.angleMode,
+    calcPrecision: opts.calcPrecision,
     blocks: slim,
     only: opts.only,
   };

@@ -47,12 +47,32 @@ export function createLru<K, V>(limit: number) {
 
 export type LruCache<K, V> = ReturnType<typeof createLru<K, V>>;
 
+interface BigNumberLike {
+  toNumber(): number;
+  isFinite(): boolean;
+  isZero(): boolean;
+}
+
+function isBigNumberLike(v: unknown): v is BigNumberLike {
+  if (v === null || typeof v !== 'object') return false;
+  const candidate = v as Partial<BigNumberLike>;
+  return (
+    typeof candidate.toNumber === 'function' &&
+    typeof candidate.isFinite === 'function' &&
+    typeof candidate.isZero === 'function'
+  );
+}
+
 /**
  * Вещественная часть значения (комплексные {re}, массивы не трогаем).
  * Возвращает null, если число недостижимо.
  */
 export function complexReOrNull(v: unknown): number | null {
   if (typeof v === 'number') return isFinite(v) ? v : null;
+  if (isBigNumberLike(v)) {
+    const n = v.toNumber();
+    return v.isFinite() && isFinite(n) ? n : null;
+  }
   if (v !== null && typeof v === 'object' && 're' in (v as object)) {
     const re = Number((v as { re: unknown }).re);
     return isFinite(re) ? re : null;
@@ -101,6 +121,7 @@ export function isTruthyValue(v: unknown): boolean {
   if (typeof v === 'string') return v.length > 0;
   if (v === null || v === undefined) return false;
   if (typeof v === 'object') {
+    if (isBigNumberLike(v)) return v.isFinite() && !v.isZero();
     if ('re' in (v as object)) {
       const c = v as { re: unknown; im: unknown };
       return Number(c.re) !== 0 || Number(c.im) !== 0;
