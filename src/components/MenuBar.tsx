@@ -642,7 +642,7 @@ export default function MenuBar({
               action: run(() => setNumFmt({ mode: 'fixed', digits: numFmt.digits })),
             },
             { sep: true },
-            ...[3, 4, 5, 6, 8, 10, 15, 34, 50, 100].map((d): Entry => ({
+            ...[3, 4, 5, 6, 8, 10, 15, 34, 50, 100, 200, 500, 1000].map((d): Entry => ({
               id: `fmt-d${d}`,
               label: t('menu.numDigits', { n: d }),
               checked: numFmt.digits === d,
@@ -662,7 +662,7 @@ export default function MenuBar({
               action: run(() => setCalcPrecision({ ...calcPrecision, mode: 'standard' })),
             },
             { sep: true },
-            ...[34, 50, 100, 200, 500, 1000].map((digits): Entry => ({
+            ...[34, 50, 100, 200, 500, 1000, 1100].map((digits): Entry => ({
               id: `precision-${digits}`,
               label: t('menu.precisionDigits', { n: digits }),
               checked: calcPrecision.mode === 'arbitrary' && calcPrecision.digits === digits,

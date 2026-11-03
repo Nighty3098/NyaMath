@@ -27,6 +27,27 @@ import {
   normalizeCalcPrecision,
   type CalculationPrecision,
 } from './precision';
+import {
+  calculateAcos,
+  calculateAsin,
+  calculateAtan,
+  calculateCatalan,
+  calculateExp,
+  calculateGamma,
+  calculateLn,
+  calculateLog10,
+  calculatePi,
+  calculateSinCos,
+  calculateZeta,
+} from './highPrecision';
+import {
+  clearSymbolicDefinitions,
+  evaluateSymbolic,
+  isSymbolicDefinitionUnsupported,
+  isSupportedSymbolicFunction,
+  markSymbolicDefinitionUnsupported,
+  setSymbolicDefinition,
+} from './symbolicEngine';
 
 export type { Scope } from './core';
 export type { CalculationPrecision, CalculationPrecisionMode } from './precision';
@@ -35,17 +56,62 @@ export const math: MathJsInstance = create(all, {});
 const nativeMathFns = math as unknown as Record<string, (...args: unknown[]) => unknown>;
 const nativeLog = nativeMathFns['log'];
 const nativeLog10 = nativeMathFns['log10'];
+const nativeExp = nativeMathFns['exp'];
+const nativePow = nativeMathFns['pow'];
+const nativeZeta = nativeMathFns['zeta'];
+const nativeGamma = nativeMathFns['gamma'];
 
 let calcPrecision: CalculationPrecision = { ...DEFAULT_CALC_PRECISION };
 let arbitraryPi: BigNumber | null = null;
+let arbitraryCatalan: BigNumber | null = null;
+const ARITHMETIC_GUARD_DIGITS = 128;
+const workingDigits = (): number => calcPrecision.digits + ARITHMETIC_GUARD_DIGITS;
+
+interface BigNumberConstructor {
+  precision: number;
+  set(config: { precision: number }): void;
+}
+
+function setBigNumberPrecision(precision: number): void {
+  const constructor = math.bignumber(0).constructor as unknown as BigNumberConstructor;
+  constructor.set({ precision });
+}
+
+function withGuardDigits<T>(calculate: () => T, extraDigits = 0): T {
+  const constructor = math.bignumber(0).constructor as unknown as BigNumberConstructor;
+  const previousPrecision = constructor.precision;
+  setBigNumberPrecision(workingDigits() + 30 + extraDigits);
+  try {
+    const result = calculate();
+    const round = (value: unknown): unknown => {
+      if (math.isBigNumber(value)) {
+        return (value as BigNumber).toSignificantDigits(workingDigits());
+      }
+      if (Array.isArray(value)) return value.map(round);
+      return value;
+    };
+    return round(result) as T;
+  } finally {
+    setBigNumberPrecision(previousPrecision);
+  }
+}
 
 export function setCalcPrecision(value: CalculationPrecision): void {
   calcPrecision = normalizeCalcPrecision(value);
+  const configuredPrecision = Math.min(calcPrecision.digits, 1000);
+  setBigNumberPrecision(configuredPrecision);
   math.config({
     number: calcPrecision.mode === 'arbitrary' ? 'BigNumber' : 'number',
-    precision: calcPrecision.digits,
+    precision: configuredPrecision,
   });
-  arbitraryPi = calcPrecision.mode === 'arbitrary' ? (math.evaluate('pi') as BigNumber) : null;
+  if (calcPrecision.mode === 'arbitrary') {
+    setBigNumberPrecision(workingDigits());
+    arbitraryPi = calculatePi(math.bignumber, workingDigits() + 20);
+    arbitraryCatalan = null;
+  } else {
+    arbitraryPi = null;
+    arbitraryCatalan = null;
+  }
 }
 
 export function getCalcPrecision(): CalculationPrecision {
@@ -55,6 +121,40 @@ export function getCalcPrecision(): CalculationPrecision {
 function getArbitraryPi(): BigNumber {
   if (!arbitraryPi) throw new Error('Arbitrary-precision constants are not initialized');
   return arbitraryPi;
+}
+
+function getArbitraryCatalan(): BigNumber {
+  if (!arbitraryCatalan) {
+    arbitraryCatalan = withGuardDigits(() =>
+      calculateCatalan(math.bignumber, workingDigits() + 20),
+    );
+  }
+  return arbitraryCatalan;
+}
+
+function getArbitrarySinCos(value: BigNumber): [BigNumber, BigNumber] {
+  const exponent = (value as BigNumber & { e?: number | null }).e ?? 0;
+  const extraDigits = Math.max(0, exponent);
+  return withGuardDigits(() => {
+    const pi =
+      extraDigits === 0
+        ? getArbitraryPi()
+        : calculatePi(math.bignumber, workingDigits() + 20 + extraDigits);
+    const radians = angleMode === 'deg' ? value.mul(pi.div(180)) : value;
+    return calculateSinCos(math.bignumber, radians, pi, workingDigits() + 20 + extraDigits);
+  }, extraDigits);
+}
+
+function getArbitraryAtan(value: BigNumber): BigNumber {
+  return withGuardDigits(() =>
+    calculateAtan(math.bignumber, value, getArbitraryPi(), workingDigits() + 20),
+  );
+}
+
+function ensureNamedHighPrecisionConstants(scope: object, expression: string): void {
+  if (calcPrecision.mode !== 'arbitrary' || !/\bCatalan\b/.test(expression)) return;
+  const record = scope as Record<string, unknown>;
+  if (record['Catalan'] === undefined) record['Catalan'] = getArbitraryCatalan();
 }
 
 // rawArgs-решатели паков: mathjs решает raw/eager на этапе компиляции
@@ -133,6 +233,78 @@ math.import(
   { override: true },
 );
 
+math.import(
+  {
+    exp: (x: unknown) =>
+      math.isBigNumber(x)
+        ? withGuardDigits(() => calculateExp(math.bignumber, x as BigNumber, workingDigits() + 20))
+        : nativeExp?.(x),
+    ln: (x: unknown) =>
+      math.isBigNumber(x) && (x as BigNumber).gt(0)
+        ? withGuardDigits(() => calculateLn(math.bignumber, x as BigNumber, workingDigits() + 20))
+        : nativeLog?.(x),
+    log10: (x: unknown) =>
+      math.isBigNumber(x) && (x as BigNumber).gt(0)
+        ? withGuardDigits(() =>
+            calculateLog10(math.bignumber, x as BigNumber, workingDigits() + 20),
+          )
+        : nativeLog10?.(x),
+    log: (x: unknown, base?: unknown) => {
+      if (!math.isBigNumber(x) || (x as BigNumber).lte(0)) {
+        return base === undefined ? nativeLog10?.(x) : nativeLog?.(x, base);
+      }
+      return withGuardDigits(() => {
+        const value = x as BigNumber;
+        if (base === undefined) {
+          return calculateLog10(math.bignumber, value, workingDigits() + 20);
+        }
+        const baseValue = math.isBigNumber(base)
+          ? (base as BigNumber)
+          : math.bignumber(Number(base));
+        return calculateLn(math.bignumber, value, workingDigits() + 20).div(
+          calculateLn(math.bignumber, baseValue, workingDigits() + 20),
+        );
+      });
+    },
+  },
+  { override: true },
+);
+
+const nativePowSignatures = (
+  nativePow as unknown as {
+    signatures: Record<string, (...args: unknown[]) => unknown>;
+  }
+).signatures;
+const highPrecisionPow = math.typed('pow', {
+  ...nativePowSignatures,
+  'BigNumber,BigNumber': (base: BigNumber, exponent: BigNumber) => {
+    if (!base.gt(0) || exponent.isInteger()) return nativePow?.(base, exponent);
+    return withGuardDigits(() => {
+      const power = exponent.times(calculateLn(math.bignumber, base, workingDigits() + 20));
+      return calculateExp(math.bignumber, power, workingDigits() + 20);
+    });
+  },
+});
+math.import({ pow: highPrecisionPow }, { override: true });
+
+math.import(
+  {
+    zeta: (x: unknown) =>
+      math.isBigNumber(x)
+        ? withGuardDigits(() => calculateZeta(math.bignumber, x as BigNumber, workingDigits() + 20))
+        : nativeZeta?.(x),
+    gamma: (x: unknown) =>
+      math.isBigNumber(x)
+        ? withGuardDigits(() => calculateGamma(math.bignumber, x as BigNumber, getArbitraryPi()))
+        : nativeGamma?.(x),
+    Gamma: (x: unknown) =>
+      math.isBigNumber(x)
+        ? withGuardDigits(() => calculateGamma(math.bignumber, x as BigNumber, getArbitraryPi()))
+        : nativeGamma?.(x),
+  },
+  { override: true },
+);
+
 // --- Режим углов для тригонометрии (калькуляторный паттерн DEG/RAD) ---
 // rad — как раньше (mathjs из коробки); deg — sin/cos/tan принимают градусы,
 // asin/acos/atan/atan2 возвращают градусы. Не-числа (комплексные, матрицы,
@@ -169,7 +341,11 @@ function realInvTrig(fn: 'asin' | 'acos', x: any, orig: (...a: any[]) => unknown
   if (math.isBigNumber(x)) {
     const value = x as BigNumber;
     if (value.abs().gt(1)) throw new Error(t('e.trigDomain', { fn }));
-    const result = orig(x);
+    const result = withGuardDigits(() =>
+      fn === 'asin'
+        ? calculateAsin(math.bignumber, value, getArbitraryPi(), workingDigits() + 20)
+        : calculateAcos(math.bignumber, value, getArbitraryPi(), workingDigits() + 20),
+    );
     return angleMode === 'deg'
       ? (result as BigNumber).mul(math.bignumber(180).div(getArbitraryPi()))
       : result;
@@ -186,21 +362,24 @@ math.import(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     sin: (x: any) =>
       math.isBigNumber(x)
-        ? oSin(angleMode === 'deg' ? x.mul(getArbitraryPi().div(180)) : x)
+        ? getArbitrarySinCos(x)[0]
         : typeof x === 'number'
           ? oSin(angleMode === 'deg' ? x * D2R : x)
           : oSin(x),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cos: (x: any) =>
       math.isBigNumber(x)
-        ? oCos(angleMode === 'deg' ? x.mul(getArbitraryPi().div(180)) : x)
+        ? getArbitrarySinCos(x)[1]
         : typeof x === 'number'
           ? oCos(angleMode === 'deg' ? x * D2R : x)
           : oCos(x),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tan: (x: any) =>
       math.isBigNumber(x)
-        ? oTan(angleMode === 'deg' ? x.mul(getArbitraryPi().div(180)) : x)
+        ? (() => {
+            const [sin, cos] = getArbitrarySinCos(x);
+            return sin.div(cos);
+          })()
         : typeof x === 'number'
           ? oTan(angleMode === 'deg' ? x * D2R : x)
           : oTan(x),
@@ -212,8 +391,8 @@ math.import(
     atan: (x: any) =>
       math.isBigNumber(x)
         ? angleMode === 'deg'
-          ? (oAtan(x) as BigNumber).mul(math.bignumber(180).div(getArbitraryPi()))
-          : oAtan(x)
+          ? getArbitraryAtan(x).mul(math.bignumber(180).div(getArbitraryPi()))
+          : getArbitraryAtan(x)
         : typeof x === 'number'
           ? angleMode === 'deg'
             ? Number(oAtan(x)) * R2D
@@ -222,9 +401,18 @@ math.import(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     atan2: (y: any, x: any) =>
       math.isBigNumber(y) && math.isBigNumber(x)
-        ? angleMode === 'deg'
-          ? (oAtan2(y, x) as BigNumber).mul(math.bignumber(180).div(getArbitraryPi()))
-          : oAtan2(y, x)
+        ? (() => {
+            const pi = getArbitraryPi();
+            const halfPi = pi.div(2);
+            let result: BigNumber;
+            if (x.isZero()) {
+              result = y.isZero() ? math.bignumber(0) : y.isNegative() ? halfPi.neg() : halfPi;
+            } else {
+              result = getArbitraryAtan(y.div(x));
+              if (x.isNegative()) result = result.plus(y.isNegative() ? pi.neg() : pi);
+            }
+            return angleMode === 'deg' ? result.mul(math.bignumber(180).div(pi)) : result;
+          })()
         : typeof y === 'number' && typeof x === 'number'
           ? angleMode === 'deg'
             ? Number(oAtan2(y, x)) * R2D
@@ -301,7 +489,10 @@ export function normalizeScopePrecision(scope: object, names?: Iterable<string>)
 function precisionAwareCompile(code: EvalFunction, symbols: string[]): EvalFunction {
   return {
     evaluate(scope) {
-      if (scope && typeof scope === 'object') normalizeScopePrecision(scope, symbols);
+      if (scope && typeof scope === 'object') {
+        ensureNamedHighPrecisionConstants(scope, symbols.join(' '));
+        normalizeScopePrecision(scope, symbols);
+      }
       return code.evaluate(scope);
     },
   };
@@ -414,6 +605,15 @@ export function createBaseScope(): Scope {
     // Мнимая единица под двумя именами
     i: math.complex(0, 1),
     j: math.complex(0, 1),
+    ...(calcPrecision.mode === 'arbitrary'
+      ? {
+          pi: getArbitraryPi(),
+          e: withGuardDigits(() =>
+            calculateExp(math.bignumber, math.bignumber(1), workingDigits() + 20),
+          ),
+          phi: math.bignumber(1).plus(math.bignumber(5).sqrt()).div(2),
+        }
+      : {}),
     ...buildPackScope(math),
   };
 }
@@ -431,6 +631,9 @@ export interface ParsedLine {
   isFunctionDef: boolean;
   /** строка кончается на `=`: `delta := atan(x) =` — определить И показать результат */
   show: boolean;
+  /** Символьный вывод через `→`, с optional численным приближением float,n. */
+  symbolic?: boolean;
+  floatDigits?: number;
 }
 
 /**
@@ -605,6 +808,20 @@ function indexOfBareEq(s: string): number {
 
 export function parseLine(rawInput: string): ParsedLine {
   const trimmed = rawInput.trim();
+  const symbolicOutput = trimmed.match(/^(.*?)\s*→(?:\s*float\s*,\s*(\d+)\s*)?$/i);
+  if (symbolicOutput) {
+    return {
+      kind: 'output',
+      lhs: '',
+      expr: symbolicOutput[1].trim(),
+      definedVar: null,
+      fnParams: [],
+      isFunctionDef: false,
+      show: true,
+      symbolic: true,
+      ...(symbolicOutput[2] ? { floatDigits: Number(symbolicOutput[2]) } : {}),
+    };
+  }
   if (trimmed.includes(':=')) {
     const idx = trimmed.indexOf(':=');
     const lhs = trimmed.slice(0, idx).trim();
@@ -865,6 +1082,67 @@ export function evaluateLine(rawInput: string, scope: Scope): EvalResult {
   return r;
 }
 
+function validateSymbolicExpression(expression: string, scope: Scope): void {
+  let node: MathNode;
+  try {
+    node = math.parse(expression);
+  } catch {
+    return;
+  }
+  let unsupported: string | null = null;
+  node.traverse((current: MathNode) => {
+    if (unsupported) return;
+    const candidate = current as MathNode & {
+      isFunctionNode?: boolean;
+      isSymbolNode?: boolean;
+      isUnitNode?: boolean;
+      fn?: unknown;
+      name?: string;
+    };
+    if (candidate.isUnitNode) {
+      unsupported = 'units are not supported by symbolic calculations';
+      return;
+    }
+    if (candidate.isFunctionNode) {
+      const fn = candidate.fn;
+      const name =
+        typeof fn === 'string'
+          ? fn
+          : fn && typeof fn === 'object' && 'name' in fn
+            ? String(fn.name)
+            : '';
+      if (name && !isSupportedSymbolicFunction(name)) unsupported = `unsupported function: ${name}`;
+      return;
+    }
+    if (!candidate.isSymbolNode) return;
+    const name = String(candidate.name ?? '');
+    if (!name || name === 'i' || name === 'pi' || name === 'e') return;
+    if (isSymbolicDefinitionUnsupported(scope, name)) {
+      unsupported = `no exact symbolic form is available for: ${name}`;
+      return;
+    }
+    if (Object.hasOwn(scope, name)) {
+      const value = scope[name];
+      if (
+        typeof value === 'function' ||
+        math.isUnit(value) ||
+        math.isMatrix(value) ||
+        Array.isArray(value)
+      ) {
+        unsupported = `unsupported symbolic value: ${name}`;
+      }
+      return;
+    }
+    try {
+      math.unit(name);
+      unsupported = `units are not supported by symbolic calculations: ${name}`;
+    } catch {
+      // Unknown identifiers are valid free symbolic variables.
+    }
+  });
+  if (unsupported) throw new Error(unsupported);
+}
+
 /** Вычислить предобработанное выражение (#C): кэшированная компиляция,
  * fallback — math.evaluate (присваивания внутри, новые юниты после defunit). */
 function evalPre(pre: string, scope: Scope): unknown {
@@ -876,8 +1154,22 @@ function evalPre(pre: string, scope: Scope): unknown {
 /** Собственно вычисление строки без on-error (fallback — через evaluateLine). */
 function evaluateMain(input: string, scope: Scope): EvalResult {
   try {
-    normalizeScopePrecision(scope);
     const parsed = parseLine(input);
+    if (parsed.symbolic) {
+      try {
+        const expression = preprocessJ(parsed.expr, false);
+        validateSymbolicExpression(expression, scope);
+        return {
+          value: evaluateSymbolic(scope, expression, parsed.floatDigits),
+          error: null,
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { value: null, error: t('e.symbolic', { msg: message }) };
+      }
+    }
+    ensureNamedHighPrecisionConstants(scope, parsed.expr);
+    normalizeScopePrecision(scope);
     const lhsIsJ = parsed.kind === 'assign' && parsed.lhs.trim() === 'j';
     const pre = preprocessJ(input, lhsIsJ);
 
@@ -891,6 +1183,7 @@ function evaluateMain(input: string, scope: Scope): EvalResult {
         // f(x) := body  ->  f(x) = body для mathjs
         const mathExpr = `${parsed.lhs} = ${preprocessRanges(preprocessJ(rhsClean, false))}`;
         math.evaluate(mathExpr, scope);
+        clearSymbolicDefinitions(scope, [parsed.definedVar as string]);
         // значение функции — сама функция
         return { value: scope[parsed.definedVar as string] ?? null, error: null };
       }
@@ -916,6 +1209,12 @@ function evaluateMain(input: string, scope: Scope): EvalResult {
       scope[parsed.lhs] = value; // особый случай `j := sqrt(-1)` — синхронизируем i
       if (parsed.lhs === 'j') {
         scope['i'] = value;
+      }
+      try {
+        validateSymbolicExpression(rhsPre, scope);
+        setSymbolicDefinition(scope, parsed.lhs, rhsPre);
+      } catch {
+        markSymbolicDefinitionUnsupported(scope, parsed.lhs);
       }
       void pre;
       return { value, error: null };
@@ -1281,6 +1580,13 @@ function toLatexUncached(input: string): string {
     return `\\text{${escapeLatex(text)}}`;
   }
   try {
+    const symbolicOutput = input.match(/^(.*?)\s*→(?:\s*float\s*,\s*(\d+)\s*)?$/i);
+    if (symbolicOutput) {
+      const arrow = symbolicOutput[2]
+        ? `\\xrightarrow{\\mathrm{float},\\;${symbolicOutput[2]}}`
+        : '\\to';
+      return `${safeTex(preprocessJ(symbolicOutput[1].trim(), false))} ${arrow}`;
+    }
     // перевод единиц `L = cm`, `g := 10cm = m`: единицу — прямым текстом
     const noShowL = input.replace(/=+\s*$/, '').trim();
     const [texLhs, texUnit] = splitOffUnit(noShowL);

@@ -15,6 +15,11 @@ import {
   toLatex,
   valueToLatex,
 } from './mathEngine';
+import {
+  clearSymbolicDefinitions,
+  getSymbolicDefinitions,
+  restoreSymbolicDefinitions,
+} from './symbolicEngine';
 import type { Scope } from './core';
 import { padRange } from './core';
 import { resetSolverTrace, takeSolverTrace } from './numeric';
@@ -190,6 +195,8 @@ interface CachedBlock {
   block: MathBlockData;
   /** записи в scope, сделанные блоком (defined-переменные после вычисления) */
   writes: Record<string, unknown>;
+  /** точные символьные определения, соответствующие записям блока */
+  symbolicWrites: Record<string, string | null>;
 }
 
 const recalcCache = new Map<string, CachedBlock>();
@@ -702,10 +709,16 @@ function createRecalcCtx(list: MathBlockData[], opts?: RecalcOpts): RecalcCtx {
   /** Запомнить результат блока в кэше (вызывать после вычисления). */
   const snapBlock = (c: MathBlockData, key: string) => {
     const writes: Record<string, unknown> = {};
-    for (const d of blockDefs(c)) {
+    const defs = blockDefs(c);
+    for (const d of defs) {
       if (d in scope) writes[d] = scope[d];
     }
-    recalcCache.set(c.id, { fp: key, block: c, writes });
+    recalcCache.set(c.id, {
+      fp: key,
+      block: c,
+      writes,
+      symbolicWrites: getSymbolicDefinitions(scope, defs),
+    });
   };
   /**
    * Пропуск вне fresh-множества: reuse кэша + протяжка scope, при расхождении
@@ -720,6 +733,7 @@ function createRecalcCtx(list: MathBlockData[], opts?: RecalcOpts): RecalcCtx {
     const key = `${langTag}|${fpOf(b.id)}`;
     out[b.id] = reuseHit(b, prev);
     for (const [k, v] of Object.entries(prev.writes)) scope[k] = v;
+    restoreSymbolicDefinitions(scope, blockDefs(b), prev.symbolicWrites);
     if (prev.fp !== key) stale.push(b.id);
     return true;
   };
@@ -897,6 +911,7 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
   if (prev && prev.fp === key) {
     out[b.id] = reuseHit(b, prev);
     for (const [k, v] of Object.entries(prev.writes)) scope[k] = v;
+    restoreSymbolicDefinitions(scope, blockDefs(b), prev.symbolicWrites);
     return;
   }
   ctx.allHit.v = false;
@@ -940,6 +955,7 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
     cur.resultStr = formatResult(val);
     cur.resultLatex = valueToLatex(val);
     scope[v] = val;
+    clearSymbolicDefinitions(scope, [v]);
     snapBlock(cur, key);
     return;
   }
@@ -966,7 +982,10 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
       cur.resultValue = r.value;
       cur.resultStr = formatResult(r.value);
       cur.resultLatex = valueToLatex(r.value);
-      if (cur.definedVar) scope[cur.definedVar] = r.value;
+      if (cur.definedVar) {
+        scope[cur.definedVar] = r.value;
+        clearSymbolicDefinitions(scope, [cur.definedVar]);
+      }
     }
     cur.displayLatex = '';
     snapBlock(cur, key);
@@ -1113,7 +1132,7 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
     cur.resultLatex = valueToLatex(lastValue);
     // подстановка Calcpad-стиля для выводимой последней строки
     // (`F := m*a =` → `2 * 5`); определения функций и молчаливые присваивания пропускаем
-    if (cur.isOutput && lastP && !lastP.isFunctionDef && scopeBeforeLast) {
+    if (cur.isOutput && lastP && !lastP.isFunctionDef && !lastP.symbolic && scopeBeforeLast) {
       const sub = buildSubstitution(lastP.expr, scopeBeforeLast, lastP.fnParams ?? [], lastValue);
       if (sub) {
         cur.substStr = sub.text;
@@ -1183,7 +1202,10 @@ function simApply(cur: MathBlockData, ctx: RecalcCtx, r: SimResult): void {
     cur.resultValue = r.final;
     cur.resultStr = formatResult(r.final);
     cur.resultLatex = valueToLatex(r.final);
-    if (cur.definedVar) ctx.scope[cur.definedVar] = r.final;
+    if (cur.definedVar) {
+      ctx.scope[cur.definedVar] = r.final;
+      clearSymbolicDefinitions(ctx.scope, [cur.definedVar]);
+    }
   }
 }
 

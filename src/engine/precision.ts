@@ -15,6 +15,6 @@ export function normalizeCalcPrecision(
 ): CalculationPrecision {
   const mode = value?.mode === 'arbitrary' ? 'arbitrary' : 'standard';
   const requested = Math.floor(value?.digits ?? DEFAULT_CALC_PRECISION.digits);
-  const digits = Math.max(16, Math.min(1000, requested || DEFAULT_CALC_PRECISION.digits));
+  const digits = Math.max(16, Math.min(5000, requested || DEFAULT_CALC_PRECISION.digits));
   return { mode, digits };
 }

@@ -15,10 +15,10 @@ export interface NumFmt {
 
 export const DEFAULT_NUM_FMT: NumFmt = { mode: 'auto', digits: 6 };
 
-/** Нормализовать формат отображения (clamp digits 1..100, fallback auto/6). */
+/** Нормализовать формат отображения (clamp digits 1..5000, fallback auto/6). */
 export function normalizeNumFmt(f: Partial<NumFmt> | null | undefined): NumFmt {
   const mode = f?.mode === 'sig' || f?.mode === 'fixed' ? f.mode : 'auto';
-  const digits = Math.max(1, Math.min(100, Math.floor(f?.digits ?? 6) || 6));
+  const digits = Math.max(1, Math.min(5000, Math.floor(f?.digits ?? 6) || 6));
   return { mode, digits };
 }
 
@@ -35,15 +35,16 @@ function fixZero(s: string, digits: number): string {
 /** Формат числа с явным форматом (чистая функция, без глобалов). */
 export function formatNumberWith(n: number, fmt: NumFmt): string {
   if (!isFinite(n)) return String(n);
-  if (n === 0 || Object.is(n, -0)) return fmt.mode === 'fixed' ? (0).toFixed(fmt.digits) : '0';
+  const digits = Math.min(fmt.digits, 100);
+  if (n === 0 || Object.is(n, -0)) return fmt.mode === 'fixed' ? (0).toFixed(digits) : '0';
   const abs = Math.abs(n);
   if (fmt.mode === 'sig') {
-    if (abs >= 1e-3 && abs < 1e6) return String(Number(n.toPrecision(fmt.digits)));
-    return expToSup(n.toExponential(fmt.digits - 1));
+    if (abs >= 1e-3 && abs < 1e6) return String(Number(n.toPrecision(digits)));
+    return expToSup(n.toExponential(digits - 1));
   }
   if (fmt.mode === 'fixed') {
-    if (abs >= 1e-3 && abs < 1e6) return fixZero(n.toFixed(fmt.digits), fmt.digits);
-    return expToSup(n.toExponential(fmt.digits));
+    if (abs >= 1e-3 && abs < 1e6) return fixZero(n.toFixed(digits), digits);
+    return expToSup(n.toExponential(digits));
   }
   if (abs >= 1e-3 && abs < 1e6) return Number(n.toPrecision(10)).toString();
   return expToSup(n.toExponential(5));
@@ -61,7 +62,7 @@ export function formatBigNumberWith(
   fmt: NumFmt,
 ): string {
   if (!n.isFinite()) return n.toString();
-  if (n.isZero()) return fmt.mode === 'fixed' ? (0).toFixed(fmt.digits) : '0';
+  if (n.isZero()) return fmt.mode === 'fixed' ? n.toFixed(fmt.digits) : '0';
   const abs = n.abs();
   const ordinaryRange = abs.gte(1e-3) && abs.lt(1e6);
   if (fmt.mode === 'sig') {

@@ -155,13 +155,15 @@ describe('urls and lang', () => {
     ).toBe(true);
   });
 
-  it('reads only a bounded arbitrary precision from the URL', () => {
+  it('reads arbitrary precision from the URL within the supported limit', () => {
     vi.stubGlobal('location', {
       hash: '#d=4abc&precision=arbitrary-100',
       search: '',
     });
     expect(readCalcPrecisionFromUrl()).toEqual({ mode: 'arbitrary', digits: 100 });
-    vi.stubGlobal('location', { hash: '#d=4abc&precision=arbitrary-1001', search: '' });
+    vi.stubGlobal('location', { hash: '#d=4abc&precision=arbitrary-1100', search: '' });
+    expect(readCalcPrecisionFromUrl()).toEqual({ mode: 'arbitrary', digits: 1100 });
+    vi.stubGlobal('location', { hash: '#d=4abc&precision=arbitrary-5001', search: '' });
     expect(readCalcPrecisionFromUrl()).toBeNull();
   });
 

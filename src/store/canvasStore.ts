@@ -1580,7 +1580,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   numFmt: loadNumFmt(),
   setNumFmt: (f) => {
     const mode: NumFmtMode = f.mode === 'sig' || f.mode === 'fixed' ? f.mode : 'auto';
-    const digits = Math.max(1, Math.min(100, Math.floor(f.digits) || 6));
+    const digits = Math.max(1, Math.min(5000, Math.floor(f.digits) || 6));
     const next = { mode, digits };
     saveNumFmt(next);
     // main-thread движок (фолбэк без воркера) читает модульное состояние

@@ -615,7 +615,7 @@ export function readCalcPrecisionFromUrl(): CalculationPrecision | null {
     const match = raw?.match(/^arbitrary-(\d+)$/);
     if (!match) return null;
     const digits = Number(match[1]);
-    if (!Number.isInteger(digits) || digits < 16 || digits > 1000) return null;
+    if (!Number.isInteger(digits) || digits < 16 || digits > 5000) return null;
     return normalizeCalcPrecision({ mode: 'arbitrary', digits });
   } catch {
     return null;

@@ -5,6 +5,10 @@ describe('normalizeNumFmt', () => {
   it('clamp и fallback', () => {
     expect(normalizeNumFmt(null)).toEqual({ mode: 'auto', digits: 6 });
     expect(normalizeNumFmt({ mode: 'sig', digits: 99 })).toEqual({ mode: 'sig', digits: 99 });
+    expect(normalizeNumFmt({ mode: 'fixed', digits: 1000 })).toEqual({
+      mode: 'fixed',
+      digits: 1000,
+    });
     expect(normalizeNumFmt({ mode: 'weird' as never, digits: 3 })).toEqual({
       mode: 'auto',
       digits: 3,
