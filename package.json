@@ -2,11 +2,20 @@
   "name": "nyamath",
   "private": true,
   "version": "0.0.0",
+  "description": "Engineering worksheet for formulas, plots, and simulations",
+  "author": "NyaMath contributors",
   "type": "module",
+  "main": "electron/main.mjs",
+  "desktopName": "NyaMath",
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:site": "vite",
     "build": "tsc -b && vite build",
+    "electron:dev": "node scripts/electron-dev.mjs",
+    "electron:linux": "npm run build && electron-builder --linux",
+    "electron:mac": "npm run build && electron-builder --mac",
+    "electron:win": "npm run build && electron-builder --win",
+    "electron:all": "npm run build && electron-builder --linux --mac --win",
     "seed": "node scripts/seed-db.mjs",
     "update-db": "node scripts/update-db.mjs",
     "codata": "node scripts/fetch-codata.mjs",
@@ -16,6 +25,49 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.nyamath.desktop",
+    "productName": "NyaMath",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/main.mjs",
+      "electron/preload.cjs",
+      "electron/icons/**/*",
+      "package.json"
+    ],
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "linux": {
+      "icon": "electron/icons/icon.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Education",
+      "maintainer": "NyaMath",
+      "syncDesktopName": true
+    },
+    "mac": {
+      "icon": "electron/icons/icon.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.education"
+    },
+    "win": {
+      "icon": "electron/icons/icon.ico",
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
@@ -41,6 +93,8 @@
     "@types/three": "^0.186.0",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0",
     "oxlint": "^1.81.0",
     "prettier": "^3.9.8",
     "tailwindcss": "^4.3.3",

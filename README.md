@@ -16,6 +16,23 @@ npm run build    # type-check + production build → dist/
 npm run lint     # oxlint
 ```
 
+## Desktop app (Electron)
+
+```bash
+npm run electron:dev   # desktop app with Vite hot reload
+npm run electron:linux # Linux: AppImage + deb
+npm run electron:mac   # macOS: dmg + zip
+npm run electron:win   # Windows: NSIS installer
+```
+
+Run `npm run electron:all` for all three targets locally (macOS packaging requires
+macOS). GitHub Actions builds Linux, macOS, and Windows artifacts on native runners
+when manually triggered (`workflow_dispatch`) or when a `v*` tag is pushed.
+Local artifacts are written to `release/`; CI artifacts are available from the
+Actions run. macOS uses the native application menu; Windows and Linux use the
+React menu bar and its custom minimize, maximize/restore, and close controls
+instead of the native window frame.
+
 `npm run dev` сначала собирает `mcp/dist`, затем поднимает MCP-сервис
 (`--port=$NYAMATH_PORT`, по умолчанию `3777`) рядом с vite: агент через
 stdio и приложение через _View → Live sync_ видят один документ в реалтайме.

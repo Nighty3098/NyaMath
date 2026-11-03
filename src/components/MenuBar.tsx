@@ -57,6 +57,7 @@ import {
   IWarn,
   ICheck,
   IPlay,
+  IMenu,
   IX,
   ITable,
   IZap,
@@ -95,6 +96,43 @@ type Entry =
       label: string;
       children: Entry[];
     };
+
+const nativeAccelerators: Record<string, string> = {
+  'file/save': 'CommandOrControl+S',
+  'file/print-color': 'CommandOrControl+P',
+  'view/scopemon': 'CommandOrControl+J',
+  'view/recalc': 'CommandOrControl+Enter',
+  'view/variables': 'CommandOrControl+K',
+  'view/problems': 'CommandOrControl+Shift+M',
+};
+
+function toNativeEntries(
+  entries: Entry[],
+  parentId: string,
+  actions: Map<string, () => void>,
+): NativeMenuItem[] {
+  return entries.map((entry) => {
+    if ('sep' in entry) return { type: 'separator' };
+    if ('head' in entry) return { label: entry.head, enabled: false };
+
+    const id = `${parentId}/${entry.id}`;
+    if ('children' in entry) {
+      return {
+        label: entry.label,
+        submenu: toNativeEntries(entry.children, id, actions),
+      };
+    }
+
+    actions.set(id, entry.action);
+    return {
+      id,
+      label: entry.label,
+      enabled: !entry.disabled,
+      checked: entry.checked,
+      accelerator: nativeAccelerators[id],
+    };
+  });
+}
 
 /** Новая вставка — в точку курсора-прицела; прицел каскадом уходит вниз. */
 function atCross(): { x: number; y: number } {
@@ -181,8 +219,34 @@ export default function MenuBar({
   const redo = useCanvasStore((s) => s.redo);
   const canUndo = useCanvasStore((s) => s.past.length > 0);
   const canRedo = useCanvasStore((s) => s.future.length > 0);
+  const windowControls = window.nyaElectron?.windowControls;
+  const showWindowControls =
+    window.nyaElectron?.platform === 'win32' || window.nyaElectron?.platform === 'linux';
+  const [windowMaximized, setWindowMaximized] = useState(false);
   // Кружок состояния расчёта: зелёный — чисто, красный — есть ошибки
   const errCount = useMemo(() => Object.values(blocks).filter((b) => b.error).length, [blocks]);
+
+  useEffect(() => {
+    if (!showWindowControls || !windowControls) return;
+    let active = true;
+    let receivedWindowState = false;
+    const unsubscribe = windowControls.onMaximizedChange((maximized) => {
+      receivedWindowState = true;
+      setWindowMaximized(maximized);
+    });
+    void windowControls
+      .getMaximized()
+      .then((maximized) => {
+        if (active && !receivedWindowState) setWindowMaximized(maximized);
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to read Electron window state:', error);
+      });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [showWindowControls, windowControls]);
 
   const [open, setOpen] = useState<string | null>(null);
   const [subOpen, setSubOpen] = useState<string | null>(null);
@@ -778,6 +842,72 @@ export default function MenuBar({
     },
   ];
 
+  const nativeActions = useRef(new Map<string, () => void>());
+  const lastNativeMenu = useRef('');
+
+  useEffect(() => {
+    const electron = window.nyaElectron;
+    if (electron?.platform !== 'darwin') return;
+    return electron.onNativeMenuAction((id) => nativeActions.current.get(id)?.());
+  }, []);
+
+  useEffect(() => {
+    const electron = window.nyaElectron;
+    if (electron?.platform !== 'darwin') return;
+
+    const actions = new Map<string, () => void>();
+    actions.set('edit/undo', () => useCanvasStore.getState().undo());
+    actions.set('edit/redo', () => useCanvasStore.getState().redo());
+    const nativeMenus = menus.map((menu) => ({
+      label: menu.label,
+      items: toNativeEntries(
+        menu.id === 'view'
+          ? [
+              ...menu.items,
+              { sep: true },
+              {
+                id: 'toolbar-calc-mode',
+                label: calcMode === 'manual' ? t('menu.calcManual') : t('menu.calcAuto'),
+                checked: calcMode === 'manual',
+                action: run(() => setCalcMode(calcMode === 'manual' ? 'auto' : 'manual')),
+              },
+              ...(calcMode === 'manual'
+                ? [
+                    {
+                      id: 'toolbar-calc-now',
+                      label: t('menu.calcNow'),
+                      disabled: computeActive,
+                      action: run(recalcNow),
+                    } satisfies Entry,
+                  ]
+                : []),
+              {
+                id: 'toolbar-sidebar',
+                label: t('menu.sidebar'),
+                checked: sidebarOpen,
+                action: run(toggleSidebar),
+              },
+            ]
+          : menu.items,
+        menu.id,
+        actions,
+      ),
+    }));
+    nativeActions.current = actions;
+
+    const nativeTemplate: NativeMenuTemplate = {
+      editLabel: t('menu.edit'),
+      undoLabel: t('menu.undo'),
+      redoLabel: t('menu.redo'),
+      menus: nativeMenus,
+    };
+    const serialized = JSON.stringify(nativeTemplate);
+    if (serialized !== lastNativeMenu.current) {
+      lastNativeMenu.current = serialized;
+      electron.setNativeMenu(nativeTemplate);
+    }
+  });
+
   const renderLeaf = (
     it: Extract<Entry, { action: unknown }>,
     _i: number | string,
@@ -983,12 +1113,23 @@ export default function MenuBar({
   return (
     <div
       ref={barRef}
-      className="nya-menubar h-11 shrink-0 flex items-center gap-1 px-3 border-b border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] z-20 select-none"
+      className={`nya-menubar h-11 shrink-0 flex items-center gap-1 px-3 border-b border-[var(--chrome-line)] bg-[var(--chrome)] text-[var(--chrome-ink)] z-20 select-none${showWindowControls ? ' electron-titlebar' : ''}`}
       role="menubar"
       aria-label={t('menu.main')}
     >
       {/* меню слева, частые действия — справа */}
       <div className="flex items-center min-w-0 shrink-0">
+        {/* гамбургер: на телефоне текстовые меню скрыты — всё дублируется в шит */}
+        <button
+          type="button"
+          className="nya-tbtn nya-tbtn-big nya-tbtn-burger"
+          onClick={() => setMOpen(true)}
+          aria-label={t('menu.main')}
+          aria-expanded={mOpen}
+          aria-haspopup="dialog"
+        >
+          <IMenu />
+        </button>
         {menus.map((m) => (
           <div key={m.id} className="relative">
             <button
@@ -1009,11 +1150,15 @@ export default function MenuBar({
           </div>
         ))}
       </div>
-      <div className="flex-1" aria-hidden="true" />
+      <div
+        className={`flex-1${showWindowControls ? ' electron-titlebar-drag' : ''}`}
+        aria-hidden="true"
+      />
 
       {/* частые действия — всегда под рукой */}
       <div
         className="flex items-center gap-0.5 shrink-0"
+        data-electron-window-toolbar={showWindowControls || undefined}
         role="toolbar"
         aria-label={t('menu.edit')}
       >
@@ -1089,7 +1234,6 @@ export default function MenuBar({
             )}
           </button>
         )}
-        <span className="w-px h-5 bg-[var(--chrome-line)] mx-1" aria-hidden="true" />
         <button
           type="button"
           className={`nya-tbtn nya-tbtn-big ${sidebarOpen ? 'is-on' : ''}`}
@@ -1123,6 +1267,51 @@ export default function MenuBar({
         >
           {THEMES.find((x) => x.id === theme)?.kind === 'light' ? <IMoon /> : <ISun />}
         </button>
+        {showWindowControls && windowControls && (
+          <>
+            <div className="electron-titlebar-controls flex items-center -mr-3">
+              <button
+                type="button"
+                className="electron-window-control"
+                onClick={windowControls.minimize}
+                title={t('window.minimize')}
+                aria-label={t('window.minimize')}
+              >
+                <svg viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M2 6h8" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="electron-window-control"
+                onClick={windowControls.toggleMaximize}
+                title={windowMaximized ? t('window.restore') : t('window.maximize')}
+                aria-label={windowMaximized ? t('window.restore') : t('window.maximize')}
+              >
+                {windowMaximized ? (
+                  <svg viewBox="0 0 12 12" aria-hidden="true">
+                    <path d="M4 2h6v6M8 4H2v6h6z" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 12 12" aria-hidden="true">
+                    <rect x="2.5" y="2.5" width="7" height="7" />
+                  </svg>
+                )}
+              </button>
+              <button
+                type="button"
+                className="electron-window-control electron-window-control-close"
+                onClick={windowControls.close}
+                title={t('window.close')}
+                aria-label={t('window.close')}
+              >
+                <svg viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="m3 3 6 6m0-6L3 9" />
+                </svg>
+              </button>
+            </div>
+          </>
+        )}
       </div>
       {mobileSheet}
     </div>

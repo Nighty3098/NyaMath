@@ -24,6 +24,7 @@ export default function App() {
   const theme = useCanvasStore((s) => s.theme);
   const lang = useCanvasStore((s) => s.lang);
   const blocks = useCanvasStore((s) => s.blocks);
+  const nativeMacMenu = window.nyaElectron?.platform === 'darwin';
   const loadDocument = useCanvasStore((s) => s.loadDocument);
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const [welcomeForced, setWelcomeForced] = useState(false);
@@ -242,12 +243,14 @@ export default function App() {
         <div data-ph="title" className="nya-print-title" />
         <div data-ph="sub" className="nya-print-sub" />
       </div>
-      <MenuBar
-        onOpenFile={() => fileRef.current?.click()}
-        onShowWelcome={() => setWelcomeForced(true)}
-        onOpenNavigator={() => setNavigatorOpen(true)}
-        onOpenProblems={() => setProblemsOpen((v) => !v)}
-      />
+      <div className={nativeMacMenu ? 'hidden' : undefined}>
+        <MenuBar
+          onOpenFile={() => fileRef.current?.click()}
+          onShowWelcome={() => setWelcomeForced(true)}
+          onOpenNavigator={() => setNavigatorOpen(true)}
+          onOpenProblems={() => setProblemsOpen((v) => !v)}
+        />
+      </div>
       <input
         ref={fileRef}
         type="file"

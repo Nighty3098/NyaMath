@@ -18,6 +18,7 @@ export type SwStatus = 'registered' | 'skipped' | 'unsupported';
 export function registerSW(): SwStatus {
   try {
     if (!import.meta.env.PROD) return 'skipped';
+    if (typeof location !== 'undefined' && location.protocol === 'app:') return 'skipped';
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return 'unsupported';
     void navigator.serviceWorker.register(swUrl()).catch(() => {
       /* приватный режим / запрет SW — работаем без офлайна */
