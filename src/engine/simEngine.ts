@@ -575,6 +575,8 @@ function beginOde(def: SimDef, docScope: Scope): { fail: SimResult } | { run: Od
             s[a.name] = v;
           }
           if (stop) return true;
+          // Later events observe state and aux values after earlier event actions.
+          refresh(tt, y);
         }
         prev[e] = now;
       }

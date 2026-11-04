@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectCycles, type MathBlockData } from './dependencies';
+import { detectCycles, recalculateAll, type MathBlockData } from './dependencies';
 
 function block(id: string, y: number, rawInput: string): MathBlockData {
   return {
@@ -20,13 +20,17 @@ function block(id: string, y: number, rawInput: string): MathBlockData {
 }
 
 describe('dependency cycle detection', () => {
-  it('marks only blocks participating in a dependency cycle', () => {
+  it('resolves repeated definitions using the nearest earlier block', () => {
     const blocks = [
-      block('a', 60, 'x := y + 1'),
-      block('b', 124, 'y := x + 1'),
-      block('c', 188, 'z := x + 2'),
+      block('a', 60, 'x := 1'),
+      block('b', 124, 'a := x + 1'),
+      block('c', 188, 'x := a + 1'),
     ];
-    expect(detectCycles(blocks)).toEqual(new Set(['a', 'b']));
+    expect(detectCycles(blocks)).toEqual(new Set());
+    const result = recalculateAll(blocks);
+    expect(result.blocks.a.error).toBeNull();
+    expect(result.blocks.b.resultStr).toBe('2');
+    expect(result.blocks.c.resultStr).toBe('3');
   });
 
   it('handles a deep dependency path without scanning the DFS stack per back-edge', () => {

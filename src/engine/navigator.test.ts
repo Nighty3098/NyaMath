@@ -84,6 +84,10 @@ describe('variable index helpers (Ctrl+K navigator)', () => {
     expect(deps).not.toContain('Z');
   });
 
+  it('does not treat an earlier assignment in the same block as an external dependency', () => {
+    expect(blockDeps(block('math', 'R1 := 2\nZ := R1 + R2'))).toEqual(['R2']);
+  });
+
   it('program block: def = exportName, deps from analysis', () => {
     const b = block('program', 'x := 1\ny := x^2', { exportName: 'res' });
     expect(blockDefs(b)).toEqual(['res']);

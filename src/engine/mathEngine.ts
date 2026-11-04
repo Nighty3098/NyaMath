@@ -779,6 +779,9 @@ export function convertToUnit(value: unknown, unitStr: string, exprSlice: string
   if (value !== null && typeof value === 'object' && math.isUnit(value)) {
     return (value as Unit).to(unitStr);
   }
+  if (math.isBigNumber(value)) {
+    return math.unit(value, unitStr);
+  }
   if (typeof value === 'number' && isFinite(value)) {
     return math.unit(value, unitStr);
   }

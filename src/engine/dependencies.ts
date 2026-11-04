@@ -337,6 +337,7 @@ function computeBlockDeps(b: MathBlockData): string[] {
   if (b.kind === 'sim') return simDeps(b);
   if (b.kind === 'slider') return [];
   const deps = new Set<string>();
+  const localDefs = new Set<string>();
   for (const line of b.rawInput.split('\n')) {
     const t = stripOnError(line.trim());
     if (!t || t.startsWith('//') || t.startsWith('#')) continue;
@@ -346,7 +347,10 @@ function computeBlockDeps(b: MathBlockData): string[] {
     const src = unitU ? lhsU : t;
     try {
       const p = parseLine(src);
-      for (const d of extractDependencies(p.expr, p.fnParams)) deps.add(d);
+      for (const d of extractDependencies(p.expr, p.fnParams)) {
+        if (!localDefs.has(d)) deps.add(d);
+      }
+      if (p.kind === 'assign' && p.definedVar) localDefs.add(p.definedVar);
     } catch {
       /* ignore */
     }
@@ -382,20 +386,19 @@ function computeBlockDefs(b: MathBlockData): string[] {
 }
 
 export function detectCycles(blocks: MathBlockData[]): Set<string> {
-  const defMap = new Map<string, string>();
-  for (const b of blocks) {
-    for (const d of blockDefs(b)) defMap.set(d, b.id);
-  }
+  const ordered = sortBlocksTopDown(blocks);
+  const latestDef = new Map<string, string>();
   const adj = new Map<string, string[]>();
-  for (const b of blocks) {
+  for (const b of ordered) {
     if (b.kind !== 'math' && b.kind !== 'program' && b.kind !== 'sim' && b.kind !== 'slider')
       continue;
     const deps = new Set<string>();
     for (const d of blockDeps(b)) {
-      const target = defMap.get(d);
+      const target = latestDef.get(d);
       if (target && target !== b.id) deps.add(target);
     }
     adj.set(b.id, [...deps]);
+    for (const name of blockDefs(b)) latestDef.set(name, b.id);
   }
   const visited = new Map<string, number>();
   const cyclic = new Set<string>();
@@ -419,7 +422,7 @@ export function detectCycles(blocks: MathBlockData[]): Set<string> {
     stackIndex.delete(id);
     visited.set(id, 2);
   };
-  for (const b of blocks) {
+  for (const b of ordered) {
     if ((visited.get(b.id) ?? 0) === 0) dfs(b.id);
   }
   return cyclic;

@@ -57,7 +57,9 @@ stdio и приложение через _View → Live sync_ видят оди�
   preserves supported exact expressions independently of numeric calculation; unsupported
   functions and units report an error rather than returning a misleading result. `float,n`
   approximates the expression to `n` significant digits. Complex values and numerical
-  solvers/simulations still use double precision.
+  solvers/simulations still use double precision. Infinite `nsum` uses a recent-term
+  numerical tail estimate; general convergence cannot be proved for arbitrary terms, so
+  unsupported or inconclusive tails report non-convergence.
 - **Serverless sharing**: _File → Share link_ packs the sheet into a URL fragment
   (`#d=…`, slim tuples → phrase dictionary → deflate-raw → base64url, language and
   arbitrary-precision mode included);

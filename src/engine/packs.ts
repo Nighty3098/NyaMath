@@ -92,7 +92,8 @@ export function buildPackScope(math: MathJsInstance): Scope {
     const A = Number(a);
     const B = Number(b);
     const N = n === undefined ? 50 : Math.floor(Number(n));
-    if (N < 2 || N > 100000) throw new Error(t('e.linspaceN'));
+    if (!Number.isFinite(A) || !Number.isFinite(B)) throw new Error(t('e.calcArgs'));
+    if (!Number.isFinite(N) || N < 2 || N > 100000) throw new Error(t('e.linspaceN'));
     const out: number[] = [];
     for (let k = 0; k < N; k++) out.push(Number((A + ((B - A) * k) / (N - 1)).toPrecision(12)));
     return math.matrix(out);
@@ -186,6 +187,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
       } catch {
         throw new Error(t('e.simEval', { expr: expr.slice(0, 60) }));
       }
+      if (math.isBigNumber(v)) v = Number(v);
       if (typeof v !== 'number' || !isFinite(v))
         throw new Error(t('e.simNotNum', { expr: expr.slice(0, 60) }));
       return v;
@@ -1741,6 +1743,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const lines: string[] = [];
       try {
         const r = nelderMead(f, guess, 500, 1e-8, (l) => lines.push(l));
+        if (!r.converged) throw new Error(t('e.calcNoConv'));
         pushSolverTrace(scope, {
           label: `minimize ${expr} from ${vecTrace(guess)}: ${r.iters} iters, f=${fmtTrace(r.fx)}`,
           lines: compactTrace(lines),
@@ -1772,6 +1775,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const lines: string[] = [];
       try {
         const r = nelderMead(f, guess, 500, 1e-8, (l) => lines.push(l));
+        if (!r.converged) throw new Error(t('e.calcNoConv'));
         pushSolverTrace(scope, {
           label: `maximize ${expr} from ${vecTrace(guess)}: ${r.iters} iters, f=${fmtTrace(-r.fx)}`,
           lines: compactTrace(lines),
@@ -1819,10 +1823,12 @@ export function buildPackScope(math: MathJsInstance): Scope {
           const d = (f(x + h) - f(x - h)) / (2 * h);
           if (!isFinite(d) || d === 0) throw new Error(t('e.calcNoConv'));
           const nx = x - fx / d;
-          if (Math.abs(nx - x) < 1e-12) {
-            pub(`${head}: f=${fmtTrace(f(nx))}`);
+          const nextFx = f(nx);
+          if (Math.abs(nx - x) < 1e-12 && Math.abs(nextFx) <= 1e-10) {
+            pub(`${head}: f=${fmtTrace(nextFx)}`);
             return nx;
           }
+          if (nx === x) throw new Error(t('e.calcNoConv'));
           x = nx;
         }
         throw new Error(t('e.calcNoConv'));
@@ -1844,19 +1850,18 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const yb = needNum(evNode(args[5], scope));
       const s0 = args.length > 6 ? needNum(evNode(args[6], scope)) : (yb - ya) / (b - a);
       if (!/^[A-Za-z_]\w*$/.test(vx) || !(b > a)) throw new Error(t('e.calcArgs'));
-      const NPTS = 101;
+      const SEARCH_STEPS = 400;
+      const OUTPUT_STRIDE = 4;
       const ev = numEvaluator(expr, scope);
       const rhs = (tt: number, y: number[]): number[] => {
         const yp = ev({ [vx]: tt, y: y[0], yp: y[1] });
         return [y[1], yp];
       };
       const shoot = (s: number): number => {
-        const h = (b - a) / 400;
+        const h = (b - a) / SEARCH_STEPS;
         let y = [ya, s];
-        let tt = a;
-        for (let k = 0; k < 400; k++) {
-          y = rk4Step(rhs, tt, y, h);
-          tt += h;
+        for (let k = 0; k < SEARCH_STEPS; k++) {
+          y = rk4Step(rhs, a + k * h, y, h);
           if (!isFinite(y[0]) || !isFinite(y[1])) return NaN;
         }
         return y[0] - yb;
@@ -1871,34 +1876,54 @@ export function buildPackScope(math: MathJsInstance): Scope {
         let f0 = shoot(x0);
         if (!isFinite(f0)) throw new Error(t('e.calcNoConv'));
         lines.push(`s0=${fmtTrace(x0)} miss=${fmtTrace(f0)}`);
+        let converged = Math.abs(f0) < 1e-9;
+        let slope = x0;
         let iters = 0;
-        for (let k = 0; k < 60; k++) {
-          const f1 = shoot(x1);
-          if (!isFinite(f1)) throw new Error(t('e.calcNoConv'));
-          lines.push(`k=${k} s=${fmtTrace(x1)} miss=${fmtTrace(f1)}`);
-          iters = k + 1;
-          if (Math.abs(f1) < 1e-9) {
+        if (!converged) {
+          for (let k = 0; k < 60; k++) {
+            const f1 = shoot(x1);
+            if (!isFinite(f1)) throw new Error(t('e.calcNoConv'));
+            lines.push(`k=${k} s=${fmtTrace(x1)} miss=${fmtTrace(f1)}`);
+            iters = k + 1;
+            if (Math.abs(f1) < 1e-9) {
+              slope = x1;
+              converged = true;
+              break;
+            }
+            const denom = f1 - f0;
+            if (denom === 0) throw new Error(t('e.calcNoConv'));
+            const x2 = x1 - (f1 * (x1 - x0)) / denom;
             x0 = x1;
-            break;
+            f0 = f1;
+            x1 = x2;
           }
-          const denom = f1 - f0;
-          if (denom === 0) throw new Error(t('e.calcNoConv'));
-          const x2 = x1 - (f1 * (x1 - x0)) / denom;
-          x0 = x1;
-          f0 = f1;
-          x1 = x2;
+          if (!converged) {
+            const residual = shoot(x1);
+            if (!isFinite(residual) || Math.abs(residual) >= 1e-9) {
+              throw new Error(t('e.calcNoConv'));
+            }
+            slope = x1;
+            converged = true;
+          }
         }
-        pubBvp(`bvp ${expr}: secant ${iters} iters, s=${fmtTrace(x0)}`);
-        // финальный прогон с сеткой для графика
-        const h = (b - a) / (NPTS - 1);
-        let y = [ya, x0];
+        if (!converged) throw new Error(t('e.calcNoConv'));
+        const finalResidual = shoot(slope);
+        if (!isFinite(finalResidual) || Math.abs(finalResidual) >= 1e-9) {
+          throw new Error(t('e.calcNoConv'));
+        }
+        // Use the same RK4 grid as shooting; only decimate the returned trajectory.
+        const h = (b - a) / SEARCH_STEPS;
+        let y = [ya, slope];
         let tt = a;
         const rows: number[][] = [[a, ya]];
-        for (let k = 1; k < NPTS; k++) {
+        for (let k = 1; k <= SEARCH_STEPS; k++) {
           y = rk4Step(rhs, tt, y, h);
           tt = a + k * h;
-          rows.push([tt, y[0]]);
+          if (!isFinite(y[0]) || !isFinite(y[1])) throw new Error(t('e.calcNoConv'));
+          if (k % OUTPUT_STRIDE === 0) rows.push([tt, y[0]]);
         }
+        if (Math.abs(y[0] - yb) >= 1e-9) throw new Error(t('e.calcNoConv'));
+        pubBvp(`bvp ${expr}: secant ${iters} iters, s=${fmtTrace(slope)}`);
         return math.matrix(rows);
       } catch (e) {
         if (lines.length) pubBvp(`bvp ${expr}: no convergence`);
@@ -1959,7 +1984,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
       }
     }),
     // nsum("k^2", "k", 1, 100), nprod — целочисленные суммы/произведения;
-    // nsum держит и бесконечный предел: суммирует до малости члена
+    // Infinite sums stop only when recent terms support a tail estimate.
     nsum: raw((args, _m, scope) => {
       const [expr, v, a, b] = sumProdArgs(args, scope, true);
       const ev = numEvaluator(expr, scope);
@@ -1968,23 +1993,49 @@ export function buildPackScope(math: MathJsInstance): Scope {
         for (let k = a; k <= b; k++) s += ev({ [v]: k });
         return s;
       }
-      // Σ до ±∞: стоп по малости члена, иначе — честная несходимость
+      // Infinite sums use recent-term estimates; arbitrary convergence cannot be proved.
       const MAX = 1000000;
-      const TOL = 1e-9;
+      const TOL = 1e-6;
+      const WINDOW = 8;
       let s = 0;
+      const recent: number[] = [];
+      const converged = (term: number): boolean => {
+        if (recent.length < WINDOW) return false;
+        const magnitudes = recent.map(Math.abs);
+        const threshold = TOL * (1 + Math.abs(s));
+        if (magnitudes.some((m) => m > threshold)) return false;
+        const decreasing = magnitudes.every(
+          (m, i) => i === 0 || m <= magnitudes[i - 1] * (1 + 1e-12),
+        );
+        const alternating =
+          decreasing &&
+          recent.every((value, i) => i === 0 || Math.sign(value) !== Math.sign(recent[i - 1]));
+        if (alternating) return true;
+        if (magnitudes.some((m) => m === 0)) return false;
+        let ratio = 0;
+        for (let i = 1; i < magnitudes.length; i++) {
+          ratio = Math.max(ratio, magnitudes[i] / magnitudes[i - 1]);
+        }
+        const estimatedTail = (Math.abs(term) * ratio) / (1 - ratio);
+        return ratio < 1 && Number.isFinite(estimatedTail) && estimatedTail <= threshold;
+      };
       if (!Number.isFinite(b)) {
         for (let k = a, n = 0; n < MAX; k++, n++) {
           const term = ev({ [v]: k });
           if (typeof term !== 'number' || !isFinite(term)) throw new Error(t('e.sumNoConv'));
           s += term;
-          if (n > 10 && Math.abs(term) <= TOL * (1 + Math.abs(s))) return s;
+          recent.push(term);
+          if (recent.length > WINDOW) recent.shift();
+          if (n >= WINDOW - 1 && converged(term)) return s;
         }
       } else {
         for (let k = b, n = 0; n < MAX; k--, n++) {
           const term = ev({ [v]: k });
           if (typeof term !== 'number' || !isFinite(term)) throw new Error(t('e.sumNoConv'));
           s += term;
-          if (n > 10 && Math.abs(term) <= TOL * (1 + Math.abs(s))) return s;
+          recent.push(term);
+          if (recent.length > WINDOW) recent.shift();
+          if (n >= WINDOW - 1 && converged(term)) return s;
         }
       }
       throw new Error(t('e.sumNoConv'));
@@ -2359,7 +2410,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
           throw new Error(t('e.calcNoConv'));
         }
         if (!isFinite(c)) throw new Error(t('e.calcNoConv'));
-        if (Math.abs(c) > 1e-12) {
+        if (c !== 0) {
           let fact = 1;
           for (let i = 2; i <= k; i++) fact *= i;
           const coef = c / fact;
@@ -2391,6 +2442,14 @@ export function buildPackScope(math: MathJsInstance): Scope {
       const sc = Math.max(1, Math.abs(a));
       const probe = (fn: (x: number) => number, h: number, side: number): number =>
         fn(a + side * h * sc);
+      const combineSides = (values: number[]): number => {
+        if (values.length < 2) return values[0];
+        const [left, right] = values;
+        if (Math.abs(left - right) > 1e-6 * Math.max(1, Math.abs(left), Math.abs(right))) {
+          throw new Error(t('e.calcNoConv'));
+        }
+        return (left + right) / 2;
+      };
       const converge = (fn: (x: number) => number): number => {
         try {
           return convergeGrid(fn);
@@ -2400,7 +2459,7 @@ export function buildPackScope(math: MathJsInstance): Scope {
       };
       const convergeGrid = (fn: (x: number) => number): number => {
         const sides = dir === 0 ? [-1, 1] : [dir];
-        let cand = 0;
+        const candidates: number[] = [];
         for (const side of sides) {
           const vals: number[] = [];
           for (let k = 1; k <= 12; k++) {
@@ -2420,15 +2479,15 @@ export function buildPackScope(math: MathJsInstance): Scope {
           // хвост из точных нулей при ненулевом начале — схлопывание точности,
           // а не предел: отдать на Ричардсона/Лопиталя
           if (tail[3] === 0 && vals.some((y) => y !== 0)) throw new Error(t('e.calcNoConv'));
-          cand = side === sides[0] ? tail[3] : (cand + tail[3]) / 2;
+          candidates.push(tail[3]);
         }
-        return cand;
+        return combineSides(candidates);
       };
       // Мелкая сетка утонула в погрешности (0/0 высокого порядка):
       // экстраполяция Ричардсона по умеренным h (ошибка чётна по h)
       const convergeRichardson = (fn: (x: number) => number): number => {
         const sides = dir === 0 ? [-1, 1] : [dir];
-        let cand = 0;
+        const candidates: number[] = [];
         for (const side of sides) {
           const hs = [0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625];
           const vals: number[] = [];
@@ -2450,9 +2509,9 @@ export function buildPackScope(math: MathJsInstance): Scope {
             throw new Error(t('e.calcNoConv'));
           // субпикоскоп — честный ноль, а не шум экстраполяции
           const snapped = Math.abs(last) < 1e-12 ? 0 : last;
-          cand = side === sides[0] ? snapped : (cand + snapped) / 2;
+          candidates.push(snapped);
         }
-        return cand;
+        return combineSides(candidates);
       };
       try {
         return converge(f);

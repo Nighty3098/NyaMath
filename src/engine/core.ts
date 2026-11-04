@@ -47,13 +47,13 @@ export function createLru<K, V>(limit: number) {
 
 export type LruCache<K, V> = ReturnType<typeof createLru<K, V>>;
 
-interface BigNumberLike {
+export interface BigNumberLike {
   toNumber(): number;
   isFinite(): boolean;
   isZero(): boolean;
 }
 
-function isBigNumberLike(v: unknown): v is BigNumberLike {
+export function isBigNumberLike(v: unknown): v is BigNumberLike {
   if (v === null || typeof v !== 'object') return false;
   const candidate = v as Partial<BigNumberLike>;
   return (

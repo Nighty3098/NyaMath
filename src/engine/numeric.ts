@@ -286,6 +286,7 @@ export interface NelderMeadResult {
   x: number[];
   fx: number;
   iters: number;
+  converged: boolean;
 }
 
 /** Нелдер–Мид без производных. */
@@ -318,11 +319,16 @@ export function nelderMead(
     const best = idx[0];
     const worst = idx[n];
     const second = idx[n - 1];
-    // сходимость: разброс значений
     const spread = Math.max(...vals) - Math.min(...vals);
+    const xScale = Math.max(1, ...simplex[best].map((x) => Math.abs(x)));
+    const xSpread = Math.max(
+      ...simplex.map((point) =>
+        point.reduce((distance, x, j) => Math.max(distance, Math.abs(x - simplex[best][j])), 0),
+      ),
+    );
     trace?.(`k=${k} best=${fmtTrace(vals[best])} x=${vecTrace(simplex[best])}`);
-    if (spread < tol) {
-      return { x: simplex[best], fx: vals[best], iters: k };
+    if (spread <= tol * Math.max(1, Math.abs(vals[best])) && xSpread <= tol * xScale) {
+      return { x: simplex[best], fx: vals[best], iters: k, converged: true };
     }
     const centroid = new Array<number>(n).fill(0);
     for (const i of idx.slice(0, n)) {
@@ -368,7 +374,7 @@ export function nelderMead(
     }
   }
   const idx = order();
-  return { x: simplex[idx[0]], fx: vals[idx[0]], iters: maxIter };
+  return { x: simplex[idx[0]], fx: vals[idx[0]], iters: maxIter, converged: false };
 }
 
 /** Адаптивный Симпсон (лог: дробины/счётчик f — рекурсия в одну строку итога). */
@@ -382,7 +388,6 @@ export function adaptiveSimpson(
 ): number {
   let evals = 3;
   let splits = 0;
-  let maxHit = 0;
   const fa = f(a);
   const fb = f(b);
   const m = (a + b) / 2;
@@ -402,6 +407,7 @@ export function adaptiveSimpson(
     f1: number,
     w: number,
     depth: number,
+    localTol: number,
   ): number => {
     const m1 = (x0 + xm) / 2;
     const m2 = (xm + x1) / 2;
@@ -412,19 +418,15 @@ export function adaptiveSimpson(
     const left = ((xm - x0) / 6) * (f0 + 4 * f1v + fm2);
     const right = ((x1 - xm) / 6) * (fm2 + 4 * f2v + f1);
     const delta = left + right - w;
-    if (depth <= 0) {
-      maxHit = Math.max(maxHit, maxDepth - depth);
-      return left + right + delta / 15;
-    }
-    if (Math.abs(delta) < 15 * tol) return left + right + delta / 15;
+    if (Math.abs(delta) <= 15 * localTol) return left + right + delta / 15;
+    if (depth <= 0) throw new Error('Adaptive Simpson did not converge within maxDepth');
     splits++;
-    maxHit = Math.max(maxHit, maxDepth - depth);
     return (
-      rec(x0, f0, m1, f1v, xm, fm2, left, depth - 1) +
-      rec(xm, fm2, m2, f2v, x1, f1, right, depth - 1)
+      rec(x0, f0, m1, f1v, xm, fm2, left, depth - 1, localTol / 2) +
+      rec(xm, fm2, m2, f2v, x1, f1, right, depth - 1, localTol / 2)
     );
   };
-  const result = rec(a, fa, m, fm, b, fb, whole, maxDepth);
+  const result = rec(a, fa, m, fm, b, fb, whole, maxDepth, tol);
   trace?.(`splits=${splits} f-evals=${evals} I=${fmtTrace(result)}`);
   return result;
 }

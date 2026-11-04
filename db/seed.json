@@ -7534,7 +7534,7 @@
    "label_en": "Series via integral",
    "hint_ru": "∫₀¹(e^x−1)/x dx = Σ1/(n·n!)",
    "hint_en": "∫₀¹(e^x−1)/x dx = Σ1/(n·n!)",
-   "code": "[numint(\"(exp(x)-1)/x\", \"x\", 10^-9, 1); numsum(\"1/(k*factorial(k))\", \"k\", 1, 8)] =",
+   "code": "[numint(\"expm1(x)/x\", \"x\", 10^-9, 1); numsum(\"1/(k*factorial(k))\", \"k\", 1, 8)] =",
    "plot2d": null,
    "plot3d": null,
    "sim": null

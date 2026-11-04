@@ -83,7 +83,7 @@ describe('solverTrace: math blocks', () => {
   it('minimize: итерации Нелдера–Мида', () => {
     const out = recalc([block(60, { rawInput: 'minimize("(x-2)^2", ["x"], [0]) =' })]);
     expect(out[0].error).toBeNull();
-    expect(out[0].resultStr).toContain('1.999');
+    expect(out[0].resultStr).toContain('2');
     const tr = out[0].solverTrace ?? [];
     expect(tr[0]).toContain('minimize');
   });

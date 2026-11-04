@@ -47,4 +47,8 @@ describe('limit 0/0', () => {
     expect(b.error).toBeNull();
     expect(b.resultStr).toContain('10^-24');
   });
+
+  it('rejects a two-sided limit when the one-sided limits differ', () => {
+    expect(calc('limit("sign(x)", "x", 0) =').error).not.toBeNull();
+  });
 });

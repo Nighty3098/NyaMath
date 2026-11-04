@@ -29,7 +29,7 @@ import {
   splitOnError,
   stripOnError,
 } from './mathEngine';
-import type { Scope } from './core';
+import { isBigNumberLike, type Scope } from './core';
 import type { EvalFunction } from 'mathjs';
 import { t } from '../i18n';
 
@@ -94,12 +94,13 @@ export function analyzeProgram(src: string): ProgramAnalysis {
 
 function analyzeProgramUncached(src: string): ProgramAnalysis {
   const lines = toLines(src).slice(0, MAX_LINES);
-  const assigned = new Set<string>();
+  const definitelyAssigned = new Set<string>();
+  const allAssigned = new Set<string>();
   for (const l of lines) {
     const a = l.text.match(ASSIGN_RE);
-    if (a) assigned.add(a[1]);
+    if (a) allAssigned.add(a[1]);
     const f = l.text.match(FOR_RE);
-    if (f) assigned.add(f[1]);
+    if (f) allAssigned.add(f[1]);
   }
   const deps = new Set<string>();
   const partOf = (t: string): string => {
@@ -123,14 +124,42 @@ function analyzeProgramUncached(src: string): ProgramAnalysis {
     if (/^(end|else(\s+if\b.*)?|break|continue)$/i.test(t)) return '';
     return stripOnError(t);
   };
+  const frames: { kind: 'if' | 'loop'; parent: Set<string> }[] = [];
   for (const l of lines) {
+    if (/^end$/i.test(l.text)) {
+      const frame = frames.pop();
+      if (frame) {
+        definitelyAssigned.clear();
+        for (const name of frame.parent) definitelyAssigned.add(name);
+      }
+      continue;
+    }
+    if (/^else(?:\s+if\b.*)?$/i.test(l.text)) {
+      const frame = frames[frames.length - 1];
+      if (frame?.kind === 'if') {
+        definitelyAssigned.clear();
+        for (const name of frame.parent) definitelyAssigned.add(name);
+      }
+    }
     const part = partOf(l.text);
-    if (!part) continue;
-    for (const d of extractDependencies(part)) {
-      if (!assigned.has(d)) deps.add(d);
+    if (part) {
+      for (const d of extractDependencies(part)) {
+        if (!definitelyAssigned.has(d)) deps.add(d);
+      }
+    }
+    const assignment = l.text.match(ASSIGN_RE);
+    if (assignment) definitelyAssigned.add(assignment[1]);
+    const loop = l.text.match(FOR_RE);
+    if (loop) {
+      frames.push({ kind: 'loop', parent: new Set(definitelyAssigned) });
+      definitelyAssigned.add(loop[1]);
+    } else if (IF_RE.test(l.text)) {
+      frames.push({ kind: 'if', parent: new Set(definitelyAssigned) });
+    } else if (WHILE_RE.test(l.text)) {
+      frames.push({ kind: 'loop', parent: new Set(definitelyAssigned) });
     }
   }
-  return { dependencies: [...deps], assigned: [...assigned] };
+  return { dependencies: [...deps], assigned: [...allAssigned] };
 }
 
 /** `a..b` / `a,s..b` с произвольными (вычисляемыми) концами → seq-выражение. */
@@ -320,6 +349,7 @@ export function runProgram(
   const truthy = (v: unknown, lineNo: number): boolean => {
     if (typeof v === 'boolean') return v;
     if (typeof v === 'number') return v !== 0;
+    if (isBigNumberLike(v)) return v.isFinite() && !v.isZero();
     if (v !== null && typeof v === 'object' && 're' in v && 'im' in v) {
       const c = v as { re: number; im: number };
       return c.re !== 0 || c.im !== 0;
@@ -328,8 +358,9 @@ export function runProgram(
   };
 
   const toArray = (v: unknown, lineNo: number): unknown[] => {
-    if (typeof v === 'number') {
-      const n = Math.floor(v);
+    if (typeof v === 'number' || isBigNumberLike(v)) {
+      const value = typeof v === 'number' ? v : v.toNumber();
+      const n = Math.floor(value);
       if (!isFinite(n) || n < 0 || n > MAX_FOR)
         throw { line: lineNo, msg: t('e.forNumber', { max: MAX_FOR }) };
       return Array.from({ length: n }, (_, k) => k + 1);
