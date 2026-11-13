@@ -50,9 +50,9 @@ const byRaw = (blocks: Record<string, MathBlockData>, raw: string): MathBlockDat
  * движком без ошибок, контрольные значения — по ручному расчёту.
  */
 describe('templates: library integrity', () => {
-  it('26 шаблонов в 8 разделах с описаниями', () => {
+  it('31 шаблон в 9 разделах с описаниями', () => {
     const all = listTemplates();
-    expect(all.length).toBe(26);
+    expect(all.length).toBe(31);
     expect(new Set(all.map((t) => t.section))).toEqual(
       new Set([
         'beams',
@@ -63,6 +63,7 @@ describe('templates: library integrity', () => {
         'hydro',
         'fea',
         'signal',
+        'probability',
       ]),
     );
     for (const t of all) {
@@ -244,5 +245,74 @@ describe('templates: library integrity', () => {
     const b = calcAll('tolerance-clearance');
     expect(byRaw(b, 'Smax = Dmax-dmin').resultStr).toBe('90 um');
     expect(byRaw(b, 'Smin = Dmin-dmax').resultStr).toBe('30 um');
+  });
+
+  it('непрерывная СВ: c=2, F(0.5)=0.25, m=2/3, P(X<m)=4/9', () => {
+    const b = calcAll('prob-continuous-density');
+    expect(byRaw(b, 'c := 1/I_f =').resultStr).toBe('2');
+    expect(byRaw(b, 'F_x := nint("g(t)", "t", a, x) =').resultStr).toBe('0.25');
+    expect(
+      Number(byRaw(b, 'm_x := nint("t*g(t)", "t", a, b) =').resultStr),
+    ).toBeCloseTo(2 / 3, 9);
+    expect(
+      Number(byRaw(b, 'P_below := nint("g(t)", "t", a, m_x) =').resultStr),
+    ).toBeCloseTo(4 / 9, 9);
+  });
+
+  it('сдвинутое показательное: c=e, F(2)=1−e⁻¹, m=2', () => {
+    const b = calcAll('prob-exponential-shifted');
+    expect(Number(byRaw(b, 'c := lam*exp(lam*x0) =').resultStr)).toBeCloseTo(Math.E, 8);
+    expect(Number(byRaw(b, 'F_x := expcdf(x, lam, x0) =').resultStr)).toBeCloseTo(
+      1 - Math.exp(-1),
+      9,
+    );
+    expect(byRaw(b, 'm_x := x0 + 1/lam =').resultStr).toBe('2');
+    expect(Number(byRaw(b, 'P_below := expcdf(m_x, lam, x0) =').resultStr)).toBeCloseTo(
+      1 - Math.exp(-1),
+      9,
+    );
+  });
+
+  it('Парето: f(4)=0.3164, F(4)=0.578125, m=4.5, D=6.75', () => {
+    const b = calcAll('prob-pareto-cdf');
+    expect(Number(byRaw(b, 'f_x := paretopdf(x, x_m, alf) =').resultStr)).toBeCloseTo(
+      81 / 256,
+      9,
+    );
+    expect(Number(byRaw(b, 'F_x := paretocdf(x, x_m, alf) =').resultStr)).toBeCloseTo(
+      37 / 64,
+      9,
+    );
+    expect(byRaw(b, 'm_x := paretoMean(x_m, alf) =').resultStr).toBe('4.5');
+    expect(byRaw(b, 'D_x := paretoVar(x_m, alf) =').resultStr).toBe('6.75');
+  });
+
+  it('нормальное: P(X≥200)≈0.0228, порог ≈192.8 см', () => {
+    const b = calcAll('prob-normal-tail-threshold');
+    expect(
+      Number(byRaw(b, 'P_tail := 1 - normcdf(x0, mu, sigma) =').resultStr),
+    ).toBeCloseTo(0.0227501, 6);
+    expect(
+      Number(byRaw(b, 'x_req := normQuant(1 - P_target, mu, sigma) =').resultStr),
+    ).toBeCloseTo(192.816, 2);
+    expect(Number(byRaw(b, 'Phi0(2) =').resultStr)).toBeCloseTo(0.47725, 4);
+  });
+
+  it('допуск: годность ≈0.6827, брак ≈0.3173, σ≈0.0356 мм', () => {
+    const b = calcAll('prob-normal-tolerance');
+    expect(
+      Number(
+        byRaw(
+          b,
+          'P_ok := normcdf(mu + tol, mu, sigma) - normcdf(mu - tol, mu, sigma) =',
+        ).resultStr,
+      ),
+    ).toBeCloseTo(0.682689, 5);
+    expect(Number(byRaw(b, 'P_def := 1 - P_ok =').resultStr)).toBeCloseTo(0.317311, 5);
+    expect(
+      Number(
+        byRaw(b, 'sigma_req := tol/normQuant((1 + (1 - P_target))/2) =').resultStr,
+      ),
+    ).toBeCloseTo(0.035624, 5);
   });
 });

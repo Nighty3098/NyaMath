@@ -9670,6 +9670,305 @@
    "plot2d": null,
    "plot3d": null,
    "sim": null
+  },
+  {
+   "id": "density-normalization",
+   "section": "probability",
+   "ord": 346,
+   "label_ru": "Нормировка плотности",
+   "label_en": "Density normalization",
+   "hint_ru": "f(x)=c·x на [a;b]: c = 1/∫f dx",
+   "hint_en": "f(x)=c·x on [a;b]: c = 1/∫f dx",
+   "code": "a_v := 0\nb_v := 1\nI_f := nint(\"x\", \"x\", a_v, b_v)\nc_v := 1/I_f\nc_v =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "density-cdf",
+   "section": "probability",
+   "ord": 347,
+   "label_ru": "Функция распределения из плотности",
+   "label_en": "CDF from density",
+   "hint_ru": "F(x)=∫ₐˣ f(t)dt",
+   "hint_en": "F(x)=∫ₐˣ f(t)dt",
+   "code": "a_v := 0\nx_v := 0.5\nf_t := \"2*t\"\nF_x := nint(f_t, \"t\", a_v, x_v)\nF_x =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "density-from-cdf",
+   "section": "probability",
+   "ord": 348,
+   "label_ru": "Плотность из функции распределения",
+   "label_en": "Density from CDF",
+   "hint_ru": "f(x)=F′(x)",
+   "hint_en": "f(x)=F′(x)",
+   "code": "F_t := \"1 - (3/t)^2\"\nx_v := 4\nf_x := ndiff(F_t, \"t\", x_v)\nf_x =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "continuous-moments",
+   "section": "probability",
+   "ord": 349,
+   "label_ru": "Моменты непрерывной СВ",
+   "label_en": "Continuous moments",
+   "hint_ru": "m=∫x·f dx; D=∫x²·f dx−m²",
+   "hint_en": "m=∫x·f dx; D=∫x²·f dx−m²",
+   "code": "a_v := 0\nb_v := 1\nf(t) := 2*t\nm_x := nint(\"t*f(t)\", \"t\", a_v, b_v)\nM_x2 := nint(\"t^2*f(t)\", \"t\", a_v, b_v)\nD_x := M_x2 - m_x^2\ns_x := sqrt(D_x)\n[m_x; D_x; s_x] =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "continuous-prob-below-mean",
+   "section": "probability",
+   "ord": 350,
+   "label_ru": "Вероятность ниже среднего",
+   "label_en": "Probability below mean",
+   "hint_ru": "P(X<m)=F(m)",
+   "hint_en": "P(X<m)=F(m)",
+   "code": "a_v := 0\nm_x := 2/3\nf_t := \"2*t\"\nP_below := nint(f_t, \"t\", a_v, m_x)\nP_below =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "uniform-pdf",
+   "section": "probability",
+   "ord": 351,
+   "label_ru": "Равномерное: плотность",
+   "label_en": "Uniform PDF",
+   "hint_ru": "f(x)=1/(b−a) на [a;b]",
+   "hint_en": "f(x)=1/(b−a) on [a;b]",
+   "code": "a_u := 0\nb_u := 2\nx_v := 0.5\nf_x := unifpdf(x_v, a_u, b_u)\nf_x =",
+   "plot2d": "unifpdf(x, a_u, b_u)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "uniform-cdf",
+   "section": "probability",
+   "ord": 352,
+   "label_ru": "Равномерное: функция распределения",
+   "label_en": "Uniform CDF",
+   "hint_ru": "F(x)=(x−a)/(b−a) на [a;b]",
+   "hint_en": "F(x)=(x−a)/(b−a) on [a;b]",
+   "code": "a_u := 0\nb_u := 2\nx_v := 0.5\nF_x := unifcdf(x_v, a_u, b_u)\nF_x =",
+   "plot2d": "unifcdf(x, a_u, b_u)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "uniform-interval",
+   "section": "probability",
+   "ord": 353,
+   "label_ru": "Равномерное: вероятность интервала",
+   "label_en": "Uniform interval probability",
+   "hint_ru": "P(c<X<d)=F(d)−F(c)",
+   "hint_en": "P(c<X<d)=F(d)−F(c)",
+   "code": "a_u := 0\nb_u := 10\nc_v := 2\nd_v := 7\nP_cd := unifcdf(d_v, a_u, b_u) - unifcdf(c_v, a_u, b_u)\nP_cd =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "exponential-pdf",
+   "section": "probability",
+   "ord": 354,
+   "label_ru": "Показательное: плотность",
+   "label_en": "Exponential PDF",
+   "hint_ru": "f(x)=λ·e^(−λx), x≥0",
+   "hint_en": "f(x)=λ·e^(−λx), x≥0",
+   "code": "lam := 2\nx_v := 1\nf_x := exppdf(x_v, lam)\nf_x =",
+   "plot2d": "exppdf(x, lam)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "exponential-cdf",
+   "section": "probability",
+   "ord": 355,
+   "label_ru": "Показательное: функция распределения",
+   "label_en": "Exponential CDF",
+   "hint_ru": "F(x)=1−e^(−λx), x≥0",
+   "hint_en": "F(x)=1−e^(−λx), x≥0",
+   "code": "lam := 2\nx_v := 1\nF_x := expcdf(x_v, lam)\nF_x =",
+   "plot2d": "expcdf(x, lam)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "exponential-shift-norm",
+   "section": "probability",
+   "ord": 356,
+   "label_ru": "Сдвинутое показательное: нормировка",
+   "label_en": "Shifted exponential normalization",
+   "hint_ru": "f(x)=c·e^(−λ(x−x0)), x≥x0: c=λ·e^(λx0)",
+   "hint_en": "f(x)=c·e^(−λ(x−x0)), x≥x0: c=λ·e^(λx0)",
+   "code": "x0 := 1\nlam := 1\nc_v := lam*exp(lam*x0)\nc_v =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "exponential-moments",
+   "section": "probability",
+   "ord": 357,
+   "label_ru": "Показательное: моменты",
+   "label_en": "Exponential moments",
+   "hint_ru": "m=1/λ; D=1/λ²; σ=1/λ",
+   "hint_en": "m=1/λ; D=1/λ²; σ=1/λ",
+   "code": "lam := 2\nm_x := 1/lam\nD_x := 1/lam^2\ns_x := 1/lam\n[m_x; D_x; s_x] =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "pareto-pdf",
+   "section": "probability",
+   "ord": 358,
+   "label_ru": "Парето: плотность",
+   "label_en": "Pareto PDF",
+   "hint_ru": "f(x)=α·xm^α/x^(α+1), x≥xm",
+   "hint_en": "f(x)=α·xm^α/x^(α+1), x≥xm",
+   "code": "x_m := 3\nalf := 2\nx_v := 4\nf_x := paretopdf(x_v, x_m, alf)\nf_x =",
+   "plot2d": "paretopdf(x, x_m, alf)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "pareto-cdf",
+   "section": "probability",
+   "ord": 359,
+   "label_ru": "Парето: функция распределения",
+   "label_en": "Pareto CDF",
+   "hint_ru": "F(x)=1−(xm/x)^α, x≥xm",
+   "hint_en": "F(x)=1−(xm/x)^α, x≥xm",
+   "code": "x_m := 3\nalf := 2\nx_v := 4\nF_x := paretocdf(x_v, x_m, alf)\nF_x =",
+   "plot2d": "paretocdf(x, x_m, alf)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "pareto-moments",
+   "section": "probability",
+   "ord": 360,
+   "label_ru": "Парето: моменты",
+   "label_en": "Pareto moments",
+   "hint_ru": "m=α·xm/(α−1); D=xm²α/((α−1)²(α−2))",
+   "hint_en": "m=α·xm/(α−1); D=xm²α/((α−1)²(α−2))",
+   "code": "x_m := 3\nalf := 3\nm_x := paretoMean(x_m, alf)\nD_x := paretoVar(x_m, alf)\n[m_x; D_x] =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "laplace-phi0",
+   "section": "probability",
+   "ord": 361,
+   "label_ru": "Функция Лапласа Φ₀",
+   "label_en": "Laplace function Φ₀",
+   "hint_ru": "Φ₀(x)=P(0≤Z≤x)",
+   "hint_en": "Φ₀(x)=P(0≤Z≤x)",
+   "code": "x_v := 2\nPhi_v := Phi0(x_v)\nPhi_v =",
+   "plot2d": "Phi0(x)",
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "laplace-inverse",
+   "section": "probability",
+   "ord": 362,
+   "label_ru": "Обратная функция Лапласа",
+   "label_en": "Inverse Laplace function",
+   "hint_ru": "Φ₀⁻¹(p): p∈(−0.5;0.5)",
+   "hint_en": "Φ₀⁻¹(p): p∈(−0.5;0.5)",
+   "code": "p_v := 0.4\nz_p := invPhi0(p_v)\nz_p =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "normal-tail",
+   "section": "probability",
+   "ord": 363,
+   "label_ru": "Нормальное: вероятность хвоста",
+   "label_en": "Normal tail probability",
+   "hint_ru": "P(X>x₀)=1−Φ((x₀−μ)/σ)",
+   "hint_en": "P(X>x₀)=1−Φ((x₀−μ)/σ)",
+   "code": "mu_v := 180\nsig_v := 10\nx0 := 200\nP_tail := 1 - normcdf(x0, mu_v, sig_v)\nP_tail =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "normal-threshold",
+   "section": "probability",
+   "ord": 364,
+   "label_ru": "Нормальное: порог по вероятности",
+   "label_en": "Normal threshold from probability",
+   "hint_ru": "x₀=μ+σ·Φ⁻¹(1−P)",
+   "hint_en": "x₀=μ+σ·Φ⁻¹(1−P)",
+   "code": "mu_v := 180\nsig_v := 10\nP_tail := 0.1\nx_req := normQuant(1 - P_tail, mu_v, sig_v)\nx_req =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "normal-interval",
+   "section": "probability",
+   "ord": 365,
+   "label_ru": "Нормальное: вероятность интервала",
+   "label_en": "Normal interval probability",
+   "hint_ru": "P(a<X<b)=Φ((b−μ)/σ)−Φ((a−μ)/σ)",
+   "hint_en": "P(a<X<b)=Φ((b−μ)/σ)−Φ((a−μ)/σ)",
+   "code": "mu_v := 10\nsig_v := 0.1\na_v := 9.9\nb_v := 10.1\nP_ab := normcdf(b_v, mu_v, sig_v) - normcdf(a_v, mu_v, sig_v)\nP_ab =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "normal-tolerance",
+   "section": "probability",
+   "ord": 366,
+   "label_ru": "Нормальное: годность и брак",
+   "label_en": "Normal tolerance and defects",
+   "hint_ru": "P_годн=Φ(μ+δ)−Φ(μ−δ); P_брак=1−P_годн",
+   "hint_en": "P_ok=Φ(μ+δ)−Φ(μ−δ); P_def=1−P_ok",
+   "code": "mu_v := 10\nsig_v := 0.1\ntol_v := 0.1\nP_ok := normcdf(mu_v + tol_v, mu_v, sig_v) - normcdf(mu_v - tol_v, mu_v, sig_v)\nP_def := 1 - P_ok\n[P_ok; P_def] =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "normal-sigma-for-defect",
+   "section": "probability",
+   "ord": 367,
+   "label_ru": "Нормальное: СКО под заданный брак",
+   "label_en": "Normal sigma for target defects",
+   "hint_ru": "σ=δ/Φ⁻¹((1+P_годн)/2)",
+   "hint_en": "σ=δ/Φ⁻¹((1+P_ok)/2)",
+   "code": "tol_v := 0.1\nP_def := 0.005\nP_ok := 1 - P_def\nsig_req := tol_v/normQuant((1 + P_ok)/2)\nsig_req =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
+  },
+  {
+   "id": "normal-moments",
+   "section": "probability",
+   "ord": 368,
+   "label_ru": "Нормальное: среднее и дисперсия",
+   "label_en": "Normal mean and variance",
+   "hint_ru": "m=μ; D=σ²",
+   "hint_en": "m=μ; D=σ²",
+   "code": "mu_v := 180\nsig_v := 10\nm_x := mu_v\nD_x := sig_v^2\n[m_x; D_x] =",
+   "plot2d": null,
+   "plot3d": null,
+   "sim": null
   }
  ],
  "formula_sources": [
@@ -13680,6 +13979,144 @@
    "ord": 0,
    "title": "Smith chart — Wikipedia",
    "url": "https://en.wikipedia.org/wiki/Smith_chart"
+  },
+  {
+   "formula_id": "density-normalization",
+   "ord": 0,
+   "title": "Probability density function — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Probability_density_function"
+  },
+  {
+   "formula_id": "density-cdf",
+   "ord": 0,
+   "title": "Cumulative distribution function — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Cumulative_distribution_function"
+  },
+  {
+   "formula_id": "density-from-cdf",
+   "ord": 0,
+   "title": "Probability density function — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Probability_density_function"
+  },
+  {
+   "formula_id": "continuous-moments",
+   "ord": 0,
+   "title": "Variance — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Variance"
+  },
+  {
+   "formula_id": "continuous-prob-below-mean",
+   "ord": 0,
+   "title": "Cumulative distribution function — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Cumulative_distribution_function"
+  },
+  {
+   "formula_id": "uniform-pdf",
+   "ord": 0,
+   "title": "Continuous uniform distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Continuous_uniform_distribution"
+  },
+  {
+   "formula_id": "uniform-cdf",
+   "ord": 0,
+   "title": "Continuous uniform distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Continuous_uniform_distribution"
+  },
+  {
+   "formula_id": "uniform-interval",
+   "ord": 0,
+   "title": "Continuous uniform distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Continuous_uniform_distribution"
+  },
+  {
+   "formula_id": "exponential-pdf",
+   "ord": 0,
+   "title": "Exponential distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Exponential_distribution"
+  },
+  {
+   "formula_id": "exponential-cdf",
+   "ord": 0,
+   "title": "Exponential distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Exponential_distribution"
+  },
+  {
+   "formula_id": "exponential-shift-norm",
+   "ord": 0,
+   "title": "Exponential distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Exponential_distribution"
+  },
+  {
+   "formula_id": "exponential-moments",
+   "ord": 0,
+   "title": "Exponential distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Exponential_distribution"
+  },
+  {
+   "formula_id": "pareto-pdf",
+   "ord": 0,
+   "title": "Pareto distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Pareto_distribution"
+  },
+  {
+   "formula_id": "pareto-cdf",
+   "ord": 0,
+   "title": "Pareto distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Pareto_distribution"
+  },
+  {
+   "formula_id": "pareto-moments",
+   "ord": 0,
+   "title": "Pareto distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Pareto_distribution"
+  },
+  {
+   "formula_id": "laplace-phi0",
+   "ord": 0,
+   "title": "Normal distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Normal_distribution"
+  },
+  {
+   "formula_id": "laplace-inverse",
+   "ord": 0,
+   "title": "Normal distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Normal_distribution"
+  },
+  {
+   "formula_id": "normal-tail",
+   "ord": 0,
+   "title": "Normal distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Normal_distribution"
+  },
+  {
+   "formula_id": "normal-threshold",
+   "ord": 0,
+   "title": "Normal distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Normal_distribution"
+  },
+  {
+   "formula_id": "normal-interval",
+   "ord": 0,
+   "title": "Normal distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Normal_distribution"
+  },
+  {
+   "formula_id": "normal-tolerance",
+   "ord": 0,
+   "title": "Normal distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Normal_distribution"
+  },
+  {
+   "formula_id": "normal-sigma-for-defect",
+   "ord": 0,
+   "title": "Normal distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Normal_distribution"
+  },
+  {
+   "formula_id": "normal-moments",
+   "ord": 0,
+   "title": "Normal distribution — Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Normal_distribution"
   }
  ],
  "formula_vars": [
@@ -26814,6 +27251,629 @@
    "name": "len_turn",
    "label_ru": "длина",
    "label_en": "length"
+  },
+  {
+   "formula_id": "density-normalization",
+   "ord": 0,
+   "name": "a_v",
+   "label_ru": "нижняя граница",
+   "label_en": "lower bound"
+  },
+  {
+   "formula_id": "density-normalization",
+   "ord": 1,
+   "name": "b_v",
+   "label_ru": "верхняя граница",
+   "label_en": "upper bound"
+  },
+  {
+   "formula_id": "density-normalization",
+   "ord": 2,
+   "name": "I_f",
+   "label_ru": "интеграл плотности",
+   "label_en": "density integral"
+  },
+  {
+   "formula_id": "density-normalization",
+   "ord": 3,
+   "name": "c_v",
+   "label_ru": "нормирующий множитель",
+   "label_en": "normalizing factor"
+  },
+  {
+   "formula_id": "density-cdf",
+   "ord": 0,
+   "name": "a_v",
+   "label_ru": "нижняя граница",
+   "label_en": "lower bound"
+  },
+  {
+   "formula_id": "density-cdf",
+   "ord": 1,
+   "name": "x_v",
+   "label_ru": "точка x",
+   "label_en": "point x"
+  },
+  {
+   "formula_id": "density-cdf",
+   "ord": 2,
+   "name": "f_t",
+   "label_ru": "плотность f(t)",
+   "label_en": "density f(t)"
+  },
+  {
+   "formula_id": "density-cdf",
+   "ord": 3,
+   "name": "F_x",
+   "label_ru": "функция распределения",
+   "label_en": "CDF"
+  },
+  {
+   "formula_id": "density-from-cdf",
+   "ord": 0,
+   "name": "F_t",
+   "label_ru": "функция распределения F(t)",
+   "label_en": "CDF F(t)"
+  },
+  {
+   "formula_id": "density-from-cdf",
+   "ord": 1,
+   "name": "x_v",
+   "label_ru": "точка x",
+   "label_en": "point x"
+  },
+  {
+   "formula_id": "density-from-cdf",
+   "ord": 2,
+   "name": "f_x",
+   "label_ru": "плотность f(x)",
+   "label_en": "density f(x)"
+  },
+  {
+   "formula_id": "continuous-moments",
+   "ord": 0,
+   "name": "a_v",
+   "label_ru": "нижняя граница",
+   "label_en": "lower bound"
+  },
+  {
+   "formula_id": "continuous-moments",
+   "ord": 1,
+   "name": "b_v",
+   "label_ru": "верхняя граница",
+   "label_en": "upper bound"
+  },
+  {
+   "formula_id": "continuous-moments",
+   "ord": 2,
+   "name": "m_x",
+   "label_ru": "математическое ожидание",
+   "label_en": "mean"
+  },
+  {
+   "formula_id": "continuous-moments",
+   "ord": 3,
+   "name": "M_x2",
+   "label_ru": "второй момент",
+   "label_en": "second moment"
+  },
+  {
+   "formula_id": "continuous-moments",
+   "ord": 4,
+   "name": "D_x",
+   "label_ru": "дисперсия",
+   "label_en": "variance"
+  },
+  {
+   "formula_id": "continuous-moments",
+   "ord": 5,
+   "name": "s_x",
+   "label_ru": "СКО",
+   "label_en": "standard deviation"
+  },
+  {
+   "formula_id": "continuous-prob-below-mean",
+   "ord": 0,
+   "name": "a_v",
+   "label_ru": "нижняя граница",
+   "label_en": "lower bound"
+  },
+  {
+   "formula_id": "continuous-prob-below-mean",
+   "ord": 1,
+   "name": "m_x",
+   "label_ru": "среднее",
+   "label_en": "mean"
+  },
+  {
+   "formula_id": "continuous-prob-below-mean",
+   "ord": 2,
+   "name": "f_t",
+   "label_ru": "плотность f(t)",
+   "label_en": "density f(t)"
+  },
+  {
+   "formula_id": "continuous-prob-below-mean",
+   "ord": 3,
+   "name": "P_below",
+   "label_ru": "вероятность",
+   "label_en": "probability"
+  },
+  {
+   "formula_id": "uniform-pdf",
+   "ord": 0,
+   "name": "a_u",
+   "label_ru": "нижняя граница",
+   "label_en": "lower bound"
+  },
+  {
+   "formula_id": "uniform-pdf",
+   "ord": 1,
+   "name": "b_u",
+   "label_ru": "верхняя граница",
+   "label_en": "upper bound"
+  },
+  {
+   "formula_id": "uniform-pdf",
+   "ord": 2,
+   "name": "x_v",
+   "label_ru": "точка x",
+   "label_en": "point x"
+  },
+  {
+   "formula_id": "uniform-pdf",
+   "ord": 3,
+   "name": "f_x",
+   "label_ru": "плотность",
+   "label_en": "density"
+  },
+  {
+   "formula_id": "uniform-cdf",
+   "ord": 0,
+   "name": "a_u",
+   "label_ru": "нижняя граница",
+   "label_en": "lower bound"
+  },
+  {
+   "formula_id": "uniform-cdf",
+   "ord": 1,
+   "name": "b_u",
+   "label_ru": "верхняя граница",
+   "label_en": "upper bound"
+  },
+  {
+   "formula_id": "uniform-cdf",
+   "ord": 2,
+   "name": "x_v",
+   "label_ru": "точка x",
+   "label_en": "point x"
+  },
+  {
+   "formula_id": "uniform-cdf",
+   "ord": 3,
+   "name": "F_x",
+   "label_ru": "функция распределения",
+   "label_en": "CDF"
+  },
+  {
+   "formula_id": "uniform-interval",
+   "ord": 0,
+   "name": "a_u",
+   "label_ru": "нижняя граница",
+   "label_en": "lower bound"
+  },
+  {
+   "formula_id": "uniform-interval",
+   "ord": 1,
+   "name": "b_u",
+   "label_ru": "верхняя граница",
+   "label_en": "upper bound"
+  },
+  {
+   "formula_id": "uniform-interval",
+   "ord": 2,
+   "name": "c_v",
+   "label_ru": "левая граница",
+   "label_en": "left bound"
+  },
+  {
+   "formula_id": "uniform-interval",
+   "ord": 3,
+   "name": "d_v",
+   "label_ru": "правая граница",
+   "label_en": "right bound"
+  },
+  {
+   "formula_id": "uniform-interval",
+   "ord": 4,
+   "name": "P_cd",
+   "label_ru": "вероятность",
+   "label_en": "probability"
+  },
+  {
+   "formula_id": "exponential-pdf",
+   "ord": 0,
+   "name": "lam",
+   "label_ru": "интенсивность λ",
+   "label_en": "rate λ"
+  },
+  {
+   "formula_id": "exponential-pdf",
+   "ord": 1,
+   "name": "x_v",
+   "label_ru": "точка x",
+   "label_en": "point x"
+  },
+  {
+   "formula_id": "exponential-pdf",
+   "ord": 2,
+   "name": "f_x",
+   "label_ru": "плотность",
+   "label_en": "density"
+  },
+  {
+   "formula_id": "exponential-cdf",
+   "ord": 0,
+   "name": "lam",
+   "label_ru": "интенсивность λ",
+   "label_en": "rate λ"
+  },
+  {
+   "formula_id": "exponential-cdf",
+   "ord": 1,
+   "name": "x_v",
+   "label_ru": "точка x",
+   "label_en": "point x"
+  },
+  {
+   "formula_id": "exponential-cdf",
+   "ord": 2,
+   "name": "F_x",
+   "label_ru": "функция распределения",
+   "label_en": "CDF"
+  },
+  {
+   "formula_id": "exponential-shift-norm",
+   "ord": 0,
+   "name": "x0",
+   "label_ru": "сдвиг x₀",
+   "label_en": "shift x₀"
+  },
+  {
+   "formula_id": "exponential-shift-norm",
+   "ord": 1,
+   "name": "lam",
+   "label_ru": "интенсивность λ",
+   "label_en": "rate λ"
+  },
+  {
+   "formula_id": "exponential-shift-norm",
+   "ord": 2,
+   "name": "c_v",
+   "label_ru": "нормирующий множитель",
+   "label_en": "normalizing factor"
+  },
+  {
+   "formula_id": "exponential-moments",
+   "ord": 0,
+   "name": "lam",
+   "label_ru": "интенсивность λ",
+   "label_en": "rate λ"
+  },
+  {
+   "formula_id": "exponential-moments",
+   "ord": 1,
+   "name": "m_x",
+   "label_ru": "математическое ожидание",
+   "label_en": "mean"
+  },
+  {
+   "formula_id": "exponential-moments",
+   "ord": 2,
+   "name": "D_x",
+   "label_ru": "дисперсия",
+   "label_en": "variance"
+  },
+  {
+   "formula_id": "exponential-moments",
+   "ord": 3,
+   "name": "s_x",
+   "label_ru": "СКО",
+   "label_en": "standard deviation"
+  },
+  {
+   "formula_id": "pareto-pdf",
+   "ord": 0,
+   "name": "x_m",
+   "label_ru": "минимальное значение xm",
+   "label_en": "minimum xm"
+  },
+  {
+   "formula_id": "pareto-pdf",
+   "ord": 1,
+   "name": "alf",
+   "label_ru": "параметр α",
+   "label_en": "shape α"
+  },
+  {
+   "formula_id": "pareto-pdf",
+   "ord": 2,
+   "name": "x_v",
+   "label_ru": "точка x",
+   "label_en": "point x"
+  },
+  {
+   "formula_id": "pareto-pdf",
+   "ord": 3,
+   "name": "f_x",
+   "label_ru": "плотность",
+   "label_en": "density"
+  },
+  {
+   "formula_id": "pareto-cdf",
+   "ord": 0,
+   "name": "x_m",
+   "label_ru": "минимальное значение xm",
+   "label_en": "minimum xm"
+  },
+  {
+   "formula_id": "pareto-cdf",
+   "ord": 1,
+   "name": "alf",
+   "label_ru": "параметр α",
+   "label_en": "shape α"
+  },
+  {
+   "formula_id": "pareto-cdf",
+   "ord": 2,
+   "name": "x_v",
+   "label_ru": "точка x",
+   "label_en": "point x"
+  },
+  {
+   "formula_id": "pareto-cdf",
+   "ord": 3,
+   "name": "F_x",
+   "label_ru": "функция распределения",
+   "label_en": "CDF"
+  },
+  {
+   "formula_id": "pareto-moments",
+   "ord": 0,
+   "name": "x_m",
+   "label_ru": "минимальное значение xm",
+   "label_en": "minimum xm"
+  },
+  {
+   "formula_id": "pareto-moments",
+   "ord": 1,
+   "name": "alf",
+   "label_ru": "параметр α",
+   "label_en": "shape α"
+  },
+  {
+   "formula_id": "pareto-moments",
+   "ord": 2,
+   "name": "m_x",
+   "label_ru": "математическое ожидание",
+   "label_en": "mean"
+  },
+  {
+   "formula_id": "pareto-moments",
+   "ord": 3,
+   "name": "D_x",
+   "label_ru": "дисперсия",
+   "label_en": "variance"
+  },
+  {
+   "formula_id": "laplace-phi0",
+   "ord": 0,
+   "name": "x_v",
+   "label_ru": "аргумент x",
+   "label_en": "argument x"
+  },
+  {
+   "formula_id": "laplace-phi0",
+   "ord": 1,
+   "name": "Phi_v",
+   "label_ru": "Φ₀(x)",
+   "label_en": "Φ₀(x)"
+  },
+  {
+   "formula_id": "laplace-inverse",
+   "ord": 0,
+   "name": "p_v",
+   "label_ru": "вероятность p",
+   "label_en": "probability p"
+  },
+  {
+   "formula_id": "laplace-inverse",
+   "ord": 1,
+   "name": "z_p",
+   "label_ru": "квантиль z",
+   "label_en": "quantile z"
+  },
+  {
+   "formula_id": "normal-tail",
+   "ord": 0,
+   "name": "mu_v",
+   "label_ru": "среднее μ",
+   "label_en": "mean μ"
+  },
+  {
+   "formula_id": "normal-tail",
+   "ord": 1,
+   "name": "sig_v",
+   "label_ru": "СКО σ",
+   "label_en": "standard deviation σ"
+  },
+  {
+   "formula_id": "normal-tail",
+   "ord": 2,
+   "name": "x0",
+   "label_ru": "порог x₀",
+   "label_en": "threshold x₀"
+  },
+  {
+   "formula_id": "normal-tail",
+   "ord": 3,
+   "name": "P_tail",
+   "label_ru": "вероятность",
+   "label_en": "probability"
+  },
+  {
+   "formula_id": "normal-threshold",
+   "ord": 0,
+   "name": "mu_v",
+   "label_ru": "среднее μ",
+   "label_en": "mean μ"
+  },
+  {
+   "formula_id": "normal-threshold",
+   "ord": 1,
+   "name": "sig_v",
+   "label_ru": "СКО σ",
+   "label_en": "standard deviation σ"
+  },
+  {
+   "formula_id": "normal-threshold",
+   "ord": 2,
+   "name": "P_tail",
+   "label_ru": "заданная вероятность",
+   "label_en": "target probability"
+  },
+  {
+   "formula_id": "normal-threshold",
+   "ord": 3,
+   "name": "x_req",
+   "label_ru": "искомый порог",
+   "label_en": "required threshold"
+  },
+  {
+   "formula_id": "normal-interval",
+   "ord": 0,
+   "name": "mu_v",
+   "label_ru": "среднее μ",
+   "label_en": "mean μ"
+  },
+  {
+   "formula_id": "normal-interval",
+   "ord": 1,
+   "name": "sig_v",
+   "label_ru": "СКО σ",
+   "label_en": "standard deviation σ"
+  },
+  {
+   "formula_id": "normal-interval",
+   "ord": 2,
+   "name": "a_v",
+   "label_ru": "левая граница",
+   "label_en": "left bound"
+  },
+  {
+   "formula_id": "normal-interval",
+   "ord": 3,
+   "name": "b_v",
+   "label_ru": "правая граница",
+   "label_en": "right bound"
+  },
+  {
+   "formula_id": "normal-interval",
+   "ord": 4,
+   "name": "P_ab",
+   "label_ru": "вероятность",
+   "label_en": "probability"
+  },
+  {
+   "formula_id": "normal-tolerance",
+   "ord": 0,
+   "name": "mu_v",
+   "label_ru": "среднее μ",
+   "label_en": "mean μ"
+  },
+  {
+   "formula_id": "normal-tolerance",
+   "ord": 1,
+   "name": "sig_v",
+   "label_ru": "СКО σ",
+   "label_en": "standard deviation σ"
+  },
+  {
+   "formula_id": "normal-tolerance",
+   "ord": 2,
+   "name": "tol_v",
+   "label_ru": "допуск δ",
+   "label_en": "tolerance δ"
+  },
+  {
+   "formula_id": "normal-tolerance",
+   "ord": 3,
+   "name": "P_ok",
+   "label_ru": "доля годных",
+   "label_en": "pass fraction"
+  },
+  {
+   "formula_id": "normal-tolerance",
+   "ord": 4,
+   "name": "P_def",
+   "label_ru": "доля брака",
+   "label_en": "defect fraction"
+  },
+  {
+   "formula_id": "normal-sigma-for-defect",
+   "ord": 0,
+   "name": "tol_v",
+   "label_ru": "допуск δ",
+   "label_en": "tolerance δ"
+  },
+  {
+   "formula_id": "normal-sigma-for-defect",
+   "ord": 1,
+   "name": "P_def",
+   "label_ru": "заданный брак",
+   "label_en": "target defect fraction"
+  },
+  {
+   "formula_id": "normal-sigma-for-defect",
+   "ord": 2,
+   "name": "P_ok",
+   "label_ru": "доля годных",
+   "label_en": "pass fraction"
+  },
+  {
+   "formula_id": "normal-sigma-for-defect",
+   "ord": 3,
+   "name": "sig_req",
+   "label_ru": "требуемое СКО",
+   "label_en": "required sigma"
+  },
+  {
+   "formula_id": "normal-moments",
+   "ord": 0,
+   "name": "mu_v",
+   "label_ru": "среднее μ",
+   "label_en": "mean μ"
+  },
+  {
+   "formula_id": "normal-moments",
+   "ord": 1,
+   "name": "sig_v",
+   "label_ru": "СКО σ",
+   "label_en": "standard deviation σ"
+  },
+  {
+   "formula_id": "normal-moments",
+   "ord": 2,
+   "name": "m_x",
+   "label_ru": "математическое ожидание",
+   "label_en": "mean"
+  },
+  {
+   "formula_id": "normal-moments",
+   "ord": 3,
+   "name": "D_x",
+   "label_ru": "дисперсия",
+   "label_en": "variance"
   }
  ],
  "const_sections": [
@@ -31190,6 +32250,61 @@
    "desc_en": "Smax/Smin from limits, ISO 286",
    "lines_json": "[{\"kind\":\"text\",\"raw\":\"// Зазор отверстие–вал\"},{\"kind\":\"math\",\"raw\":\"Dmax := 50.03 mm\"},{\"kind\":\"math\",\"raw\":\"Dmin := 50 mm\"},{\"kind\":\"math\",\"raw\":\"dmax := 49.97 mm\"},{\"kind\":\"math\",\"raw\":\"dmin := 49.94 mm\"},{\"kind\":\"math\",\"raw\":\"Smax = Dmax-dmin\"},{\"kind\":\"math\",\"raw\":\"Smin = Dmin-dmax\"}]",
    "standard": "ГОСТ 25346-2013"
+  },
+  {
+   "id": "prob-continuous-density",
+   "section": "probability",
+   "ord": 26,
+   "title_ru": "Непрерывная СВ · плотность → F, m, σ",
+   "title_en": "Continuous RV · density → CDF, mean, σ",
+   "desc_ru": "Нормировка f(x)=c·x, функция распределения F(x), моменты и P(X<m)",
+   "desc_en": "Normalize f(x)=c·x, build CDF F(x), moments and P(X<m)",
+   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Непрерывная СВ: f(x) = c·x на [a; b]\"}, {\"kind\": \"math\", \"raw\": \"a := 0\"}, {\"kind\": \"math\", \"raw\": \"b := 1\"}, {\"kind\": \"math\", \"raw\": \"f(t) := t\"}, {\"kind\": \"math\", \"raw\": \"I_f := nint(\\\"f(t)\\\", \\\"t\\\", a, b)\"}, {\"kind\": \"math\", \"raw\": \"c := 1/I_f =\"}, {\"kind\": \"math\", \"raw\": \"g(t) := c*f(t)\"}, {\"kind\": \"math\", \"raw\": \"x := 0.5\"}, {\"kind\": \"math\", \"raw\": \"F_x := nint(\\\"g(t)\\\", \\\"t\\\", a, x) =\"}, {\"kind\": \"math\", \"raw\": \"m_x := nint(\\\"t*g(t)\\\", \\\"t\\\", a, b) =\"}, {\"kind\": \"math\", \"raw\": \"E_x2 := nint(\\\"t^2*g(t)\\\", \\\"t\\\", a, b)\"}, {\"kind\": \"math\", \"raw\": \"D_x := E_x2 - m_x^2 =\"}, {\"kind\": \"math\", \"raw\": \"sigma_x := sqrt(D_x) =\"}, {\"kind\": \"math\", \"raw\": \"P_below := nint(\\\"g(t)\\\", \\\"t\\\", a, m_x) =\"}]",
+   "standard": null
+  },
+  {
+   "id": "prob-exponential-shifted",
+   "section": "probability",
+   "ord": 27,
+   "title_ru": "Сдвинутое показательное · c, F, m, σ",
+   "title_en": "Shifted exponential · c, CDF, mean, σ",
+   "desc_ru": "Плотность c·e^(−λ(x−x0)), нормировка, функция распределения и моменты",
+   "desc_en": "Density c·e^(−λ(x−x0)), normalization, CDF and moments",
+   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Сдвинутое показательное: f(x) = c·e^(−λ(x−x0)), x ≥ x0\"}, {\"kind\": \"math\", \"raw\": \"x0 := 1\"}, {\"kind\": \"math\", \"raw\": \"lam := 1\"}, {\"kind\": \"math\", \"raw\": \"c := lam*exp(lam*x0) =\"}, {\"kind\": \"math\", \"raw\": \"x := 2\"}, {\"kind\": \"math\", \"raw\": \"F_x := expcdf(x, lam, x0) =\"}, {\"kind\": \"math\", \"raw\": \"m_x := x0 + 1/lam =\"}, {\"kind\": \"math\", \"raw\": \"D_x := 1/lam^2 =\"}, {\"kind\": \"math\", \"raw\": \"sigma_x := 1/lam =\"}, {\"kind\": \"math\", \"raw\": \"P_below := expcdf(m_x, lam, x0) =\"}]",
+   "standard": null
+  },
+  {
+   "id": "prob-pareto-cdf",
+   "section": "probability",
+   "ord": 28,
+   "title_ru": "Парето · плотность, F, моменты",
+   "title_en": "Pareto · density, CDF, moments",
+   "desc_ru": "F(x)=1−(xm/x)^α, плотность, среднее и дисперсия (α>2)",
+   "desc_en": "F(x)=1−(xm/x)^α, density, mean and variance (α>2)",
+   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Парето: F(x) = 1 − (xm/x)^α, x ≥ xm\"}, {\"kind\": \"math\", \"raw\": \"x_m := 3\"}, {\"kind\": \"math\", \"raw\": \"alf := 3\"}, {\"kind\": \"math\", \"raw\": \"x := 4\"}, {\"kind\": \"math\", \"raw\": \"f_x := paretopdf(x, x_m, alf) =\"}, {\"kind\": \"math\", \"raw\": \"F_x := paretocdf(x, x_m, alf) =\"}, {\"kind\": \"math\", \"raw\": \"m_x := paretoMean(x_m, alf) =\"}, {\"kind\": \"math\", \"raw\": \"D_x := paretoVar(x_m, alf) =\"}, {\"kind\": \"text\", \"raw\": \"// при α ≤ 2 дисперсия не существует\"}]",
+   "standard": null
+  },
+  {
+   "id": "prob-normal-tail-threshold",
+   "section": "probability",
+   "ord": 29,
+   "title_ru": "Нормальное · хвост и порог",
+   "title_en": "Normal · tail and threshold",
+   "desc_ru": "P(X>x0) для N(μ;σ²) и порог x0 по заданной вероятности",
+   "desc_en": "P(X>x0) for N(μ;σ²) and threshold x0 from a target probability",
+   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// X ~ N(μ; σ²): вероятность хвоста и порог\"}, {\"kind\": \"math\", \"raw\": \"mu := 180\"}, {\"kind\": \"math\", \"raw\": \"sigma := 10\"}, {\"kind\": \"math\", \"raw\": \"x0 := 200\"}, {\"kind\": \"math\", \"raw\": \"P_tail := 1 - normcdf(x0, mu, sigma) =\"}, {\"kind\": \"math\", \"raw\": \"P_target := 0.10\"}, {\"kind\": \"math\", \"raw\": \"x_req := normQuant(1 - P_target, mu, sigma) =\"}, {\"kind\": \"math\", \"raw\": \"Phi0(2) =\"}]",
+   "standard": null
+  },
+  {
+   "id": "prob-normal-tolerance",
+   "section": "probability",
+   "ord": 30,
+   "title_ru": "Нормальное · годность и брак",
+   "title_en": "Normal · tolerance and defects",
+   "desc_ru": "Доля годных в допуске ±δ, брак и требуемое СКО под заданный брак",
+   "desc_en": "Pass fraction inside ±δ, defect fraction and required sigma",
+   "lines_json": "[{\"kind\": \"text\", \"raw\": \"// Допуск: годные детали и доля брака\"}, {\"kind\": \"math\", \"raw\": \"mu := 10\"}, {\"kind\": \"math\", \"raw\": \"sigma := 0.1\"}, {\"kind\": \"math\", \"raw\": \"tol := 0.1\"}, {\"kind\": \"math\", \"raw\": \"P_ok := normcdf(mu + tol, mu, sigma) - normcdf(mu - tol, mu, sigma) =\"}, {\"kind\": \"math\", \"raw\": \"P_def := 1 - P_ok =\"}, {\"kind\": \"math\", \"raw\": \"P_target := 0.005\"}, {\"kind\": \"math\", \"raw\": \"sigma_req := tol/normQuant((1 + (1 - P_target))/2) =\"}]",
+   "standard": null
   }
  ],
  "elements": [

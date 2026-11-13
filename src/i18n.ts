@@ -162,6 +162,7 @@ const ru = {
   'tplsec.fea': 'МКЭ',
   'tplsec.signal': 'Сигналы',
   'tplsec.metrology': 'Метрология',
+  'tplsec.probability': 'Вероятность и статистика',
 
   'prob.empty': 'Ошибок нет — расчёт чист',
   'prob.close': 'Закрыть панель',
@@ -719,6 +720,7 @@ const en: Record<StrKey, string> = {
   'tplsec.fea': 'FEM',
   'tplsec.signal': 'Signals',
   'tplsec.metrology': 'Metrology',
+  'tplsec.probability': 'Probability & statistics',
 
   'prob.empty': 'No errors — calculation is clean',
   'prob.close': 'Close panel',

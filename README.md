@@ -47,6 +47,10 @@ stdio и приложение через _View → Live sync_ видят оди�
   surfaces/point clouds, PNG/CSV export.
 - **Program blocks** with step debugger, **simulations** (RK4/RK45/TR-BDF2, events, FDTD waves).
 - **Units** via mathjs (`m/s`, `GHz`, `mm`, `ohm`, `degC`…), custom units via `defunit`.
+- **Probability & statistics**: normal (`normpdf`/`normcdf`/`normQuant` with μ and σ),
+  Laplace `Phi0`/`invPhi0`, uniform, exponential (with shift) and Pareto PDF/CDF/moments;
+  the palette includes ready-made formulas and sheet templates for continuous random
+  variables, tail probabilities and normal tolerances.
 - **Scientific precision**: _View → Calculation precision_ selects IEEE-754 or
   document-level arbitrary-precision BigNumber arithmetic (34–1100 digit presets).
   The engine keeps guard digits through iterative calculations; output can be formatted

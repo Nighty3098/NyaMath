@@ -2686,6 +2686,87 @@ export function buildPackScope(math: MathJsInstance): Scope {
       if (!(s > 0)) throw new Error(t('e.calcArgs'));
       return 0.5 * (1 + erfImpl((xv - m) / (s * Math.SQRT2)));
     },
+    // Функция Лапласа Φ₀(x) = ∫₀ˣ φ(t) dt = P(0 ≤ Z ≤ x)
+    Phi0: (x: unknown) => 0.5 * erfImpl(needNum(x) / Math.SQRT2),
+    // Обратная функция Лапласа: Φ₀⁻¹(p), p ∈ (−0.5; 0.5)
+    invPhi0: (p: unknown) => {
+      const P = needNum(p);
+      if (!(P > -0.5 && P < 0.5)) throw new Error(t('e.calcArgs'));
+      return normInvCdf(P + 0.5);
+    },
+    // Равномерное распределение на [a; b]
+    unifpdf: (x: unknown, a: unknown, b: unknown) => {
+      const X = needNum(x);
+      const A = needNum(a);
+      const B = needNum(b);
+      if (!(B > A)) throw new Error(t('e.calcArgs'));
+      return X >= A && X <= B ? 1 / (B - A) : 0;
+    },
+    unifcdf: (x: unknown, a: unknown, b: unknown) => {
+      const X = needNum(x);
+      const A = needNum(a);
+      const B = needNum(b);
+      if (!(B > A)) throw new Error(t('e.calcArgs'));
+      if (X < A) return 0;
+      if (X > B) return 1;
+      return (X - A) / (B - A);
+    },
+    unifQuant: (p: unknown, a: unknown, b: unknown) => {
+      const P = needNum(p);
+      const A = needNum(a);
+      const B = needNum(b);
+      if (!(B > A) || !(P >= 0 && P <= 1)) throw new Error(t('e.calcArgs'));
+      return A + P * (B - A);
+    },
+    // Показательное распределение (необязательный сдвиг x0)
+    exppdf: (x: unknown, lam: unknown, shift?: unknown) => {
+      const X = needNum(x);
+      const L = needNum(lam);
+      const S = optNum(shift, 0);
+      if (!(L > 0)) throw new Error(t('e.calcArgs'));
+      return X >= S ? L * Math.exp(-L * (X - S)) : 0;
+    },
+    expcdf: (x: unknown, lam: unknown, shift?: unknown) => {
+      const X = needNum(x);
+      const L = needNum(lam);
+      const S = optNum(shift, 0);
+      if (!(L > 0)) throw new Error(t('e.calcArgs'));
+      return X >= S ? 1 - Math.exp(-L * (X - S)) : 0;
+    },
+    expQuant: (p: unknown, lam: unknown, shift?: unknown) => {
+      const P = needNum(p);
+      const L = needNum(lam);
+      const S = optNum(shift, 0);
+      if (!(L > 0) || !(P >= 0 && P < 1)) throw new Error(t('e.calcArgs'));
+      return S - Math.log1p(-P) / L;
+    },
+    // Распределение Парето: F(x) = 1 − (xm/x)^α, x ≥ xm > 0, α > 0
+    paretopdf: (x: unknown, xm: unknown, alpha: unknown) => {
+      const X = needNum(x);
+      const XM = needNum(xm);
+      const A = needNum(alpha);
+      if (!(XM > 0) || !(A > 0)) throw new Error(t('e.calcArgs'));
+      return X >= XM ? (A * XM ** A) / X ** (A + 1) : 0;
+    },
+    paretocdf: (x: unknown, xm: unknown, alpha: unknown) => {
+      const X = needNum(x);
+      const XM = needNum(xm);
+      const A = needNum(alpha);
+      if (!(XM > 0) || !(A > 0)) throw new Error(t('e.calcArgs'));
+      return X >= XM ? 1 - (XM / X) ** A : 0;
+    },
+    paretoMean: (xm: unknown, alpha: unknown) => {
+      const XM = needNum(xm);
+      const A = needNum(alpha);
+      if (!(XM > 0) || !(A > 0)) throw new Error(t('e.calcArgs'));
+      return A > 1 ? (A * XM) / (A - 1) : Infinity;
+    },
+    paretoVar: (xm: unknown, alpha: unknown) => {
+      const XM = needNum(xm);
+      const A = needNum(alpha);
+      if (!(XM > 0) || !(A > 0)) throw new Error(t('e.calcArgs'));
+      return A > 2 ? (XM ** 2 * A) / ((A - 1) ** 2 * (A - 2)) : Infinity;
+    },
     binomPmf: (k: unknown, n: unknown, p: unknown) => {
       const K = truncI(k);
       const N = truncI(n);
@@ -3196,7 +3277,14 @@ export function buildPackScope(math: MathJsInstance): Scope {
       if (!(den > 0)) return Infinity;
       return (uc2 * uc2) / den; // GUM (G.2b): Уэлч–Саттертуэйт
     },
-    normQuant: (q: unknown) => normInvCdf(needNum(q)), // односторонняя обратная нормальная
+    // Обратная нормальная CDF: normQuant(q[, mu, sigma]) = mu + sigma·Φ⁻¹(q)
+    normQuant: (q: unknown, mu?: unknown, sig?: unknown) => {
+      const Q = needNum(q);
+      const M = optNum(mu, 0);
+      const S = optNum(sig, 1);
+      if (!(S > 0)) throw new Error(t('e.calcArgs'));
+      return M + S * normInvCdf(Q);
+    },
     tStud: (q: unknown, nu: unknown) => {
       const N = Number(nu);
       if (typeof nu === 'boolean' || !(N > 0)) throw new Error(t('e.calcArgs'));
@@ -3993,6 +4081,18 @@ export const PACK_NAMES = [
   'erf',
   'normpdf',
   'normcdf',
+  'Phi0',
+  'invPhi0',
+  'unifpdf',
+  'unifcdf',
+  'unifQuant',
+  'exppdf',
+  'expcdf',
+  'expQuant',
+  'paretopdf',
+  'paretocdf',
+  'paretoMean',
+  'paretoVar',
   'binomPmf',
   'poissonPmf',
   'interpLin',
