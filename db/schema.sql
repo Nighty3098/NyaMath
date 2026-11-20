@@ -114,6 +114,20 @@ CREATE TABLE IF NOT EXISTS const_sources (
   PRIMARY KEY (entry_id, ord)
 );
 
+-- Функции Mathcad/Prime: полный каталог для совместимости импорта.
+-- nyamath_name — имя функции/эквивалента в NyaMath (NULL, если аналога нет).
+-- status: native | alias | implemented | unsupported.
+CREATE TABLE IF NOT EXISTS functions (
+  name TEXT PRIMARY KEY,
+  params TEXT,
+  category TEXT,
+  description TEXT,
+  source_pack TEXT NOT NULL,
+  help_topic TEXT,
+  nyamath_name TEXT,
+  status TEXT NOT NULL
+);
+
 -- Сниппеты палитры вставки (бывший SNIPPETS из packs.ts).
 CREATE TABLE IF NOT EXISTS snippets (
   ord INTEGER PRIMARY KEY,

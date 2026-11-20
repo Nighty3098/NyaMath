@@ -16,6 +16,7 @@ import {
 } from '../lib/db';
 import { getCompiledPre, preprocessJ, preprocessRanges } from './mathEngine';
 import type { Scope } from './core';
+import { MATHCAD_COMPAT_NAMES } from './mathcadCompat';
 import {
   adaptiveSimpson,
   brent,
@@ -4226,6 +4227,7 @@ export const PACK_NAMES = [
   'wrapAngle',
   'deg2rad',
   'rad2deg',
+  ...MATHCAD_COMPAT_NAMES,
 ];
 
 /* ---------------- Палитра вставки ---------------- */

@@ -18,6 +18,7 @@ import {
   type Unit,
 } from 'mathjs';
 import { buildPackScope, PACK_NAMES } from './packs';
+import { buildMathcadScope } from './mathcadCompat';
 
 import { t, getLang } from '../i18n';
 import type { Scope } from './core';
@@ -167,7 +168,10 @@ let packImportsDone = false;
 function ensurePackImports(): void {
   if (packImportsDone) return;
   packImportsDone = true;
-  const packScope = buildPackScope(math) as Record<string, unknown>;
+  const packScope = {
+    ...buildPackScope(math),
+    ...buildMathcadScope(math),
+  } as Record<string, unknown>;
   for (const k of [
     'nlsolve',
     'find',
@@ -184,6 +188,7 @@ function ensurePackImports(): void {
     'numint',
     'numsum',
     'numprod',
+    'vectorize',
     'taylor',
     'limit',
     'numgrad',
@@ -533,7 +538,12 @@ export function getCompiledPre(pre: string): EvalFunction | null {
       lruSet(compiledPreCache, pre, out);
       return out;
     }
-    out = assign ? null : precisionAwareCompile(node.compile(), symbolNames(node));
+    out = assign
+      ? null
+      : precisionAwareCompile(
+          (node as MathNode & { compile: (m: MathJsInstance) => EvalFunction }).compile(math),
+          symbolNames(node),
+        );
   } catch {
     out = null;
   }
@@ -590,7 +600,14 @@ export function compilePlotExpr(pre: string): CompiledPlotExpr | null {
       else if (nn.isSymbolNode && nn.name) free.add(String(nn.name));
     });
     if (assign) out = null;
-    else out = { code: precisionAwareCompile(node.compile(), [...free]), freeVars: [...free] };
+    else
+      out = {
+        code: precisionAwareCompile(
+          (node as MathNode & { compile: (m: MathJsInstance) => EvalFunction }).compile(math),
+          [...free],
+        ),
+        freeVars: [...free],
+      };
   } catch {
     out = null;
   }
@@ -615,6 +632,7 @@ export function createBaseScope(): Scope {
         }
       : {}),
     ...buildPackScope(math),
+    ...buildMathcadScope(math),
   };
 }
 

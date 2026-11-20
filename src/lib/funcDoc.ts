@@ -1,4 +1,4 @@
-import { listSnippets } from './db';
+import { listMathcadFunctions, listSnippets } from './db';
 import type { Lang } from '../i18n';
 
 export interface FuncDoc {
@@ -21,7 +21,8 @@ const BUILTIN: { name: string; ru: string; en: string }[] = [
   { name: 'sqrt', ru: 'sqrt(x) — квадратный корень', en: 'sqrt(x) — square root' },
   { name: 'cbrt', ru: 'cbrt(x) — кубический корень', en: 'cbrt(x) — cube root' },
   { name: 'exp', ru: 'exp(x) — e в степени x', en: 'exp(x) — e to the x' },
-  { name: 'log', ru: 'log(x) — натуральный логарифм', en: 'log(x) — natural log' },
+  { name: 'ln', ru: 'ln(x) — натуральный логарифм', en: 'ln(x) — natural log' },
+  { name: 'log', ru: 'log(x) — десятичный логарифм (как в Mathcad)', en: 'log(x) — base-10 log (as in Mathcad)' },
   { name: 'log10', ru: 'log10(x) — десятичный логарифм', en: 'log10(x) — base-10 log' },
   { name: 'abs', ru: 'abs(x) — модуль', en: 'abs(x) — absolute value' },
   { name: 'sign', ru: 'sign(x) — знак: −1, 0, 1', en: 'sign(x) — sign: −1, 0, 1' },
@@ -52,6 +53,26 @@ export interface SnippetDoc {
 }
 
 let snippetDocs: Map<string, SnippetDoc> | null = null;
+let mathcadDocs: Map<string, FuncDoc> | null = null;
+
+/** Каталог поддерживаемых функций Mathcad/Prime из БД. */
+function mathcadDocIndex(): Map<string, FuncDoc> {
+  if (!mathcadDocs) {
+    mathcadDocs = new Map<string, FuncDoc>();
+    for (const f of listMathcadFunctions()) {
+      if (f.status === 'unsupported' || !f.description) continue;
+      const syntax = f.params ? `${f.name}(${f.params})` : f.name;
+      const doc: FuncDoc = { name: f.name, title: f.name, syntax: `${syntax} — ${f.description}` };
+      mathcadDocs.set(f.name.toLowerCase(), doc);
+      if (f.nyamath_name && f.nyamath_name !== f.name) {
+        if (!mathcadDocs.has(f.nyamath_name.toLowerCase())) {
+          mathcadDocs.set(f.nyamath_name.toLowerCase(), { ...doc, name: f.nyamath_name });
+        }
+      }
+    }
+  }
+  return mathcadDocs;
+}
 
 /** Ленивый индекс по сниппетам из БД (после initDb; до этого — пусто). */
 function docsIndex(): Map<string, SnippetDoc> {
@@ -73,7 +94,7 @@ export function lookupFuncDoc(name: string, lang: Lang): FuncDoc | null {
   if (b) return { name, title: name, syntax: lang === 'ru' ? b.ru : b.en };
   const s = docsIndex().get(name);
   if (s) return { name, title: s.title[lang], syntax: s.syntax };
-  return null;
+  return mathcadDocIndex().get(name.toLowerCase()) ?? null;
 }
 
 /** Полный список функций со сигнатурами (для Dynamic Assistant). */
@@ -85,6 +106,12 @@ export function listFuncDocs(lang: Lang): FuncDoc[] {
   }));
   for (const [name, s] of docsIndex()) {
     out.push({ name, title: s.title[lang], syntax: s.syntax });
+  }
+  const seen = new Set(out.map((d) => d.name.toLowerCase()));
+  for (const d of mathcadDocIndex().values()) {
+    if (seen.has(d.name.toLowerCase())) continue;
+    seen.add(d.name.toLowerCase());
+    out.push(d);
   }
   return out;
 }

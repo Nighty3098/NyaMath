@@ -83,6 +83,14 @@ describe('importDoc: SMath .sm', () => {
     expect(r.blocks[0]?.body).toBe('x ^ (2 ^ 3)');
   });
 
+  it('RPN-функция Mathcad ln импортируется как log', () => {
+    const xml = `<regions><region left="80" top="60"><math><input>
+      <e type="operand">y</e><e type="operand">x</e>
+      <e type="function" args="1">ln</e><e type="operator" args="2">:</e>
+    </input></math></region></regions>`;
+    expect(parseSmXml(xml).blocks[0]?.body).toBe('y := ln(x)');
+  });
+
   it('битый RPN пропускается с пометкой, а не роняет всё', () => {
     const xml = `<regions>
       <region left="80" top="60"><math><input><e type="operator" args="2">+</e></input></math></region>
@@ -224,6 +232,25 @@ describe('importDoc: Mathcad .xmcd', () => {
     ]);
   });
 
+  it('функции Mathcad переименовываются в equivalents NyaMath', () => {
+    const xml = `<regions>
+      <region left="0" top="0"><math><ml:eval>
+        <ml:apply><ml:id>ln</ml:id><ml:id>x</ml:id></ml:apply>
+      </ml:eval></math></region>
+      <region left="0" top="64"><math><ml:eval>
+        <ml:apply><ml:id>eigenvals</ml:id><ml:id>A</ml:id></ml:apply>
+      </ml:eval></math></region>
+      <region left="0" top="128"><math><ml:eval>
+        <ml:apply><ml:id>Stdev</ml:id><ml:id>v</ml:id></ml:apply>
+      </ml:eval></math></region>
+    </regions>`;
+    expect(parseXmcd(xml).blocks.map((b) => b.body)).toEqual([
+      'ln(x) =',
+      'eigen(A) =',
+      'mcStdevSample(v) =',
+    ]);
+  });
+
   it('программа: localDefine / for / if / else / вложенный program', () => {
     const xml = `<regions><region left="0" top="0"><math>
       <ml:define>
@@ -263,6 +290,15 @@ describe('importDoc: Mathcad .xmcd', () => {
         'S',
       ].join('\n'),
     );
+  });
+
+  it('неподдерживаемая функция Mathcad остаётся в блоке и попадает в notes', () => {
+    const xml = `<regions><region left="0" top="0"><math><ml:eval>
+      <ml:apply><ml:id>READPRN</ml:id><ml:str>data.prn</ml:str></ml:apply>
+    </ml:eval></math></region></regions>`;
+    const r = parseXmcd(xml);
+    expect(r.blocks[0]?.body).toBe('READPRN("data.prn") =');
+    expect(r.notes.some((n) => n.includes('READPRN() has no NyaMath equivalent'))).toBe(true);
   });
 
   it('не-лист даёт честную пометку', () => {

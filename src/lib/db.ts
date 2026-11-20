@@ -34,6 +34,7 @@ const formulaById = new Map<string, Formula>();
 const constSections: ConstSection[] = [];
 const constEntries: ConstEntry[] = [];
 const snippets: Snippet[] = [];
+const mathcadFunctions = new Map<string, MathcadFunctionRow>();
 const simModels: SimModel[] = [];
 const simById = new Map<string, SimModel>();
 const demoBySuite = new Map<string, DemoItem[]>();
@@ -54,6 +55,18 @@ export interface ConstantRow {
   hint_ru: string | null;
   hint_en: string | null;
   source: string | null;
+}
+
+/** Каталог функций Mathcad 15/Prime (для совместимости импорта). */
+export interface MathcadFunctionRow {
+  name: string;
+  params: string | null;
+  category: string | null;
+  description: string | null;
+  source_pack: string;
+  help_topic: string | null;
+  nyamath_name: string | null;
+  status: 'native' | 'alias' | 'implemented' | 'unsupported';
 }
 
 export interface Material {
@@ -223,6 +236,7 @@ function readAllTables(db: Driver): Record<string, Row[]> {
     'const_entries',
     'const_sources',
     'snippets',
+    'functions',
     'sim_models',
     'demo_lines',
     'templates',
@@ -360,6 +374,20 @@ function ingest(t: Record<string, Row[]>): void {
       ...(optStr(r['plot_json']) !== undefined
         ? { plot: JSON.parse(optStr(r['plot_json']) as string) as Snippet['plot'] }
         : {}),
+    });
+  }
+  mathcadFunctions.clear();
+  for (const r of q('functions')) {
+    const name = str(r['name']);
+    mathcadFunctions.set(name.toLowerCase(), {
+      name,
+      params: nulStr(r['params']),
+      category: nulStr(r['category']),
+      description: nulStr(r['description']),
+      source_pack: str(r['source_pack']),
+      help_topic: nulStr(r['help_topic']),
+      nyamath_name: nulStr(r['nyamath_name']),
+      status: str(r['status']) as MathcadFunctionRow['status'],
     });
   }
   simModels.length = 0;
@@ -616,6 +644,18 @@ export function listConstEntries(section?: string): ConstEntry[] {
 export function listSnippets(): Snippet[] {
   ready();
   return snippets;
+}
+
+/** Все функции Mathcad/Prime из каталога БД. */
+export function listMathcadFunctions(): MathcadFunctionRow[] {
+  ready();
+  return [...mathcadFunctions.values()];
+}
+
+/** Найти функцию Mathcad по имени (без учёта регистра). */
+export function getMathcadFunction(name: string): MathcadFunctionRow | null {
+  ready();
+  return mathcadFunctions.get(name.replace(/\.sc$/i, '').trim().toLowerCase()) ?? null;
 }
 
 export function listSimModels(): SimModel[] {

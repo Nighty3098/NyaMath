@@ -14,6 +14,7 @@ import {
   getElement,
   getFormula,
   getMaterial,
+  getMathcadFunction,
   getSimModelDb,
   getTemplate,
   isDbReady,
@@ -23,6 +24,7 @@ import {
   listElements,
   listFormulas,
   listFormulaSections,
+  listMathcadFunctions,
   listMaterials,
   listSimModels,
   listSnippets,
@@ -30,11 +32,25 @@ import {
   matPropName,
   unitPrefixes,
 } from './db';
+import { MATHCAD_UNSUPPORTED } from './mathcadUnsupported';
 
 describe('NyaMath.db integrity', () => {
   it('db is ready', () => {
     expect(isDbReady()).toBe(true);
     expect(dbPath().length).toBeGreaterThan(0);
+  });
+
+  it('Mathcad/Prime function catalog is complete and derived notes are in sync', () => {
+    const all = listMathcadFunctions();
+    expect(all.length).toBeGreaterThanOrEqual(700);
+    expect(getMathcadFunction('READPRN')?.status).toBe('unsupported');
+    expect(getMathcadFunction('ln')?.nyamath_name).toBe('ln');
+    expect(getMathcadFunction('rnorm')?.status).toBe('implemented');
+    const expected = new Set(
+      all.filter((f) => f.status === 'unsupported').map((f) => f.name.toLowerCase()),
+    );
+    const actual = new Set([...MATHCAD_UNSUPPORTED].map((n) => n.toLowerCase()));
+    expect(actual).toEqual(expected);
   });
 
   it('constants: anchors + scope coverage', () => {
@@ -114,6 +130,10 @@ describe('NyaMath.db integrity', () => {
       string,
       Array<Record<string, unknown>>
     >;
+    const catalog = JSON.parse(
+      fs.readFileSync(path.join(root, 'db', 'mathcad-functions.json'), 'utf-8'),
+    ) as { functions: Array<Record<string, unknown>> };
+    seed.functions = catalog.functions;
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'nyadb-'));
     const rebuilt = path.join(tmp, 'NyaMath.db');
     try {
@@ -143,7 +163,7 @@ describe('NyaMath.db integrity', () => {
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
-  });
+  }, 30000);
 
   it('elements: 118 rows, Fe anchors, lookup', () => {
     const all = listElements();

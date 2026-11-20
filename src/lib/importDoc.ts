@@ -5,6 +5,12 @@
  * Best-effort: формулы переносятся, экзотика — в notes (ничего молча не теряем).
  * Чистый модуль без DOM (регулярный XML-парсер — работает и в node MCP-сервера).
  */
+import { mapMathcadFunctionName } from './mathcadNames';
+import { MATHCAD_UNSUPPORTED } from './mathcadUnsupported';
+
+const MATHCAD_UNSUPPORTED_LOWER = new Set(
+  [...MATHCAD_UNSUPPORTED].map((n) => n.replace(/\.sc$/i, '').toLowerCase()),
+);
 
 export type ImportKind = 'math' | 'text' | 'plot' | 'contour' | 'program';
 
@@ -26,6 +32,22 @@ export interface ImportResult {
   blocks: ImportBlock[];
   notes: string[];
   format: 'sm' | 'cpd' | 'xmcd';
+}
+
+/** Не_support functions are kept verbatim, but must never disappear silently. */
+function noteUnsupportedFunctions(blocks: ImportBlock[], notes: string[]): void {
+  const found = new Set<string>();
+  for (const b of blocks) {
+    for (const m of b.body.matchAll(/\b([A-Za-z][A-Za-z0-9_.]*)\s*\(/g)) {
+      const name = (m[1] ?? '').replace(/\.sc$/i, '');
+      if (MATHCAD_UNSUPPORTED_LOWER.has(name.replace(/\.sc$/i, '').toLowerCase())) {
+        found.add(name);
+      }
+    }
+  }
+  for (const name of [...found].sort()) {
+    notes.push(`Mathcad function ${name}() has no NyaMath equivalent — call preserved, check result`);
+  }
 }
 
 /* ---------------- общие мелочи ---------------- */
@@ -108,7 +130,7 @@ function rpnToInfix(els: RpnEl[]): string | null {
       const n = el.args ?? 0;
       if (stack.length < n) return null;
       const argv = stack.splice(stack.length - n, n).map((a) => a.s);
-      stack.push({ s: `${el.value}(${argv.join(', ')})`, prec: PREC_ATOM });
+      stack.push({ s: `${mapMathcadFunctionName(el.value)}(${argv.join(', ')})`, prec: PREC_ATOM });
       continue;
     }
     if (el.type !== 'operator') return null;
@@ -280,6 +302,7 @@ export function parseSmXml(xml: string): ImportResult {
     skipped++;
   }
   if (skipped) notes.push(`пропущено регионов: ${skipped} (картинки/области/несобранное)`);
+  noteUnsupportedFunctions(blocks, notes);
   return { blocks, notes, format: 'sm' };
 }
 
@@ -458,6 +481,7 @@ export function parseCpd(text: string): ImportResult {
     }
     push({ kind: 'math', body: code, x: 80, y: 60 });
   });
+  noteUnsupportedFunctions(blocks, notes);
   return { blocks, notes, format: 'cpd' };
 }
 
@@ -767,7 +791,8 @@ function mxRender(n: XNode, ctx = 0): string {
     // `<apply><id>log</id>…</apply>` — вызов функции по имени. Раньше брали
     // имя тега (`id`) вместо текста (`log`, `identity`, `last`, …) — отсюда
     // «id(K, 2)» в переведённых листах.
-    const op = X_LOCAL(opNode.name) === 'id' ? mxRender(opNode, 0) : X_LOCAL(opNode.name);
+    const rawOp = X_LOCAL(opNode.name) === 'id' ? mxRender(opNode, 0) : X_LOCAL(opNode.name);
+    const op = mapMathcadFunctionName(rawOp);
     // Обычно `<apply><sum/><bounds/><lambda/></apply>`, но встречается и
     // `<apply><sum><bounds/><lambda/></sum></apply>` — поддерживаем оба вида.
     const args = kids.length > 1 ? kids.slice(1) : mxExprChildren(opNode);
@@ -1009,6 +1034,7 @@ export function parseXmcd(xml: string): ImportResult {
     skipped++;
   }
   if (skipped) notes.push(`пропущено регионов Mathcad: ${skipped} (графики/картинки/пустые)`);
+  noteUnsupportedFunctions(blocks, notes);
   return { blocks, notes, format: 'xmcd' };
 }
 

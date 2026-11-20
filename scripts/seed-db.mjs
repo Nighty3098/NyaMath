@@ -16,6 +16,9 @@ const outPath = path.join(root, 'public', 'NyaMath.db');
 
 const schema = fs.readFileSync(schemaPath, 'utf-8');
 const seed = JSON.parse(fs.readFileSync(seedPath, 'utf-8'));
+const mathcadCatalog = JSON.parse(
+  fs.readFileSync(path.join(root, 'db', 'mathcad-functions.json'), 'utf-8'),
+);
 
 try {
   fs.unlinkSync(outPath);
@@ -26,7 +29,26 @@ try {
 const db = new DatabaseSync(outPath);
 db.exec(schema);
 
-let total = 0;
+const insertFunction = db.prepare(
+  `INSERT INTO functions
+    (name, params, category, description, source_pack, help_topic, nyamath_name, status)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+);
+for (const f of mathcadCatalog.functions) {
+  insertFunction.run(
+    f.name,
+    f.params ?? null,
+    f.category ?? null,
+    f.description ?? null,
+    f.source_pack ?? 'Mathcad',
+    f.help_topic ?? null,
+    f.nyamath_name ?? null,
+    f.status ?? 'unsupported',
+  );
+}
+let total = mathcadCatalog.functions.length;
+console.log(`functions: ${total}`);
+
 for (const [table, rows] of Object.entries(seed)) {
   if (!Array.isArray(rows) || !rows.length) continue;
   const cols = Object.keys(rows[0]);
