@@ -3,6 +3,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { strict as assert } from 'node:assert';
 import { fileURLToPath } from 'node:url';
+import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -100,8 +101,22 @@ await call('nya_add_block', { kind: 'math', x: 80, y: 50, rawInput: 'n := 7' });
 prog = await call('nya_get_block', { id: prog.data.id });
 check(!prog.data.error && prog.data.resultStr === '5040', `factorial = ${prog.data.resultStr}`);
 
+// 9b. импорт Mathcad .xmcd (XML worksheet30 → NyaMath-синтаксис)
+const xmcdPath = path.join(os.tmpdir(), 'nya-smoke.xmcd');
+fs.writeFileSync(
+  xmcdPath,
+  `<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.mathsoft.com/worksheet30" xmlns:ml="http://schemas.mathsoft.com/math30">
+  <regions><region left="80" top="60"><math>
+    <ml:define><ml:id>z</ml:id><ml:real>5</ml:real></ml:define>
+  </math></region></regions>
+</worksheet>`,
+);
+r = await call('nya_import', { path: xmcdPath, format: 'xmcd' });
+check(r.data.imported === 1 && r.data.format === 'xmcd', `xmcd import: ${r.data.imported} block(s)`);
+
 // 10. save + open roundtrip
-const tmp = '/tmp/opencode/nya-smoke.json';
+const tmp = path.join(os.tmpdir(), 'nya-smoke.json');
 r = await call('nya_save', { path: tmp });
 check(r.data.ok && r.data.blocks > 30, `saved ${r.data.blocks} blocks`);
 await call('nya_clear', { confirm: true });
@@ -195,7 +210,7 @@ check(
 await call('nya_remove_block', { id: tmpBlock.data.id });
 
 // 18. import Calcpad .cpd: блоки + пересчёт + scope
-const cpdPath = '/tmp/opencode/nya-smoke.cpd';
+const cpdPath = path.join(os.tmpdir(), 'nya-smoke.cpd');
 fs.writeFileSync(
   cpdPath,
   `"Beam"\n'input\nL = 3*m\nq = 4*kN/m ?\nF = q*L/2|kN\n$Plot { sin(x) @ x = 0 : 6.28 }\n`,
@@ -213,7 +228,7 @@ r = await call('nya_get_scope');
 check(r.data.variables['F']?.startsWith('6'), `imported F = ${r.data.variables['F']}`);
 
 // 19. import SMath .sm (RPN): текст + L := 3*m
-const smPath = '/tmp/opencode/nya-smoke.sm';
+const smPath = path.join(os.tmpdir(), 'nya-smoke.sm');
 fs.writeFileSync(
   smPath,
   `<?xml version="1.0"?><regions>

@@ -190,6 +190,16 @@ const ru = {
   'share.badLink': 'Похоже, ссылка битая: не удалось распаковать данные.',
 
   'app.badJson': 'Не удалось прочитать файл: это не корректный JSON',
+
+  'drop.hint': 'Перетащите файл листа сюда (.json, .sm, .cpd, .xmcd, .xmcdz, .mcdx)',
+  'drop.active': 'Отпустите, чтобы импортировать',
+  'import.ok': 'Импортировано блоков: {n}.{notes}',
+  'import.notes': '\n\nЗамечания:\n{notes}',
+  'import.unsupported': 'Неподдерживаемый формат: {ext}',
+  'import.failed': 'Не удалось импортировать {name}: {error}',
+  'import.empty': 'В файле не найдено блоков.{notes}',
+  'import.tooMany': 'Слишком много блоков ({n} > 500)',
+
   'doc.notArray': 'Файл не похож на проект NyaMath (ожидается массив блоков)',
   'doc.tooMany': 'Слишком много блоков (>5000)',
   'doc.noBlocks': 'В файле нет корректных блоков',
@@ -747,6 +757,16 @@ const en: Record<StrKey, string> = {
   'share.badLink': 'The link looks broken: could not unpack the data.',
 
   'app.badJson': 'Could not read the file: not valid JSON',
+
+  'drop.hint': 'Drop a worksheet file here (.json, .sm, .cpd, .xmcd, .xmcdz, .mcdx)',
+  'drop.active': 'Release to import',
+  'import.ok': 'Imported blocks: {n}.{notes}',
+  'import.notes': '\n\nNotes:\n{notes}',
+  'import.unsupported': 'Unsupported format: {ext}',
+  'import.failed': 'Could not import {name}: {error}',
+  'import.empty': 'No blocks found in the file.{notes}',
+  'import.tooMany': 'Too many blocks ({n} > 500)',
+
   'doc.notArray': 'File does not look like a NyaMath project (expected an array of blocks)',
   'doc.tooMany': 'Too many blocks (>5000)',
   'doc.noBlocks': 'No valid blocks in the file',

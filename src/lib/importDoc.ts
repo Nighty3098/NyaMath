@@ -1,11 +1,12 @@
 /**
- * Импорт чужих листов в NyaMath (MCP nya_import): SMath Studio .sm (XML, RPN)
- * и Calcpad .cpd/.txt (plain text). Best-effort: формулы переносятся,
- * экзотика — в notes (ничего молча не теряем). Чистый модуль без DOM
- * (регулярный XML-парсер — работает и в node MCP-сервера).
+ * Импорт чужих листов в NyaMath (MCP nya_import + drag&drop в UI):
+ * SMath Studio .sm (XML, RPN), Calcpad .cpd/.txt (plain text) и
+ * Mathcad .xmcd/.xmcdz/.mcdx (XML worksheet15/Prime → NyaMath-синтаксис).
+ * Best-effort: формулы переносятся, экзотика — в notes (ничего молча не теряем).
+ * Чистый модуль без DOM (регулярный XML-парсер — работает и в node MCP-сервера).
  */
 
-export type ImportKind = 'math' | 'text' | 'plot' | 'contour';
+export type ImportKind = 'math' | 'text' | 'plot' | 'contour' | 'program';
 
 export interface ImportBlock {
   kind: ImportKind;
@@ -15,6 +16,8 @@ export interface ImportBlock {
   plotXmax?: number;
   plotYmin?: number;
   plotYmax?: number;
+  /** program: имя, под которым результат программы уходит в scope. */
+  exportName?: string;
   x: number;
   y: number;
 }
@@ -22,7 +25,7 @@ export interface ImportBlock {
 export interface ImportResult {
   blocks: ImportBlock[];
   notes: string[];
-  format: 'sm' | 'cpd';
+  format: 'sm' | 'cpd' | 'xmcd';
 }
 
 /* ---------------- общие мелочи ---------------- */
@@ -456,4 +459,567 @@ export function parseCpd(text: string): ImportResult {
     push({ kind: 'math', body: code, x: 80, y: 60 });
   });
   return { blocks, notes, format: 'cpd' };
+}
+
+/* ---------------- Mathcad .xmcd / .xmcdz / .mcdx (XML → NyaMath) ---------------- */
+
+/** Узел registry-дерева, собраного регулярками (без DOM — работает в node). */
+interface XNode {
+  name: string;
+  attrs: Record<string, string>;
+  text: string;
+  children: XNode[];
+}
+
+const X_LOCAL = (name: string): string => {
+  const i = name.lastIndexOf(':');
+  return i >= 0 ? name.slice(i + 1) : name;
+};
+
+function parseXmlTree(xml: string): XNode[] {
+  const root: XNode = { name: '#root', attrs: {}, text: '', children: [] };
+  const stack: XNode[] = [root];
+  const re =
+    /<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<!\[CDATA\[[\s\S]*?\]\]>|<(\/?)([\w:.-]+)([^>]*?)(\/?)>|([^<]+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml)) !== null) {
+    if (m[5] !== undefined) {
+      const cur = stack[stack.length - 1];
+      if (cur) cur.text += decodeEntities(m[5]);
+      continue;
+    }
+    const closing = m[1] === '/';
+    const name = X_LOCAL(m[2] ?? '');
+    if (closing) {
+      for (let i = stack.length - 1; i > 0; i--) {
+        if (stack[i]?.name === name) {
+          stack.length = i;
+          break;
+        }
+      }
+      continue;
+    }
+    const head = m[3] ?? '';
+    const node: XNode = { name, attrs: {}, text: '', children: [] };
+    const ar = /([:\w.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+    let am: RegExpExecArray | null;
+    while ((am = ar.exec(head)) !== null) {
+      node.attrs[am[1] as string] = am[2] ?? am[3] ?? '';
+    }
+    stack[stack.length - 1]?.children.push(node);
+    if (m[4] !== '/') stack.push(node);
+  }
+  return root.children;
+}
+
+function findChild(n: XNode, name: string): XNode | null {
+  return n.children.find((c) => c.name === name) ?? null;
+}
+function findFirst(nodes: XNode[], name: string): XNode | null {
+  for (const n of nodes) {
+    if (n.name === name) return n;
+    const hit = findFirst(n.children, name);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** Текст региона: <p> построчно, вложенные <b>/<c>/<i> — прозрачные. */
+function textLines(node: XNode): string[] {
+  const out: string[] = [];
+  const walk = (n: XNode): void => {
+    if (n.name === 'p') {
+      let s = n.text;
+      for (const c of n.children) s += collect(c);
+      const line = s.replace(/\s+/g, ' ').trim();
+      if (line) out.push(line);
+      return;
+    }
+    for (const c of n.children) walk(c);
+  };
+  const collect = (n: XNode): string => {
+    let s = n.text;
+    for (const c of n.children) s += collect(c);
+    return s;
+  };
+  walk(node);
+  if (!out.length) {
+    const s = collect(node).replace(/\s+/g, ' ').trim();
+    if (s) out.push(s);
+  }
+  return out;
+}
+
+/** Приоритеты операций NyaMath (чем больше — тем сильнее связывает). */
+const MX_PREC: Record<string, number> = {
+  define: 0,
+  eval: 0,
+  symEval: 0,
+  sequence: 1,
+  equal: 2,
+  lessThan: 2,
+  greaterThan: 2,
+  lessOrEqual: 2,
+  greaterOrEqual: 2,
+  notEqual: 2,
+  and: 2,
+  or: 2,
+  plus: 3,
+  minus: 3,
+  mult: 4,
+  div: 4,
+  pow: 5,
+  neg: 6,
+  indexer: 8,
+  factorial: 8,
+  transpose: 8,
+};
+const MX_ATOM = 9;
+
+function mxPrec(n: XNode): number {
+  if (n.name === 'apply') return MX_PREC[X_LOCAL(n.children[0]?.name ?? '')] ?? 6;
+  return MX_PREC[n.name] ?? (n.name === 'id' || n.name === 'real' ? MX_ATOM : 7);
+}
+
+function mxWrap(s: string, prec: number, ctx: number): string {
+  return prec < ctx ? `(${s})` : s;
+}
+
+/** Имена единиц Mathcad → короткие обозначения NyaMath (mathjs). */
+const MX_UNITS: Record<string, string> = {
+  meter: 'm',
+  meters: 'm',
+  metre: 'm',
+  second: 's',
+  seconds: 's',
+  sec: 's',
+  gram: 'g',
+  gramme: 'g',
+  kilogram: 'kg',
+  kilograms: 'kg',
+  newton: 'N',
+  newtons: 'N',
+  pascal: 'Pa',
+  pascals: 'Pa',
+  joule: 'J',
+  joules: 'J',
+  watt: 'W',
+  watts: 'W',
+  ampere: 'A',
+  amperes: 'A',
+  volt: 'V',
+  volts: 'V',
+  ohm: 'ohm',
+  ohms: 'ohm',
+  hertz: 'Hz',
+  tesla: 'T',
+  weber: 'Wb',
+  henry: 'H',
+  farad: 'F',
+  coulomb: 'C',
+  lux: 'lx',
+  lumen: 'lm',
+  candela: 'cd',
+  kelvin: 'K',
+  minute: 'min',
+  minutes: 'min',
+  hour: 'hr',
+  hours: 'hr',
+  day: 'day',
+  degree: 'deg',
+  radian: 'rad',
+  radians: 'rad',
+  percent: '%',
+  liter: 'L',
+  litres: 'L',
+  litre: 'L',
+  liters: 'L',
+  bar: 'bar',
+  atmosphere: 'atm',
+  atmosphere_technical: 'atm',
+  pound: 'lb',
+  pound_force: 'lbf',
+  foot: 'ft',
+  feet: 'ft',
+  inch: 'in',
+  inches: 'in',
+  mile: 'mi',
+  yard: 'yd',
+  ton: 'ton',
+  psi: 'psi',
+  rpm: 'rpm',
+  acre: 'acre',
+  gallon: 'gal',
+  Gallon: 'gal',
+};
+
+const MX_GREEK: Record<string, string> = {
+  'π': 'pi',
+  '∞': 'Infinity',
+  'τ': 'tau',
+  '✓': 'sqrt',
+};
+
+/** Служебные узлы provenance — не операнды (иначе в формуле появляются пустые `* *`). */
+const MX_META = new Set([
+  'originRef',
+  'parentRef',
+  'comment',
+  'originComment',
+  'contentHash',
+  'hash',
+]);
+
+/** Прореживаем provenance: он оборачивает выражение, но сам не операция. */
+function mxExprChildren(n: XNode): XNode[] {
+  const out: XNode[] = [];
+  for (const c of n.children) {
+    if (c.name === 'provenance') {
+      out.push(...c.children.filter((x) => !MX_META.has(X_LOCAL(x.name))));
+    } else out.push(c);
+  }
+  return out;
+}
+
+function mxRender(n: XNode, ctx = 0): string {
+  const name = X_LOCAL(n.name);
+  const kids = mxExprChildren(n);
+  const prec = mxPrec(n);
+  const wrap = (s: string): string => mxWrap(s, prec, ctx);
+
+  if (name === 'id') {
+    let s = (n.text ?? '').trim();
+    s = MX_GREEK[s] ?? s;
+    const sub = n.attrs['subscript'] ?? '';
+    if (sub) s += `_${sub.replace(/\s+/g, '')}`;
+    return s;
+  }
+  if (name === 'real') {
+    let s = (n.text ?? '').trim();
+    if (s.startsWith('.')) s = `0${s}`;
+    if (s.startsWith('-.')) s = `-0${s.slice(1)}`;
+    return s;
+  }
+  if (name === 'str') return `"${(n.text ?? '').replace(/"/g, '\\"')}"`;
+  if (name === 'parens') return `(${kids.map((k) => mxRender(k, 0)).join(', ')})`;
+  if (name === 'result' || name === 'symResult' || name === 'unitOverride') return '';
+  if (name === 'provenance') return kids.length ? mxRender(kids[0] as XNode, ctx) : '';
+
+  if (name === 'define') {
+    if (kids[1] && X_LOCAL(kids[1].name) === 'program') return ''; // → program-блок
+    const lhs = kids[0] ? mxRender(kids[0], 0) : '';
+    const rhs = kids[1] ? mxRender(kids[1], 0) : '';
+    return lhs && rhs ? `${lhs} := ${rhs}` : '';
+  }
+  if (name === 'eval') return kids[0] ? `${mxRender(kids[0] as XNode, 0)} =` : '';
+  if (name === 'symEval') return kids[0] ? `${mxRender(kids[0] as XNode, 0)} →` : '';
+
+  if (name === 'function') {
+    const f = kids[0] ? mxRender(kids[0], 0) : '';
+    const argsNode = kids[1];
+    const args = argsNode
+      ? argsNode.children.map((a) => mxRender(a, 0)).join(', ')
+      : '';
+    return `${f}(${args})`;
+  }
+  if (name === 'boundVars' || name === 'sequence')
+    return kids.map((k) => mxRender(k, 0)).join(', ');
+  if (name === 'range') return kids.map((k) => mxRender(k, 0)).join('..');
+  if (name === 'lambda') return kids.map((k) => mxRender(k, 0)).join(' → ');
+
+  if (name === 'unitedValue') {
+    const val = kids[0] ? mxRender(kids[0], 4) : '';
+    const unit = kids[1] ? mxRender(kids[1], 5) : '';
+    return val && unit ? wrap(`${val} * ${unit}`) : val || unit;
+  }
+  if (name === 'unitMonomial')
+    return kids.map((k) => mxRender(k, 5)).join(' * ');
+  if (name === 'unitReference') {
+    const raw = n.attrs['unit'] ?? '';
+    let s = MX_UNITS[raw] ?? raw;
+    const pn = n.attrs['power-numerator'];
+    const pd = n.attrs['power-denominator'];
+    if (pn) s += `^${pn}`;
+    if (pd) s += `^(${pd === '1' ? '-1' : `-(${pd})`})`;
+    return s;
+  }
+
+  if (name === 'matrix') {
+    const rows = Math.max(0, Number(n.attrs['rows']) || 0);
+    const cols = Math.max(0, Number(n.attrs['cols']) || 0);
+    if (!rows || !cols) return `[${kids.map((k) => mxRender(k, 0)).join(', ')}]`;
+    const cells: string[] = [];
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) cells.push(mxRender(kids[c * rows + r] as XNode, 0));
+    }
+    const line: string[] = [];
+    for (let r = 0; r < rows; r++) {
+      const row: string[] = [];
+      for (let c = 0; c < cols; c++) row.push(cells[c * rows + r] ?? '0');
+      line.push(row.join(', '));
+    }
+    return `[${line.join('; ')}]`;
+  }
+
+  if (name === 'apply') {
+    const opNode = kids[0];
+    if (!opNode) return '';
+    // `<apply><id>log</id>…</apply>` — вызов функции по имени. Раньше брали
+    // имя тега (`id`) вместо текста (`log`, `identity`, `last`, …) — отсюда
+    // «id(K, 2)» в переведённых листах.
+    const op = X_LOCAL(opNode.name) === 'id' ? mxRender(opNode, 0) : X_LOCAL(opNode.name);
+    // Обычно `<apply><sum/><bounds/><lambda/></apply>`, но встречается и
+    // `<apply><sum><bounds/><lambda/></sum></apply>` — поддерживаем оба вида.
+    const args = kids.length > 1 ? kids.slice(1) : mxExprChildren(opNode);
+    const at = (i: number): XNode | undefined => args[i];
+    const bin = (sym: string, p: number, rightAssoc = false): string => {
+      const a = at(0);
+      const b = at(1);
+      if (!a || !b) return `${op}(${args.map((x) => mxRender(x, 0)).join(', ')})`;
+      return `${mxRender(a, p)} ${sym} ${mxRender(b, rightAssoc ? p : p + 1)}`;
+    };
+    switch (op) {
+      case 'mult':
+        return wrap(bin('*', 4));
+      case 'div':
+        return wrap(bin('/', 4));
+      case 'plus':
+        return wrap(bin('+', 3));
+      case 'minus':
+        return wrap(bin('-', 3));
+      case 'pow':
+        return wrap(bin('^', 5, true));
+      case 'equal':
+        return wrap(bin('==', 2));
+      case 'lessThan':
+        return wrap(bin('<', 2));
+      case 'greaterThan':
+        return wrap(bin('>', 2));
+      case 'lessOrEqual':
+      case 'lessThanOrEqual':
+        return wrap(bin('<=', 2));
+      case 'greaterOrEqual':
+      case 'greaterThanOrEqual':
+        return wrap(bin('>=', 2));
+      case 'notEqual':
+        return wrap(bin('!=', 2));
+      case 'and':
+        return wrap(bin('and', 2));
+      case 'or':
+        return wrap(bin('or', 2));
+      case 'sqrt': {
+        const a = at(0);
+        return a ? `sqrt(${mxRender(a, 0)})` : 'sqrt()';
+      }
+      case 'nthRoot': {
+        const a = at(0);
+        const b = at(1);
+        return a && b ? `(${mxRender(a, 0)}) ^ (1/(${mxRender(b, 0)}))` : 'sqrt()';
+      }
+      case 'absval': {
+        const a = at(0);
+        return a ? `abs(${mxRender(a, 0)})` : 'abs()';
+      }
+      case 'neg': {
+        const a = at(0);
+        return a ? wrap(`-${mxRender(a, 6)}`) : '';
+      }
+      case 'indexer': {
+        const a = at(0);
+        if (!a) return '';
+        return `${mxRender(a, 8)}[${args.slice(1).map((x) => mxRender(x, 0)).join(', ')}]`;
+      }
+      case 'factorial': {
+        const a = at(0);
+        return a ? `${mxRender(a, 8)}!` : '';
+      }
+      case 'transpose': {
+        const a = at(0);
+        return a ? `transpose(${mxRender(a, 0)})` : '';
+      }
+      case 'summation':
+      case 'product':
+      case 'integral': {
+        const bnd = args.find((x) => X_LOCAL(x.name) === 'bounds');
+        const lam = args.find((x) => X_LOCAL(x.name) === 'lambda');
+        if (!lam) return `${op}(${args.map((x) => mxRender(x, 0)).join(', ')})`;
+        const vars = lam.children[0] ? mxRender(lam.children[0] as XNode, 0) : 'k';
+        const body = lam.children[1] ? mxRender(lam.children[1] as XNode, 0) : '';
+        const lo = bnd?.children[0] ? mxRender(bnd.children[0] as XNode, 0) : '1';
+        const hi = bnd?.children[1] ? mxRender(bnd.children[1] as XNode, 0) : 'Infinity';
+        const q = (s: string): string => s.replace(/"/g, '\\"');
+        if (op === 'summation') return `numsum("${q(body)}", "${q(vars)}", ${lo}, ${hi})`;
+        if (op === 'product') return `numprod("${q(body)}", "${q(vars)}", ${lo}, ${hi})`;
+        return `nint("${q(body)}", "${q(vars)}", ${lo}, ${hi})`;
+      }
+      default:
+        return `${op}(${args.map((x) => mxRender(x, 0)).join(', ')})`;
+    }
+  }
+
+  if (name === 'program') return mxProgram(n);
+  if (name === 'ifThen' || name === 'otherwise') {
+    const parts = kids.map((k) => mxRender(k, 0)).filter(Boolean);
+    return parts.join(' → ');
+  }
+  return kids.length ? wrap(kids.map((k) => mxRender(k, 0)).join(', ')) : (n.text ?? '').trim();
+}
+
+/** Mathcad-программа → текст program-блока NyaMath (`for … in …`, `if/else/end`). */
+function mxProgram(n: XNode): string {
+  const lines: string[] = [];
+  const statements = (list: XNode[], indent: number): void => {
+    const pad = '  '.repeat(indent);
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i] as XNode;
+      const name = X_LOCAL(c.name);
+      const kids = mxExprChildren(c);
+      if (name === 'program') {
+        // Тело цикла/ветвления — вложенный <program>, а не плоский список.
+        statements(kids, indent);
+        continue;
+      }
+      if (name === 'localDefine' || name === 'define') {
+        const lhs = kids[0] ? mxRender(kids[0], 0).trim() : '';
+        const rhs = kids[1] ? mxRender(kids[1], 0).trim() : '';
+        if (lhs) lines.push(`${pad}${lhs} := ${rhs}`.trimEnd());
+        continue;
+      }
+      if (name === 'for') {
+        const v = kids[0] ? mxRender(kids[0], 0).trim() : 'i';
+        const range = kids[1] ? mxRender(kids[1], 0).trim() : '1..n';
+        lines.push(`${pad}for ${v} in ${range}`);
+        statements(kids.slice(2), indent + 1);
+        lines.push(`${pad}end`);
+        continue;
+      }
+      if (name === 'ifThen') {
+        const cond = kids[0] ? mxRender(kids[0], 0).trim() : 'true';
+        // `otherwise` — соседний сиблинг, а не ребёнок: собираем if/else/end вместе.
+        const otherwise =
+          i + 1 < list.length && X_LOCAL((list[i + 1] as XNode).name) === 'otherwise'
+            ? ((list[++i] as XNode))
+            : null;
+        lines.push(`${pad}if ${cond}`);
+        statements(kids.slice(1), indent + 1);
+        if (otherwise) {
+          lines.push(`${pad}else`);
+          statements(mxExprChildren(otherwise), indent + 1);
+        }
+        lines.push(`${pad}end`);
+        continue;
+      }
+      if (name === 'otherwise') continue; // уже подобран выше
+      const s = mxRender(c, 0).trim();
+      if (s) lines.push(`${pad}${s}`);
+    }
+  };
+  statements(mxExprChildren(n), 0);
+  return lines.join('\n');
+}
+
+const MX_EXPR_NAMES = new Set([
+  'define',
+  'eval',
+  'symEval',
+  'apply',
+  'id',
+  'real',
+  'str',
+  'function',
+  'parens',
+  'matrix',
+  'sequence',
+  'range',
+  'unitedValue',
+  'unitMonomial',
+  'program',
+  'result',
+  'symResult',
+]);
+
+/** Весь Mathcad worksheet → блоки. Позиции из left/top; сетку разнесут вызывающие. */
+export function parseXmcd(xml: string): ImportResult {
+  const notes: string[] = [];
+  const blocks: ImportBlock[] = [];
+  const nodes = parseXmlTree(xml);
+  const sheet = findFirst(nodes, 'regions');
+  const regions = sheet ? sheet.children.filter((c) => c.name === 'region') : findAllNodes(nodes, 'region');
+  if (!regions.length) {
+    return { blocks, notes: ['<regions> не найдены — не похоже на Mathcad .xmcd'], format: 'xmcd' };
+  }
+  let autoY = 60;
+  let skipped = 0;
+  for (const r of regions) {
+    const x = numOr(r.attrs['left'] ?? null, 80);
+    const y = numOr(r.attrs['top'] ?? null, autoY);
+    autoY = Math.max(autoY, y) + 72;
+    const text = findChild(r, 'text');
+    const math = findChild(r, 'math');
+    if (text) {
+      const lines = textLines(text);
+      if (lines.length) {
+        blocks.push({ kind: 'text', body: lines.join('\n'), x, y });
+      } else {
+        skipped++;
+        notes.push(`текстовый регион @${Math.round(y)} пуст (Prime XAML) — пропущен`);
+      }
+      continue;
+    }
+    if (math) {
+      let exprs = mxExprChildren(math).filter((c) => MX_EXPR_NAMES.has(X_LOCAL(c.name)));
+      if (!exprs.length) {
+        const prov = findChild(math, 'provenance');
+        if (prov) exprs = mxExprChildren(prov).filter((c) => MX_EXPR_NAMES.has(X_LOCAL(c.name)));
+      }
+      if (!exprs.length) {
+        skipped++;
+        continue;
+      }
+      for (const e of exprs) {
+        const name = X_LOCAL(e.name);
+        if (name === 'result' || name === 'symResult') continue;
+        // `<define>x := <program>…` → program-блок с exportName=x
+        if (name === 'define') {
+          const kids = mxExprChildren(e);
+          const rhs = kids[1];
+          if (rhs && X_LOCAL(rhs.name) === 'program') {
+            const lhs = mxRender(kids[0] as XNode, 0).trim();
+            blocks.push({
+              kind: 'program',
+              body: mxProgram(rhs),
+              exportName: lhs,
+              x,
+              y,
+            });
+            notes.push(
+              `Mathcad-программа @${Math.round(y)} → program-блок (результат как ${lhs || 'exportName'})`,
+            );
+            continue;
+          }
+        }
+        const body = name === 'program' ? mxProgram(e) : mxRender(e, 0).trim();
+        if (!body) continue;
+        blocks.push({ kind: name === 'program' ? 'program' : 'math', body, x, y });
+        if (name === 'program')
+          notes.push('Mathcad-программа → program-блок (проверьте условия/ветви)');
+      }
+      continue;
+    }
+    skipped++;
+  }
+  if (skipped) notes.push(`пропущено регионов Mathcad: ${skipped} (графики/картинки/пустые)`);
+  return { blocks, notes, format: 'xmcd' };
+}
+
+function findAllNodes(nodes: XNode[], name: string): XNode[] {
+  const out: XNode[] = [];
+  const walk = (list: XNode[]): void => {
+    for (const n of list) {
+      if (n.name === name) out.push(n);
+      walk(n.children);
+    }
+  };
+  walk(nodes);
+  return out;
 }

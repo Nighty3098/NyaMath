@@ -31,7 +31,9 @@ import { pullSnapshot, pushSnapshot, resolveSyncUrl, type SyncSnapshot } from '.
 import { ENGINE_VERSION } from '../../src/engine/version.js';
 import { engineMismatch, parseDocFile, serializeDocFile } from '../../src/lib/docFile.js';
 import { slimText, unifiedDiff } from '../../src/lib/slimDiff.js';
-import { parseCpd, parseSmXml, type ImportBlock } from '../../src/lib/importDoc.js';
+import { parseCpd, parseSmXml, type ImportResult } from '../../src/lib/importDoc.js';
+import { parseMathcadFile } from '../../src/lib/mathcadFile.js';
+import { buildImportedBlocks } from '../../src/lib/importBlocks.js';
 import { startSyncServer } from './syncServer.js';
 import {
   canon,
@@ -988,82 +990,50 @@ server.tool(
   },
 );
 
-/** ImportBlock → полные блоки документа (многострочный текст режем построчно). */
-function importBlocks(items: ImportBlock[], y0: number, dy: number): MathBlockData[] {
-  const rec: MathBlockData[] = [];
-  let k = 0;
-  const place = (): { x: number; y: number } => ({ x: 80, y: y0 + k++ * dy });
-  for (const ib of items) {
-    if (ib.kind === 'text' && ib.body.includes('\n')) {
-      for (const line of ib.body.split('\n')) {
-        const id = uuid();
-        const p = place();
-        rec.push({ ...blank(id, ib.x || p.x, p.y), kind: 'text', rawInput: line });
-      }
-      continue;
-    }
-    const id = uuid();
-    const p = place();
-    if (ib.kind === 'math') {
-      rec.push({ ...blank(id, ib.x || p.x, p.y), kind: 'math', rawInput: ib.body });
-    } else if (ib.kind === 'text') {
-      rec.push({ ...blank(id, ib.x || p.x, p.y), kind: 'text', rawInput: ib.body });
-    } else if (ib.kind === 'plot') {
-      rec.push({
-        ...blank(id, ib.x || p.x, p.y),
-        kind: 'plot',
-        rawInput: 'plot',
-        plotFn: ib.body,
-        plotXmin: ib.plotXmin ?? -10,
-        plotXmax: ib.plotXmax ?? 10,
-      });
-    } else {
-      rec.push({
-        ...blank(id, ib.x || p.x, p.y),
-        kind: 'contour',
-        rawInput: 'contour',
-        plotFn: ib.body,
-        plotXmin: ib.plotXmin ?? -5,
-        plotXmax: ib.plotXmax ?? 5,
-        plotYmin: ib.plotYmin ?? -5,
-        plotYmax: ib.plotYmax ?? 5,
-        plotResolution: 48,
-      });
-    }
-  }
-  return rec;
-}
-
 server.tool(
   'nya_import',
-  'Импорт чужого листа: SMath .sm (XML/RPN) или Calcpad .cpd/.txt. Блоки дописываются ниже, отчёт — в notes',
+  'Импорт чужого листа: SMath .sm, Calcpad .cpd/.txt, Mathcad .xmcd/.xmcdz/.mcdx. Блоки дописываются ниже, отчёт — в notes',
   {
-    path: z.string().describe('Путь к .sm/.cpd/.txt файлу'),
-    format: z.enum(['auto', 'sm', 'cpd']).default('auto').describe('Формат (auto — по расширению)'),
+    path: z.string().describe('Путь к .sm/.cpd/.txt/.xmcd/.xmcdz/.mcdx файлу'),
+    format: z
+      .enum(['auto', 'sm', 'cpd', 'xmcd', 'xmcdz', 'mcdx'])
+      .default('auto')
+      .describe('Формат (auto — по расширению)'),
     y0: z.number().optional().describe('Верх вставки (по умолчанию — ниже всех блоков)'),
     dy: z.number().int().min(24).max(500).default(72).describe('Шаг по Y между блоками'),
   },
   async ({ path: p, format, y0, dy }): Promise<CallToolResult> => {
-    let text: string;
+    let bytes: Uint8Array;
     try {
       const st = fs.statSync(p);
-      if (st.size > 1024 * 1024) return fail('Файл больше 1 МБ — импорт не поддерживается');
-      text = fs.readFileSync(p, 'utf-8');
+      if (st.size > 8 * 1024 * 1024) return fail('Файл больше 8 МБ — импорт не поддерживается');
+      bytes = new Uint8Array(fs.readFileSync(p));
     } catch (e) {
       return fail(`Не могу прочитать ${p}: ${e instanceof Error ? e.message : String(e)}`);
     }
-    if (text.startsWith('PK\x03\x04'))
-      return fail('.smz (zip) не поддерживается — распакуйте в .sm');
     const ext = path.extname(p).toLowerCase();
-    const fmt = format === 'auto' ? (ext === '.sm' ? 'sm' : 'cpd') : format;
-    const parsed = fmt === 'sm' ? parseSmXml(text) : parseCpd(text);
+    const fmt = format === 'auto' ? ext.replace('.', '') : format;
+    let parsed: ImportResult;
+    try {
+      if (fmt === 'sm' || fmt === 'cpd') {
+        parsed = fmt === 'sm' ? parseSmXml(Buffer.from(bytes).toString('utf-8')) : parseCpd(Buffer.from(bytes).toString('utf-8'));
+      } else if (fmt === 'xmcd' || fmt === 'xmcdz' || fmt === 'mcdx') {
+        parsed = await parseMathcadFile(bytes, p);
+      } else {
+        return fail(
+          `Неизвестный формат ${fmt || '(без расширения)'} — укажите format вручную (sm/cpd/xmcd/xmcdz/mcdx)`,
+        );
+      }
+    } catch (e) {
+      return fail(`Не удалось разобрать ${p}: ${e instanceof Error ? e.message : String(e)}`);
+    }
     if (!parsed.blocks.length) {
       return fail(`Нечего импортировать: ${parsed.notes.join('; ') || 'пустой файл'}`);
     }
     if (parsed.blocks.length > 500)
       return fail(`Слишком много блоков (${parsed.blocks.length} > 500)`);
     const startY = y0 ?? (blocks.length ? Math.max(...blocks.map((b) => b.y)) + 72 : 60);
-    const rec = importBlocks(parsed.blocks, startY, dy);
+    const rec = buildImportedBlocks(parsed.blocks, { y0: startY, dy });
     blocks.push(...rec);
     refresh();
     let errors = 0;

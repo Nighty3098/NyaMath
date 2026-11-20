@@ -52,6 +52,8 @@ import * as tableIO from '../lib/tableIO';
 import * as snapshots from '../lib/snapshots';
 import { ENGINE_VERSION } from '../engine/version';
 import { blankBlock, normalizeBlock, slimBlockRecord, type BlockKind } from '../lib/blocks';
+import { buildImportedBlocks } from '../lib/importBlocks';
+import type { ImportBlock } from '../lib/importDoc';
 
 /* Настройки листа/форматы/палитры: персист — в store/persist.ts. */
 
@@ -170,6 +172,11 @@ export interface CanvasState {
   addBlock: (x: number, y: number, raw?: string, edit?: boolean) => void;
   /** Пакетная вставка построчно: каждая строка — отдельный мат-блок лесенкой вниз (один undo-шаг). */
   addBlocks: (lines: string[], x: number, y: number, dy?: number) => void;
+  /**
+   * Импорт чужого листа (.sm/.cpd/.xmcd): блоки строятся общей раскладкой
+   * и дописываются ниже текущих, одним шагом undo. Возвращает число блоков.
+   */
+  appendImportedBlocks: (items: ImportBlock[]) => number;
   /**
    * Импорт CSV/TSV-текста (Excel copy-paste) матрицей: `M := [..]` новым
    * мат-блоком в точке прицела. Возвращает false, если чисел нет.
@@ -1300,6 +1307,22 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     persist(next);
     set({ blocks: next, selectedIds: ids });
     scheduleRecalcAsync(60);
+  },
+
+  appendImportedBlocks: (items) => {
+    if (!items.length) return 0;
+    const cur = get().blocks;
+    const all = Object.values(cur);
+    const y0 = all.length ? Math.max(...all.map((b) => b.y)) + 132 : 60;
+    const built = buildImportedBlocks(items, { y0, dy: 72 });
+    if (!built.length) return 0;
+    pushHistory(get, set as SetFn, true);
+    const next = { ...cur };
+    for (const b of built) next[b.id] = b;
+    persist(next);
+    set({ blocks: next, selectedIds: built.map((b) => b.id) });
+    scheduleRecalcAsync(60);
+    return built.length;
   },
 
   addPlotBlock: (x, y, fn = 'sin(x)', patch) => {

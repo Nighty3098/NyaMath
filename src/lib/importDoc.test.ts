@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { parseCpd, parseSmXml } from './importDoc';
+import { deflateRawSync, gzipSync } from 'node:zlib';
+import { parseCpd, parseSmXml, parseXmcd } from './importDoc';
+import { parseMathcadFile } from './mathcadFile';
 
 const SM_SAMPLE = `<?xml version="1.0" encoding="utf-8"?>
 <regions>
@@ -137,5 +139,181 @@ describe('importDoc: Calcpad .cpd', () => {
       plotYmax: 5,
     });
     expect(r.blocks[0]?.body).toContain('sin(x, y)');
+  });
+});
+
+const XMCD_SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>
+<worksheet version="3.0.3" xmlns="http://schemas.mathsoft.com/worksheet30"
+  xmlns:ml="http://schemas.mathsoft.com/math30">
+  <regions>
+    <region left="36" top="136"><text><p>Beam parameters</p></text></region>
+    <region left="36" top="200"><math>
+      <ml:define>
+        <ml:id>L</ml:id>
+        <ml:apply><ml:mult/><ml:real>3</ml:real><ml:unitReference unit="meter"/></ml:apply>
+      </ml:define>
+    </math></region>
+    <region left="36" top="264"><math>
+      <ml:eval><ml:apply><ml:div/><ml:id>x</ml:id><ml:real>2</ml:real></ml:apply></ml:eval>
+    </math></region>
+    <region left="36" top="328"><math>
+      <ml:define><ml:id>S</ml:id>
+        <ml:apply>
+          <ml:summation>
+            <ml:bounds><ml:real>1</ml:real><ml:real>4</ml:real></ml:bounds>
+            <ml:lambda><ml:id>k</ml:id><ml:id>k</ml:id></ml:lambda>
+          </ml:summation>
+        </ml:apply>
+      </ml:define>
+    </math></region>
+    <region left="36" top="392"><math>
+      <ml:define><ml:id>M</ml:id>
+        <ml:matrix rows="2" cols="2">
+          <ml:real>1</ml:real><ml:real>2</ml:real><ml:real>3</ml:real><ml:real>4</ml:real>
+        </ml:matrix>
+      </ml:define>
+    </math></region>
+  </regions>
+</worksheet>`;
+
+describe('importDoc: Mathcad .xmcd', () => {
+  it('текст, define с единицей, eval, сумма и матрица', () => {
+    const r = parseXmcd(XMCD_SAMPLE);
+    expect(r.format).toBe('xmcd');
+    expect(r.blocks.map((b) => b.body)).toEqual([
+      'Beam parameters',
+      'L := 3 * m',
+      'x / 2 =',
+      'S := numsum("k", "k", 1, 4)',
+      'M := [1, 3; 2, 4]',
+    ]);
+    expect(r.blocks[0]).toMatchObject({ kind: 'text', x: 36, y: 136 });
+  });
+
+  it('скобки и правоассоциативная степень', () => {
+    const xml = `<regions><region left="0" top="0"><math>
+      <ml:define><ml:id>y</ml:id>
+        <ml:apply><ml:plus/><ml:id>a</ml:id>
+          <ml:apply><ml:mult/><ml:apply><ml:pow/><ml:id>b</ml:id><ml:real>2</ml:real></ml:apply><ml:id>c</ml:id></ml:apply>
+        </ml:apply>
+      </ml:define>
+    </math></region></regions>`;
+    expect(parseXmcd(xml).blocks[0]?.body).toBe('y := a + b ^ 2 * c');
+  });
+
+  it('gzip-контейнер .xmcdz читается как обычный лист', async () => {
+    const gz = gzipSync(Buffer.from(XMCD_SAMPLE, 'utf-8'));
+    const r = await parseMathcadFile(new Uint8Array(gz), 'sample.xmcdz');
+    expect(r.format).toBe('xmcd');
+    expect(r.blocks).toHaveLength(5);
+    expect(r.notes.some((n) => n.includes('gzip'))).toBe(true);
+  });
+
+  it('вызов функции по имени (<id>log</id>) не превращается в id(...)', () => {
+    const xml = `<regions>
+      <region left="0" top="0"><math><ml:define><ml:id>k</ml:id>
+        <ml:apply><ml:id>log</ml:id><ml:id>K</ml:id><ml:real>2</ml:real></ml:apply>
+      </ml:define></math></region>
+      <region left="0" top="64"><math><ml:eval>
+        <ml:apply><ml:id>last</ml:id><ml:id>X</ml:id></ml:apply>
+      </ml:eval></math></region>
+    </regions>`;
+    expect(parseXmcd(xml).blocks.map((b) => b.body)).toEqual([
+      'k := log(K, 2)',
+      'last(X) =',
+    ]);
+  });
+
+  it('программа: localDefine / for / if / else / вложенный program', () => {
+    const xml = `<regions><region left="0" top="0"><math>
+      <ml:define>
+        <ml:function><ml:id>DecBin</ml:id><ml:boundVars><ml:id>X</ml:id></ml:boundVars></ml:function>
+        <ml:program>
+          <ml:localDefine><ml:id>S</ml:id><ml:real>0</ml:real></ml:localDefine>
+          <ml:for><ml:id>i</ml:id><ml:range><ml:real>0</ml:real><ml:real>3</ml:real></ml:range>
+            <ml:program>
+              <ml:ifThen>
+                <ml:apply><ml:equal/><ml:id>X</ml:id><ml:real>1</ml:real></ml:apply>
+                <ml:program><ml:localDefine><ml:id>S</ml:id>
+                  <ml:apply><ml:plus/><ml:id>S</ml:id><ml:real>1</ml:real></ml:apply>
+                </ml:localDefine></ml:program>
+              </ml:ifThen>
+              <ml:otherwise><ml:program><ml:localDefine><ml:id>S</ml:id>
+                <ml:apply><ml:minus/><ml:id>S</ml:id><ml:real>1</ml:real></ml:apply>
+              </ml:localDefine></ml:program></ml:otherwise>
+            </ml:program>
+          </ml:for>
+          <ml:id>S</ml:id>
+        </ml:program>
+      </ml:define>
+    </math></region></regions>`;
+    const r = parseXmcd(xml);
+    expect(r.blocks).toHaveLength(1);
+    expect(r.blocks[0]).toMatchObject({ kind: 'program', exportName: 'DecBin(X)' });
+    expect(r.blocks[0]?.body).toBe(
+      [
+        'S := 0',
+        'for i in 0..3',
+        '  if X == 1',
+        '    S := S + 1',
+        '  else',
+        '    S := S - 1',
+        '  end',
+        'end',
+        'S',
+      ].join('\n'),
+    );
+  });
+
+  it('не-лист даёт честную пометку', () => {
+    expect(parseXmcd('<html><body>hi</body></html>').notes.length).toBeGreaterThan(0);
+  });
+});
+
+/** Минимальный ZIP с одним deflate-членом — фикстура Prime .mcdx. */
+function zipOne(name: string, content: string): Uint8Array {
+  const raw = Buffer.from(content, 'utf-8');
+  const def = deflateRawSync(raw);
+  const nb = Buffer.from(name, 'utf-8');
+  const local = Buffer.alloc(30 + nb.length);
+  local.writeUInt32LE(0x04034b50, 0);
+  local.writeUInt16LE(20, 4);
+  local.writeUInt16LE(8, 8);
+  local.writeUInt32LE(def.length, 18);
+  local.writeUInt32LE(raw.length, 22);
+  local.writeUInt16LE(nb.length, 26);
+  nb.copy(local, 30);
+  const central = Buffer.alloc(46 + nb.length);
+  central.writeUInt32LE(0x02014b50, 0);
+  central.writeUInt16LE(20, 4);
+  central.writeUInt16LE(20, 6);
+  central.writeUInt16LE(8, 10);
+  central.writeUInt32LE(def.length, 20);
+  central.writeUInt32LE(raw.length, 24);
+  central.writeUInt16LE(nb.length, 28);
+  nb.copy(central, 46);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(1, 8);
+  eocd.writeUInt16LE(1, 10);
+  eocd.writeUInt32LE(central.length, 12);
+  eocd.writeUInt32LE(local.length + def.length, 16);
+  return new Uint8Array(Buffer.concat([local, def, central, eocd]));
+}
+
+describe('importDoc: Prime .mcdx', () => {
+  it('читает mathcad/worksheet.xml из ZIP и честно помечает XAML-текст', async () => {
+    const zip = zipOne(
+      'mathcad/worksheet.xml',
+      `<worksheet xmlns="http://schemas.mathsoft.com/worksheet50" xmlns:ml="http://schemas.mathsoft.com/math50">
+        <regions><region left="20" top="40"><math>
+          <ml:define><ml:id>a</ml:id><ml:real>7</ml:real></ml:define>
+        </math></region></regions>
+      </worksheet>`,
+    );
+    const r = await parseMathcadFile(zip, 'test.mcdx');
+    expect(r.format).toBe('xmcd');
+    expect(r.blocks.map((b) => b.body)).toEqual(['a := 7']);
+    expect(r.notes.some((n) => n.includes('XAML'))).toBe(true);
   });
 });

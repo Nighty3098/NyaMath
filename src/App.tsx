@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import MenuBar from './components/MenuBar';
 import Canvas from './components/Canvas';
 import ProblemsPanel from './components/ProblemsPanel';
@@ -10,6 +10,9 @@ import VariableNavigator from './components/VariableNavigator';
 import { useCanvasStore, type PaletteTab } from './store/canvasStore';
 import { saveDocument } from './lib/saveDocument';
 import { installPrintCleanup } from './lib/print';
+import { parseCpd, parseSmXml, type ImportResult } from './lib/importDoc';
+import { parseMathcadFile } from './lib/mathcadFile';
+import { parseTable } from './lib/tableIO';
 import {
   clearShareParamFromUrl,
   decodeShareParam,
@@ -20,6 +23,26 @@ import {
 } from './lib/share';
 import { t } from './i18n';
 import { trackVisitOnce } from './lib/analytics';
+
+const DROP_EXTS = new Set([
+  '.json',
+  '.sm',
+  '.cpd',
+  '.csv',
+  '.tsv',
+  '.txt',
+  '.xmcd',
+  '.xmcdz',
+  '.mcdx',
+]);
+const MAX_IMPORT_BYTES = 16 * 1024 * 1024;
+
+function notesText(notes: string[]): string {
+  if (!notes.length) return '';
+  const head = notes.slice(0, 12).join('\n');
+  const tail = notes.length > 12 ? `\n… (+${notes.length - 12})` : '';
+  return t('import.notes', { notes: head + tail });
+}
 
 export default function App() {
   const theme = useCanvasStore((s) => s.theme);
@@ -220,19 +243,118 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const openFile = (f: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(String(reader.result));
-        const r = loadDocument(data);
-        alert(r.message);
-      } catch {
-        alert(t('app.badJson'));
+  const openFile = useCallback(
+    (f: File) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(String(reader.result));
+          const r = loadDocument(data);
+          alert(r.message);
+        } catch {
+          alert(t('app.badJson'));
+        }
+      };
+      reader.readAsText(f);
+    },
+    [loadDocument],
+  );
+
+  /** Единая точка входа для файла — из пикера и из drag&drop. */
+  const importFile = useCallback(
+    async (f: File) => {
+      const lc = f.name.toLowerCase();
+      const ext = lc.includes('.') ? lc.slice(lc.lastIndexOf('.')) : '';
+      if (ext === '.json') {
+        openFile(f);
+        return;
       }
+      if (!DROP_EXTS.has(ext)) {
+        alert(t('import.unsupported', { ext: ext || '—' }));
+        return;
+      }
+      if (f.size > MAX_IMPORT_BYTES) {
+        alert(t('import.failed', { name: f.name, error: 'file too large (>16 MB)' }));
+        return;
+      }
+      try {
+        if (ext === '.csv' || ext === '.tsv' || ext === '.txt') {
+          const text = await f.text();
+          const rows = parseTable(text);
+          const ok = useCanvasStore.getState().importCsvMatrix(text);
+          alert(ok ? t('csv.imported', { n: rows.length, m: rows[0]?.length ?? 0 }) : t('csv.failed'));
+          return;
+        }
+        const bytes = new Uint8Array(await f.arrayBuffer());
+        let parsed: ImportResult;
+        if (ext === '.xmcd' || ext === '.xmcdz' || ext === '.mcdx') {
+          parsed = await parseMathcadFile(bytes, f.name);
+        } else {
+          const text = new TextDecoder('utf-8').decode(bytes);
+          parsed = ext === '.sm' ? parseSmXml(text) : parseCpd(text);
+        }
+        if (!parsed.blocks.length) {
+          alert(t('import.empty', { notes: notesText(parsed.notes) }));
+          return;
+        }
+        if (parsed.blocks.length > 500) {
+          alert(t('import.tooMany', { n: parsed.blocks.length }));
+          return;
+        }
+        const n = useCanvasStore.getState().appendImportedBlocks(parsed.blocks);
+        alert(t('import.ok', { n, notes: notesText(parsed.notes) }));
+      } catch (e) {
+        alert(
+          t('import.failed', { name: f.name, error: e instanceof Error ? e.message : String(e) }),
+        );
+      }
+    },
+    [openFile],
+  );
+
+  // Внешний drag&drop файлов — слушаем на window, чтобы работало поверх холста,
+  // панелей и любых модальных окон. Счётчик depth гасит мерцание при переходе
+  // между вложенными элементами.
+  const [dragActive, setDragActive] = useState(false);
+  useEffect(() => {
+    let depth = 0;
+    const hasFiles = (e: DragEvent): boolean =>
+      Array.from(e.dataTransfer?.types ?? []).includes('Files');
+    const onEnter = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth++;
+      setDragActive(true);
     };
-    reader.readAsText(f);
-  };
+    const onLeave = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      depth = Math.max(0, depth - 1);
+      if (!depth) setDragActive(false);
+    };
+    const onOver = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    };
+    const onDrop = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth = 0;
+      setDragActive(false);
+      const f = e.dataTransfer?.files?.[0];
+      if (f) void importFile(f);
+    };
+    window.addEventListener('dragenter', onEnter);
+    window.addEventListener('dragleave', onLeave);
+    window.addEventListener('dragover', onOver);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragenter', onEnter);
+      window.removeEventListener('dragleave', onLeave);
+      window.removeEventListener('dragover', onOver);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, [importFile]);
 
   const closeWelcome = () => {
     setWelcomeForced(false);
@@ -259,13 +381,13 @@ export default function App() {
       <input
         ref={fileRef}
         type="file"
-        accept=".json,application/json"
+        accept=".json,.sm,.cpd,.csv,.tsv,.txt,.xmcd,.xmcdz,.mcdx,application/json,text/plain,text/csv"
         className="hidden"
         aria-hidden="true"
         tabIndex={-1}
         onChange={(e) => {
           const f = e.target.files?.[0];
-          if (f) openFile(f);
+          if (f) void importFile(f);
           e.target.value = '';
         }}
       />
@@ -290,6 +412,14 @@ export default function App() {
       ))}
       {/* Ctrl+K: навигатор переменных листа */}
       {navigatorOpen && <VariableNavigator onClose={() => setNavigatorOpen(false)} />}
+      {dragActive && (
+        <div className="nya-drop-overlay" aria-live="polite">
+          <div className="nya-drop-card">
+            <div className="nya-drop-title">{t('drop.active')}</div>
+            <div className="nya-drop-sub">{t('drop.hint')}</div>
+          </div>
+        </div>
+      )}
       {showWelcome && (
         <WelcomeModal onClose={closeWelcome} onOpenFile={() => fileRef.current?.click()} />
       )}

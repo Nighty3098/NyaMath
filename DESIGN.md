@@ -107,7 +107,7 @@
 
 **Скриншот:** IDE из коробки: редактор с подсветкой, Variable Browser, Console, Help с примерами; Xcos — dataflow-граф блоков как Simulink-лайт.
 **Паттерн:** всё нужное уже открыто, `mfile2sci`-транслятор для миграции.
-**Нам взять:** Variable Browser (наш `nya_get_scope` как UI-панель); транслятор чужих форматов (у нас уже `nya_import` для `.sm`/`.cpd` — развивать).
+**Нам взять:** Variable Browser (наш `nya_get_scope` как UI-панель); транслятор чужих форматов (у нас уже `nya_import` для `.sm`/`.cpd`/`.xmcd`/`.xmcdz`/`.mcdx` и drag&drop в UI — развивать).
 
 ### 10. Julia + Pluto.jl (реактивный notebook)
 
