@@ -1,7 +1,7 @@
 name: Electron builds & release
 
-# Сборка трёх десктопных таргетов при пуше в main и публикация релиза
-# с бинарниками. Тег/название берутся из package.json, баннер — из banner.png.
+# Build three desktop targets on every push to main and publish a release.
+# The tag and name come from package.json; the banner comes from banner.png.
 on:
   workflow_dispatch:
   push:
@@ -33,7 +33,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      # electron-builder соберёт установщики в release/ (см. build.directories.output).
+      # electron-builder writes installers to release/ (see build.directories.output).
       - name: Install dependencies
         run: npm ci
 
@@ -42,7 +42,7 @@ jobs:
 
       - name: Package Electron app (${{ matrix.target }})
         env:
-          # На CI нет сертификата подписи macOS — собираем unsigned dmg/zip.
+          # No signing certificate on CI, so macOS dmg/zip are unsigned.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npx electron-builder --${{ matrix.target }} --publish never
 
@@ -55,7 +55,7 @@ jobs:
           retention-days: 7
 
   release:
-    name: Create GitHub release
+    name: Publish GitHub release
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -63,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Версия и имя приложения — единственный источник правды: package.json.
+      # Version and app name are the single source of truth: package.json.
       - name: Read package.json metadata
         id: meta
         shell: bash
@@ -85,9 +85,24 @@ jobs:
       - name: List release files
         run: ls -lh release
 
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
+      # Same package.json version means the release already exists: only assets change.
+      - name: Check whether the release already exists
+        id: release_state
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          if gh release view "${{ steps.meta.outputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create release
+        if: steps.release_state.outputs.exists != 'true'
+        uses: softprops/action-gh-release@v3
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ steps.meta.outputs.tag }}
           name: ${{ steps.meta.outputs.app_name }} ${{ steps.meta.outputs.version }}
           body: |
@@ -95,11 +110,20 @@ jobs:
 
             **${{ steps.meta.outputs.app_name }} ${{ steps.meta.outputs.version }}**
 
-            Сборки: Windows (NSIS), Linux (AppImage, deb), macOS (dmg, zip).
-            Тег и название сформированы из `package.json` (коммит `${{ github.sha }}`).
+            Builds: Windows (NSIS), Linux (AppImage, deb), macOS (dmg, zip).
+            Tag and name are generated from `package.json` (commit `${{ github.sha }}`).
           generate_release_notes: true
           files: release/*
           overwrite_files: true
           fail_on_unmatched_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # No name/body here: the action keeps the existing release metadata.
+      - name: Replace assets in existing release
+        if: steps.release_state.outputs.exists == 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          files: release/*
+          overwrite_files: true
+          fail_on_unmatched_files: true

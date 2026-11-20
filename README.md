@@ -29,7 +29,8 @@ Run `npm run electron:all` for all three targets locally (macOS packaging requir
 macOS). GitHub Actions builds Linux, macOS, and Windows artifacts on native runners
 when changes are pushed to `main` or when the workflow is triggered manually
 (`workflow_dispatch`). Each run publishes a GitHub release using the name and
-version from `package.json`, with `banner.png` in the release notes.
+version from `package.json`, with `banner.png` in the release notes. Pushes with
+the same version replace the assets in the existing release.
 Local artifacts are written to `release/`; CI artifacts are available from the
 Actions run. macOS uses the native application menu; Windows and Linux use the
 React menu bar and its custom minimize, maximize/restore, and close controls
