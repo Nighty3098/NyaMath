@@ -10,8 +10,8 @@ ODE/FDTD simulations, and units (`10 GHz`, `23 mm`, `207 ohm`) on an infinite ca
 
 ```bash
 npm install
-npm run dev      # сайт (vite) + MCP-сервис с live-шиной (:3777) в одном терминале
-npm run dev:site # только сайт, без сервиса
+npm run dev      # site (vite) + MCP service with a live bus (:3777) in one terminal
+npm run dev:site # site only, without the service
 npm run build    # type-check + production build → dist/
 npm run lint     # oxlint
 ```
@@ -27,15 +27,17 @@ npm run electron:win   # Windows: NSIS installer
 
 Run `npm run electron:all` for all three targets locally (macOS packaging requires
 macOS). GitHub Actions builds Linux, macOS, and Windows artifacts on native runners
-when manually triggered (`workflow_dispatch`) or when a `v*` tag is pushed.
+when changes are pushed to `main` or when the workflow is triggered manually
+(`workflow_dispatch`). Each run publishes a GitHub release using the name and
+version from `package.json`, with `banner.png` in the release notes.
 Local artifacts are written to `release/`; CI artifacts are available from the
 Actions run. macOS uses the native application menu; Windows and Linux use the
 React menu bar and its custom minimize, maximize/restore, and close controls
 instead of the native window frame.
 
-`npm run dev` сначала собирает `mcp/dist`, затем поднимает MCP-сервис
-(`--port=$NYAMATH_PORT`, по умолчанию `3777`) рядом с vite: агент через
-stdio и приложение через _View → Live sync_ видят один документ в реалтайме.
+`npm run dev` first builds `mcp/dist`, then starts the MCP service
+(`--port=$NYAMATH_PORT`, default `3777`) alongside Vite: the agent over stdio
+and the app via _View → Live sync_ see the same document in real time.
 
 ## Features
 
@@ -69,6 +71,15 @@ stdio и приложение через _View → Live sync_ видят оди�
   arbitrary-precision mode included);
   pristine examples share as tiny `#t=ex20` links. No backend involved.
 - **Project files**: save/open JSON, print/PDF, undo/redo, themes, RU/EN interface.
+- **Import of foreign worksheets**: drop a file anywhere onto the app (or use
+  _File → Open_) to import Mathcad `.xmcd`/`.xmcdz` (Mathcad 15 XML / gzip) and
+  Prime `.mcdx` (ZIP → `mathcad/worksheet.xml`), plus SMath `.sm` and Calcpad
+  `.cpd`/`.txt`. Mathcad expressions are translated to NyaMath syntax (`define → :=`,
+  `eval → =`, named function calls, `numsum`/`numprod`/`nint`, matrices, units,
+  programs → `for … in …` / `if … else … end`); blocks are snapped to the grid
+  and appended below the current sheet. Unsupported regions are reported in notes
+  rather than silently dropped. Prime text regions live in XAML packages and are
+  skipped with an explicit note.
 - **Reference data in SQLite**: constants, materials, formulas, snippets, sim
   presets and SI prefixes live in `public/NyaMath.db` (SQLite, tables:
   `constants`, `materials`, `formulas`, `snippets`, …), read by the app,
@@ -158,7 +169,7 @@ formulas and programs).
 | `nya_recalc`                         | Force recalculation                                                                                                                                                               |
 | `nya_sync_pull` / `nya_sync_push`    | Pull the canvas the user sees into this session / push it back live to the browser                                                                                                |
 | `nya_diff`                           | Git-friendly slim diff (canonical JSONL + unified hunks vs file/empty)                                                                                                            |
-| `nya_import`                         | Import SMath `.sm` (XML/RPN) or Calcpad `.cpd`/`.txt` worksheets                                                                                                                  |
+| `nya_import`                         | Import SMath `.sm` (XML/RPN), Calcpad `.cpd`/`.txt` and Mathcad `.xmcd`/`.xmcdz`/`.mcdx` worksheets                                                                             |
 | `nya_ask` / `nya_answer`             | Ask the user a question (with optional answer `options`), record the reply. `var` writes the answer into the document scope (`var := answer`, numeric when it parses as a number) |
 
 Resource `nya://document` — JSON summary of the document.
