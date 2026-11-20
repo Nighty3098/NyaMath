@@ -85,17 +85,26 @@ jobs:
       - name: List release files
         run: ls -lh release
 
-      # Same package.json version means the release already exists: only assets change.
-      - name: Check whether the release already exists
+      # Same package.json version means the release already exists: assets change,
+      # while legacy Russian notes are translated once.
+      - name: Check release state
         id: release_state
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          if gh release view "${{ steps.meta.outputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+          TAG="${{ steps.meta.outputs.tag }}"
+          REPO="${{ github.repository }}"
+          if BODY=$(gh release view "$TAG" --repo "$REPO" --json body --jq .body 2>/dev/null); then
             echo "exists=true" >> "$GITHUB_OUTPUT"
+            if printf '%s' "$BODY" | node -e "let s=''; process.stdin.on('data', d => s += d).on('end', () => process.exit(/[\u0400-\u052F]/.test(s) ? 0 : 1))"; then
+              echo "fix_body=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "fix_body=false" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "fix_body=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create release
@@ -116,6 +125,21 @@ jobs:
           files: release/*
           overwrite_files: true
           fail_on_unmatched_files: true
+
+      - name: Translate legacy release notes
+        if: steps.release_state.outputs.exists == 'true' && steps.release_state.outputs.fix_body == 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          body: |
+            ![${{ steps.meta.outputs.app_name }}](${{ steps.meta.outputs.banner }})
+
+            **${{ steps.meta.outputs.app_name }} ${{ steps.meta.outputs.version }}**
+
+            Builds: Windows (NSIS), Linux (AppImage, deb), macOS (dmg, zip).
+            Tag and name are generated from `package.json` (commit `${{ github.sha }}`).
+          generate_release_notes: true
 
       # No name/body here: the action keeps the existing release metadata.
       - name: Replace assets in existing release
