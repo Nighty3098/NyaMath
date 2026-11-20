@@ -1,13 +1,19 @@
-name: Electron builds
+name: Electron builds & release
 
+# Сборка трёх десктопных таргетов при пуше в main и публикация релиза
+# с бинарниками. Тег/название берутся из package.json, баннер — из banner.png.
 on:
   workflow_dispatch:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: Build ${{ matrix.target }}
     strategy:
       fail-fast: false
       matrix:
@@ -21,15 +27,79 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run build
-      - run: npx electron-builder --${{ matrix.target }} --publish never
-      - uses: actions/upload-artifact@v4
+
+      # electron-builder соберёт установщики в release/ (см. build.directories.output).
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build renderer (tsc + vite)
+        run: npm run build
+
+      - name: Package Electron app (${{ matrix.target }})
+        env:
+          # На CI нет сертификата подписи macOS — собираем unsigned dmg/zip.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --${{ matrix.target }} --publish never
+
+      - name: Upload ${{ matrix.target }} artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: NyaMath-${{ matrix.target }}
           path: release/*
           if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Create GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Версия и имя приложения — единственный источник правды: package.json.
+      - name: Read package.json metadata
+        id: meta
+        shell: bash
+        run: |
+          VERSION=$(node --input-type=module -e "import fs from 'node:fs'; process.stdout.write(JSON.parse(fs.readFileSync('package.json','utf8')).version)")
+          APP_NAME=$(node --input-type=module -e "import fs from 'node:fs'; const p = JSON.parse(fs.readFileSync('package.json','utf8')); process.stdout.write(p.desktopName || p.build?.productName || p.name)")
+          test -n "$VERSION" && test -n "$APP_NAME"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "app_name=$APP_NAME" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "banner=https://raw.githubusercontent.com/${{ github.repository }}/v$VERSION/banner.png" >> "$GITHUB_OUTPUT"
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: List release files
+        run: ls -lh release
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.app_name }} ${{ steps.meta.outputs.version }}
+          body: |
+            ![${{ steps.meta.outputs.app_name }}](${{ steps.meta.outputs.banner }})
+
+            **${{ steps.meta.outputs.app_name }} ${{ steps.meta.outputs.version }}**
+
+            Сборки: Windows (NSIS), Linux (AppImage, deb), macOS (dmg, zip).
+            Тег и название сформированы из `package.json` (коммит `${{ github.sha }}`).
+          generate_release_notes: true
+          files: release/*
+          overwrite_files: true
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
