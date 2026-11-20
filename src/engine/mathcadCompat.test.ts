@@ -78,6 +78,7 @@ describe('mathcad: functions imported from Mathcad worksheets', () => {
     expect(Number(evalLine('ln0(0) ='))).toBeLessThan(-1e306);
     expect(Number(evalLine('mcAtan2(1, 1) ='))).toBeCloseTo(Math.PI / 4, 6);
     expect(Number(evalLine('mcAngle(-1, 0) ='))).toBeCloseTo(Math.PI, 6);
+    expect(Number(evalLine('nthRoot(-8, 3) ='))).toBeCloseTo(-2, 6);
   });
 
   it('statistics catalog functions have Mathcad semantics', () => {

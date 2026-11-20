@@ -26,6 +26,7 @@ export const MATHCAD_COMPAT_NAMES = [
   'digamma',
   'beta',
   'fibonacci',
+  'nthRoot',
   'logspace',
   'signum',
   'csgn',
@@ -781,6 +782,13 @@ export function buildMathcadScope(math: MathJsInstance): Scope {
       let b = 1;
       for (let i = 0; i < k; i++) [a, b] = [b, a + b];
       return a;
+    },
+    nthRoot: (x: unknown, n: unknown) => {
+      const v = asNum(x);
+      const k = asNum(n);
+      if (k === 0) throw new Error(t('e.calcArgs'));
+      if (v < 0 && Math.abs(k % 2) !== 1) throw new Error(t('e.calcArgs'));
+      return (v < 0 ? -1 : 1) * Math.abs(v) ** (1 / k);
     },
     logspace: (a: unknown, b: unknown, n: unknown) => {
       const lo = asNum(a);
