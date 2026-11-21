@@ -78,7 +78,7 @@ and the app via _View → Live sync_ see the same document in real time.
   `.cpd`/`.txt`. Mathcad expressions are translated to NyaMath syntax (`define → :=`,
   `eval → =`, named function calls, `numsum`/`numprod`/`nint`, matrices, units,
   programs → `for … in …` / `if … else … end`); blocks are snapped to the grid
-  and appended below the current sheet. A compatibility catalog of 774 Mathcad
+  and appended below the current sheet. A compatibility catalog of 776 Mathcad
   15/Prime functions (`db/mathcad-functions.json`, seeded into the `functions`
   SQLite table) drives import renames: equivalent NyaMath names are used when
   available, while functions without an implementation stay in the call and

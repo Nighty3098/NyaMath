@@ -24,6 +24,8 @@ export interface ImportBlock {
   plotYmax?: number;
   /** program: имя, под которым результат программы уходит в scope. */
   exportName?: string;
+  /** program: параметры определяемой функции `exportName(params)`. */
+  programParams?: string[];
   x: number;
   y: number;
 }
@@ -684,6 +686,138 @@ const MX_GREEK: Record<string, string> = {
   '✓': 'sqrt',
 };
 
+/** Буквы греческого алфавита в идентификаторах (`λ1` → `lambda1`). */
+const MX_GREEK_LETTERS: Record<string, string> = {
+  α: 'alpha', β: 'beta', γ: 'gamma', δ: 'delta', ε: 'epsilon', ζ: 'zeta',
+  η: 'eta', θ: 'theta', ι: 'iota', κ: 'kappa', λ: 'lambda', μ: 'mu',
+  ν: 'nu', ξ: 'xi', ο: 'omicron', ρ: 'rho', σ: 'sigma', ς: 'sigma',
+  υ: 'upsilon', φ: 'phi', χ: 'chi', ψ: 'psi', ω: 'omega',
+  Α: 'Alpha', Β: 'Beta', Γ: 'Gamma', Δ: 'Delta', Ε: 'Epsilon', Ζ: 'Zeta',
+  Η: 'Eta', Θ: 'Theta', Ι: 'Iota', Κ: 'Kappa', Λ: 'Lambda', Μ: 'Mu',
+  Ν: 'Nu', Ξ: 'Xi', Ο: 'Omicron', Ρ: 'Rho', Σ: 'Sigma', Υ: 'Upsilon',
+  Φ: 'Phi', Χ: 'Chi', Ψ: 'Psi', Ω: 'Omega',
+};
+
+/** Кириллические имена из импортируемых листов (`длина` → `dlina`). */
+const MX_CYRILLIC: Record<string, string> = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z',
+  и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r',
+  с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'c', ч: 'ch', ш: 'sh',
+  щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+  А: 'A', Б: 'B', В: 'V', Г: 'G', Д: 'D', Е: 'E', Ё: 'E', Ж: 'Zh', З: 'Z',
+  И: 'I', Й: 'Y', К: 'K', Л: 'L', М: 'M', Н: 'N', О: 'O', П: 'P', Р: 'R',
+  С: 'S', Т: 'T', У: 'U', Ф: 'F', Х: 'H', Ц: 'C', Ч: 'Ch', Ш: 'Sh',
+  Щ: 'Sch', Ъ: '', Ы: 'Y', Ь: '', Э: 'E', Ю: 'Yu', Я: 'Ya',
+};
+
+/** Привести идентификатор Mathcad к синтаксису NyaMath (греческие/кириллица → ASCII). */
+function mxIdent(text: string): string {
+  return text.replace(/[Α-Ωα-ωςА-Яа-яЁё]/g, (ch) => MX_GREEK_LETTERS[ch] ?? MX_CYRILLIC[ch] ?? ch);
+}
+
+/** Разделить строку по разделителю верхнего уровня (не внутри скобок). */
+function splitTopLevel(text: string, sep: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '(' || ch === '[' || ch === '{') depth++;
+    else if (ch === ')' || ch === ']' || ch === '}') depth--;
+    else if (ch === sep && depth === 0) {
+      out.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  out.push(text.slice(start));
+  return out;
+}
+
+/**
+ * Mathcad использует 0-based индексы (ORIGIN = 0), а mathjs в выражениях —
+ * 1-based. Сдвигаем только индексы вида `A[i]`, `M[i,j]`, `A[0:k]`, не трогая
+ * аргументы функций и литеральные массивы `[1, 2, 3]`.
+ */
+function mxShiftIndices(src: string): string {
+  const isIdentStart = (ch: string | undefined): boolean =>
+    !!ch && /[A-Za-z_]/.test(ch);
+  const isIdentPart = (ch: string | undefined): boolean =>
+    !!ch && /[\w]/.test(ch);
+  const shiftPart = (part: string): string => {
+    const t = part.trim();
+    if (!t) return t;
+    const range = splitTopLevel(t, ':');
+    if (range.length > 1) return range.map((p) => `(${p.trim()}) + 1`).join(':');
+    return `(${t}) + 1`;
+  };
+  const shiftInner = (inner: string): string =>
+    splitTopLevel(inner, ',').map(shiftPart).join(', ');
+
+  let out = '';
+  let i = 0;
+  while (i < src.length) {
+    if (!isIdentStart(src[i])) {
+      out += src[i++];
+      continue;
+    }
+    let j = i + 1;
+    while (isIdentPart(src[j])) j++;
+    const name = src.slice(i, j);
+    if (src[j] !== '[') {
+      out += name;
+      i = j;
+      continue;
+    }
+    //найти закрывающую скобку с учётом вложенности
+    let k = j + 1;
+    let depth = 1;
+    while (k < src.length && depth > 0) {
+      if (src[k] === '[') depth++;
+      else if (src[k] === ']') depth--;
+      k++;
+    }
+    if (depth !== 0) {
+      out += name;
+      i = j;
+      continue;
+    }
+    out += `${name}[${shiftInner(src.slice(j + 1, k - 1))}]`;
+    i = k;
+  }
+  return out;
+}
+
+/** `<ml:range>` → `seq(start, end)` или `seq(start, end, step)` (все аргументы — выражения). */
+function mxRangeToSeq(n: XNode): string {
+  const kids = mxExprChildren(n);
+  if (!kids.length) return '';
+  if (kids.length === 1) return kids[0] ? mxRender(kids[0], 0) : '';
+  const first = kids[0];
+  let start = mxRender(first as XNode, 0);
+  let step: string | null = null;
+  if (first && X_LOCAL(first.name) === 'sequence') {
+    const seqParts = mxExprChildren(first).map((k) => mxRender(k, 0));
+    if (seqParts.length > 1) {
+      start = seqParts[0];
+      step = seqParts[1];
+    }
+  }
+  const end = kids[1] ? mxRender(kids[1], 0) : '';
+  return step !== null ? `seq(${start}, ${end}, ${step})` : `seq(${start}, ${end})`;
+}
+
+/** Для program-блоков сохраняем привычный синтаксис `a,step..b` / `a..b`. */
+function mxRangeToLoop(n: XNode): string {
+  const kids = mxExprChildren(n);
+  if (!kids.length) return '';
+  const seq = mxRangeToSeq(n);
+  if (!seq.startsWith('seq(') || !seq.endsWith(')')) return seq;
+  const args = splitTopLevel(seq.slice(4, -1), ',');
+  if (args.length < 2) return seq;
+  const [start, end, step] = args.map((a) => a.trim());
+  return step ? `${start}, ${step}..${end}` : `${start}..${end}`;
+}
+
 /** Служебные узлы provenance — не операнды (иначе в формуле появляются пустые `* *`). */
 const MX_META = new Set([
   'originRef',
@@ -713,7 +847,7 @@ function mxRender(n: XNode, ctx = 0): string {
 
   if (name === 'id') {
     let s = (n.text ?? '').trim();
-    s = MX_GREEK[s] ?? s;
+    s = MX_GREEK[s] ?? mxIdent(s);
     const sub = n.attrs['subscript'] ?? '';
     if (sub) s += `_${sub.replace(/\s+/g, '')}`;
     return s;
@@ -732,7 +866,14 @@ function mxRender(n: XNode, ctx = 0): string {
   if (name === 'define') {
     if (kids[1] && X_LOCAL(kids[1].name) === 'program') return ''; // → program-блок
     const lhs = kids[0] ? mxRender(kids[0], 0) : '';
-    const rhs = kids[1] ? mxRender(kids[1], 0) : '';
+    // Mathcad-дискретный диапазон k := 10, 100, 1000 → обычный вектор.
+    const rhsNode = kids[1];
+    const rhs =
+      rhsNode && X_LOCAL(rhsNode.name) === 'sequence'
+        ? `[${mxExprChildren(rhsNode).map((k) => mxRender(k, 0)).join(', ')}]`
+        : rhsNode
+          ? mxRender(rhsNode, 0)
+          : '';
     return lhs && rhs ? `${lhs} := ${rhs}` : '';
   }
   if (name === 'eval') return kids[0] ? `${mxRender(kids[0] as XNode, 0)} =` : '';
@@ -748,7 +889,7 @@ function mxRender(n: XNode, ctx = 0): string {
   }
   if (name === 'boundVars' || name === 'sequence')
     return kids.map((k) => mxRender(k, 0)).join(', ');
-  if (name === 'range') return kids.map((k) => mxRender(k, 0)).join('..');
+  if (name === 'range') return mxRangeToSeq(n);
   if (name === 'lambda') return kids.map((k) => mxRender(k, 0)).join(' → ');
 
   if (name === 'unitedValue') {
@@ -788,6 +929,8 @@ function mxRender(n: XNode, ctx = 0): string {
   if (name === 'apply') {
     const opNode = kids[0];
     if (!opNode) return '';
+    // Пустой регион Mathcad (незаполненный placeholder) — не формула, пропускаем.
+    if (kids.some((k) => X_LOCAL(k.name) === 'placeholder')) return '';
     // `<apply><id>log</id>…</apply>` — вызов функции по имени. Раньше брали
     // имя тега (`id`) вместо текста (`log`, `identity`, `last`, …) — отсюда
     // «id(K, 2)» в переведённых листах.
@@ -912,7 +1055,13 @@ function mxProgram(n: XNode): string {
       }
       if (name === 'for') {
         const v = kids[0] ? mxRender(kids[0], 0).trim() : 'i';
-        const range = kids[1] ? mxRender(kids[1], 0).trim() : '1..n';
+        const rangeNode = kids[1];
+        const range =
+          rangeNode && X_LOCAL(rangeNode.name) === 'range'
+            ? mxRangeToLoop(rangeNode)
+            : rangeNode
+              ? mxRender(rangeNode, 0).trim()
+              : '1..n';
         lines.push(`${pad}for ${v} in ${range}`);
         statements(kids.slice(2), indent + 1);
         lines.push(`${pad}end`);
@@ -1009,22 +1158,45 @@ export function parseXmcd(xml: string): ImportResult {
           const kids = mxExprChildren(e);
           const rhs = kids[1];
           if (rhs && X_LOCAL(rhs.name) === 'program') {
-            const lhs = mxRender(kids[0] as XNode, 0).trim();
+            const lhsNode = kids[0] as XNode;
+            let exportName = lhsNode ? mxRender(lhsNode, 0).trim() : '';
+            let programParams: string[] | undefined;
+            // `<define><function><id>f</id><boundVars>…</boundVars></function>…`
+            // — это определяемая функция, а не результат с составным именем.
+            if (lhsNode && X_LOCAL(lhsNode.name) === 'function') {
+              const fnKids = mxExprChildren(lhsNode);
+              exportName = fnKids[0] ? mxRender(fnKids[0], 0).trim() : '';
+              const bound = fnKids[1];
+              if (bound && X_LOCAL(bound.name) === 'boundVars') {
+                programParams = mxExprChildren(bound)
+                  .map((p) => mxRender(p, 0).trim())
+                  .filter(Boolean);
+              }
+            }
             blocks.push({
               kind: 'program',
               body: mxProgram(rhs),
-              exportName: lhs,
+              exportName,
+              ...(programParams?.length ? { programParams } : {}),
               x,
               y,
             });
             notes.push(
-              `Mathcad-программа @${Math.round(y)} → program-блок (результат как ${lhs || 'exportName'})`,
+              programParams?.length
+                ? `Mathcad-программа @${Math.round(y)} → function ${exportName}(${programParams.join(', ')})`
+                : `Mathcad-программа @${Math.round(y)} → program-блок (результат как ${exportName || 'exportName'})`,
             );
             continue;
           }
         }
         const body = name === 'program' ? mxProgram(e) : mxRender(e, 0).trim();
         if (!body) continue;
+        // Голый `<ml:id>` в математическом регионе — подпись/заготовка, а не
+        // вычисляемое выражение (в листах встречаются русские подписи).
+        if (name === 'id') {
+          blocks.push({ kind: 'text', body, x, y });
+          continue;
+        }
         blocks.push({ kind: name === 'program' ? 'program' : 'math', body, x, y });
         if (name === 'program')
           notes.push('Mathcad-программа → program-блок (проверьте условия/ветви)');
@@ -1034,6 +1206,15 @@ export function parseXmcd(xml: string): ImportResult {
     skipped++;
   }
   if (skipped) notes.push(`пропущено регионов Mathcad: ${skipped} (графики/картинки/пустые)`);
+  // Mathcad ORIGIN=0 → mathjs accessor 1-based; `j` — мнимая единица в NyaMath,
+  // поэтому цикловую переменную `j` из Mathcad-программ переименовываем.
+  for (const b of blocks) {
+    if (b.kind === 'text') continue;
+    b.body = mxShiftIndices(b.body);
+    if (b.kind === 'program' && /\bfor\s+j\s+in\b/.test(b.body)) {
+      b.body = b.body.replace(/\bj\b/g, 'jLoop');
+    }
+  }
   noteUnsupportedFunctions(blocks, notes);
   return { blocks, notes, format: 'xmcd' };
 }

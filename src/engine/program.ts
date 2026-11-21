@@ -53,6 +53,8 @@ function toLines(src: string): CodeLine[] {
 }
 
 const ASSIGN_RE = /^([A-Za-z_]\w*)\s*(:=|<-)\s*(.+)$/;
+/** Mathcad-программы пишут элементы массива как `A[i] := …` / `M[i,j] := …`. */
+const INDEX_ASSIGN_RE = /^([A-Za-z_]\w*)\s*\[([^\]]+)\]\s*(:=|<-)\s*(.+)$/;
 const FOR_RE = /^for\s+([A-Za-z_]\w*)\s+in\s+(.+)$/i;
 const IF_RE = /^if\s+(.+)$/i;
 const ELSE_IF_RE = /^else\s+if\s+(.+)$/i;
@@ -83,27 +85,31 @@ function analysisPut(key: string, v: ProgramAnalysis): void {
   analysisCache.set(key, v);
 }
 
-/** Только разбор: зависимости от глобалей (имена, не покрытые локальными присваиваниями). */
-export function analyzeProgram(src: string): ProgramAnalysis {
-  const hit = analysisCache.get(src);
+/** Только разбор: зависимости от глобалей (имена, не покрытые локальными присваиваниями).
+ *  `skip` — параметры функции: они задаются вызовом, а не документом. */
+export function analyzeProgram(src: string, skip?: ReadonlySet<string>): ProgramAnalysis {
+  const skipKey = skip?.size ? `|skip:${[...skip].sort().join(',')}` : '';
+  const hit = analysisCache.get(src + skipKey);
   if (hit) return { dependencies: hit.dependencies.slice(), assigned: hit.assigned.slice() };
-  const out = analyzeProgramUncached(src);
-  analysisPut(src, out);
+  const out = analyzeProgramUncached(src, skip);
+  analysisPut(src + skipKey, out);
   return { dependencies: out.dependencies.slice(), assigned: out.assigned.slice() };
 }
 
-function analyzeProgramUncached(src: string): ProgramAnalysis {
+function analyzeProgramUncached(src: string, skip?: ReadonlySet<string>): ProgramAnalysis {
   const lines = toLines(src).slice(0, MAX_LINES);
   const definitelyAssigned = new Set<string>();
   const allAssigned = new Set<string>();
   for (const l of lines) {
-    const a = l.text.match(ASSIGN_RE);
+    const a = l.text.match(ASSIGN_RE) ?? l.text.match(INDEX_ASSIGN_RE);
     if (a) allAssigned.add(a[1]);
     const f = l.text.match(FOR_RE);
     if (f) allAssigned.add(f[1]);
   }
   const deps = new Set<string>();
   const partOf = (t: string): string => {
+    const ia = t.match(INDEX_ASSIGN_RE);
+    if (ia) return `${ia[2]}, ${stripOnError(ia[4])}`;
     const a = t.match(ASSIGN_RE);
     if (a) return stripOnError(a[3]);
     const f = t.match(FOR_RE);
@@ -144,10 +150,10 @@ function analyzeProgramUncached(src: string): ProgramAnalysis {
     const part = partOf(l.text);
     if (part) {
       for (const d of extractDependencies(part)) {
-        if (!definitelyAssigned.has(d)) deps.add(d);
+        if (!definitelyAssigned.has(d) && !skip?.has(d)) deps.add(d);
       }
     }
-    const assignment = l.text.match(ASSIGN_RE);
+    const assignment = l.text.match(ASSIGN_RE) ?? l.text.match(INDEX_ASSIGN_RE);
     if (assignment) definitelyAssigned.add(assignment[1]);
     const loop = l.text.match(FOR_RE);
     if (loop) {
@@ -170,6 +176,30 @@ function rangeToSeq(expr: string): string {
   const m2 = t.match(/^(.*?)\.\.(.*)$/);
   if (m2) return `seq(${m2[1]},${m2[2]})`;
   return t;
+}
+
+/** Неглубоко скопировать значение в обычный изменяемый массив (не трогаем аргумент функции). */
+function toMutableArray(v: unknown): unknown[] {
+  if (Array.isArray(v)) return v.map((x) => (Array.isArray(x) ? x.slice() : x));
+  if (v !== null && typeof v === 'object' && 'toArray' in (v as object)) {
+    const a = (v as { toArray: () => unknown }).toArray();
+    return Array.isArray(a) ? a.map((x) => (Array.isArray(x) ? x.slice() : x)) : [];
+  }
+  return [];
+}
+
+/** Записать значение по индексам (1 или 2) в массив, создавая строки при необходимости.
+ *  Индексы приходят из mathjs-выражений (1-based), внутренний массив — 0-based. */
+function setIndexed(target: unknown[], indices: number[], value: unknown): void {
+  if (!indices.length) return;
+  const zero = indices.map((i) => i - 1);
+  let cur = target;
+  for (let k = 0; k < zero.length - 1; k++) {
+    const idx = zero[k];
+    if (!Array.isArray(cur[idx])) cur[idx] = [];
+    cur = cur[idx] as unknown[];
+  }
+  cur[zero[zero.length - 1]] = value;
 }
 
 export interface ProgramResult {
@@ -377,6 +407,26 @@ export function runProgram(
     while (i < end) {
       const { no, text } = lines[i];
 
+      // --- присваивание элемента массива: A[i] := … / M[i,j] := … ---
+      const ia = text.match(INDEX_ASSIGN_RE);
+      if (ia) {
+        // Mathcad-индексы целочисленные; Td/T в циклах даёт 0.999999… из-за
+        // плавающей точки — округляем, иначе в массиве остаются дыры (null).
+        const indices = ia[2]
+          .split(',')
+          .map((s) => Math.round(Number(evalExpr(s.trim(), no))))
+          .filter((v) => Number.isFinite(v));
+        const value = evalExpr(ia[4], no);
+        const base = scope[ia[1]] ?? local[ia[1]];
+        const arr = toMutableArray(base);
+        setIndexed(arr, indices, value);
+        local[ia[1]] = arr;
+        scope[ia[1]] = arr;
+        last = value;
+        step('assign', no, text, value);
+        i++;
+        continue;
+      }
       // --- присваивание ---
       const a = text.match(ASSIGN_RE);
       if (a) {

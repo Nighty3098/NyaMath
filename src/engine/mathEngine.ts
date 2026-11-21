@@ -172,6 +172,14 @@ function ensurePackImports(): void {
     ...buildPackScope(math),
     ...buildMathcadScope(math),
   } as Record<string, unknown>;
+  // Имена, которые уже есть в mathjs, но должны использовать Mathcad-семантику.
+  for (const k of ['vectorSum', 'if', 'xor']) {
+    try {
+      math.import({ [k]: packScope[k] } as never, { override: true });
+    } catch {
+      /* fallback — scope-версия */
+    }
+  }
   for (const k of [
     'nlsolve',
     'find',

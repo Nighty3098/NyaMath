@@ -318,7 +318,6 @@ export const MATHCAD_UNSUPPORTED: ReadonlySet<string> = new Set([
   "idwt",
   "idwti",
   "idwts",
-  "if",
   "iirhigh",
   "iirlow",
   "iirpass",

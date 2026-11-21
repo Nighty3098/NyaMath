@@ -113,6 +113,8 @@ export interface MathBlockData {
   plotWireframe?: boolean;
   /** Имя переменной, в которую программный блок экспортирует результат */
   exportName?: string;
+  /** Параметры-program-блока: блок определяет функцию `exportName(params)`. */
+  programParams?: string[];
   /** Лог trace-операторов программного блока */
   programTrace?: string[] | null;
   /** Sim: модель, состояния, производные, параметры, старт, интервал, решатель, оси */
@@ -329,7 +331,7 @@ export function blockDefs(b: MathBlockData): string[] {
 function computeBlockDeps(b: MathBlockData): string[] {
   if (b.kind === 'program') {
     try {
-      return analyzeProgram(b.rawInput).dependencies;
+      return analyzeProgram(b.rawInput, new Set(b.programParams ?? [])).dependencies;
     } catch {
       return [];
     }
@@ -617,7 +619,7 @@ function createRecalcCtx(list: MathBlockData[], opts?: RecalcOpts): RecalcCtx {
         fp = `sl:${b.sliderVar}|${b.sliderMin}|${b.sliderMax}|${b.sliderStep}|${b.sliderVal}${ordTag}`;
         break;
       case 'program':
-        fp = `pr:${b.rawInput}|${b.exportName ?? ''}${ordTag}|${depTag}`;
+        fp = `pr:${b.rawInput}|${b.exportName ?? ''}|${(b.programParams ?? []).join(',')}${ordTag}|${depTag}`;
         break;
       case 'sim':
         fp = `sm:${simConfigFp(b)}${ordTag}|${depTag}`;
@@ -965,15 +967,43 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
 
   // ---------- программный блок ----------
   if (b.kind === 'program') {
-    const analysis = analyzeProgram(b.rawInput);
+    const params = b.programParams ?? [];
+    const exp = (b.exportName ?? '').trim();
+    const analysis = analyzeProgram(b.rawInput, new Set(params));
     resetSolverTrace(scope);
+    cur.dependencies = analysis.dependencies;
+    cur.isOutput = true;
+    // `<define>f(X) := <program>…` из Mathcad — это определение функции,
+    // а не немедленный вычисл.: экспортируем вызываемую функцию в scope.
+    if (exp && isValidVarName(exp) && params.length) {
+      const fnName = exp;
+      const src = b.rawInput;
+      const paramNames = [...params];
+      const fn = (...args: unknown[]): unknown => {
+        const callScope: Scope = { ...scope };
+        paramNames.forEach((p, i) => {
+          callScope[p] = args[i];
+        });
+        const r = runProgram(src, callScope);
+        if (r.error) throw new Error(r.error);
+        return r.value;
+      };
+      cur.error = null;
+      cur.definedVar = fnName;
+      cur.resultValue = fn;
+      cur.resultStr = `${fnName}(${paramNames.join(', ')})`;
+      cur.resultLatex = '';
+      cur.programTrace = null;
+      scope[fnName] = fn;
+      clearSymbolicDefinitions(scope, [fnName]);
+      cur.displayLatex = '';
+      snapBlock(cur, key);
+      return;
+    }
     const r = runProgram(b.rawInput, scope);
     const st = takeSolverTrace(scope);
     cur.solverTrace = st.length ? st : null;
-    cur.dependencies = analysis.dependencies;
-    cur.isOutput = true;
     cur.programTrace = r.trace ?? null;
-    const exp = (b.exportName ?? '').trim();
     cur.definedVar = exp && isValidVarName(exp) ? exp : null;
     if (r.error) {
       cur.error = r.error;

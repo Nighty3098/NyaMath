@@ -53,6 +53,9 @@ export const MATHCAD_COMPAT_NAMES = [
   'mcGrubbsClassic',
   'last',
   'length',
+  'vectorSum',
+  'if',
+  'xor',
   'submatrix',
   'stack',
   'augment3',
@@ -513,6 +516,24 @@ export function buildMathcadScope(math: MathJsInstance): Scope {
     }
     return [v];
   };
+  const xorScalar = (a: unknown, b: unknown): number => {
+    const x = asNum(a);
+    const y = asNum(b);
+    const xi = Number.isInteger(x) ? x : x !== 0 ? 1 : 0;
+    const yi = Number.isInteger(y) ? y : y !== 0 ? 1 : 0;
+    return (xi | 0) ^ (yi | 0);
+  };
+  const isArrayLike = (v: unknown): boolean =>
+    Array.isArray(v) || (v !== null && typeof v === 'object' && 'toArray' in (v as object));
+  const xorFn = (a: unknown, b: unknown): unknown => {
+    if (!isArrayLike(a) && !isArrayLike(b)) return xorScalar(a, b);
+    const aa = toArr(a);
+    const bb = toArr(b);
+    const n = Math.max(aa.length, bb.length);
+    return mat(
+      Array.from({ length: n }, (_, i) => xorScalar(aa[i] ?? 0, bb[i] ?? 0)),
+    );
+  };
   const numArgs = (args: unknown[]): number[] => args.flatMap(toArr).map(asNum);
   const meanOf = (a: number[]): number => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : NaN);
   const varianceOf = (a: number[], sample = false): number => {
@@ -593,6 +614,19 @@ export function buildMathcadScope(math: MathJsInstance): Scope {
     /* ------------------------------ vectors ------------------------------ */
     last: (v: unknown) => toArr(v).length - 1,
     length: (v: unknown) => toArr(v).length,
+    /** Mathcad vectorSum — сумма элементов вектора/матрицы. */
+    vectorSum: (v: unknown) => toVec(v).reduce((s, x) => s + x, 0),
+    /** Mathcad if(cond, yes, no) — в mathjs нет тернарной функции. */
+    if: (cond: unknown, yes: unknown, no: unknown): unknown => {
+      if (typeof cond === 'boolean') return cond ? yes : no;
+      if (typeof cond === 'number') return cond !== 0 ? yes : no;
+      if (cond !== null && typeof cond === 'object' && 'isZero' in (cond as object)) {
+        return (cond as { isZero: () => boolean }).isZero() ? no : yes;
+      }
+      return cond ? yes : no;
+    },
+    /** Mathcad xor(a, b) — побитовое исключающее ИЛИ; массивы — поэлементно. */
+    xor: xorFn,
     reverse: (v: unknown) => {
       const a = rawArray(v);
       if (Array.isArray(a[0])) return mat((a as number[][]).slice().reverse());
@@ -604,6 +638,8 @@ export function buildMathcadScope(math: MathJsInstance): Scope {
       const R1 = intArg(r1);
       const C0 = intArg(c0);
       const C1 = intArg(c1);
+      // В Mathcad submatrix с одним столбцом даёт вектор, а не матрицу n×1.
+      if (C0 === C1) return mat(a.slice(R0, R1 + 1).map((row) => row[C0] ?? 0));
       return mat(a.slice(R0, R1 + 1).map((row) => row.slice(C0, C1 + 1)));
     },
     stack: (...parts: unknown[]) => mat(parts.flatMap((p) => toMat(p))),

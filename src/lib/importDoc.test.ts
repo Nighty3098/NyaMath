@@ -276,7 +276,11 @@ describe('importDoc: Mathcad .xmcd', () => {
     </math></region></regions>`;
     const r = parseXmcd(xml);
     expect(r.blocks).toHaveLength(1);
-    expect(r.blocks[0]).toMatchObject({ kind: 'program', exportName: 'DecBin(X)' });
+    expect(r.blocks[0]).toMatchObject({
+      kind: 'program',
+      exportName: 'DecBin',
+      programParams: ['X'],
+    });
     expect(r.blocks[0]?.body).toBe(
       [
         'S := 0',
@@ -290,6 +294,63 @@ describe('importDoc: Mathcad .xmcd', () => {
         'S',
       ].join('\n'),
     );
+  });
+
+  it('Mathcad: 0-based индексы и параметры program-функции', () => {
+    const xml = `<regions><region left="0" top="0"><math>
+      <ml:define>
+        <ml:function><ml:id>f</ml:id><ml:boundVars><ml:id>X</ml:id></ml:boundVars></ml:function>
+        <ml:program>
+          <ml:localDefine><ml:id>S</ml:id><ml:real>0</ml:real></ml:localDefine>
+          <ml:for><ml:id>i</ml:id><ml:range><ml:real>0</ml:real><ml:real>2</ml:real></ml:range>
+            <ml:program><ml:localDefine><ml:id>S</ml:id>
+              <ml:apply><ml:plus/><ml:id>S</ml:id>
+                <ml:apply><ml:indexer/><ml:id>X</ml:id><ml:id>i</ml:id></ml:apply>
+              </ml:apply>
+            </ml:localDefine></ml:program>
+          </ml:for>
+          <ml:id>S</ml:id>
+        </ml:program>
+      </ml:define>
+    </math></region></regions>`;
+    const r = parseXmcd(xml);
+    expect(r.blocks[0]).toMatchObject({ kind: 'program', exportName: 'f', programParams: ['X'] });
+    expect(r.blocks[0]?.body).toContain('X[(i) + 1]');
+  });
+
+  it('Mathcad: range с выражениями → seq(start, end, step)', () => {
+    const xml = `<regions><region left="0" top="0"><math>
+      <ml:define><ml:id>t</ml:id><ml:range>
+        <ml:sequence>
+          <ml:real>0</ml:real>
+          <ml:apply><ml:div/><ml:id>tau</ml:id><ml:real>100</ml:real></ml:apply>
+        </ml:sequence>
+        <ml:apply><ml:mult/>
+          <ml:apply><ml:id>length</ml:id><ml:id>D</ml:id></ml:apply>
+          <ml:id>tau</ml:id>
+        </ml:apply>
+      </ml:range></ml:define>
+    </math></region></regions>`;
+    expect(parseXmcd(xml).blocks[0]?.body).toBe('t := seq(0, length(D) * tau, tau / 100)');
+  });
+
+  it('Mathcad: цикловая j переименовывается (j — мнимая единица)', () => {
+    const xml = `<regions><region left="0" top="0"><math><ml:program>
+      <ml:for><ml:id>j</ml:id><ml:range><ml:real>0</ml:real><ml:real>6</ml:real></ml:range>
+        <ml:program><ml:localDefine>
+          <ml:apply><ml:indexer/><ml:id>A</ml:id><ml:id>j</ml:id></ml:apply>
+          <ml:id>j</ml:id>
+        </ml:localDefine></ml:program>
+      </ml:for>
+    </ml:program></math></region></regions>`;
+    const body = parseXmcd(xml).blocks[0]?.body ?? '';
+    expect(body).toContain('for jLoop in 0..6');
+    expect(body).toContain('A[(jLoop) + 1] := jLoop');
+  });
+
+  it('Mathcad: кириллический id в математическом регионе становится подписью', () => {
+    const xml = `<regions><region left="0" top="0"><math><ml:id>длина</ml:id></math></region></regions>`;
+    expect(parseXmcd(xml).blocks[0]).toMatchObject({ kind: 'text', body: 'dlina' });
   });
 
   it('неподдерживаемая функция Mathcad остаётся в блоке и попадает в notes', () => {

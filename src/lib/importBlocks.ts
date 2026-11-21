@@ -94,6 +94,9 @@ export function buildImportedBlocks(items: ImportBlock[], opts: ImportBuildOptio
       kind,
       rawInput: p.ib.body,
       ...(kind === 'program' && p.ib.exportName ? { exportName: p.ib.exportName } : {}),
+      ...(kind === 'program' && p.ib.programParams?.length
+        ? { programParams: p.ib.programParams }
+        : {}),
     };
   });
 }

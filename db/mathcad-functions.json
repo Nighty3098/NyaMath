@@ -1,12 +1,12 @@
 {
   "meta": {
     "source": "Mathcad 15 funcdoc XML + Mathcad Prime function inventory",
-    "count": 774,
+    "count": 776,
     "status_counts": {
       "native": 79,
-      "unsupported": 527,
+      "unsupported": 526,
       "alias": 40,
-      "implemented": 128
+      "implemented": 131
     }
   },
   "functions": [
@@ -2797,8 +2797,8 @@
       "description": "Returns x if logical condition cond is true (non-zero), y otherwise.",
       "source_pack": "mathcad_EN,Prime",
       "help_topic": "",
-      "nyamath_name": null,
-      "status": "unsupported"
+      "nyamath_name": "if",
+      "status": "implemented"
     },
     {
       "name": "ifft",
@@ -7749,6 +7749,26 @@
       "help_topic": "",
       "nyamath_name": null,
       "status": "unsupported"
+    },
+    {
+      "name": "vectorSum",
+      "params": "",
+      "category": "Mathcad compatibility",
+      "description": "Sum of all elements of a vector/matrix.",
+      "source_pack": "mathcad_EN",
+      "help_topic": "",
+      "nyamath_name": "vectorSum",
+      "status": "implemented"
+    },
+    {
+      "name": "xor",
+      "params": "",
+      "category": "Mathcad compatibility",
+      "description": "Bitwise exclusive OR (elementwise with vectorize).",
+      "source_pack": "mathcad_EN",
+      "help_topic": "",
+      "nyamath_name": "xor",
+      "status": "implemented"
     }
   ]
 }
