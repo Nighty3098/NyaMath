@@ -46,6 +46,8 @@ describe('smart visualize', () => {
     expect(vizOf('c := [1; 2; 3]')).toBeNull();
     const res = recalculateAll([mathBlock('v', 'data := [1, 2, 3]')]);
     expect(res.blocks['v'].resultTable).toMatchObject({ rowCount: 1, colCount: 3 });
+    const col = recalculateAll([mathBlock('v', 'c := [1; 2; 3]')]);
+    expect(col.blocks['v'].resultTable).toMatchObject({ rowCount: 1, colCount: 3 });
   });
 
   it('shows numeric matrices as tables, not plots', () => {

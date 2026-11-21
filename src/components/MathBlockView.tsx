@@ -684,53 +684,32 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
             )}
             {block.resultTable && !block.error && (
               <div
-                className="mt-1 max-w-full"
+                className="mt-1 min-w-0 max-w-full font-mono text-[11px] leading-4 text-[var(--ink)]"
+                title={`${t('m.matrixTable', {
+                  rows: block.resultTable.rowCount,
+                  cols: block.resultTable.colCount,
+                })}${block.resultTable.truncated ? ` — ${t('m.matrixTruncated')}` : ''}`}
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
               >
-                <div className="mb-1 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--faint)]">
-                  <span>
-                    {t('m.matrixTable', {
-                      rows: block.resultTable.rowCount,
-                      cols: block.resultTable.colCount,
-                    })}
-                  </span>
-                  {block.resultTable.truncated && <span>{t('m.matrixTruncated')}</span>}
-                </div>
-                <div className="max-h-[240px] max-w-full overflow-auto rounded-lg border border-[var(--line)] bg-[var(--input-bg)]">
-                  <table className="w-max border-collapse text-[12px] tabular-nums text-[var(--ink)]">
-                    <thead>
-                      <tr>
-                        <th className="sticky left-0 top-0 z-10 border-b border-r border-[var(--line)] bg-[var(--sheet)] px-2 py-1 text-[10px] font-normal text-[var(--faint)]" />
-                        {Array.from({ length: block.resultTable.colCount }, (_, c) => (
-                          <th
+                <div className="flex min-w-0 max-w-full items-stretch gap-1 rounded-md bg-[var(--input-bg)]/60 px-1.5 py-1">
+                  <span className="flex select-none items-center text-[var(--faint)]">[</span>
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    {block.resultTable.rows.map((row, r) => (
+                      <div key={r} className="flex min-w-0 flex-wrap gap-x-2 gap-y-0.5">
+                        {row.map((cell, c) => (
+                          <span
                             key={c}
-                            className="sticky top-0 border-b border-r border-[var(--line)] bg-[var(--sheet)] px-2 py-1 text-[10px] font-normal text-[var(--faint)]"
+                            title={cell}
+                            className="inline-block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap align-top tabular-nums"
                           >
-                            {c + 1}
-                          </th>
+                            {cell}
+                          </span>
                         ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {block.resultTable.rows.map((row, r) => (
-                        <tr key={r}>
-                          <th className="sticky left-0 border-b border-r border-[var(--line)] bg-[var(--sheet)] px-2 py-1 text-right text-[10px] font-normal text-[var(--faint)]">
-                            {r + 1}
-                          </th>
-                          {row.map((cell, c) => (
-                            <td
-                              key={c}
-                              title={cell}
-                              className="max-w-[240px] truncate border-b border-r border-[var(--line)] px-2 py-1 text-right"
-                            >
-                              {cell}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </div>
+                    ))}
+                  </div>
+                  <span className="flex select-none items-center text-[var(--faint)]">]</span>
                 </div>
               </div>
             )}

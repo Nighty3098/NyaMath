@@ -1952,7 +1952,8 @@ const TABLE_MAX_ROWS = 500;
 const TABLE_MAX_COLS = 100;
 const TABLE_MAX_CELL_CHARS = 48;
 
-/** Матрица/вектор → HTML-таблица (ячейки уже отформатированы как текст). */
+/** Матрица/вектор → данные для адаптивного вывода (ячейки уже текстом).
+ *  Одностолбцовые векторы разворачиваются в строку — так же, как в Mathcad. */
 export function valueToTable(value: unknown): MatrixTableData | null {
   let arr: unknown = null;
   if (math.isMatrix(value)) arr = (value as { toArray: () => unknown }).toArray();
@@ -1966,10 +1967,17 @@ export function valueToTable(value: unknown): MatrixTableData | null {
   const rawCols = rawRows.reduce((m, r) => Math.max(m, Array.isArray(r) ? r.length : 1), 0);
   if (rawCols === 0) return { rows: [], rowCount: 0, colCount: 0, truncated: false };
 
-  const rowCount = Math.min(rawRows.length, TABLE_MAX_ROWS);
-  const colCount = Math.min(rawCols, TABLE_MAX_COLS);
-  const truncated = rowCount < rawRows.length || colCount < rawCols;
-  const rows = rawRows.slice(0, rowCount).map((r) => {
+  // Вектор-столбец показываем как вектор-строку: [1; 0; 1] → [1 0 1].
+  const displayRows =
+    rawRows.length > 1 && rawCols === 1
+      ? [rawRows.map((r) => (Array.isArray(r) ? r[0] : r))]
+      : rawRows;
+
+  const displayCols = displayRows.reduce((m, r) => Math.max(m, r.length), 0);
+  const rowCount = Math.min(displayRows.length, TABLE_MAX_ROWS);
+  const colCount = Math.min(displayCols, TABLE_MAX_COLS);
+  const truncated = rowCount < displayRows.length || colCount < displayCols;
+  const rows = displayRows.slice(0, rowCount).map((r) => {
     const cells = Array.isArray(r) ? r : [r];
     return Array.from({ length: colCount }, (_, c) => {
       if (c >= cells.length) return '';

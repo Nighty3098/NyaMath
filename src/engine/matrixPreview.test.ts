@@ -24,6 +24,17 @@ describe('valueToTable', () => {
     expect(table!.rows[0][0]).toBe('1');
   });
 
+  it('turns a column vector into a single row, like Mathcad', () => {
+    const table = valueToTable([
+      [1],
+      [0],
+      [1],
+      [0],
+    ]);
+    expect(table).toMatchObject({ rowCount: 1, colCount: 4, truncated: false });
+    expect(table!.rows).toEqual([['1', '0', '1', '0']]);
+  });
+
   it('does not make tables from scalars', () => {
     expect(valueToTable(42)).toBeNull();
   });
