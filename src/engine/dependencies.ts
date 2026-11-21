@@ -14,6 +14,8 @@ import {
   stripOnError,
   toLatex,
   valueToLatex,
+  valueToTable,
+  type MatrixTableData,
 } from './mathEngine';
 import {
   clearSymbolicDefinitions,
@@ -52,6 +54,8 @@ export interface MathBlockData {
   resultStr: string;
   /** LaTeX результата (матрицы/bmatrix, комплексные) — рендерится через KaTeX */
   resultLatex: string;
+  /** Матрицы/векторы показываем таблицей, а не автографиком (пересчитываемое поле). */
+  resultTable?: MatrixTableData | null;
   /** Подстановка значений Calcpad-стиля (`m*a` → `2 * 5`): текст ... */
   substStr?: string | null;
   /** ... и LaTeX подстановки. null/'' = нет подстановки */
@@ -855,6 +859,7 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
   // вне области Calculate Now — старые результаты из кэша (scope протянут)
   if (reuseStale(b)) return;
   const cur = out[b.id];
+  cur.resultTable = null;
   // подстановка и лог решателей пересчитываются ниже (мат/program-ветки)
   cur.substStr = null;
   cur.substLatex = null;
@@ -959,6 +964,7 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
     cur.resultValue = val;
     cur.resultStr = formatResult(val);
     cur.resultLatex = valueToLatex(val);
+    cur.resultTable = valueToTable(val);
     scope[v] = val;
     clearSymbolicDefinitions(scope, [v]);
     snapBlock(cur, key);
@@ -1015,6 +1021,7 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
       cur.resultValue = r.value;
       cur.resultStr = formatResult(r.value);
       cur.resultLatex = valueToLatex(r.value);
+      cur.resultTable = valueToTable(r.value);
       if (cur.definedVar) {
         scope[cur.definedVar] = r.value;
         clearSymbolicDefinitions(scope, [cur.definedVar]);
@@ -1093,7 +1100,9 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
     lastKind === 'output' || lastKind === 'eval' || (lastP?.kind === 'assign' && lastP.show);
   cur.displayLatex = texParts.join(' \\\\ ');
   cur.plotPreview = null;
-  cur.visualize = detectVisualize(lastP, lastError, definedVar, lastValue);
+  cur.resultTable = lastOk && !lastError ? valueToTable(lastValue) : null;
+  // Матрицы/векторы — таблица, а не график; surface (f(x,y)) оставляем.
+  cur.visualize = cur.resultTable ? null : detectVisualize(lastP, lastError, definedVar, lastValue);
 
   // ----- Автографик -----
   // 1) определение функции одной переменной: f(t) := t^2 → превью;
@@ -1125,7 +1134,7 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
     }
   } else if (lastOk && !lastError && lastP) {
     const cells = toNumberCells(lastValue);
-    if (cells && (cells.cols === 1 || cells.rows === 1) && cells.flat.length >= 2) {
+    if (!cur.resultTable && cells && (cells.cols === 1 || cells.rows === 1) && cells.flat.length >= 2) {
       const exprV =
         definedVar ??
         (lastP.kind === 'assign' ? lastP.expr.replace(/=+\s*$/, '').trim() : lastP.expr);
@@ -1163,6 +1172,7 @@ function computeBlockSync(b: MathBlockData, ctx: RecalcCtx): void {
     cur.resultValue = lastValue;
     cur.resultStr = formatResult(lastValue);
     cur.resultLatex = valueToLatex(lastValue);
+    cur.resultTable = valueToTable(lastValue);
     // подстановка Calcpad-стиля для выводимой последней строки
     // (`F := m*a =` → `2 * 5`); определения функций и молчаливые присваивания пропускаем
     if (cur.isOutput && lastP && !lastP.isFunctionDef && !lastP.symbolic && scopeBeforeLast) {
@@ -1235,6 +1245,7 @@ function simApply(cur: MathBlockData, ctx: RecalcCtx, r: SimResult): void {
     cur.resultValue = r.final;
     cur.resultStr = formatResult(r.final);
     cur.resultLatex = valueToLatex(r.final);
+    cur.resultTable = valueToTable(r.final);
     if (cur.definedVar) {
       ctx.scope[cur.definedVar] = r.final;
       clearSymbolicDefinitions(ctx.scope, [cur.definedVar]);

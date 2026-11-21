@@ -120,6 +120,7 @@ export function normalizeBlock(raw: unknown): MathBlockData | null {
     disabled: b.disabled === true,
     visibility,
     plotPreview: null,
+    resultTable: null,
     simResult: null,
     exportName: strOrUndef(b.exportName),
     plotYmin: numOrUndef(b.plotYmin),
@@ -182,13 +183,15 @@ export function normalizeBlock(raw: unknown): MathBlockData | null {
   };
 }
 
-/** Убрать пересчитываемые поля (plotPreview/simResult) — для файла и sync. */
+/** Убрать пересчитываемые поля (plotPreview/resultTable/simResult) — для файла и sync. */
 export function slimBlock<T extends MathBlockData>(b: T): T {
-  const { plotPreview: _pp, simResult: _sr, ...rest } = b as T & {
+  const { plotPreview: _pp, resultTable: _rt, simResult: _sr, ...rest } = b as T & {
     plotPreview?: unknown;
+    resultTable?: unknown;
     simResult?: unknown;
   };
   void _pp;
+  void _rt;
   void _sr;
   return rest as T;
 }

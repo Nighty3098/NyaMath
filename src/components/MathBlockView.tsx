@@ -230,8 +230,10 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
   // Инлайн-результат Calcpad-стиля: `expr = subst = result` одной строкой KaTeX
   const tex = useMemo(() => {
     if (!block.displayLatex) return '';
-    if (block.error || !block.isOutput || !block.resultLatex) return block.displayLatex;
     const lhs = block.displayLatex.replace(/=\s*$/, '').trim();
+    // Матрицы/векторы показываем отдельной таблицей, в формуле оставляем только `=`.
+    if (block.resultTable) return block.isOutput && !block.error ? `${lhs} =` : block.displayLatex;
+    if (block.error || !block.isOutput || !block.resultLatex) return block.displayLatex;
     const subst = block.kind === 'math' ? (block.substLatex ?? '').trim() : '';
     if (subst) return `${lhs} = ${subst} = ${block.resultLatex}`;
     return `${lhs} = ${block.resultLatex}`;
@@ -240,6 +242,7 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
     block.error,
     block.isOutput,
     block.resultLatex,
+    block.resultTable,
     block.kind,
     block.substLatex,
   ]);
@@ -677,6 +680,58 @@ function MathBlockView({ block, scale, lateDeps }: Props) {
             ) : (
               <div className="math-input text-[14px] text-[var(--ink)]">
                 {block.rawInput || '—'}
+              </div>
+            )}
+            {block.resultTable && !block.error && (
+              <div
+                className="mt-1 max-w-full"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <div className="mb-1 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--faint)]">
+                  <span>
+                    {t('m.matrixTable', {
+                      rows: block.resultTable.rowCount,
+                      cols: block.resultTable.colCount,
+                    })}
+                  </span>
+                  {block.resultTable.truncated && <span>{t('m.matrixTruncated')}</span>}
+                </div>
+                <div className="max-h-[240px] max-w-full overflow-auto rounded-lg border border-[var(--line)] bg-[var(--input-bg)]">
+                  <table className="w-max border-collapse text-[12px] tabular-nums text-[var(--ink)]">
+                    <thead>
+                      <tr>
+                        <th className="sticky left-0 top-0 z-10 border-b border-r border-[var(--line)] bg-[var(--sheet)] px-2 py-1 text-[10px] font-normal text-[var(--faint)]" />
+                        {Array.from({ length: block.resultTable.colCount }, (_, c) => (
+                          <th
+                            key={c}
+                            className="sticky top-0 border-b border-r border-[var(--line)] bg-[var(--sheet)] px-2 py-1 text-[10px] font-normal text-[var(--faint)]"
+                          >
+                            {c + 1}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {block.resultTable.rows.map((row, r) => (
+                        <tr key={r}>
+                          <th className="sticky left-0 border-b border-r border-[var(--line)] bg-[var(--sheet)] px-2 py-1 text-right text-[10px] font-normal text-[var(--faint)]">
+                            {r + 1}
+                          </th>
+                          {row.map((cell, c) => (
+                            <td
+                              key={c}
+                              title={cell}
+                              className="max-w-[240px] truncate border-b border-r border-[var(--line)] px-2 py-1 text-right"
+                            >
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
             {block.error && (

@@ -1923,9 +1923,10 @@ export function valueToLatex(value: unknown): string {
     if (total === 0) return '\\text{[] }';
     if (total > 24) {
       const preview = rowsArr.flat().slice(0, 6).map(entryLatex).join(',\\;');
-      // \times нельзя класть внутрь \text — в KaTeX это не команда, а
-      // '\text{[1\times60]}' падает и рисуется сырой TeX. Знак держим в математике.
-      return `\\text{[}${rowsArr.length}\\times${rowsArr[0]?.length ?? total}\\text{]: }${preview},\\;\\dots`;
+      // \times внутри \text в KaTeX не работает, а Unicode × в математическом
+      // режиме рендерится без предупреждений. Таблица всё равно показывается
+      // отдельно — это запасной путь для экспорта/старых снимков.
+      return `\\text{[}${rowsArr.length}×${rowsArr[0]?.length ?? total}\\text{]: }${preview},\\;\\dots`;
     }
     const body = rowsArr.map((r) => r.map(entryLatex).join(' & ')).join(' \\\\ ');
     return `\\begin{bmatrix}${body}\\end{bmatrix}`;
@@ -1935,6 +1936,48 @@ export function valueToLatex(value: unknown): string {
     return complexLatex(Number(c.re), Number(c.im));
   }
   return `\\text{${escapeLatex(String(value)).slice(0, 120)}}`;
+}
+
+/* ---------------- Таблица для матриц/векторов ---------------- */
+
+/** Табличное представление матрицы/вектора для вывода в регионе. */
+export interface MatrixTableData {
+  rows: string[][];
+  rowCount: number;
+  colCount: number;
+  truncated: boolean;
+}
+
+const TABLE_MAX_ROWS = 500;
+const TABLE_MAX_COLS = 100;
+const TABLE_MAX_CELL_CHARS = 48;
+
+/** Матрица/вектор → HTML-таблица (ячейки уже отформатированы как текст). */
+export function valueToTable(value: unknown): MatrixTableData | null {
+  let arr: unknown = null;
+  if (math.isMatrix(value)) arr = (value as { toArray: () => unknown }).toArray();
+  else if (Array.isArray(value)) arr = value;
+  else return null;
+
+  const a = arr as unknown[];
+  if (a.length === 0) return { rows: [], rowCount: 0, colCount: 0, truncated: false };
+  const is2D = Array.isArray(a[0]);
+  const rawRows = is2D ? (a as unknown[][]) : [a];
+  const rawCols = rawRows.reduce((m, r) => Math.max(m, Array.isArray(r) ? r.length : 1), 0);
+  if (rawCols === 0) return { rows: [], rowCount: 0, colCount: 0, truncated: false };
+
+  const rowCount = Math.min(rawRows.length, TABLE_MAX_ROWS);
+  const colCount = Math.min(rawCols, TABLE_MAX_COLS);
+  const truncated = rowCount < rawRows.length || colCount < rawCols;
+  const rows = rawRows.slice(0, rowCount).map((r) => {
+    const cells = Array.isArray(r) ? r : [r];
+    return Array.from({ length: colCount }, (_, c) => {
+      if (c >= cells.length) return '';
+      const s = formatResult(cells[c]);
+      return s.length > TABLE_MAX_CELL_CHARS ? `${s.slice(0, TABLE_MAX_CELL_CHARS - 1)}…` : s;
+    });
+  });
+  return { rows, rowCount, colCount, truncated };
 }
 
 /* ---------------- Подстановка значений (Calcpad-стиль) ----------------

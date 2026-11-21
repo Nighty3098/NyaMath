@@ -69,6 +69,7 @@ function toFull(s: SlimBlock): MathBlockData {
       definedVar: null,
       isOutput: false,
       plotPreview: null,
+      resultTable: null,
       visualize: null,
       programTrace: null,
       simResult: null,

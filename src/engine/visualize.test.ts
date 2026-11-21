@@ -41,14 +41,18 @@ describe('smart visualize', () => {
     expect(vizOf('f(t) := t^2')).toBeNull();
   });
 
-  it('detects numeric vectors (row, column, plain)', () => {
-    expect(vizOf('data := [1, 2, 3]'))?.toMatchObject({ kind: 'vector', expr: 'data' });
-    expect(vizOf('c := [1; 2; 3]'))?.toMatchObject({ kind: 'vector', expr: 'c' });
+  it('shows numeric vectors as tables, not plots', () => {
+    expect(vizOf('data := [1, 2, 3]')).toBeNull();
+    expect(vizOf('c := [1; 2; 3]')).toBeNull();
+    const res = recalculateAll([mathBlock('v', 'data := [1, 2, 3]')]);
+    expect(res.blocks['v'].resultTable).toMatchObject({ rowCount: 1, colCount: 3 });
   });
 
-  it('detects numeric matrices', () => {
-    expect(vizOf('m := [1, 2, 3; 4, 5, 6]'))?.toMatchObject({ kind: 'matrix', expr: 'm' });
-    expect(vizOf('h := [1, 2; 3, 4]'))?.toMatchObject({ kind: 'matrix', expr: 'h' });
+  it('shows numeric matrices as tables, not plots', () => {
+    expect(vizOf('m := [1, 2, 3; 4, 5, 6]')).toBeNull();
+    expect(vizOf('h := [1, 2; 3, 4]')).toBeNull();
+    const res = recalculateAll([mathBlock('v', 'm := [1, 2, 3; 4, 5, 6]')]);
+    expect(res.blocks['v'].resultTable).toMatchObject({ rowCount: 2, colCount: 3 });
   });
 
   it('returns null for scalars, strings, errors and anonymous outputs', () => {

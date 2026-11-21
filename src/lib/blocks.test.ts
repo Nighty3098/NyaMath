@@ -31,6 +31,7 @@ function full(): MathBlockData {
     w: 300,
     h: 200,
     plotPreview: { label: 'x', expr: 'x', xs: [0], ys: [0], xmin: 0, xmax: 1, ymin: 0, ymax: 1 },
+    resultTable: { rows: [['1']], rowCount: 1, colCount: 1, truncated: false },
     simResult: { ok: true } as never,
   };
 }
@@ -63,6 +64,7 @@ describe('normalizeBlock', () => {
     expect(b?.w).toBe(300);
     // пересчитываемое всегда сброшено
     expect(b?.plotPreview).toBeNull();
+    expect(b?.resultTable).toBeNull();
     expect(b?.simResult).toBeNull();
     // disabled строго boolean (иначе эхо в live sync)
     expect(b?.disabled).toBe(false);
@@ -70,10 +72,11 @@ describe('normalizeBlock', () => {
 });
 
 describe('slimBlock', () => {
-  it('убирает plotPreview/simResult, остальное оставляет', () => {
+  it('убирает plotPreview/resultTable/simResult, остальное оставляет', () => {
     const b = full();
     const s = slimBlock(b);
     expect(s.plotPreview).toBeUndefined();
+    expect(s.resultTable).toBeUndefined();
     expect(s.simResult).toBeUndefined();
     expect(s.simMode).toBe('fdtd');
     expect(slimBlocks([b])).toHaveLength(1);
