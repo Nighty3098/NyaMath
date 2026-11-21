@@ -42,10 +42,17 @@ describe('NyaMath.db integrity', () => {
 
   it('Mathcad/Prime function catalog is complete and derived notes are in sync', () => {
     const all = listMathcadFunctions();
-    expect(all.length).toBeGreaterThanOrEqual(700);
+    expect(all.length).toBeGreaterThanOrEqual(770);
     expect(getMathcadFunction('READPRN')?.status).toBe('unsupported');
     expect(getMathcadFunction('ln')?.nyamath_name).toBe('ln');
     expect(getMathcadFunction('rnorm')?.status).toBe('implemented');
+    // Prime 11/12 Help inventory additions, including distinct exact-case spellings.
+    expect(getMathcadFunction('dft')?.status).toBe('native');
+    expect(getMathcadFunction('READTEXT')?.source_pack).toContain('Prime');
+    expect(getMathcadFunction('°C')?.status).toBe('unsupported');
+    expect(getMathcadFunction('Li')?.name).toBe('Li');
+    expect(getMathcadFunction('li')?.name).toBe('li');
+    expect(all.filter((f) => f.name === 'Li' || f.name === 'li')).toHaveLength(2);
     const expected = new Set(
       all.filter((f) => f.status === 'unsupported').map((f) => f.name.toLowerCase()),
     );

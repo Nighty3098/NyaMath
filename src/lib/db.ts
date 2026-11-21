@@ -35,6 +35,8 @@ const constSections: ConstSection[] = [];
 const constEntries: ConstEntry[] = [];
 const snippets: Snippet[] = [];
 const mathcadFunctions = new Map<string, MathcadFunctionRow>();
+const mathcadFunctionsExact = new Map<string, MathcadFunctionRow>();
+const mathcadFunctionRows: MathcadFunctionRow[] = [];
 const simModels: SimModel[] = [];
 const simById = new Map<string, SimModel>();
 const demoBySuite = new Map<string, DemoItem[]>();
@@ -377,9 +379,11 @@ function ingest(t: Record<string, Row[]>): void {
     });
   }
   mathcadFunctions.clear();
+  mathcadFunctionsExact.clear();
+  mathcadFunctionRows.length = 0;
   for (const r of q('functions')) {
     const name = str(r['name']);
-    mathcadFunctions.set(name.toLowerCase(), {
+    const row: MathcadFunctionRow = {
       name,
       params: nulStr(r['params']),
       category: nulStr(r['category']),
@@ -388,7 +392,10 @@ function ingest(t: Record<string, Row[]>): void {
       help_topic: nulStr(r['help_topic']),
       nyamath_name: nulStr(r['nyamath_name']),
       status: str(r['status']) as MathcadFunctionRow['status'],
-    });
+    };
+    mathcadFunctionsExact.set(name, row);
+    mathcadFunctionRows.push(row);
+    if (!mathcadFunctions.has(name.toLowerCase())) mathcadFunctions.set(name.toLowerCase(), row);
   }
   simModels.length = 0;
   simById.clear();
@@ -649,13 +656,14 @@ export function listSnippets(): Snippet[] {
 /** Все функции Mathcad/Prime из каталога БД. */
 export function listMathcadFunctions(): MathcadFunctionRow[] {
   ready();
-  return [...mathcadFunctions.values()];
+  return [...mathcadFunctionRows];
 }
 
-/** Найти функцию Mathcad по имени (без учёта регистра). */
+/** Найти функцию Mathcad по имени: сначала точный регистр, затем без учёта регистра. */
 export function getMathcadFunction(name: string): MathcadFunctionRow | null {
   ready();
-  return mathcadFunctions.get(name.replace(/\.sc$/i, '').trim().toLowerCase()) ?? null;
+  const key = name.replace(/\.sc$/i, '').trim();
+  return mathcadFunctionsExact.get(key) ?? mathcadFunctions.get(key.toLowerCase()) ?? null;
 }
 
 export function listSimModels(): SimModel[] {
