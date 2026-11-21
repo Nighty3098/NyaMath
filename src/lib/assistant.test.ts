@@ -28,6 +28,9 @@ describe('assistant: prefixAt', () => {
   it('нижнее подчёркивание — часть имени', () => {
     expect(prefixAt('my_var + 1', 6)).toEqual({ start: 0, word: 'my_var' });
   });
+  it('греческие имена Mathcad — часть имени', () => {
+    expect(prefixAt('lnγ(', 3)).toEqual({ start: 0, word: 'lnγ' });
+  });
 });
 
 describe('assistant: fuzzyScore', () => {

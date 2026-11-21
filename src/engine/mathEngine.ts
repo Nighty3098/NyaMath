@@ -1923,7 +1923,9 @@ export function valueToLatex(value: unknown): string {
     if (total === 0) return '\\text{[] }';
     if (total > 24) {
       const preview = rowsArr.flat().slice(0, 6).map(entryLatex).join(',\\;');
-      return `\\text{[${rowsArr.length}\\times${rowsArr[0]?.length ?? total}]: }${preview},\\;\\dots`;
+      // \times нельзя класть внутрь \text — в KaTeX это не команда, а
+      // '\text{[1\times60]}' падает и рисуется сырой TeX. Знак держим в математике.
+      return `\\text{[}${rowsArr.length}\\times${rowsArr[0]?.length ?? total}\\text{]: }${preview},\\;\\dots`;
     }
     const body = rowsArr.map((r) => r.map(entryLatex).join(' & ')).join(' \\\\ ');
     return `\\begin{bmatrix}${body}\\end{bmatrix}`;

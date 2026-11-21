@@ -37,10 +37,11 @@ export const ASSIST_ALL_LIMIT = 60;
 export function prefixAt(text: string, pos: number): { start: number; word: string } | null {
   const p = Math.max(0, Math.min(pos, text.length));
   let s = p;
-  while (s > 0 && /[A-Za-z0-9_]/.test(text[s - 1])) s--;
+  // \p{L} включает греческие имена Mathcad (lnγ, Γ, ε), \p{N} — цифры в хвосте.
+  while (s > 0 && /[\p{L}\p{N}_]/u.test(text[s - 1])) s--;
   if (s >= p) return null;
   const word = text.slice(s, p);
-  if (!/^[A-Za-z_]/.test(word)) return null;
+  if (!/^[\p{L}_]/u.test(word)) return null;
   return { start: s, word };
 }
 

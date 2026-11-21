@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { lookupFuncDoc, wordAt } from './funcDoc';
+import { listMathcadFunctions } from './db';
+import { MATHCAD_COMPAT_NAMES } from '../engine/mathcadCompat';
+import { MATHCAD_RENAMES } from './mathcadNames';
+import { listFuncDocs, lookupFuncDoc, wordAt } from './funcDoc';
 
 describe('funcDoc', () => {
   it('finds builtin math functions', () => {
@@ -15,6 +18,29 @@ describe('funcDoc', () => {
     expect(lookupFuncDoc('dec2bin', 'en')).not.toBeNull();
   });
 
+  it('finds Mathcad/Prime catalog functions, including unsupported ones', () => {
+    const alias = lookupFuncDoc('lg', 'en');
+    expect(alias).not.toBeNull();
+    expect(alias!.syntax).toContain('log10');
+
+    const unsupported = lookupFuncDoc('Adams', 'en');
+    expect(unsupported).not.toBeNull();
+    expect(unsupported!.syntax).toContain('not supported');
+
+    expect(lookupFuncDoc('Ceil', 'en')!.name).toBe('Ceil');
+    expect(listFuncDocs('en').length).toBeGreaterThan(500);
+  });
+
+  it('has a hint for every known Mathcad/Prime function name', () => {
+    const names = new Set<string>([
+      ...listMathcadFunctions().map((f) => f.name),
+      ...Object.keys(MATHCAD_RENAMES),
+      ...MATHCAD_COMPAT_NAMES,
+    ]);
+    const missing = [...names].filter((name) => !lookupFuncDoc(name, 'en'));
+    expect(missing).toEqual([]);
+  });
+
   it('returns null for unknown names', () => {
     expect(lookupFuncDoc('nosuchfn', 'ru')).toBeNull();
     expect(lookupFuncDoc('', 'en')).toBeNull();
@@ -22,6 +48,8 @@ describe('funcDoc', () => {
 
   it('extracts the word under the cursor', () => {
     expect(wordAt('y := sin(x)', 8)).toBe('sin');
+    expect(wordAt('lnγ(z)', 3)).toBe('lnγ');
+    expect(wordAt('Γ(z)', 1)).toBe('Γ');
     expect(wordAt('y := sin(x)', 2)).toBe('y');
     expect(wordAt('123 +', 5)).toBeNull();
     expect(wordAt('', 0)).toBeNull();
