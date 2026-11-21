@@ -78,12 +78,17 @@ and the app via _View → Live sync_ see the same document in real time.
   `.cpd`/`.txt`. Mathcad expressions are translated to NyaMath syntax (`define → :=`,
   `eval → =`, named function calls, `numsum`/`numprod`/`nint`, matrices, units,
   programs → `for … in …` / `if … else … end`); blocks are snapped to the grid
-  and appended below the current sheet. Unsupported regions are reported in notes
-  rather than silently dropped. Prime text regions live in XAML packages and are
+  and appended below the current sheet. A compatibility catalog of 774 Mathcad
+  15/Prime functions (`db/mathcad-functions.json`, seeded into the `functions`
+  SQLite table) drives import renames: equivalent NyaMath names are used when
+  available, while functions without an implementation stay in the call and
+  produce an explicit note. Unsupported regions are reported in notes rather
+  than silently dropped. Prime text regions live in XAML packages and are
   skipped with an explicit note.
 - **Reference data in SQLite**: constants, materials, formulas, snippets, sim
-  presets and SI prefixes live in `public/NyaMath.db` (SQLite, tables:
-  `constants`, `materials`, `formulas`, `snippets`, …), read by the app,
+  presets, SI prefixes and the Mathcad/Prime function catalog live in
+  `public/NyaMath.db` (SQLite, tables:
+  `constants`, `materials`, `formulas`, `snippets`, `functions`, …), read by the app,
   tests and MCP from the same file. Edit data in `db/seed.json`, then
   `npm run seed` to rebuild the DB (`db/schema.sql` is the schema).
   `npm run update-db` refreshes constants (NIST CODATA) and elements, then rebuilds.
