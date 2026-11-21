@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { deflateRawSync, gzipSync } from 'node:zlib';
 import { parseCpd, parseSmXml, parseXmcd } from './importDoc';
-import { parseMathcadFile } from './mathcadFile';
+import { importXmcdPlots, parseMathcadFile, xmcdPlotExpressions } from './mathcadFile';
 
 const SM_SAMPLE = `<?xml version="1.0" encoding="utf-8"?>
 <regions>
@@ -40,6 +40,80 @@ const SM_SAMPLE = `<?xml version="1.0" encoding="utf-8"?>
     </plot>
   </region>
 </regions>`;
+
+/** Конструктор минимального бинарного описания графика Mathcad. */
+function plotNode(
+  index: number,
+  ref: number,
+  marker: number,
+  text: string,
+  opts: { utf16?: boolean; numeric?: boolean } = {},
+): number[] {
+  const units = [...text].flatMap((ch) =>
+    opts.utf16 ? [ch.charCodeAt(0), 0] : [ch.charCodeAt(0)],
+  );
+  const len = Math.ceil(units.length / 2) + 1;
+  const flag = opts.utf16 ? 3 : 1;
+  return [
+    index,
+    0x32,
+    0x02,
+    0x0f,
+    0,
+    0,
+    marker,
+    ref,
+    0,
+    0,
+    len,
+    ...(opts.numeric ? [1] : []),
+    flag,
+    ...units,
+    0,
+    0,
+  ];
+}
+const plotApply = (index: number, ref: number): number[] => [
+  index,
+  0x32,
+  0x8e,
+  0x70,
+  0,
+  0,
+  0x80,
+  ref,
+  0,
+];
+const plotArgs = (index: number, ref: number): number[] => [
+  index,
+  0x32,
+  0x0a,
+  0xc3,
+  0,
+  0,
+  0x80,
+  ref,
+];
+const plotGroup = (index: number, ref: number): number[] => [
+  index,
+  0x32,
+  0x07,
+  0xfb,
+  0,
+  0,
+  0x40,
+  ref,
+];
+const plotBytes = (...nodes: number[][]): Uint8Array => Uint8Array.from(nodes.flat());
+
+const plotBinaryX = (): Uint8Array =>
+  plotBytes(
+    plotNode(5, 4, 0x64, 'X'),
+    plotApply(6, 4),
+    plotArgs(7, 6),
+    plotNode(8, 7, 0x64, 't'),
+    plotNode(9, 7, 0xa4, 'D'),
+  );
 
 describe('importDoc: SMath .sm', () => {
   it('текст, присваивание с единицей, sin + результат, плот', () => {
@@ -364,6 +438,81 @@ describe('importDoc: Mathcad .xmcd', () => {
 
   it('не-лист даёт честную пометку', () => {
     expect(parseXmcd('<html><body>hi</body></html>').notes.length).toBeGreaterThan(0);
+  });
+
+  it('Mathcad: бинарное описание графика даёт выражение кривой', () => {
+    expect(xmcdPlotExpressions(plotBinaryX())).toEqual(['X(t, D)']);
+  });
+
+  it('Mathcad: числовой аргумент и UTF-16 имя кривой читаются', () => {
+    expect(
+      xmcdPlotExpressions(
+        plotBytes(
+          plotNode(5, 4, 0x64, 'G'),
+          plotApply(6, 4),
+          plotArgs(7, 6),
+          plotNode(8, 7, 0x64, 't'),
+          plotNode(9, 7, 0xb4, '1', { numeric: true }),
+        ),
+      ),
+    ).toEqual(['G(t, 1)']);
+    expect(
+      xmcdPlotExpressions(
+        plotBytes(
+          plotNode(5, 4, 0x64, 'X'),
+          plotApply(6, 4),
+          plotArgs(7, 6),
+          plotNode(8, 7, 0x64, 't'),
+          plotNode(9, 7, 0xa4, 'SIG', { utf16: true }),
+        ),
+      ),
+    ).toEqual(['X(t, SIG)']);
+  });
+
+  it('Mathcad: лишние аргументы кривой делятся по арности функции', async () => {
+    const multi = plotBytes(
+      plotNode(5, 4, 0x64, 'V'),
+      plotApply(6, 4),
+      plotArgs(7, 6),
+      plotGroup(8, 7),
+      plotNode(9, 8, 0x64, 't'),
+      plotNode(10, 8, 0xa4, 'I'),
+      plotNode(11, 7, 0xa4, 'S'),
+    );
+    const base64 = Buffer.from(multi).toString('base64');
+    const xml = `<regions>
+      <region left="12" top="10"><math><ml:define><ml:function>
+        <ml:id>V</ml:id><ml:boundVars><ml:id>t</ml:id><ml:id>D</ml:id></ml:boundVars>
+      </ml:function><ml:real>1</ml:real></ml:define></math></region>
+      <region left="12" top="200"><plot item-idref="9"/></region>
+    </regions>
+    <binaryContent><item item-id="9">${base64}</item></binaryContent>`;
+    const r = await importXmcdPlots(xml, parseXmcd(xml));
+    expect(r.blocks.find((b) => b.kind === 'plot')?.body).toBe('V(t, I); V(t, S)');
+  });
+
+  it('Mathcad: график импортируется plot-блоком с осью 0..1', async () => {
+    const base64 = Buffer.from(plotBinaryX()).toString('base64');
+    const xml = `<regions>
+      <region left="12" top="10"><math><ml:define><ml:function>
+        <ml:id>X</ml:id><ml:boundVars><ml:id>t</ml:id><ml:id>D</ml:id></ml:boundVars>
+      </ml:function><ml:real>1</ml:real></ml:define></math></region>
+      <region left="12" top="20"><math><ml:define><ml:id>t</ml:id><ml:range>
+        <ml:sequence><ml:real>0</ml:real><ml:real>0.1</ml:real></ml:sequence>
+        <ml:real>2</ml:real>
+      </ml:range></ml:define></math></region>
+      <region left="12" top="200"><plot item-idref="9"/></region>
+    </regions>
+    <binaryContent><item item-id="9">${base64}</item></binaryContent>`;
+    const r = await importXmcdPlots(xml, parseXmcd(xml));
+    expect(r.blocks.find((b) => b.kind === 'plot')).toMatchObject({
+      body: 'X(x*(2), D)',
+      x: 12,
+      y: 200,
+      plotXmin: 0,
+      plotXmax: 1,
+    });
+    expect(r.notes.some((n) => n.includes('импортировано 1'))).toBe(true);
   });
 });
 

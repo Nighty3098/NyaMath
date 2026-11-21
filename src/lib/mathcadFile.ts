@@ -9,7 +9,7 @@
  *
  * Модуль не использует DOM-API: работает и в браузере, и в node (MCP).
  */
-import { parseXmcd, type ImportResult } from './importDoc.js';
+import { parseXmcd, xmcdPlotSources, type ImportBlock, type ImportResult } from './importDoc.js';
 
 export interface MathcadXmlRead {
   xml: string;
@@ -158,9 +158,330 @@ export async function readMathcadXml(
   return { xml: utf8(bytes), container: 'xml', notes };
 }
 
+/* ---------------- Графики Mathcad ---------------- */
+
+function decodeBase64(text: string): Uint8Array {
+  const bin = atob(text);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+const PLOT_NAME_SOURCE = '[A-Za-zА-Яа-яΑ-Ωα-ω][A-Za-z0-9_А-Яа-яΑ-Ωα-ω]*';
+const PLOT_IDENT = new RegExp(`^${PLOT_NAME_SOURCE}$`, 'u');
+const PLOT_NUMBER = /^-?(?:\d+(?:\.\d*)?|\.\d+)$/;
+const PLOT_NATIVE_ARITY = new Map<string, number>([
+  ['sin', 1],
+  ['cos', 1],
+  ['tan', 1],
+  ['exp', 1],
+  ['log', 1],
+  ['ln', 1],
+  ['sqrt', 1],
+]);
+
+interface PlotToken {
+  kind: 'token';
+  index: number;
+  ref: number;
+  marker: number;
+  text: string;
+}
+interface PlotNode {
+  kind: 'apply' | 'args' | 'group';
+  index: number;
+  ref: number;
+}
+interface PlotTrace {
+  name: string;
+  args: string[];
+  expr: string;
+}
+
+function decodePlotText(bytes: Uint8Array, start: number, len: number, flag: number): string {
+  const units = Math.max(0, len - 1);
+  if (flag === 3) {
+    let out = '';
+    for (let i = 0; i < units; i++) out += String.fromCharCode(le16(bytes, start + i * 2));
+    return out.replace(/\0+$/u, '');
+  }
+  if (flag === 1) {
+    return String.fromCharCode(...bytes.subarray(start, start + units)).replace(/\0+$/u, '');
+  }
+  return '';
+}
+
+/**
+ * Достать выражения кривых из бинарного описания графика Mathcad 15.
+ * Формат — registry-дерево: имя → apply → args → аргументы (имена/числа).
+ */
+function xmcdPlotTraces(bytes: Uint8Array): PlotTrace[] {
+  const tokens: PlotToken[] = [];
+  const nodes: PlotNode[] = [];
+
+  for (let i = 1; i < bytes.length - 12; i++) {
+    if (
+      bytes[i] === 0x32 &&
+      bytes[i + 1] === 0x02 &&
+      bytes[i + 2] === 0x0f &&
+      bytes[i + 3] === 0 &&
+      bytes[i + 4] === 0
+    ) {
+      const refVal = le32(bytes, i + 5);
+      const marker = refVal & 0xff;
+      if (marker !== 0x64 && marker !== 0xa4 && marker !== 0xb4) continue;
+      const len = bytes[i + 9] as number;
+      // Числовые литералы несут дополнительный байт формата перед строкой.
+      const textStart = marker === 0xb4 ? i + 12 : i + 11;
+      const textFlag = bytes[marker === 0xb4 ? i + 11 : i + 10] as number;
+      if (len < 2 || len > 64 || textStart + 2 * len - 1 > bytes.length) continue;
+      const text = decodePlotText(bytes, textStart, len, textFlag);
+      if (!PLOT_IDENT.test(text) && !PLOT_NUMBER.test(text)) continue;
+      tokens.push({
+        kind: 'token',
+        index: bytes[i - 1] as number,
+        ref: refVal >>> 8,
+        marker,
+        text,
+      });
+    } else if (
+      bytes[i] === 0x32 &&
+      bytes[i + 1] === 0x8e &&
+      bytes[i + 2] === 0x70 &&
+      bytes[i + 3] === 0 &&
+      bytes[i + 4] === 0
+    ) {
+      nodes.push({
+        kind: 'apply',
+        index: bytes[i - 1] as number,
+        ref: le16(bytes, i + 5) >>> 8,
+      });
+    } else if (
+      bytes[i] === 0x32 &&
+      bytes[i + 1] === 0x0a &&
+      bytes[i + 2] === 0xc3 &&
+      bytes[i + 3] === 0 &&
+      bytes[i + 4] === 0
+    ) {
+      nodes.push({ kind: 'args', index: bytes[i - 1] as number, ref: le16(bytes, i + 5) >>> 8 });
+    } else if (
+      bytes[i] === 0x32 &&
+      bytes[i + 1] === 0x07 &&
+      bytes[i + 2] === 0xfb &&
+      bytes[i + 3] === 0 &&
+      bytes[i + 4] === 0
+    ) {
+      nodes.push({ kind: 'group', index: bytes[i - 1] as number, ref: le16(bytes, i + 5) >>> 8 });
+    }
+  }
+
+  const byIndex = <T extends PlotNode | PlotToken>(items: T[], ref: number): T[] =>
+    items.filter((n) => n.ref === ref).sort((a, b) => a.index - b.index);
+  const out: PlotTrace[] = [];
+  const seen = new Set<string>();
+  for (const name of tokens.filter((t) => t.marker === 0x64)) {
+    const apply = byIndex(nodes.filter((n): n is PlotNode & { kind: 'apply' } => n.kind === 'apply'), name.ref)[0];
+    if (!apply) continue;
+    const args = byIndex(nodes.filter((n): n is PlotNode & { kind: 'args' } => n.kind === 'args'), apply.index)[0];
+    if (!args) continue;
+
+    const argParts: string[] = [];
+    for (const child of byIndex(
+      [...tokens, ...nodes.filter((n) => n.kind === 'group')],
+      args.index,
+    )) {
+      if (child.kind === 'token') {
+        argParts.push(child.text);
+      } else {
+        for (const inner of byIndex(tokens, child.index)) argParts.push(inner.text);
+      }
+    }
+    if (!argParts.length) continue;
+    const expr = `${name.text}(${argParts.join(', ')})`;
+    if (seen.has(expr)) continue;
+    seen.add(expr);
+    out.push({ name: name.text, args: argParts, expr });
+  }
+  return out;
+}
+
+/** Публичная форма для тестов и отладки: выражения кривых без адаптации осей. */
+export function xmcdPlotExpressions(bytes: Uint8Array): string[] {
+  return xmcdPlotTraces(bytes).map((t) => t.expr);
+}
+
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function splitArgs(s: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i] as string;
+    if (ch === '(' || ch === '[' || ch === '{') depth++;
+    else if (ch === ')' || ch === ']' || ch === '}') depth--;
+    else if (ch === ',' && depth === 0) {
+      out.push(s.slice(start, i));
+      start = i + 1;
+    }
+  }
+  out.push(s.slice(start));
+  return out;
+}
+
+function rangeOf(
+  blocks: ImportBlock[],
+  variable: string,
+): { start: string; end: string } | null {
+  const re = new RegExp(
+    `^\\s*${escapeRe(variable)}\\s*:=\\s*seq\\(([^,]+),\\s*([^,]+),`,
+  );
+  for (const b of blocks) {
+    if (b.kind !== 'math') continue;
+    const m = b.body.match(re);
+    if (m) return { start: (m[1] ?? '').trim(), end: (m[2] ?? '').trim() };
+  }
+  return null;
+}
+
+/** Арности функций, известные из формул листа (нужны для разбора кривых графика). */
+function functionArities(blocks: ImportBlock[]): Map<string, number> {
+  const out = new Map<string, number>();
+  const def = new RegExp(`^\\s*(${PLOT_NAME_SOURCE})\\s*\\(([^)]*)\\)\\s*:=`, 'u');
+  for (const b of blocks) {
+    if (b.kind === 'program' && b.exportName) {
+      out.set(b.exportName, b.programParams?.length ?? 0);
+      continue;
+    }
+    if (b.kind !== 'math') continue;
+    const m = b.body.match(def);
+    if (!m) continue;
+    const params = splitArgs(m[2] ?? '')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    out.set(m[1] as string, params.length);
+  }
+  return out;
+}
+
+function combinations<T>(items: T[], k: number): T[][] {
+  if (k <= 0) return [[]];
+  if (!items.length) return [];
+  const out: T[][] = [];
+  const walk = (start: number, chosen: T[]): void => {
+    if (chosen.length === k) {
+      out.push([...chosen]);
+      return;
+    }
+    for (let i = start; i < items.length; i++) {
+      chosen.push(items[i] as T);
+      walk(i + 1, chosen);
+      chosen.pop();
+      if (out.length >= 24) return;
+    }
+  };
+  walk(0, []);
+  return out;
+}
+
+/**
+ * Бинарник Mathcad иногда складывает в args несколько кривых подряд
+ * (`V(t, I, S)`), хотя функция на листе объявлена с двумя параметрами.
+ * По арности возвращаем отдельные выражения `V(t, I)` и `V(t, S)`.
+ */
+function traceVariants(trace: PlotTrace, arities: Map<string, number>): string[] {
+  const arity =
+    arities.get(trace.name) ?? PLOT_NATIVE_ARITY.get(trace.name.toLowerCase());
+  if (!arity || trace.args.length < arity) return [];
+  if (trace.args.length === arity) return [trace.expr];
+  const first = trace.args[0] as string;
+  const rest = trace.args.slice(1);
+  const named = rest.filter((a) => !PLOT_NUMBER.test(a));
+  const pool = named.length ? named : rest;
+  const out = new Set<string>();
+  for (const tail of combinations(pool, arity - 1)) {
+    out.add(`${trace.name}(${[first, ...tail].join(', ')})`);
+  }
+  return [...out];
+}
+
+/** `X(t, D)` → `X(x*(length(D)*tau), D)`: ось X в NyaMath всегда 0..1. */
+function adaptPlotExpr(expr: string, blocks: ImportBlock[]): string {
+  const call = expr.match(
+    new RegExp(`^(${PLOT_NAME_SOURCE})\\s*\\((.*)\\)$`, 'u'),
+  );
+  if (!call) return expr;
+  const name = call[1] as string;
+  const args = splitArgs(call[2] ?? '');
+  const mapped = args.map((a) => {
+    const arg = a.trim();
+    const range = rangeOf(blocks, arg);
+    if (!range) return arg;
+    const replacement =
+      range.start === '0'
+        ? `x*(${range.end})`
+        : `(${range.start}) + x*((${range.end}) - (${range.start}))`;
+    const re = new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRe(arg)}(?![\\p{L}\\p{N}_])`, 'gu');
+    return arg.replace(re, replacement);
+  });
+  return `${name}(${mapped.join(', ')})`;
+}
+
+/** Добавить импортированные графики к результату разбора XML. */
+export async function importXmcdPlots(xml: string, parsed: ImportResult): Promise<ImportResult> {
+  const sources = xmcdPlotSources(xml);
+  if (!sources.length) return parsed;
+  const blocks = [...parsed.blocks];
+  const arities = functionArities(blocks);
+  let notes = [...parsed.notes];
+  let imported = 0;
+  for (const src of sources) {
+    let raw: Uint8Array;
+    try {
+      raw = decodeBase64(src.base64);
+      if (src.gzipped) raw = await inflate(raw, 'gzip');
+    } catch {
+      notes.push(`Mathcad-график @${Math.round(src.y)}: бинарные данные не распакованы`);
+      continue;
+    }
+    const exprs = [
+      ...new Set(
+        xmcdPlotTraces(raw)
+          .flatMap((t) => traceVariants(t, arities))
+          .map((e) => adaptPlotExpr(e, blocks)),
+      ),
+    ];
+    if (!exprs.length) {
+      notes.push(`Mathcad-график @${Math.round(src.y)}: кривые не распознаны — пропущен`);
+      continue;
+    }
+    blocks.push({
+      kind: 'plot',
+      body: exprs.join('; '),
+      x: src.x,
+      y: src.y,
+      plotXmin: 0,
+      plotXmax: 1,
+    });
+    imported++;
+  }
+  if (imported) {
+    notes = notes.map((n) =>
+      n.startsWith('пропущено регионов Mathcad')
+        ? n.replace('графики/картинки/пустые', 'картинки/пустые')
+        : n,
+    );
+    notes.push(`Mathcad-графики: импортировано ${imported}`);
+  }
+  return { ...parsed, blocks, notes };
+}
+
 /** Универсальная точка входа: байты файла → готовые блоки импорта. */
 export async function parseMathcadFile(bytes: Uint8Array, name = ''): Promise<ImportResult> {
   const read = await readMathcadXml(bytes, name);
   const parsed = parseXmcd(read.xml);
-  return { ...parsed, notes: [...read.notes, ...parsed.notes], format: 'xmcd' };
+  const withPlots = await importXmcdPlots(read.xml, parsed);
+  return { ...withPlots, notes: [...read.notes, ...withPlots.notes], format: 'xmcd' };
 }

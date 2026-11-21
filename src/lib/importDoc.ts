@@ -1112,6 +1112,41 @@ const MX_EXPR_NAMES = new Set([
   'symResult',
 ]);
 
+/** Источник данных графика Mathcad: base64 из `<binaryContent>`. */
+export interface XmcdPlotSource {
+  x: number;
+  y: number;
+  base64: string;
+  gzipped: boolean;
+}
+
+/** Найти графические регионы .xmcd и их бинарные описания. */
+export function xmcdPlotSources(xml: string): XmcdPlotSource[] {
+  const nodes = parseXmlTree(xml);
+  const sheet = findFirst(nodes, 'regions');
+  const regions = sheet ? sheet.children.filter((c) => c.name === 'region') : findAllNodes(nodes, 'region');
+  const binary = findFirst(nodes, 'binaryContent');
+  const items = new Map<string, XNode>();
+  for (const it of binary?.children ?? []) {
+    if (it.name === 'item' && it.attrs['item-id']) items.set(it.attrs['item-id'], it);
+  }
+  const out: XmcdPlotSource[] = [];
+  for (const r of regions) {
+    const plot = findChild(r, 'plot');
+    if (!plot) continue;
+    const id = plot.attrs['item-idref'];
+    const item = id ? items.get(id) : undefined;
+    if (!item) continue;
+    out.push({
+      x: numOr(r.attrs['left'] ?? null, 80),
+      y: numOr(r.attrs['top'] ?? null, 60),
+      base64: item.text.replace(/\s/g, ''),
+      gzipped: /gzip/i.test(item.attrs['content-encoding'] ?? ''),
+    });
+  }
+  return out;
+}
+
 /** Весь Mathcad worksheet → блоки. Позиции из left/top; сетку разнесут вызывающие. */
 export function parseXmcd(xml: string): ImportResult {
   const notes: string[] = [];
